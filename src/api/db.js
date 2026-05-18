@@ -92,11 +92,15 @@ function createEntity(entityName) {
       return normalize(result);
     },
 
-    async update(id, data) {
-      const { data: result, error } = await supabase.from(tableName).update(data).eq('id', id).select().single();
-      if (error) throw new Error(`[db.${entityName}.update] ${error.message}`);
-      return normalize(result);
-    },
+  async update(id, data) {
+  const { data: result, error } = await supabase
+    .from(tableName)
+    .update(data)
+    .eq('id', id)
+    .select();
+  if (error) throw new Error(`[db.${entityName}.update] ${error.message}`);
+  return normalize(result?.[0]);
+},
 
     async delete(id) {
       const { error } = await supabase.from(tableName).delete().eq('id', id);
