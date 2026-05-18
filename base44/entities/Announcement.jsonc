@@ -1,0 +1,50 @@
+{
+  "name": "Announcement",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string",
+      "description": "Duyuru ba\u015fl\u0131\u011f\u0131"
+    },
+    "content": {
+      "type": "string",
+      "description": "Duyuru i\u00e7eri\u011fi"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true,
+      "description": "Duyuru aktif mi? (admin geri \u00e7ekebilir)"
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "announcement",
+        "system_update"
+      ],
+      "default": "announcement",
+      "description": "Duyuru tipi"
+    }
+  },
+  "required": [
+    "title",
+    "content"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": true,
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

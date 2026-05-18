@@ -1,0 +1,191 @@
+{
+  "name": "Platform",
+  "type": "object",
+  "properties": {
+    "platform_type": {
+      "type": "string",
+      "enum": [
+        "trendyol",
+        "hepsiburada",
+        "website"
+      ],
+      "description": "Sabit platform t\u00fcr\u00fc"
+    },
+    "name": {
+      "type": "string",
+      "description": "Platform ad\u0131"
+    },
+    "code": {
+      "type": "string",
+      "description": "Platform kodu"
+    },
+    "website_adapter": {
+      "type": "string",
+      "enum": [
+        "shopify",
+        "ikas",
+        "ticimax",
+        "generic_excel"
+      ],
+      "description": "Web sitesi altyap\u0131s\u0131 (platform_type=website ise zorunlu)",
+      "default": "shopify"
+    },
+    "shipping_company_id": {
+      "type": "string",
+      "description": "Se\u00e7ilen kargo firmas\u0131 ID'si"
+    },
+    "shipping_company_name": {
+      "type": "string",
+      "description": "Se\u00e7ilen kargo firmas\u0131 ad\u0131"
+    },
+    "custom_shipping_price": {
+      "type": "number",
+      "description": "Manuel anla\u015fmal\u0131 kargo fiyat\u0131",
+      "default": 0
+    },
+    "use_custom_shipping_price": {
+      "type": "boolean",
+      "description": "Manuel kargo fiyat\u0131 kullan\u0131ls\u0131n m\u0131?",
+      "default": false
+    },
+    "has_withholding": {
+      "type": "boolean",
+      "default": true
+    },
+    "withholding_rate": {
+      "type": "number",
+      "default": 1
+    },
+    "has_service_fee": {
+      "type": "boolean",
+      "default": true
+    },
+    "service_fee_type": {
+      "type": "string",
+      "enum": [
+        "none",
+        "fixed_per_order",
+        "percent_of_sale"
+      ],
+      "default": "fixed_per_order"
+    },
+    "service_fee_amount": {
+      "type": "number",
+      "default": 0
+    },
+    "service_fee_vat_rate": {
+      "type": "number",
+      "default": 20
+    },
+    "has_transaction_fee": {
+      "type": "boolean",
+      "default": false
+    },
+    "transaction_fee_amount": {
+      "type": "number",
+      "default": 0
+    },
+    "transaction_fee_vat_rate": {
+      "type": "number",
+      "default": 20
+    },
+    "has_same_day_delivery": {
+      "type": "boolean",
+      "default": false
+    },
+    "same_day_delivery_service_fee": {
+      "type": "number",
+      "default": 0
+    },
+    "has_pos_service_fee": {
+      "type": "boolean",
+      "default": false,
+      "description": "HepsiBurada POS hizmet bedeli var m\u0131? (sipari\u015f ba\u015f\u0131na y\u00fczdelik kesinti)"
+    },
+    "pos_service_fee_rate": {
+      "type": "number",
+      "default": 0,
+      "description": "POS hizmet bedeli oran\u0131 (%) - KDV dahil sat\u0131\u015f fiyat\u0131 \u00fczerinden"
+    },
+    "use_barem": {
+      "type": "boolean",
+      "default": true
+    },
+    "barem_max_desi": {
+      "type": "number",
+      "default": 5
+    },
+    "barem1_min": {
+      "type": "number",
+      "default": 0
+    },
+    "barem1_max": {
+      "type": "number",
+      "default": 149.99
+    },
+    "barem2_min": {
+      "type": "number",
+      "default": 150
+    },
+    "barem2_max": {
+      "type": "number",
+      "default": 299.99
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [
+    "name",
+    "code",
+    "platform_type"
+  ],
+  "rls": {
+    "create": true,
+    "read": {
+      "$or": [
+        {
+          "created_by": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "platform_type": {
+            "$in": [
+              "trendyol",
+              "hepsiburada"
+            ]
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "created_by": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "created_by": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    }
+  }
+}

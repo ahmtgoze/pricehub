@@ -1,0 +1,108 @@
+{
+  "name": "Commission",
+  "type": "object",
+  "properties": {
+    "platform_id": {
+      "type": "string",
+      "description": "Platform ID"
+    },
+    "platform_name": {
+      "type": "string",
+      "description": "Platform ad\u0131"
+    },
+    "category_id": {
+      "type": "string",
+      "description": "Kategori ID"
+    },
+    "category_name": {
+      "type": "string",
+      "description": "Kategori ad\u0131"
+    },
+    "commission_rate": {
+      "type": "number",
+      "description": "Komisyon oran\u0131 (%)"
+    },
+    "commission_vat_rate": {
+      "type": "number",
+      "description": "Komisyon KDV oran\u0131 (%)",
+      "default": 20
+    },
+    "minimum_profit_amount": {
+      "type": "number",
+      "description": "Minimum k\u00e2r tutar\u0131 (TL)"
+    },
+    "target_profit_rate": {
+      "type": "number",
+      "description": "Hedef k\u00e2r oran\u0131 (%)"
+    },
+    "target_profit_amount": {
+      "type": "number",
+      "description": "Hedef k\u00e2r tutar\u0131 (TL)"
+    },
+    "discounted_minimum_profit_amount": {
+      "type": "number",
+      "description": "\u0130ndirimli min k\u00e2r tutar\u0131 (TL) - promosyon sayfalar\u0131 i\u00e7in"
+    },
+    "discounted_target_profit_rate": {
+      "type": "number",
+      "description": "\u0130ndirimli hedef k\u00e2r oran\u0131 (%) - promosyon sayfalar\u0131 i\u00e7in"
+    },
+    "discounted_target_profit_amount": {
+      "type": "number",
+      "description": "\u0130ndirimli hedef k\u00e2r tutar\u0131 (TL) - promosyon sayfalar\u0131 i\u00e7in"
+    },
+    "transaction_fee": {
+      "type": "number",
+      "description": "\u0130\u015flem ba\u015f\u0131na ek \u00fccret (\u20ba, KDV dahil) - sadece web sitesi platformlar\u0131",
+      "default": 0
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [
+    "platform_id",
+    "category_id",
+    "commission_rate"
+  ],
+  "rls": {
+    "create": true,
+    "read": {
+      "$or": [
+        {
+          "created_by": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "created_by": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "created_by": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    }
+  }
+}

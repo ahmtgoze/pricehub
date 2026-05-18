@@ -1,0 +1,131 @@
+{
+  "name": "Campaign",
+  "type": "object",
+  "properties": {
+    "campaign_type": {
+      "type": "string",
+      "enum": [
+        "turkey_campaign",
+        "turkey_plus_extra_discount",
+        "turkey_plus_coupon",
+        "micro_export_campaign",
+        "micro_export_plus_extra_discount",
+        "micro_export_plus_coupon"
+      ],
+      "description": "Kampanya t\u00fcr\u00fc"
+    },
+    "campaign_category": {
+      "type": "string",
+      "enum": [
+        "turkey",
+        "all_countries",
+        "micro_export"
+      ],
+      "description": "Ana kampanya kategorisi"
+    },
+    "region": {
+      "type": "string",
+      "enum": [
+        "turkey",
+        "azerbaijan",
+        "gulf_countries",
+        "europe",
+        "all_countries"
+      ],
+      "description": "Kampanyan\u0131n ge\u00e7erli oldu\u011fu b\u00f6lge"
+    },
+    "description": {
+      "type": "string",
+      "description": "Kampanya a\u00e7\u0131klamas\u0131"
+    },
+    "start_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Kampanya ba\u015flang\u0131\u00e7 tarihi"
+    },
+    "end_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Kampanya biti\u015f tarihi"
+    },
+    "cart_amount": {
+      "type": "number",
+      "description": "Sepet tutar\u0131 (TL)"
+    },
+    "cart_condition": {
+      "type": "string",
+      "enum": [
+        "over",
+        "under"
+      ],
+      "description": "Sepet tutar\u0131 ko\u015fulu (\u00fczeri/alt\u0131)"
+    },
+    "discount_type": {
+      "type": "string",
+      "enum": [
+        "tl",
+        "percent"
+      ],
+      "description": "\u0130ndirim tipi (TL veya %)"
+    },
+    "discount_amount": {
+      "type": "number",
+      "description": "\u0130ndirim tutar\u0131 (TL veya %)"
+    },
+    "trendyol_coverage_rate": {
+      "type": "number",
+      "description": "Trendyol kar\u015f\u0131lama oran\u0131 (%)"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true,
+      "description": "Kampanya aktif mi?"
+    }
+  },
+  "required": [
+    "campaign_type",
+    "campaign_category",
+    "region",
+    "start_date",
+    "end_date"
+  ],
+  "rls": {
+    "create": true,
+    "read": {
+      "$or": [
+        {
+          "created_by": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "created_by": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "created_by": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    }
+  }
+}

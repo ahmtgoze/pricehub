@@ -1,0 +1,126 @@
+{
+  "name": "MarketplaceProduct",
+  "type": "object",
+  "properties": {
+    "platform_account": {
+      "type": "string",
+      "enum": [
+        "Trendyol SVS",
+        "Trendyol G\u00f6z\u00fcpack",
+        "HepsiBurada",
+        "Web Sitesi - SVS",
+        "Web Sitesi - G\u00f6zepack"
+      ],
+      "description": "Pazaryeri hesab\u0131"
+    },
+    "barkod": {
+      "type": "string",
+      "description": "\u00dcr\u00fcn barkodu"
+    },
+    "hb_sku": {
+      "type": "string",
+      "description": "HepsiBurada SKU (HB Sku s\u00fctunu)"
+    },
+    "model_code": {
+      "type": "string",
+      "description": "Model kodu"
+    },
+    "brand": {
+      "type": "string",
+      "description": "Marka"
+    },
+    "category": {
+      "type": "string",
+      "description": "Kategori ismi (Excel'den)"
+    },
+    "platform_product_name": {
+      "type": "string",
+      "description": "Pazaryerinde \u00fcr\u00fcn ad\u0131"
+    },
+    "marketplace_sale_price": {
+      "type": "number",
+      "description": "Pazaryerindeki sat\u0131\u015f fiyat\u0131 (KDV dahil)"
+    },
+    "stock_quantity": {
+      "type": "number",
+      "description": "\u00dcr\u00fcn stok adedi",
+      "default": 0
+    },
+    "printing_cost": {
+      "type": "number",
+      "description": "Bask\u0131 maliyeti (KDV dahil, opsiyonel)",
+      "default": 0
+    },
+    "shipping_type": {
+      "type": "string",
+      "description": "Sevkiyat tipi (Bug\u00fcn Kargoda)"
+    },
+    "matched_product_id": {
+      "type": "string",
+      "description": "\u0130li\u015fkili ana \u00fcr\u00fcn ID"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "matched",
+        "not_matched"
+      ],
+      "default": "not_matched",
+      "description": "E\u015fle\u015ftirme durumu"
+    },
+    "shopify_data": {
+      "type": "string",
+      "description": "Shopify CSV sat\u0131r\u0131 (JSON string)"
+    },
+    "variant_sku": {
+      "type": "string",
+      "description": "Variant SKU"
+    },
+    "variant_title": {
+      "type": "string",
+      "description": "Variant Title"
+    }
+  },
+  "required": [
+    "platform_account"
+  ],
+  "rls": {
+    "create": true,
+    "read": {
+      "$or": [
+        {
+          "created_by": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "created_by": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "created_by": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    }
+  }
+}

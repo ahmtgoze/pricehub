@@ -1,0 +1,147 @@
+{
+  "name": "PlusProductCommissionTariff",
+  "type": "object",
+  "properties": {
+    "platform_account": {
+      "type": "string",
+      "enum": [
+        "Trendyol SVS",
+        "Trendyol G\u00f6zepack",
+        "HepsiBurada",
+        "Web Sitesi - SVS",
+        "Web Sitesi - G\u00f6zepack"
+      ],
+      "description": "Platform hesab\u0131"
+    },
+    "start_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Tarife ba\u015flang\u0131\u00e7 tarihi"
+    },
+    "end_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Tarife biti\u015f tarihi"
+    },
+    "product_name": {
+      "type": "string",
+      "description": "\u00dcr\u00fcn ismi"
+    },
+    "barcode": {
+      "type": "string",
+      "description": "Barkod"
+    },
+    "seller_stock_code": {
+      "type": "string",
+      "description": "Sat\u0131c\u0131 stok kodu"
+    },
+    "size": {
+      "type": "string",
+      "description": "Beden"
+    },
+    "model_code": {
+      "type": "string",
+      "description": "Model kodu"
+    },
+    "category": {
+      "type": "string",
+      "description": "Kategori"
+    },
+    "brand": {
+      "type": "string",
+      "description": "Marka"
+    },
+    "stock": {
+      "type": "number",
+      "description": "Stok adedi"
+    },
+    "current_base_price": {
+      "type": "number",
+      "description": "Komisyona esas fiyat"
+    },
+    "current_commission": {
+      "type": "number",
+      "description": "G\u00fcncel komisyon"
+    },
+    "plus_price_limit": {
+      "type": "number",
+      "description": "Plus fiyat \u00fcst limiti"
+    },
+    "plus_commission_offer": {
+      "type": "number",
+      "description": "Plus komisyon teklifi (%)"
+    },
+    "plus_base_price": {
+      "type": "number",
+      "description": "Plus komisyona esas fiyat\u0131"
+    },
+    "selected_price": {
+      "type": "number",
+      "description": "Se\u00e7ilen plus fiyat"
+    },
+    "calculated_commission": {
+      "type": "number",
+      "description": "Hesaplanan komisyon tutar\u0131"
+    },
+    "cancel_status": {
+      "type": "string",
+      "enum": [
+        "yes",
+        "no"
+      ],
+      "default": "no",
+      "description": "\u0130ptal durumu"
+    },
+    "matched_product_id": {
+      "type": "string",
+      "description": "E\u015fle\u015fen \u00fcr\u00fcn ID (sistemdeki Product entity)"
+    },
+    "excel_file_url": {
+      "type": "string",
+      "description": "Orijinal Excel dosyas\u0131 URL"
+    }
+  },
+  "required": [
+    "platform_account",
+    "barcode"
+  ],
+  "rls": {
+    "create": true,
+    "read": {
+      "$or": [
+        {
+          "created_by": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "created_by": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "created_by": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    }
+  }
+}

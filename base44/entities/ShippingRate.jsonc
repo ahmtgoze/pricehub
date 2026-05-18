@@ -1,0 +1,101 @@
+{
+  "name": "ShippingRate",
+  "type": "object",
+  "properties": {
+    "platform_id": {
+      "type": "string",
+      "description": "Platform ID (kullan\u0131c\u0131 tarifeleri i\u00e7in)"
+    },
+    "platform_name": {
+      "type": "string",
+      "description": "Platform ad\u0131 (g\u00f6r\u00fcnt\u00fcleme i\u00e7in)"
+    },
+    "platform_type": {
+      "type": "string",
+      "enum": [
+        "trendyol",
+        "hepsiburada",
+        "website"
+      ],
+      "description": "Platform tipi (admin tarifeleri i\u00e7in global e\u015fle\u015fme)"
+    },
+    "shipping_company": {
+      "type": "string",
+      "description": "Kargo firmas\u0131"
+    },
+    "rate_type": {
+      "type": "string",
+      "enum": [
+        "barem1",
+        "barem2",
+        "desi"
+      ],
+      "description": "Tarife tipi"
+    },
+    "same_day_delivery": {
+      "type": "boolean",
+      "description": "Bug\u00fcn Kap\u0131da se\u00e7ene\u011fi i\u00e7in mi?",
+      "default": false
+    },
+    "desi": {
+      "type": "number",
+      "description": "Desi de\u011feri (desi tarifesi i\u00e7in)"
+    },
+    "price": {
+      "type": "number",
+      "description": "Kargo \u00fccreti (KDV dahil)"
+    },
+    "vat_rate": {
+      "type": "number",
+      "description": "Kargo KDV oran\u0131 (%)",
+      "default": 20
+    },
+    "is_manual": {
+      "type": "boolean",
+      "description": "Kullan\u0131c\u0131 taraf\u0131ndan manuel eklendi mi?",
+      "default": false
+    },
+    "is_admin_created": {
+      "type": "boolean",
+      "description": "Sistem y\u00f6neticisi taraf\u0131ndan y\u00fcklenen tarife mi?",
+      "default": false
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [
+    "platform_type",
+    "rate_type",
+    "price"
+  ],
+  "rls": {
+    "create": true,
+    "read": true,
+    "update": {
+      "$or": [
+        {
+          "created_by": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "created_by": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,144 @@
+{
+  "name": "FlashProduct",
+  "type": "object",
+  "properties": {
+    "master_product_id": {
+      "type": "string",
+      "description": "Master \u00fcr\u00fcn ID (Products tablosu)"
+    },
+    "product_name": {
+      "type": "string",
+      "description": "\u00dcr\u00fcn ismi (Excel'den)"
+    },
+    "stock": {
+      "type": "number",
+      "description": "Stok adedi (Excel'den)"
+    },
+    "price_24h": {
+      "type": "number",
+      "description": "24 Saat Fla\u015f Fiyat\u0131 (Excel'den)"
+    },
+    "start_24h": {
+      "type": "string",
+      "format": "date",
+      "description": "24 Saat Fla\u015f Ba\u015flang\u0131\u00e7 Tarihi (Excel'den)"
+    },
+    "end_24h": {
+      "type": "string",
+      "format": "date",
+      "description": "24 Saat Fla\u015f Biti\u015f Tarihi (Excel'den)"
+    },
+    "price_3h": {
+      "type": "number",
+      "description": "3 Saat Fla\u015f Fiyat\u0131 (Excel'den)"
+    },
+    "start_3h": {
+      "type": "string",
+      "format": "date",
+      "description": "3 Saat Fla\u015f Ba\u015flang\u0131\u00e7 Tarihi (Excel'den)"
+    },
+    "end_3h": {
+      "type": "string",
+      "format": "date",
+      "description": "3 Saat Fla\u015f Biti\u015f Tarihi (Excel'den)"
+    },
+    "platform_account": {
+      "type": "string",
+      "enum": [
+        "Trendyol SVS",
+        "Trendyol G\u00f6zePack",
+        "HepsiBurada",
+        "Web Sitesi - SVS",
+        "Web Sitesi - G\u00f6zePack"
+      ],
+      "description": "Platform hesab\u0131"
+    },
+    "has_commission_tariff": {
+      "type": "string",
+      "enum": [
+        "Var",
+        "Yok"
+      ],
+      "default": "Yok",
+      "description": "\u00dcr\u00fcn Komisyon Tarife Se\u00e7ene\u011fi"
+    },
+    "start_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Fla\u015f kampanya ba\u015flang\u0131\u00e7 tarihi"
+    },
+    "end_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Fla\u015f kampanya biti\u015f tarihi"
+    },
+    "selected_type": {
+      "type": "string",
+      "enum": [
+        "flash_24h",
+        "flash_3h",
+        "manual",
+        "none"
+      ],
+      "default": "none",
+      "description": "Se\u00e7ilen fiyat tipi"
+    },
+    "selected_price": {
+      "type": "number",
+      "description": "Se\u00e7ilen fiyat",
+      "default": 0
+    },
+    "manual_price": {
+      "type": "number",
+      "description": "Manuel girilen fiyat",
+      "default": 0
+    },
+    "excel_file_base64": {
+      "type": "string",
+      "description": "Orijinal Excel dosyas\u0131 (base64 encoded, sadece ilk kay\u0131tta)"
+    }
+  },
+  "required": [
+    "product_name",
+    "platform_account"
+  ],
+  "rls": {
+    "create": true,
+    "read": {
+      "$or": [
+        {
+          "created_by": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "created_by": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "created_by": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    }
+  }
+}

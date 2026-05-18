@@ -1,0 +1,164 @@
+{
+  "name": "AdvantageProductTag",
+  "type": "object",
+  "properties": {
+    "platform_account": {
+      "type": "string",
+      "enum": [
+        "Trendyol SVS",
+        "Trendyol G\u00f6zePack",
+        "HepsiBurada",
+        "Web Sitesi - SVS",
+        "Web Sitesi - G\u00f6zePack"
+      ],
+      "description": "Platform hesab\u0131"
+    },
+    "start_date": {
+      "type": "string",
+      "format": "date",
+      "description": "\u0130ndirim ba\u015flang\u0131\u00e7 tarihi"
+    },
+    "end_date": {
+      "type": "string",
+      "format": "date",
+      "description": "\u0130ndirim biti\u015f tarihi"
+    },
+    "product_name": {
+      "type": "string",
+      "description": "\u00dcr\u00fcn ismi"
+    },
+    "barcode": {
+      "type": "string",
+      "description": "Barkod"
+    },
+    "seller_stock_code": {
+      "type": "string",
+      "description": "Sat\u0131c\u0131 stok kodu"
+    },
+    "size": {
+      "type": "string",
+      "description": "Beden"
+    },
+    "model_code": {
+      "type": "string",
+      "description": "Model kodu"
+    },
+    "category": {
+      "type": "string",
+      "description": "Kategori"
+    },
+    "brand": {
+      "type": "string",
+      "description": "Marka"
+    },
+    "stock": {
+      "type": "number",
+      "description": "Stok adedi"
+    },
+    "has_commission_tariff": {
+      "type": "string",
+      "enum": [
+        "Var",
+        "Yok"
+      ],
+      "description": "Komisyon tarifesi var m\u0131?"
+    },
+    "advantage_min": {
+      "type": "number",
+      "description": "Avantaj alt limit"
+    },
+    "advantage_max": {
+      "type": "number",
+      "description": "Avantaj \u00fcst limit"
+    },
+    "advantage_commission": {
+      "type": "number",
+      "description": "Avantaj komisyon oran\u0131 (%)"
+    },
+    "super_advantage_min": {
+      "type": "number",
+      "description": "\u00c7ok Avantaj alt limit"
+    },
+    "super_advantage_max": {
+      "type": "number",
+      "description": "\u00c7ok Avantaj \u00fcst limit"
+    },
+    "super_advantage_commission": {
+      "type": "number",
+      "description": "\u00c7ok Avantaj komisyon oran\u0131 (%)"
+    },
+    "mega_advantage_min": {
+      "type": "number",
+      "description": "S\u00fcper Avantaj alt limit"
+    },
+    "mega_advantage_max": {
+      "type": "number",
+      "description": "S\u00fcper Avantaj \u00fcst limit"
+    },
+    "mega_advantage_commission": {
+      "type": "number",
+      "description": "S\u00fcper Avantaj komisyon oran\u0131 (%)"
+    },
+    "current_base_price": {
+      "type": "number",
+      "description": "Komisyona esas fiyat"
+    },
+    "current_commission": {
+      "type": "number",
+      "description": "G\u00fcncel komisyon"
+    },
+    "current_tsf": {
+      "type": "number",
+      "description": "G\u00fcncel TSF"
+    },
+    "selected_range": {
+      "type": "string",
+      "enum": [
+        "advantage",
+        "super_advantage",
+        "mega_advantage",
+        "manual",
+        "none"
+      ],
+      "default": "none",
+      "description": "Se\u00e7ilen fiyat aral\u0131\u011f\u0131"
+    },
+    "selected_price": {
+      "type": "number",
+      "description": "Se\u00e7ilen fiyat (aral\u0131k veya manuel)"
+    },
+    "manual_price": {
+      "type": "number",
+      "description": "Manuel girilen fiyat"
+    },
+    "calculated_commission": {
+      "type": "number",
+      "description": "Hesaplanan komisyon"
+    },
+    "calculated_profit": {
+      "type": "number",
+      "description": "Hesaplanan k\u00e2r tutar\u0131"
+    },
+    "calculated_profit_rate": {
+      "type": "number",
+      "description": "Hesaplanan k\u00e2r oran\u0131 (%)"
+    },
+    "apply_until_end": {
+      "type": "boolean",
+      "default": true,
+      "description": "Tarife sonuna kadar uygula"
+    },
+    "matched_product_id": {
+      "type": "string",
+      "description": "E\u015fle\u015fen \u00fcr\u00fcn ID (sistemdeki Product entity)"
+    },
+    "excel_file_url": {
+      "type": "string",
+      "description": "Orijinal Excel dosyas\u0131 URL (sadece ilk kay\u0131tta)"
+    }
+  },
+  "required": [
+    "platform_account",
+    "barcode"
+  ]
+}
