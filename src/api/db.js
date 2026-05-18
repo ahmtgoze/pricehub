@@ -92,7 +92,8 @@ function createEntity(entityName) {
       return normalize(result);
     },
 
-  async update(id, data) {
+ async update(id, data) {
+  const { data: { session } } = await supabase.auth.getSession();
   const { data: result, error } = await supabase
     .from(tableName)
     .update(data)

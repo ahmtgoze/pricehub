@@ -230,7 +230,7 @@ export default function Platforms() {
                         onCheckedChange={(checked) => {
                           if (record) toggleMutation.mutate({ id: record.id, is_active: checked });
                         }}
-                        disabled={!record}
+                        disabled={!record || !userEmail}
                       />
                       <span className="text-xs text-slate-400">{isActive ? 'Aktif' : 'Pasif'}</span>
                     </div>
