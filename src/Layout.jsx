@@ -29,7 +29,6 @@ import { Button } from "@/components/ui/button";
 import { Toaster } from "@/components/ui/sonner";
 
 const baseNavigation = [
-const baseNavigation = [
   { name: 'Dashboard', page: 'Dashboard', icon: LayoutDashboard },
   { name: 'Fiyatlar', page: 'Prices', icon: BadgeDollarSign },
   { name: 'Platformlar', page: 'Platforms', icon: Store },
