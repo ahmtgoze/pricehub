@@ -363,26 +363,31 @@ export const findSalePriceForTargetProfit = ({
     });
   }
   
-  // Minimum kâr kontrolü
   if (minimumProfitAmount != null && bestResult.netProfit < minimumProfitAmount) {
-    bestResult = findSalePriceForTargetProfit({
-      productCost,
-      productVatRate,
-      shippingCost,
-      shippingVatRate,
-      commissionRate,
-      commissionVatRate,
-      platform,
-      targetProfitAmount: minimumProfitAmount,
-      packagingCost,
-      printingCost,
-      extraCost,
-      minPrice,
-      maxPrice,
-      tolerance,
-      maxIterations
-    });
-  }
+  const minAmountResult = findSalePriceForTargetProfit({
+    productCost,
+    productVatRate,
+    shippingCost,
+    shippingVatRate,
+    commissionRate,
+    commissionVatRate,
+    platform,
+    targetProfitAmount: minimumProfitAmount,
+    targetProfitRate: null,
+    minimumProfitAmount: null,
+    packagingCost,
+    printingCost,
+    extraCost,
+    minPrice,
+    maxPrice,
+    tolerance,
+    maxIterations,
+    isSameDayDelivery
+  });
+  // Minimum kâr tutarı hedef kâr oranından daha az kâr sağlıyorsa hedef oranı kullan
+  if (bestResult.netProfit >= minimumProfitAmount) return bestResult;
+  return minAmountResult;
+}
   
   return bestResult;
 };
