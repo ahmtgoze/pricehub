@@ -173,13 +173,6 @@ export default function Prices() {
       const startTime = Date.now();
       setPriceCalculationProgress({ isCalculating: true, current: 0, total, title: 'Fiyatlar Hesaplanıyor', currentProductName: '', estimatedSecondsLeft: null, startTime });
       setCalculationProgress({ current: 0, total });
-const progressInterval = setInterval(() => {
-  setPriceCalculationProgress(prev => {
-    if (!prev.isCalculating || prev.current >= prev.total) return prev;
-    const newCurrent = Math.min(prev.current + Math.ceil(prev.total / 20), prev.total - 1);
-    return { ...prev, current: newCurrent };
-  });
-}, 700);
 
       let successCount = 0;
       const failedProductsList = [];
@@ -223,6 +216,10 @@ const progressInterval = setInterval(() => {
         const elapsed = (Date.now() - startTime) / 1000;
         const avgPerItem = elapsed / done;
         const remaining = Math.round(avgPerItem * (total - done));
+        setPriceCalculationProgress({ isCalculating: true, current: done, total, title: 'Fiyatlar Hesaplanıyor', currentProductName: product.name, estimatedSecondsLeft: done > 2 ? remaining : null, startTime });
+        setCalculationProgress({ current: done, total });
+        updateTask(done, total);
+        await new Promise(r => setTimeout(r, 0));
       }
 
       // 2. Toplu oluştur (100'lük gruplar)
@@ -296,8 +293,6 @@ const progressInterval = setInterval(() => {
     } catch (error) {
       toast.error('Fiyat hesaplama hatası: ' + error.message);
     } finally {
-      clearInterval(progressInterval);
-      setCalculating(false);
       setCalculatingSingle(null);
     }
   };
@@ -383,6 +378,7 @@ const progressInterval = setInterval(() => {
         const remaining = Math.round((elapsed / done) * (total - done));
         setCalculationProgress({ current: done, total });
         updateTask(done, total);
+        await new Promise(r => setTimeout(r, 0));
         setPriceCalculationProgress({ isCalculating: true, current: done, total, title: 'Başarısız Ürünler Hesaplanıyor', currentProductName: product.name, estimatedSecondsLeft: done > 2 ? remaining : null, startTime });
       }
 
