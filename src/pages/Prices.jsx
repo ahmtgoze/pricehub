@@ -219,6 +219,7 @@ export default function Prices() {
         setPriceCalculationProgress({ isCalculating: true, current: done, total, title: 'Fiyatlar Hesaplanıyor', currentProductName: product.name, estimatedSecondsLeft: done > 2 ? remaining : null, startTime });
         setCalculationProgress({ current: done, total });
         updateTask(done, total);
+        await new Promise(r => setTimeout(r, 0));
       }
 
       // 2. Toplu oluştur (100'lük gruplar)
@@ -377,6 +378,7 @@ export default function Prices() {
         const remaining = Math.round((elapsed / done) * (total - done));
         setCalculationProgress({ current: done, total });
         updateTask(done, total);
+        await new Promise(r => setTimeout(r, 0));
         setPriceCalculationProgress({ isCalculating: true, current: done, total, title: 'Başarısız Ürünler Hesaplanıyor', currentProductName: product.name, estimatedSecondsLeft: done > 2 ? remaining : null, startTime });
       }
 
