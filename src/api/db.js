@@ -92,14 +92,13 @@ function createEntity(entityName) {
       return normalize(result);
     },
 
- async update(id, data) {
-  const { data: { session } } = await supabase.auth.getSession();
+async update(id, data) {
   const { data: result, error } = await supabase
     .from(tableName)
     .update(data)
     .eq('id', id)
     .select();
-  if (error) throw new Error(`[db.${entityName}.update] ${error.message}`);
+  if (error) throw new Error(`[db.${entityName}.update] ${error.message}: ${JSON.stringify(error.details)}`);
   return normalize(result?.[0]);
 },
 
