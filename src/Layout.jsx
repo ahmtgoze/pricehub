@@ -29,14 +29,15 @@ import { Button } from "@/components/ui/button";
 import { Toaster } from "@/components/ui/sonner";
 
 const baseNavigation = [
+const baseNavigation = [
   { name: 'Dashboard', page: 'Dashboard', icon: LayoutDashboard },
   { name: 'Fiyatlar', page: 'Prices', icon: BadgeDollarSign },
-  { name: 'Ürünler', page: 'Products', icon: Package },
-  { name: 'Kategoriler', page: 'Categories', icon: FolderTree },
   { name: 'Platformlar', page: 'Platforms', icon: Store },
-  { name: 'Paketleme', page: 'PackageManagement', icon: Package },
-  { name: 'Kargo Tarifeleri', page: 'ShippingRates', icon: Truck },
+  { name: 'Kategoriler', page: 'Categories', icon: FolderTree },
   { name: 'Komisyonlar', page: 'Commissions', icon: Percent },
+  { name: 'Ürünler', page: 'Products', icon: Package },
+  { name: 'Kargo Tarifeleri', page: 'ShippingRates', icon: Truck },
+  { name: 'Paketleme', page: 'PackageManagement', icon: Package },
   { name: 'Hesaplayıcı', page: 'Calculator', icon: Calculator },
   { name: 'Raporlar', page: 'UpdateReports', icon: FileText },
   { name: 'Pazaryeri Ürünleri', page: 'MarketplaceProducts', icon: Store },
@@ -49,6 +50,7 @@ const baseNavigation = [
   { name: 'Flaş Ürünler', page: 'FlashProducts', icon: Zap, trendyolOnly: true },
   { name: 'Kullanım Kılavuzu', page: 'Help', icon: HelpCircle },
 ];
+
 
 export default function Layout({ children, currentPageName }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
