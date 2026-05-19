@@ -1,33 +1,13 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { db } from '@/api/db';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { 
-  Search,
-  Download,
-  ChevronDown,
-  ChevronUp,
-  RefreshCw,
-  Info
-} from 'lucide-react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { Download, ChevronDown, ChevronUp, RefreshCw, Info } from 'lucide-react';
 import { formatTurkishCurrency, formatTurkishPercent } from '@/utils/formatters';
 import SearchInput from '@/components/ui/SearchInput';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { downloadCSV } from '@/components/ImportExport';
 import { calculateAllPlatformPrices } from '@/components/PriceCalculationEngine';
@@ -36,21 +16,8 @@ import { useBackgroundTask } from '@/lib/BackgroundTaskContext';
 import { useLocation } from 'react-router-dom';
 import PriceDetailModal from '@/components/modals/PriceDetailModal';
 import ProductHistoryModal from '@/components/modals/ProductHistoryModal';
-
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 export default function Prices() {
   const [userEmail, setUserEmail] = React.useState(null);
@@ -61,7 +28,7 @@ export default function Prices() {
   const [calculating, setCalculating] = useState(false);
   const [calculationProgress, setCalculationProgress] = useState({ current: 0, total: 0 });
   const [calculatingSingle, setCalculatingSingle] = useState(null);
-  const [detailModal, setDetailModal] = useState({ open: false, product: null, platform: null, priceData: null });
+  const [detailModal, setDetailModal] = useState({ open: false, product: null, platform: null });
   const [historyModal, setHistoryModal] = useState({ open: false, productId: null, productName: '' });
   const [failedProducts, setFailedProducts] = useState([]);
   const [successModal, setSuccessModal] = useState({ open: false, successCount: 0, failedCount: 0 });
@@ -76,31 +43,12 @@ export default function Prices() {
   }, []);
 
   React.useEffect(() => {
-    const pendingSuccess = localStorage.getItem('prices-calculation-pending');
-    if (pendingSuccess) {
-      const { successCount, failedCount } = JSON.parse(pendingSuccess);
-      if (failedCount > 0) {
-        setSuccessModal({ open: true, successCount, failedCount });
-      }
-      localStorage.removeItem('prices-calculation-pending');
-    }
-  }, []);
-
-  React.useEffect(() => {
-    if (task && task.pageRoute === 'Prices') {
-      setShowProgressModal(true);
-    }
+    if (task && task.pageRoute === 'Prices') setShowProgressModal(true);
   }, [location.pathname]);
 
   React.useEffect(() => {
     if (task) {
-      setPriceCalculationProgress(prev => ({
-        ...prev,
-        isCalculating: true,
-        current: task.current,
-        total: task.total,
-        title: task.name
-      }));
+      setPriceCalculationProgress(prev => ({ ...prev, isCalculating: true, current: task.current, total: task.total, title: task.name }));
     }
   }, [task?.current, task?.total]);
 
@@ -122,10 +70,8 @@ export default function Prices() {
   });
 
   const PLATFORM_ORDER = ['trendyol', 'hepsiburada', 'website'];
-  // Tablo başlıklarında görüntüleme için platform_type başına bir tane göster
   const platforms = [...new Map(
-    allPlatforms
-      .filter(p => p.is_active)
+    allPlatforms.filter(p => p.is_active)
       .sort((a, b) => PLATFORM_ORDER.indexOf(a.platform_type) - PLATFORM_ORDER.indexOf(b.platform_type))
       .map(p => [p.platform_type, p])
   ).values()];
@@ -142,22 +88,9 @@ export default function Prices() {
     enabled: !!userEmail
   });
 
-  const { data: shippingRates = [] } = useQuery({
-    queryKey: ['shippingRates'],
-    queryFn: async () => db.entities.ShippingRate.list('-id', 10000),
-    staleTime: 0,
-    gcTime: 0,
-  });
-
   const { data: commissions = [] } = useQuery({
     queryKey: ['commissions', userEmail],
     queryFn: () => db.entities.Commission.filter({ created_by: userEmail }),
-    enabled: !!userEmail
-  });
-
-  const { data: packages = [] } = useQuery({
-    queryKey: ['packages', userEmail],
-    queryFn: () => db.entities.Package.filter({ created_by: userEmail }),
     enabled: !!userEmail
   });
 
@@ -167,72 +100,48 @@ export default function Prices() {
     enabled: !!userEmail
   });
 
-  const { data: settings = [] } = useQuery({
-    queryKey: ['settings', userEmail],
-    queryFn: () => db.entities.Settings.filter({ created_by: userEmail }),
-    enabled: !!userEmail
-  });
-
   const isLoading = productsLoading || platformsLoading || pricesLoading;
 
   const enrichedProducts = useMemo(() => {
     return products.map(product => {
-      const prices = productPrices.filter(pp => pp.product_id === product.id);
       const priceMap = {};
-      prices.forEach(p => { priceMap[p.platform_id] = p; });
+      productPrices.filter(pp => pp.product_id === product.id).forEach(p => { priceMap[p.platform_id] = p; });
       return { ...product, prices: priceMap };
     });
   }, [products, productPrices]);
 
   const normalizeText = (text) => {
     if (!text) return '';
-    return text.toLowerCase()
-      .replace(/ş/g, 's').replace(/ç/g, 'c').replace(/ğ/g, 'g')
-      .replace(/ı/g, 'i').replace(/ö/g, 'o').replace(/ü/g, 'u');
-  };
-
-  const matchesSearch = (product, searchText) => {
-    if (!searchText.trim()) return true;
-    const searchWords = searchText.trim().split(/\s+/).map(word => normalizeText(word)).filter(word => word.length > 0);
-    if (searchWords.length === 0) return true;
-    const productText = normalizeText(`${product.name || ''} ${product.sku || ''}`);
-    return searchWords.every(word => productText.includes(word));
+    return text.toLowerCase().replace(/ş/g, 's').replace(/ç/g, 'c').replace(/ğ/g, 'g').replace(/ı/g, 'i').replace(/ö/g, 'o').replace(/ü/g, 'u');
   };
 
   const filteredProducts = useMemo(() => {
     let result = [...enrichedProducts];
-    if (search) result = result.filter(p => matchesSearch(p, search));
+    if (search) {
+      const searchWords = search.trim().split(/\s+/).map(w => normalizeText(w)).filter(w => w.length > 0);
+      result = result.filter(p => {
+        const productText = normalizeText(`${p.name || ''} ${p.sku || ''}`);
+        return searchWords.every(w => productText.includes(w));
+      });
+    }
     if (categoryFilter !== 'all') result = result.filter(p => p.category_id === categoryFilter);
     result.sort((a, b) => {
       let valA, valB;
-
-      // Platform fiyatı sıralaması (platform_trendyol, platform_hepsiburada, platform_website)
       if (sortField.startsWith('platform_')) {
         const platformId = sortField.replace('platform_', '');
-        const priceA = a.prices[platformId]?.sale_price || 0;
-        const priceB = b.prices[platformId]?.sale_price || 0;
-        valA = priceA;
-        valB = priceB;
+        valA = a.prices[platformId]?.sale_price || 0;
+        valB = b.prices[platformId]?.sale_price || 0;
       } else {
-        valA = a[sortField];
-        valB = b[sortField];
+        valA = a[sortField]; valB = b[sortField];
         if (typeof valA === 'string') valA = valA.toLowerCase();
         if (typeof valB === 'string') valB = valB.toLowerCase();
       }
-
       if (valA < valB) return sortDir === 'asc' ? -1 : 1;
       if (valA > valB) return sortDir === 'asc' ? 1 : -1;
       return 0;
     });
     return result;
   }, [enrichedProducts, search, categoryFilter, sortField, sortDir]);
-
-  const getPackageCost = (packageId) => {
-    if (!packageId) return 0;
-    return packageItems
-      .filter(item => item.package_id === packageId && item.is_active !== false)
-      .reduce((sum, item) => sum + (item.cost || 0), 0);
-  };
 
   const handleCalculatePrices = async () => {
     setCalculating(true);
@@ -255,28 +164,11 @@ export default function Prices() {
 
       const getFreshPackageCost = (packageId) => {
         if (!packageId) return 0;
-        return freshPackageItems
-          .filter(item => item.package_id === packageId && item.is_active !== false)
-          .reduce((sum, item) => sum + (item.cost || 0), 0);
+        return freshPackageItems.filter(item => item.package_id === packageId && item.is_active !== false).reduce((sum, item) => sum + (item.cost || 0), 0);
       };
-
-      const validPackageIds = new Set(
-        freshPackageItems.filter(item => item.is_active !== false).map(item => item.package_id)
-      );
-
-      for (const product of freshProducts) {
-        const packageId = product.package_id || product.auto_package_id;
-        if (packageId && !validPackageIds.has(packageId)) {
-          const updateData = {};
-          if (product.package_id) { updateData.package_id = null; product.package_id = null; }
-          if (product.auto_package_id) { updateData.auto_package_id = null; product.auto_package_id = null; }
-          await db.entities.Product.update(product.id, updateData);
-        }
-      }
 
       const freshActivePlatforms = freshUserPlatforms.filter(p => p.is_active !== false);
       const total = freshProducts.length;
-
       startTask('calc-all-prices', 'Fiyatlar Hesaplanıyor', 'Fiyatlar', 'Prices', total);
       const startTime = Date.now();
       setPriceCalculationProgress({ isCalculating: true, current: 0, total, title: 'Fiyatlar Hesaplanıyor', currentProductName: '', estimatedSecondsLeft: null, startTime });
@@ -284,68 +176,38 @@ export default function Prices() {
 
       let successCount = 0;
       const failedProductsList = [];
+      const allToCreate = [];
+      const allToUpdate = [];
 
-      // Mevcut fiyat cache'i - anlık güncelleme için
-      let currentPricesCache = [...freshProductPrices];
-
-      const tryCalculateProduct = async (product, maxRetries) => {
-        let lastError = null;
-        for (let attempt = 0; attempt <= maxRetries; attempt++) {
-          try {
-            const calculatedPrices = calculateAllPlatformPrices({
-              product,
-              platforms: freshActivePlatforms,
-              shippingRates: freshShippingRates,
-              commissions: freshCommissions,
-              packages: freshPackages,
-              packageItems: freshPackageItems,
-              getPackageCost: getFreshPackageCost,
-              settings: freshSettings,
-              systemAdminPlatforms: freshAdminPlatforms
-            });
-
-            if (calculatedPrices.length === 0) {
-              lastError = new Error('Fiyat hesaplanamadı');
-              if (attempt < maxRetries) continue;
-              throw lastError;
-            }
-
-            for (const calcPrice of calculatedPrices) {
-              const existingPrices = currentPricesCache.filter(
-                pp => pp.product_id === product.id && pp.platform_id === calcPrice.platform_id
-              );
-              let savedPrice;
-              if (existingPrices.length > 0) {
-                savedPrice = await db.entities.ProductPrice.update(existingPrices[0].id, calcPrice);
-                for (let d = 1; d < existingPrices.length; d++) {
-                  await db.entities.ProductPrice.delete(existingPrices[d].id);
-                  currentPricesCache = currentPricesCache.filter(p => p.id !== existingPrices[d].id);
-                }
-                currentPricesCache = currentPricesCache.map(p =>
-                  p.id === existingPrices[0].id ? { ...p, ...calcPrice } : p
-                );
-              } else {
-                savedPrice = await db.entities.ProductPrice.create(calcPrice);
-                currentPricesCache.push(savedPrice);
-              }
-            }
-            return true;
-          } catch (err) {
-            lastError = err;
-            if (attempt < maxRetries) {
-              await new Promise(r => setTimeout(r, 100));
-            }
-          }
-        }
-        throw lastError;
-      };
-
+      // 1. Tüm hesaplamaları yap (DB işlemi yok)
       for (let i = 0; i < freshProducts.length; i++) {
         const product = freshProducts[i];
         try {
-          await tryCalculateProduct(product, 15);
-          successCount++;
-          queryClient.setQueryData(['productPrices', userEmail], [...currentPricesCache]);
+          const calculatedPrices = calculateAllPlatformPrices({
+            product,
+            platforms: freshActivePlatforms,
+            shippingRates: freshShippingRates,
+            commissions: freshCommissions,
+            packages: freshPackages,
+            packageItems: freshPackageItems,
+            getPackageCost: getFreshPackageCost,
+            settings: freshSettings,
+            systemAdminPlatforms: freshAdminPlatforms
+          });
+
+          if (calculatedPrices.length === 0) {
+            failedProductsList.push({ id: product.id, name: product.name });
+          } else {
+            for (const calcPrice of calculatedPrices) {
+              const existing = freshProductPrices.filter(pp => pp.product_id === product.id && pp.platform_id === calcPrice.platform_id);
+              if (existing.length > 0) {
+                allToUpdate.push({ id: existing[0].id, data: calcPrice });
+              } else {
+                allToCreate.push(calcPrice);
+              }
+            }
+            successCount++;
+          }
         } catch (err) {
           failedProductsList.push({ id: product.id, name: product.name });
         }
@@ -354,20 +216,21 @@ export default function Prices() {
         const elapsed = (Date.now() - startTime) / 1000;
         const avgPerItem = elapsed / done;
         const remaining = Math.round(avgPerItem * (total - done));
-
-        setPriceCalculationProgress({
-          isCalculating: true,
-          current: done,
-          total,
-          title: 'Fiyatlar Hesaplanıyor',
-          currentProductName: product.name,
-          estimatedSecondsLeft: done > 2 ? remaining : null,
-          startTime
-        });
+        setPriceCalculationProgress({ isCalculating: true, current: done, total, title: 'Fiyatlar Hesaplanıyor', currentProductName: product.name, estimatedSecondsLeft: done > 2 ? remaining : null, startTime });
         setCalculationProgress({ current: done, total });
         updateTask(done, total);
       }
 
+      // 2. Toplu oluştur (100'lük gruplar)
+      const BATCH = 100;
+      for (let i = 0; i < allToCreate.length; i += BATCH) {
+        await db.entities.ProductPrice.bulkCreate(allToCreate.slice(i, i + BATCH));
+      }
+
+      // 3. Paralel güncelle
+      await Promise.all(allToUpdate.map(({ id, data }) => db.entities.ProductPrice.update(id, data)));
+
+      await queryClient.invalidateQueries({ queryKey: ['productPrices', userEmail] });
       setFailedProducts(failedProductsList);
       setSuccessModal({ open: true, successCount, failedCount: failedProductsList.length });
 
@@ -385,7 +248,7 @@ export default function Prices() {
   const handleCalculateSingleProduct = async (originalProduct) => {
     setCalculatingSingle(originalProduct.id);
     try {
-      const [freshProducts, freshPrices, freshShippingRatesSingle, freshUserPlatformsSingle, freshCommissionsSingle, freshPackagesSingle, freshPackageItemsSingle, freshSettingsSingle, freshAdminPlatformsSingle] = await Promise.all([
+      const [freshProducts, freshPrices, freshShippingRates, freshUserPlatforms, freshCommissions, freshPackages, freshPackageItems, freshSettings, freshAdminPlatforms] = await Promise.all([
         db.entities.Product.filter({ created_by: userEmail }),
         db.entities.ProductPrice.filter({ created_by: userEmail }),
         db.entities.ShippingRate.list('-id', 10000),
@@ -397,43 +260,17 @@ export default function Prices() {
         db.entities.Platform.filter({ platform_type: { $in: ['trendyol', 'hepsiburada'] } }),
       ]);
 
-      const activePlatforms = freshUserPlatformsSingle.filter(p => p.is_active !== false);
-
+      const activePlatforms = freshUserPlatforms.filter(p => p.is_active !== false);
       const product = freshProducts.find(p => p.id === originalProduct.id) || originalProduct;
-
-      const getFreshPackageCostSingle = (packageId) => {
+      const getFreshPackageCost = (packageId) => {
         if (!packageId) return 0;
-        return freshPackageItemsSingle
-          .filter(item => item.package_id === packageId && item.is_active !== false)
-          .reduce((sum, item) => sum + (item.cost || 0), 0);
+        return freshPackageItems.filter(item => item.package_id === packageId && item.is_active !== false).reduce((sum, item) => sum + (item.cost || 0), 0);
       };
 
-      // Ürünün paket atamasını temizle (paket silinmiş ama ID hala duruyorsa)
-      const validPackageIdsSingle = new Set(
-        freshPackageItemsSingle
-          .filter(item => item.is_active !== false)
-          .map(item => item.package_id)
-      );
-      const productPackageId = product.package_id || product.auto_package_id;
-      if (productPackageId && !validPackageIdsSingle.has(productPackageId)) {
-        const updateData = {};
-        if (product.package_id) updateData.package_id = null;
-        if (product.auto_package_id) updateData.auto_package_id = null;
-        await db.entities.Product.update(product.id, updateData);
-        if (product.package_id) product.package_id = null;
-        if (product.auto_package_id) product.auto_package_id = null;
-      }
-
       const calculatedPrices = calculateAllPlatformPrices({
-        product,
-        platforms: activePlatforms,
-        shippingRates: freshShippingRatesSingle,
-        commissions: freshCommissionsSingle,
-        packages: freshPackagesSingle,
-        packageItems: freshPackageItemsSingle,
-        getPackageCost: getFreshPackageCostSingle,
-        settings: freshSettingsSingle,
-        systemAdminPlatforms: freshAdminPlatformsSingle
+        product, platforms: activePlatforms, shippingRates: freshShippingRates,
+        commissions: freshCommissions, packages: freshPackages, packageItems: freshPackageItems,
+        getPackageCost: getFreshPackageCost, settings: freshSettings, systemAdminPlatforms: freshAdminPlatforms
       });
 
       if (calculatedPrices.length === 0) {
@@ -441,24 +278,18 @@ export default function Prices() {
         return;
       }
 
-      for (const calcPrice of calculatedPrices) {
-        const existingPrices = freshPrices.filter(
-          pp => pp.product_id === product.id && pp.platform_id === calcPrice.platform_id
-        );
-        if (existingPrices.length > 0) {
-          await db.entities.ProductPrice.update(existingPrices[0].id, calcPrice);
-          for (let i = 1; i < existingPrices.length; i++) {
-            await db.entities.ProductPrice.delete(existingPrices[i].id);
-          }
+      await Promise.all(calculatedPrices.map(async (calcPrice) => {
+        const existing = freshPrices.filter(pp => pp.product_id === product.id && pp.platform_id === calcPrice.platform_id);
+        if (existing.length > 0) {
+          await db.entities.ProductPrice.update(existing[0].id, calcPrice);
         } else {
           await db.entities.ProductPrice.create(calcPrice);
         }
-      }
+      }));
 
       await queryClient.invalidateQueries({ queryKey: ['productPrices', userEmail] });
       toast.success(`${product.name} için fiyatlar güncellendi`);
     } catch (error) {
-      console.error(`Ürün fiyat hatası:`, error);
       toast.error('Fiyat hesaplama hatası: ' + error.message);
     } finally {
       setCalculatingSingle(null);
@@ -469,16 +300,13 @@ export default function Prices() {
     if (!confirm('Tüm fiyat kayıtları silinecek. Emin misiniz?')) return;
     setCalculating(true);
     try {
-      const BATCH_SIZE = 10;
+      const BATCH_SIZE = 50;
       for (let i = 0; i < productPrices.length; i += BATCH_SIZE) {
         const batch = productPrices.slice(i, i + BATCH_SIZE);
         await Promise.all(batch.map(p => db.entities.ProductPrice.delete(p.id)));
-        if (i + BATCH_SIZE < productPrices.length) {
-          await new Promise(r => setTimeout(r, 300));
-        }
       }
       await queryClient.invalidateQueries({ queryKey: ['productPrices', userEmail] });
-      toast.success('Tüm fiyatlar sıfırlandı. Şimdi "Fiyatları Hesapla" butonuna basarak yeniden hesaplayın.');
+      toast.success('Tüm fiyatlar sıfırlandı.');
     } catch (error) {
       toast.error('Fiyat sıfırlama hatası: ' + error.message);
     } finally {
@@ -487,11 +315,7 @@ export default function Prices() {
   };
 
   const handleRecalculateFailed = async () => {
-    if (failedProducts.length === 0) {
-      toast.info('Hesaplanamayan ürün yok.');
-      return;
-    }
-
+    if (failedProducts.length === 0) { toast.info('Hesaplanamayan ürün yok.'); return; }
     setCalculating(true);
     const total = failedProducts.length;
     setCalculationProgress({ current: 0, total });
@@ -501,7 +325,7 @@ export default function Prices() {
     setPriceCalculationProgress({ isCalculating: true, current: 0, total, title: 'Başarısız Ürünler Hesaplanıyor', currentProductName: '', estimatedSecondsLeft: null, startTime });
 
     try {
-      const [freshShippingRatesFailed, freshUserPlatformsFailed, freshProductPricesFailed, freshPackagesFailed, freshPackageItemsFailed, freshProductsFailed, freshCommissionsFailed, freshSettingsFailed, freshAdminPlatformsFailed] = await Promise.all([
+      const [freshShippingRates, freshUserPlatforms, freshProductPrices, freshPackages, freshPackageItems, freshProducts, freshCommissions, freshSettings, freshAdminPlatforms] = await Promise.all([
         db.entities.ShippingRate.list('-id', 10000),
         db.entities.Platform.filter({ created_by: userEmail }),
         db.entities.ProductPrice.filter({ created_by: userEmail }),
@@ -513,108 +337,59 @@ export default function Prices() {
         db.entities.Platform.filter({ platform_type: { $in: ['trendyol', 'hepsiburada'] } }),
       ]);
 
-      const freshActivePlatformsFailed = freshUserPlatformsFailed.filter(p => p.is_active !== false);
-      const getFreshPackageCostFailed = (packageId) => {
+      const freshActivePlatforms = freshUserPlatforms.filter(p => p.is_active !== false);
+      const getFreshPackageCost = (packageId) => {
         if (!packageId) return 0;
-        return freshPackageItemsFailed.filter(item => item.package_id === packageId && item.is_active !== false).reduce((sum, item) => sum + (item.cost || 0), 0);
+        return freshPackageItems.filter(item => item.package_id === packageId && item.is_active !== false).reduce((sum, item) => sum + (item.cost || 0), 0);
       };
 
-      const tryCalculateProductRetry = async (product, maxRetries = 100) => {
-        let lastError = null;
-        let attempt = 0;
-        while (attempt <= maxRetries) {
-          try {
-            const calculatedPrices = calculateAllPlatformPrices({
-              product,
-              platforms: freshActivePlatformsFailed,
-              shippingRates: freshShippingRatesFailed,
-              commissions: freshCommissionsFailed,
-              packages: freshPackagesFailed,
-              packageItems: freshPackageItemsFailed,
-              getPackageCost: getFreshPackageCostFailed,
-              settings: freshSettingsFailed,
-              systemAdminPlatforms: freshAdminPlatformsFailed
-            });
-
-            if (calculatedPrices.length === 0) {
-              lastError = new Error('Fiyat hesaplanamadı');
-              attempt++;
-              if (attempt <= maxRetries) {
-                await new Promise(r => setTimeout(r, 100));
-                continue;
-              }
-              throw lastError;
-            }
-
-            for (const calcPrice of calculatedPrices) {
-              const existingPrices = currentPricesCache.filter(pp => pp.product_id === product.id && pp.platform_id === calcPrice.platform_id);
-              if (existingPrices.length > 0) {
-                await db.entities.ProductPrice.update(existingPrices[0].id, calcPrice);
-                for (let d = 1; d < existingPrices.length; d++) {
-                  await db.entities.ProductPrice.delete(existingPrices[d].id);
-                  currentPricesCache = currentPricesCache.filter(p => p.id !== existingPrices[d].id);
-                }
-                currentPricesCache = currentPricesCache.map(p => p.id === existingPrices[0].id ? { ...p, ...calcPrice } : p);
-              } else {
-                const saved = await db.entities.ProductPrice.create(calcPrice);
-                currentPricesCache.push(saved);
-              }
-            }
-            return true;
-          } catch (error) {
-            lastError = error;
-            attempt++;
-            if (attempt <= maxRetries) {
-              await new Promise(r => setTimeout(r, 100));
-            }
-          }
-        }
-        throw lastError;
-      };
-
-      let currentPricesCache = [...freshProductPricesFailed];
-      let processedCount = 0;
+      const allToCreate = [];
+      const allToUpdate = [];
       let successCount = 0;
       const stillFailedProducts = [];
 
-      for (const failedProduct of failedProducts) {
-        const product = freshProductsFailed.find(p => p.id === failedProduct.id);
-        if (!product) { processedCount++; continue; }
+      for (let i = 0; i < failedProducts.length; i++) {
+        const failedProduct = failedProducts[i];
+        const product = freshProducts.find(p => p.id === failedProduct.id);
+        if (!product) continue;
 
         try {
-          await tryCalculateProductRetry(product, 100);
+          const calculatedPrices = calculateAllPlatformPrices({
+            product, platforms: freshActivePlatforms, shippingRates: freshShippingRates,
+            commissions: freshCommissions, packages: freshPackages, packageItems: freshPackageItems,
+            getPackageCost: getFreshPackageCost, settings: freshSettings, systemAdminPlatforms: freshAdminPlatforms
+          });
+
+          if (calculatedPrices.length === 0) { stillFailedProducts.push(failedProduct); continue; }
+
+          for (const calcPrice of calculatedPrices) {
+            const existing = freshProductPrices.filter(pp => pp.product_id === product.id && pp.platform_id === calcPrice.platform_id);
+            if (existing.length > 0) allToUpdate.push({ id: existing[0].id, data: calcPrice });
+            else allToCreate.push(calcPrice);
+          }
           successCount++;
-          queryClient.setQueryData(['productPrices', userEmail], [...currentPricesCache]);
-        } catch (error) {
+        } catch (err) {
           stillFailedProducts.push(failedProduct);
         }
 
-        processedCount++;
+        const done = i + 1;
         const elapsed = (Date.now() - startTime) / 1000;
-        const avgPerItem = elapsed / processedCount;
-        const remaining = Math.round(avgPerItem * (total - processedCount));
-
-        setCalculationProgress({ current: processedCount, total });
-        updateTask(processedCount, total);
-        setPriceCalculationProgress({
-          isCalculating: true,
-          current: processedCount,
-          total,
-          title: 'Başarısız Ürünler Hesaplanıyor',
-          currentProductName: product.name,
-          estimatedSecondsLeft: processedCount > 2 ? remaining : null,
-          startTime
-        });
+        const remaining = Math.round((elapsed / done) * (total - done));
+        setCalculationProgress({ current: done, total });
+        updateTask(done, total);
+        setPriceCalculationProgress({ isCalculating: true, current: done, total, title: 'Başarısız Ürünler Hesaplanıyor', currentProductName: product.name, estimatedSecondsLeft: done > 2 ? remaining : null, startTime });
       }
+
+      const BATCH = 100;
+      for (let i = 0; i < allToCreate.length; i += BATCH) {
+        await db.entities.ProductPrice.bulkCreate(allToCreate.slice(i, i + BATCH));
+      }
+      await Promise.all(allToUpdate.map(({ id, data }) => db.entities.ProductPrice.update(id, data)));
+      await queryClient.invalidateQueries({ queryKey: ['productPrices', userEmail] });
 
       setFailedProducts(stillFailedProducts);
-      localStorage.removeItem('prices-calculation-pending');
-
-      if (stillFailedProducts.length > 0) {
-        toast.warning(`${successCount} ürün başarıyla hesaplandı, ${stillFailedProducts.length} ürün hala hesaplanamadı.`);
-      } else {
-        toast.success(`Tüm başarısız ürünler hesaplandı (${successCount} ürün)`);
-      }
+      if (stillFailedProducts.length > 0) toast.warning(`${successCount} ürün hesaplandı, ${stillFailedProducts.length} hala hesaplanamadı.`);
+      else toast.success(`Tüm başarısız ürünler hesaplandı (${successCount} ürün)`);
     } catch (error) {
       toast.error('Hesaplama hatası: ' + error.message);
     } finally {
@@ -627,57 +402,28 @@ export default function Prices() {
   };
 
   const handleSort = (field) => {
-    if (sortField === field) {
-      setSortDir(sortDir === 'asc' ? 'desc' : 'asc');
-    } else {
-      setSortField(field);
-      setSortDir('asc');
-    }
+    if (sortField === field) setSortDir(sortDir === 'asc' ? 'desc' : 'asc');
+    else { setSortField(field); setSortDir('asc'); }
   };
 
   const SortIcon = ({ field }) => {
     if (sortField !== field) return null;
-    return sortDir === 'asc'
-      ? <ChevronUp className="h-4 w-4 inline ml-1" />
-      : <ChevronDown className="h-4 w-4 inline ml-1" />;
+    return sortDir === 'asc' ? <ChevronUp className="h-4 w-4 inline ml-1" /> : <ChevronDown className="h-4 w-4 inline ml-1" />;
   };
 
   const handleExport = () => {
-    const exportData = filteredProducts.flatMap(product => {
-      return platforms.map(platform => {
+    const exportData = filteredProducts.flatMap(product =>
+      platforms.map(platform => {
         const price = product.prices[platform.id];
-        return {
-          sku: product.sku,
-          name: product.name,
-          category: product.category_name,
-          cost: product.cost,
-          printing_cost: product.printing_cost || 0,
-          packaging_cost: price?.packaging_cost || 0,
-          desi: product.desi,
-          platform: platform.name,
-          sale_price: price?.sale_price || 0,
-          profit_rate: price?.profit_rate || 0,
-          net_profit: price?.net_profit || 0,
-          barem: price?.barem_used || '-'
-        };
-      });
-    });
-
+        return { sku: product.sku, name: product.name, category: product.category_name, cost: product.cost, printing_cost: product.printing_cost || 0, packaging_cost: price?.packaging_cost || 0, desi: product.desi, platform: platform.name, sale_price: price?.sale_price || 0, profit_rate: price?.profit_rate || 0, net_profit: price?.net_profit || 0 };
+      })
+    );
     const columns = [
-      { key: 'sku', label: 'SKU' },
-      { key: 'name', label: 'Ürün Adı' },
-      { key: 'category', label: 'Kategori' },
-      { key: 'cost', label: 'Maliyet' },
-      { key: 'printing_cost', label: 'Baskı Maliyeti' },
-      { key: 'packaging_cost', label: 'Paketleme Maliyeti' },
-      { key: 'desi', label: 'Desi' },
-      { key: 'platform', label: 'Platform' },
-      { key: 'sale_price', label: 'Satış Fiyatı' },
-      { key: 'profit_rate', label: 'Kâr Oranı (%)' },
-      { key: 'net_profit', label: 'Net Kâr' },
-      { key: 'barem', label: 'Barem' }
+      { key: 'sku', label: 'SKU' }, { key: 'name', label: 'Ürün Adı' }, { key: 'category', label: 'Kategori' },
+      { key: 'cost', label: 'Maliyet' }, { key: 'printing_cost', label: 'Baskı Maliyeti' }, { key: 'packaging_cost', label: 'Paketleme Maliyeti' },
+      { key: 'desi', label: 'Desi' }, { key: 'platform', label: 'Platform' }, { key: 'sale_price', label: 'Satış Fiyatı' },
+      { key: 'profit_rate', label: 'Kâr Oranı (%)' }, { key: 'net_profit', label: 'Net Kâr' }
     ];
-
     downloadCSV(exportData, columns, 'fiyatlar_rapor');
   };
 
@@ -696,22 +442,17 @@ export default function Prices() {
   };
 
   const handleShowDetail = (product, platform) => {
-    // Admin platform ayarlarını (has_service_fee vb.) kullanıcı platformuna merge et
     const adminPlatform = adminPlatforms.find(p => p.platform_type === platform.platform_type);
-    const mergedPlatform = adminPlatform
-      ? {
-          ...platform,
-          has_service_fee: adminPlatform.has_service_fee,
-          service_fee_type: adminPlatform.service_fee_type,
-          service_fee_amount: adminPlatform.service_fee_amount,
-          service_fee_vat_rate: adminPlatform.service_fee_vat_rate,
-          has_same_day_delivery: adminPlatform.has_same_day_delivery,
-          same_day_delivery_service_fee: adminPlatform.same_day_delivery_service_fee,
-          has_withholding: adminPlatform.has_withholding,
-          withholding_rate: adminPlatform.withholding_rate,
-        }
-      : platform;
+    const mergedPlatform = adminPlatform ? { ...platform, has_service_fee: adminPlatform.has_service_fee, service_fee_type: adminPlatform.service_fee_type, service_fee_amount: adminPlatform.service_fee_amount, service_fee_vat_rate: adminPlatform.service_fee_vat_rate, has_same_day_delivery: adminPlatform.has_same_day_delivery, same_day_delivery_service_fee: adminPlatform.same_day_delivery_service_fee, has_withholding: adminPlatform.has_withholding, withholding_rate: adminPlatform.withholding_rate } : platform;
     setDetailModal({ open: true, product, platform: mergedPlatform });
+  };
+
+  const getDesiValue = (product, idx) => {
+    if (!product.multi_package) return idx === 0 ? (product.desi || '-') : '-';
+    try {
+      const pkgs = typeof product.packages === 'string' ? JSON.parse(product.packages) : product.packages;
+      return pkgs[idx]?.desi || '-';
+    } catch { return idx === 0 ? (product.desi || '-') : '-'; }
   };
 
   return (
@@ -727,21 +468,15 @@ export default function Prices() {
             <div className="flex flex-wrap items-center gap-2">
               <Button onClick={handleCalculatePrices} disabled={calculating || products.length === 0} size="sm">
                 <RefreshCw className="h-4 w-4" />
-                <span className="hidden sm:inline">Fiyatları Hesapla</span>
-                <span className="sm:hidden">Hesapla</span>
+                <span className="hidden sm:inline ml-1">Fiyatları Hesapla</span>
+                <span className="sm:hidden ml-1">Hesapla</span>
               </Button>
-              <Button
-                onClick={handleRecalculateFailed}
-                variant="outline"
-                disabled={calculating || failedProducts.length === 0}
-                className="gap-2 border-amber-200 text-amber-700 hover:bg-amber-50"
-                size="sm"
-              >
+              <Button onClick={handleRecalculateFailed} variant="outline" disabled={calculating || failedProducts.length === 0} className="gap-2 border-amber-200 text-amber-700 hover:bg-amber-50" size="sm">
                 <RefreshCw className={`h-4 w-4 ${calculating ? 'animate-spin' : ''}`} />
                 <span className="hidden sm:inline">Hesaplanamayan Ürünleri Hesapla</span>
                 <span className="sm:hidden">Hesaplanamayan</span>
               </Button>
-              <Button onClick={handleResetPrices} variant="destructive" disabled={calculating} className="gap-2" size="sm">
+              <Button onClick={handleResetPrices} variant="destructive" disabled={calculating} size="sm">
                 <span className="hidden sm:inline">Tüm Fiyatları Sıfırla</span>
                 <span className="sm:hidden">Sıfırla</span>
               </Button>
@@ -768,9 +503,7 @@ export default function Prices() {
           {isLoading ? (
             [...Array(3)].map((_, i) => (
               <div key={i} className="bg-white rounded-xl border border-gray-100 p-4 space-y-2">
-                <Skeleton className="h-5 w-40" />
-                <Skeleton className="h-4 w-28" />
-                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-5 w-40" /><Skeleton className="h-4 w-28" /><Skeleton className="h-10 w-full" />
               </div>
             ))
           ) : filteredProducts.length === 0 ? (
@@ -783,45 +516,27 @@ export default function Prices() {
                     <p className="font-semibold text-gray-900 text-sm">{product.name}</p>
                     <p className="text-xs text-gray-500 font-mono">{product.sku} · {product.category_name}</p>
                   </div>
-                  <Button
-                    variant="ghost" size="sm" className="h-7 px-2 shrink-0"
-                    onClick={() => handleCalculateSingleProduct(product)}
-                    disabled={calculating || calculatingSingle === product.id}
-                  >
+                  <Button variant="ghost" size="sm" className="h-7 px-2 shrink-0" onClick={() => handleCalculateSingleProduct(product)} disabled={calculating || calculatingSingle === product.id}>
                     <RefreshCw className={`h-3.5 w-3.5 ${calculatingSingle === product.id ? 'animate-spin' : ''}`} />
                   </Button>
-                </div>
-                <div className="flex flex-wrap gap-2 mb-3 text-xs text-gray-600">
-                  <span className="bg-gray-50 rounded px-2 py-1">Maliyet: <strong>₺{formatTurkishCurrency(product.cost)}</strong></span>
-                  {product.printing_cost > 0 && <span className="bg-purple-50 text-purple-700 rounded px-2 py-1">Baskı: ₺{formatTurkishCurrency(product.printing_cost)}</span>}
-                  {product.extra_cost > 0 && <span className="bg-rose-50 text-rose-700 rounded px-2 py-1">Ek: ₺{formatTurkishCurrency(product.extra_cost)}</span>}
-                  {product.desi && <span className="bg-gray-50 rounded px-2 py-1">Desi: {product.desi}</span>}
                 </div>
                 <div className="grid grid-cols-1 gap-2">
                   {platforms.map(platform => {
                     const price = product.prices[platform.id];
                     const commission = commissions.find(c => c.category_id === product.category_id && c.platform_id === platform.id && c.is_active !== false);
                     const targetRate = commission?.target_profit_rate ?? price?.profit_rate;
-                    if (!price) return (
-                      <div key={platform.id} className="flex items-center justify-between bg-gray-50 rounded-lg px-3 py-2">
-                        <span className="text-xs font-medium text-gray-600">{platform.name}</span>
-                        <span className="text-xs text-gray-400">—</span>
-                      </div>
-                    );
+                    if (!price) return <div key={platform.id} className="flex items-center justify-between bg-gray-50 rounded-lg px-3 py-2"><span className="text-xs font-medium text-gray-600">{platform.name}</span><span className="text-xs text-gray-400">—</span></div>;
                     return (
                       <div key={platform.id} className="flex flex-col gap-1 bg-gray-50 rounded-lg px-3 py-2">
                         <div className="flex items-center justify-between">
                           <span className="text-xs font-medium text-gray-700">{platform.name}</span>
-                          <button onClick={() => handleShowDetail(product, platform)} className="text-blue-500 hover:text-blue-700">
-                            <Info className="h-3.5 w-3.5" />
-                          </button>
+                          <button onClick={() => handleShowDetail(product, platform)} className="text-blue-500 hover:text-blue-700"><Info className="h-3.5 w-3.5" /></button>
                         </div>
                         <div className="flex items-center gap-2">
                           <span className="text-sm font-bold text-gray-900">₺{formatTurkishCurrency(price.sale_price)}</span>
                           <span className={`text-xs font-medium px-1.5 py-0.5 rounded-full ${getProfitColor(targetRate)}`}>{formatTurkishPercent(targetRate)}</span>
                           {getBaremBadge(price.barem_used)}
                         </div>
-                        {price.packaging_cost > 0 && <p className="text-xs text-amber-600 font-medium">📦 Paket: ₺{formatTurkishCurrency(price.packaging_cost)}</p>}
                       </div>
                     );
                   })}
@@ -855,56 +570,27 @@ export default function Prices() {
               <TableBody>
                 {isLoading ? (
                   [...Array(5)].map((_, i) => (
-                    <TableRow key={i}>
-                      {[...Array(10 + platforms.length)].map((_, j) => (
-                        <TableCell key={j}><Skeleton className="h-5 w-20" /></TableCell>
-                      ))}
-                    </TableRow>
+                    <TableRow key={i}>{[...Array(10 + platforms.length)].map((_, j) => <TableCell key={j}><Skeleton className="h-5 w-20" /></TableCell>)}</TableRow>
                   ))
                 ) : filteredProducts.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={10 + platforms.length} className="h-32 text-center text-slate-500">Ürün bulunamadı</TableCell>
-                  </TableRow>
+                  <TableRow><TableCell colSpan={10 + platforms.length} className="h-32 text-center text-slate-500">Ürün bulunamadı</TableCell></TableRow>
                 ) : (
                   filteredProducts.map(product => (
                     <TableRow key={product.id} className="hover:bg-slate-50/50">
                       <TableCell className="font-mono text-sm text-slate-600">
-                       <div className="flex items-center gap-2">
-                         <span>{product.sku || '-'}</span>
-                         <Button
-                           variant="ghost" size="sm" className="h-6 px-2 text-xs"
-                           onClick={() => handleCalculateSingleProduct(product)}
-                           disabled={calculating || calculatingSingle === product.id}
-                         >
-                           <RefreshCw className={`h-3 w-3 ${calculatingSingle === product.id ? 'animate-spin' : ''}`} />
-                         </Button>
-                         <Button
-                           variant="ghost" size="sm" className="h-6 px-2 text-xs text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50"
-                           onClick={() => setHistoryModal({ open: true, productId: product.id, productName: product.name })}
-                           title="Geçmiş Analizi"
-                         >
-                           📈
-                         </Button>
-                       </div>
-                      </TableCell>
-                      <TableCell>
-                        <div>
-                          <p className="font-medium text-slate-900">{product.name}</p>
-                          <p className="text-xs text-slate-500">{product.category_name}</p>
+                        <div className="flex items-center gap-2">
+                          <span>{product.sku || '-'}</span>
+                          <Button variant="ghost" size="sm" className="h-6 px-2 text-xs" onClick={() => handleCalculateSingleProduct(product)} disabled={calculating || calculatingSingle === product.id}>
+                            <RefreshCw className={`h-3 w-3 ${calculatingSingle === product.id ? 'animate-spin' : ''}`} />
+                          </Button>
+                          <Button variant="ghost" size="sm" className="h-6 px-2 text-xs text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50" onClick={() => setHistoryModal({ open: true, productId: product.id, productName: product.name })} title="Geçmiş Analizi">📈</Button>
                         </div>
                       </TableCell>
+                      <TableCell><div><p className="font-medium text-slate-900">{product.name}</p><p className="text-xs text-slate-500">{product.category_name}</p></div></TableCell>
                       <TableCell className="font-semibold">₺{formatTurkishCurrency(product.cost)}</TableCell>
-                      <TableCell className="text-sm">
-                        {product.printing_cost > 0 ? <span className="text-purple-600 font-medium">₺{formatTurkishCurrency(product.printing_cost)}</span> : '-'}
-                      </TableCell>
-                      <TableCell className="text-sm">
-                        {product.extra_cost > 0 ? <span className="text-rose-600 font-medium">₺{formatTurkishCurrency(product.extra_cost)}</span> : '-'}
-                      </TableCell>
-                      <TableCell>{product.multi_package ? (() => { try { const pkgs = typeof product.packages === 'string' ? JSON.parse(product.packages) : product.packages; return pkgs[0]?.desi || '-'; } catch (e) { return product.desi || '-'; } })() : (product.desi || '-')}</TableCell>
-                      <TableCell>{product.multi_package ? (() => { try { const pkgs = typeof product.packages === 'string' ? JSON.parse(product.packages) : product.packages; return pkgs[1]?.desi || '-'; } catch (e) { return '-'; } })() : '-'}</TableCell>
-                      <TableCell>{product.multi_package ? (() => { try { const pkgs = typeof product.packages === 'string' ? JSON.parse(product.packages) : product.packages; return pkgs[2]?.desi || '-'; } catch (e) { return '-'; } })() : '-'}</TableCell>
-                      <TableCell>{product.multi_package ? (() => { try { const pkgs = typeof product.packages === 'string' ? JSON.parse(product.packages) : product.packages; return pkgs[3]?.desi || '-'; } catch (e) { return '-'; } })() : '-'}</TableCell>
-                      <TableCell>{product.multi_package ? (() => { try { const pkgs = typeof product.packages === 'string' ? JSON.parse(product.packages) : product.packages; return pkgs[4]?.desi || '-'; } catch (e) { return '-'; } })() : '-'}</TableCell>
+                      <TableCell className="text-sm">{product.printing_cost > 0 ? <span className="text-purple-600 font-medium">₺{formatTurkishCurrency(product.printing_cost)}</span> : '-'}</TableCell>
+                      <TableCell className="text-sm">{product.extra_cost > 0 ? <span className="text-rose-600 font-medium">₺{formatTurkishCurrency(product.extra_cost)}</span> : '-'}</TableCell>
+                      {[0, 1, 2, 3, 4].map(idx => <TableCell key={idx}>{getDesiValue(product, idx)}</TableCell>)}
                       {platforms.map(platform => {
                         const price = product.prices[platform.id];
                         if (!price) return <TableCell key={platform.id} className="text-center text-slate-400">-</TableCell>;
@@ -935,21 +621,8 @@ export default function Prices() {
           </div>
         </div>
 
-        <PriceDetailModal
-          open={detailModal.open}
-          onClose={() => setDetailModal({ open: false, product: null, platform: null })}
-          product={detailModal.product}
-          platform={detailModal.platform}
-          productPrices={productPrices}
-          commissions={commissions}
-        />
-
-        <ProductHistoryModal
-          open={historyModal.open}
-          onClose={() => setHistoryModal({ open: false, productId: null, productName: '' })}
-          productId={historyModal.productId}
-          productName={historyModal.productName}
-        />
+        <PriceDetailModal open={detailModal.open} onClose={() => setDetailModal({ open: false, product: null, platform: null })} product={detailModal.product} platform={detailModal.platform} productPrices={productPrices} commissions={commissions} />
+        <ProductHistoryModal open={historyModal.open} onClose={() => setHistoryModal({ open: false, productId: null, productName: '' })} productId={historyModal.productId} productName={historyModal.productName} />
 
         <AlertDialog open={successModal.open} onOpenChange={(open) => !open && setSuccessModal({ ...successModal, open: false })}>
           <AlertDialogContent>
@@ -957,9 +630,7 @@ export default function Prices() {
               <AlertDialogTitle>{successModal.failedCount === 0 ? '✅ Başarılı' : '⚠️ Kısmi Başarı'}</AlertDialogTitle>
               <AlertDialogDescription className="space-y-2">
                 <p>{successModal.successCount} ürün için fiyatlar başarıyla hesaplandı.</p>
-                {successModal.failedCount > 0 && (
-                  <p className="text-amber-600 font-medium">{successModal.failedCount} ürün hesaplanamadı. Lütfen "Hesaplanamayan Ürünleri Hesapla" butonunu kullanın.</p>
-                )}
+                {successModal.failedCount > 0 && <p className="text-amber-600 font-medium">{successModal.failedCount} ürün hesaplanamadı.</p>}
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogAction onClick={() => setSuccessModal({ ...successModal, open: false })}>Tamam</AlertDialogAction>
@@ -968,24 +639,17 @@ export default function Prices() {
 
         <Dialog open={showProgressModal && priceCalculationProgress.isCalculating} onOpenChange={(open) => { if (!open) setShowProgressModal(false); }}>
           <DialogContent className="max-w-sm" onInteractOutside={(e) => e.preventDefault()}>
-            <DialogHeader>
-              <DialogTitle>{priceCalculationProgress.title}</DialogTitle>
-            </DialogHeader>
+            <DialogHeader><DialogTitle>{priceCalculationProgress.title}</DialogTitle></DialogHeader>
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <span className="text-sm text-slate-500">İlerleme</span>
                 <span className="text-sm font-bold text-indigo-600">{priceCalculationProgress.current} / {priceCalculationProgress.total}</span>
               </div>
               <div className="w-full bg-slate-100 rounded-full h-4 overflow-hidden">
-                <div
-                  className="bg-indigo-600 h-4 rounded-full transition-all duration-300"
-                  style={{ width: `${(priceCalculationProgress.current / (priceCalculationProgress.total || 1)) * 100}%` }}
-                />
+                <div className="bg-indigo-600 h-4 rounded-full transition-all duration-300" style={{ width: `${(priceCalculationProgress.current / (priceCalculationProgress.total || 1)) * 100}%` }} />
               </div>
               <div className="text-center">
-                <p className="text-3xl font-bold text-indigo-600">
-                  %{Math.round((priceCalculationProgress.current / (priceCalculationProgress.total || 1)) * 100)}
-                </p>
+                <p className="text-3xl font-bold text-indigo-600">%{Math.round((priceCalculationProgress.current / (priceCalculationProgress.total || 1)) * 100)}</p>
               </div>
               {priceCalculationProgress.estimatedSecondsLeft !== null && priceCalculationProgress.estimatedSecondsLeft > 0 && (
                 <div className="bg-indigo-50 rounded-lg px-4 py-2 text-center">
@@ -1000,7 +664,6 @@ export default function Prices() {
             </div>
           </DialogContent>
         </Dialog>
-
       </div>
     </div>
   );
