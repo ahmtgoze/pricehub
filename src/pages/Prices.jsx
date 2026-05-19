@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { db } from '@/api/db';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Download, ChevronDown, ChevronUp, RefreshCw, Info } from 'lucide-react';
@@ -12,8 +12,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { downloadCSV } from '@/components/ImportExport';
 import { calculateAllPlatformPrices } from '@/components/PriceCalculationEngine';
 import { toast } from 'sonner';
-import { useBackgroundTask } from '@/lib/BackgroundTaskContext';
-import { useLocation } from 'react-router-dom';
 import PriceDetailModal from '@/components/modals/PriceDetailModal';
 import ProductHistoryModal from '@/components/modals/ProductHistoryModal';
 import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
@@ -26,31 +24,17 @@ export default function Prices() {
   const [sortField, setSortField] = useState('name');
   const [sortDir, setSortDir] = useState('asc');
   const [calculating, setCalculating] = useState(false);
-  const [calculationProgress, setCalculationProgress] = useState({ current: 0, total: 0 });
   const [calculatingSingle, setCalculatingSingle] = useState(null);
   const [detailModal, setDetailModal] = useState({ open: false, product: null, platform: null });
   const [historyModal, setHistoryModal] = useState({ open: false, productId: null, productName: '' });
-  const [failedProducts, setFailedProducts] = useState([]);
   const [successModal, setSuccessModal] = useState({ open: false, successCount: 0, failedCount: 0 });
-  const [priceCalculationProgress, setPriceCalculationProgress] = useState({ isCalculating: false, current: 0, total: 0, title: '', currentProductName: '', estimatedSecondsLeft: null, startTime: null });
-  const [showProgressModal, setShowProgressModal] = useState(false);
-  const { task, startTask, updateTask, finishTask } = useBackgroundTask();
-  const location = useLocation();
+  const [simulatedProgress, setSimulatedProgress] = useState(0);
+  const progressIntervalRef = useRef(null);
   const queryClient = useQueryClient();
 
   React.useEffect(() => {
     db.auth.me().then(user => setUserEmail(user.email)).catch(() => {});
   }, []);
-
-  React.useEffect(() => {
-    if (task && task.pageRoute === 'Prices') setShowProgressModal(true);
-  }, [location.pathname]);
-
-  React.useEffect(() => {
-    if (task) {
-      setPriceCalculationProgress(prev => ({ ...prev, isCalculating: true, current: task.current, total: task.total, title: task.name }));
-    }
-  }, [task?.current, task?.total]);
 
   const { data: products = [], isLoading: productsLoading } = useQuery({
     queryKey: ['products', userEmail],
@@ -143,11 +127,33 @@ export default function Prices() {
     return result;
   }, [enrichedProducts, search, categoryFilter, sortField, sortDir]);
 
+  const startProgressSimulation = (estimatedMs) => {
+    setSimulatedProgress(0);
+    const intervalMs = 150;
+    const steps = estimatedMs / intervalMs;
+    let current = 0;
+    if (progressIntervalRef.current) clearInterval(progressIntervalRef.current);
+    progressIntervalRef.current = setInterval(() => {
+      current += 1;
+      const progress = Math.min(Math.round((current / steps) * 92), 92);
+      setSimulatedProgress(progress);
+    }, intervalMs);
+  };
+
+  const stopProgressSimulation = () => {
+    if (progressIntervalRef.current) {
+      clearInterval(progressIntervalRef.current);
+      progressIntervalRef.current = null;
+    }
+    setSimulatedProgress(100);
+    setTimeout(() => {
+      setSimulatedProgress(0);
+    }, 800);
+  };
+
   const handleCalculatePrices = async () => {
     setCalculating(true);
-    setCalculationProgress({ current: 0, total: 0 });
-    setFailedProducts([]);
-    setShowProgressModal(true);
+    startProgressSimulation(12000);
 
     try {
       const [freshShippingRates, freshUserPlatforms, freshProductPrices, freshPackages, freshPackageItems, freshProducts, freshCommissions, freshSettings, freshAdminPlatforms] = await Promise.all([
@@ -168,27 +174,12 @@ export default function Prices() {
       };
 
       const freshActivePlatforms = freshUserPlatforms.filter(p => p.is_active !== false);
-      const total = freshProducts.length;
-      startTask('calc-all-prices', 'Fiyatlar Hesaplanıyor', 'Fiyatlar', 'Prices', total);
-      const startTime = Date.now();
-      setPriceCalculationProgress({ isCalculating: true, current: 0, total, title: 'Fiyatlar Hesaplanıyor', currentProductName: '', estimatedSecondsLeft: null, startTime });
-      setCalculationProgress({ current: 0, total });
-const progressInterval = setInterval(() => {
-  setPriceCalculationProgress(prev => {
-    if (!prev.isCalculating || prev.current >= prev.total) return prev;
-    const newCurrent = Math.min(prev.current + Math.ceil(prev.total / 20), prev.total - 1);
-    return { ...prev, current: newCurrent };
-  });
-}, 700);
-
       let successCount = 0;
-      const failedProductsList = [];
+      let failedCount = 0;
       const allToCreate = [];
       const allToUpdate = [];
 
-      // 1. Tüm hesaplamaları yap (DB işlemi yok)
-      for (let i = 0; i < freshProducts.length; i++) {
-        const product = freshProducts[i];
+      for (const product of freshProducts) {
         try {
           const calculatedPrices = calculateAllPlatformPrices({
             product,
@@ -203,49 +194,34 @@ const progressInterval = setInterval(() => {
           });
 
           if (calculatedPrices.length === 0) {
-            failedProductsList.push({ id: product.id, name: product.name });
+            failedCount++;
           } else {
             for (const calcPrice of calculatedPrices) {
               const existing = freshProductPrices.filter(pp => pp.product_id === product.id && pp.platform_id === calcPrice.platform_id);
-              if (existing.length > 0) {
-                allToUpdate.push({ id: existing[0].id, data: calcPrice });
-              } else {
-                allToCreate.push(calcPrice);
-              }
+              if (existing.length > 0) allToUpdate.push({ id: existing[0].id, data: calcPrice });
+              else allToCreate.push(calcPrice);
             }
             successCount++;
           }
         } catch (err) {
-          failedProductsList.push({ id: product.id, name: product.name });
+          failedCount++;
         }
-
-        const done = i + 1;
-        const elapsed = (Date.now() - startTime) / 1000;
-        const avgPerItem = elapsed / done;
-        const remaining = Math.round(avgPerItem * (total - done));
       }
 
-      // 2. Toplu oluştur (100'lük gruplar)
       const BATCH = 100;
       for (let i = 0; i < allToCreate.length; i += BATCH) {
         await db.entities.ProductPrice.bulkCreate(allToCreate.slice(i, i + BATCH));
       }
-
-      // 3. Paralel güncelle
       await Promise.all(allToUpdate.map(({ id, data }) => db.entities.ProductPrice.update(id, data)));
-
       await queryClient.invalidateQueries({ queryKey: ['productPrices', userEmail] });
-      setFailedProducts(failedProductsList);
-      setSuccessModal({ open: true, successCount, failedCount: failedProductsList.length });
+
+      setSuccessModal({ open: true, successCount, failedCount });
 
     } catch (error) {
       toast.error('Fiyat hesaplama hatası: ' + error.message);
     } finally {
+      stopProgressSimulation();
       setCalculating(false);
-      setCalculationProgress({ current: 0, total: 0 });
-      setPriceCalculationProgress({ isCalculating: false, current: 0, total: 0, title: '', estimatedSecondsLeft: null, startTime: null });
-      setShowProgressModal(false);
-      finishTask();
     }
   };
 
@@ -278,17 +254,14 @@ const progressInterval = setInterval(() => {
       });
 
       if (calculatedPrices.length === 0) {
-        toast.error('Bu ürün için fiyat hesaplanamadı - komisyon veya kargo tarifesi eksik olabilir');
+        toast.error('Bu ürün için fiyat hesaplanamadı');
         return;
       }
 
       await Promise.all(calculatedPrices.map(async (calcPrice) => {
         const existing = freshPrices.filter(pp => pp.product_id === product.id && pp.platform_id === calcPrice.platform_id);
-        if (existing.length > 0) {
-          await db.entities.ProductPrice.update(existing[0].id, calcPrice);
-        } else {
-          await db.entities.ProductPrice.create(calcPrice);
-        }
+        if (existing.length > 0) await db.entities.ProductPrice.update(existing[0].id, calcPrice);
+        else await db.entities.ProductPrice.create(calcPrice);
       }));
 
       await queryClient.invalidateQueries({ queryKey: ['productPrices', userEmail] });
@@ -296,8 +269,6 @@ const progressInterval = setInterval(() => {
     } catch (error) {
       toast.error('Fiyat hesaplama hatası: ' + error.message);
     } finally {
-      clearInterval(progressInterval);
-      setCalculating(false);
       setCalculatingSingle(null);
     }
   };
@@ -308,8 +279,7 @@ const progressInterval = setInterval(() => {
     try {
       const BATCH_SIZE = 50;
       for (let i = 0; i < productPrices.length; i += BATCH_SIZE) {
-        const batch = productPrices.slice(i, i + BATCH_SIZE);
-        await Promise.all(batch.map(p => db.entities.ProductPrice.delete(p.id)));
+        await Promise.all(productPrices.slice(i, i + BATCH_SIZE).map(p => db.entities.ProductPrice.delete(p.id)));
       }
       await queryClient.invalidateQueries({ queryKey: ['productPrices', userEmail] });
       toast.success('Tüm fiyatlar sıfırlandı.');
@@ -317,93 +287,6 @@ const progressInterval = setInterval(() => {
       toast.error('Fiyat sıfırlama hatası: ' + error.message);
     } finally {
       setCalculating(false);
-    }
-  };
-
-  const handleRecalculateFailed = async () => {
-    if (failedProducts.length === 0) { toast.info('Hesaplanamayan ürün yok.'); return; }
-    setCalculating(true);
-    const total = failedProducts.length;
-    setCalculationProgress({ current: 0, total });
-    setShowProgressModal(true);
-    startTask('calc-failed-prices', 'Başarısız Ürünler Hesaplanıyor', 'Fiyatlar', 'Prices', total);
-    const startTime = Date.now();
-    setPriceCalculationProgress({ isCalculating: true, current: 0, total, title: 'Başarısız Ürünler Hesaplanıyor', currentProductName: '', estimatedSecondsLeft: null, startTime });
-
-    try {
-      const [freshShippingRates, freshUserPlatforms, freshProductPrices, freshPackages, freshPackageItems, freshProducts, freshCommissions, freshSettings, freshAdminPlatforms] = await Promise.all([
-        db.entities.ShippingRate.list('-id', 10000),
-        db.entities.Platform.filter({ created_by: userEmail }),
-        db.entities.ProductPrice.filter({ created_by: userEmail }),
-        db.entities.Package.filter({ created_by: userEmail }),
-        db.entities.PackageItem.filter({ created_by: userEmail }),
-        db.entities.Product.filter({ created_by: userEmail }),
-        db.entities.Commission.filter({ created_by: userEmail }),
-        db.entities.Settings.filter({ created_by: userEmail }),
-        db.entities.Platform.filter({ platform_type: { $in: ['trendyol', 'hepsiburada'] } }),
-      ]);
-
-      const freshActivePlatforms = freshUserPlatforms.filter(p => p.is_active !== false);
-      const getFreshPackageCost = (packageId) => {
-        if (!packageId) return 0;
-        return freshPackageItems.filter(item => item.package_id === packageId && item.is_active !== false).reduce((sum, item) => sum + (item.cost || 0), 0);
-      };
-
-      const allToCreate = [];
-      const allToUpdate = [];
-      let successCount = 0;
-      const stillFailedProducts = [];
-
-      for (let i = 0; i < failedProducts.length; i++) {
-        const failedProduct = failedProducts[i];
-        const product = freshProducts.find(p => p.id === failedProduct.id);
-        if (!product) continue;
-
-        try {
-          const calculatedPrices = calculateAllPlatformPrices({
-            product, platforms: freshActivePlatforms, shippingRates: freshShippingRates,
-            commissions: freshCommissions, packages: freshPackages, packageItems: freshPackageItems,
-            getPackageCost: getFreshPackageCost, settings: freshSettings, systemAdminPlatforms: freshAdminPlatforms
-          });
-
-          if (calculatedPrices.length === 0) { stillFailedProducts.push(failedProduct); continue; }
-
-          for (const calcPrice of calculatedPrices) {
-            const existing = freshProductPrices.filter(pp => pp.product_id === product.id && pp.platform_id === calcPrice.platform_id);
-            if (existing.length > 0) allToUpdate.push({ id: existing[0].id, data: calcPrice });
-            else allToCreate.push(calcPrice);
-          }
-          successCount++;
-        } catch (err) {
-          stillFailedProducts.push(failedProduct);
-        }
-
-        const done = i + 1;
-        const elapsed = (Date.now() - startTime) / 1000;
-        const remaining = Math.round((elapsed / done) * (total - done));
-        setCalculationProgress({ current: done, total });
-        updateTask(done, total);
-        setPriceCalculationProgress({ isCalculating: true, current: done, total, title: 'Başarısız Ürünler Hesaplanıyor', currentProductName: product.name, estimatedSecondsLeft: done > 2 ? remaining : null, startTime });
-      }
-
-      const BATCH = 100;
-      for (let i = 0; i < allToCreate.length; i += BATCH) {
-        await db.entities.ProductPrice.bulkCreate(allToCreate.slice(i, i + BATCH));
-      }
-      await Promise.all(allToUpdate.map(({ id, data }) => db.entities.ProductPrice.update(id, data)));
-      await queryClient.invalidateQueries({ queryKey: ['productPrices', userEmail] });
-
-      setFailedProducts(stillFailedProducts);
-      if (stillFailedProducts.length > 0) toast.warning(`${successCount} ürün hesaplandı, ${stillFailedProducts.length} hala hesaplanamadı.`);
-      else toast.success(`Tüm başarısız ürünler hesaplandı (${successCount} ürün)`);
-    } catch (error) {
-      toast.error('Hesaplama hatası: ' + error.message);
-    } finally {
-      setCalculating(false);
-      setCalculationProgress({ current: 0, total: 0 });
-      setPriceCalculationProgress({ isCalculating: false, current: 0, total: 0, title: '', estimatedSecondsLeft: null, startTime: null });
-      setShowProgressModal(false);
-      finishTask();
     }
   };
 
@@ -473,14 +356,9 @@ const progressInterval = setInterval(() => {
           <div className="flex flex-col gap-4">
             <div className="flex flex-wrap items-center gap-2">
               <Button onClick={handleCalculatePrices} disabled={calculating || products.length === 0} size="sm">
-                <RefreshCw className="h-4 w-4" />
+                <RefreshCw className={`h-4 w-4 ${calculating ? 'animate-spin' : ''}`} />
                 <span className="hidden sm:inline ml-1">Fiyatları Hesapla</span>
                 <span className="sm:hidden ml-1">Hesapla</span>
-              </Button>
-              <Button onClick={handleRecalculateFailed} variant="outline" disabled={calculating || failedProducts.length === 0} className="gap-2 border-amber-200 text-amber-700 hover:bg-amber-50" size="sm">
-                <RefreshCw className={`h-4 w-4 ${calculating ? 'animate-spin' : ''}`} />
-                <span className="hidden sm:inline">Hesaplanamayan Ürünleri Hesapla</span>
-                <span className="sm:hidden">Hesaplanamayan</span>
               </Button>
               <Button onClick={handleResetPrices} variant="destructive" disabled={calculating} size="sm">
                 <span className="hidden sm:inline">Tüm Fiyatları Sıfırla</span>
@@ -636,37 +514,28 @@ const progressInterval = setInterval(() => {
               <AlertDialogTitle>{successModal.failedCount === 0 ? '✅ Başarılı' : '⚠️ Kısmi Başarı'}</AlertDialogTitle>
               <AlertDialogDescription className="space-y-2">
                 <p>{successModal.successCount} ürün için fiyatlar başarıyla hesaplandı.</p>
-                {successModal.failedCount > 0 && <p className="text-amber-600 font-medium">{successModal.failedCount} ürün hesaplanamadı.</p>}
+                {successModal.failedCount > 0 && <p className="text-amber-600 font-medium">{successModal.failedCount} ürün için komisyon veya kargo tarifesi eksik olabilir.</p>}
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogAction onClick={() => setSuccessModal({ ...successModal, open: false })}>Tamam</AlertDialogAction>
           </AlertDialogContent>
         </AlertDialog>
 
-        <Dialog open={showProgressModal && priceCalculationProgress.isCalculating} onOpenChange={(open) => { if (!open) setShowProgressModal(false); }}>
+        {/* Progress Modal */}
+        <Dialog open={calculating && simulatedProgress > 0} onOpenChange={() => {}}>
           <DialogContent className="max-w-sm" onInteractOutside={(e) => e.preventDefault()}>
-            <DialogHeader><DialogTitle>{priceCalculationProgress.title}</DialogTitle></DialogHeader>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-slate-500">İlerleme</span>
-                <span className="text-sm font-bold text-indigo-600">{priceCalculationProgress.current} / {priceCalculationProgress.total}</span>
-              </div>
+            <DialogHeader><DialogTitle>Fiyatlar Hesaplanıyor</DialogTitle></DialogHeader>
+            <div className="space-y-4 py-2">
               <div className="w-full bg-slate-100 rounded-full h-4 overflow-hidden">
-                <div className="bg-indigo-600 h-4 rounded-full transition-all duration-300" style={{ width: `${(priceCalculationProgress.current / (priceCalculationProgress.total || 1)) * 100}%` }} />
+                <div
+                  className="bg-indigo-600 h-4 rounded-full transition-all duration-300"
+                  style={{ width: `${simulatedProgress}%` }}
+                />
               </div>
               <div className="text-center">
-                <p className="text-3xl font-bold text-indigo-600">%{Math.round((priceCalculationProgress.current / (priceCalculationProgress.total || 1)) * 100)}</p>
+                <p className="text-3xl font-bold text-indigo-600">%{simulatedProgress}</p>
+                <p className="text-sm text-slate-500 mt-1">Lütfen bekleyin...</p>
               </div>
-              {priceCalculationProgress.estimatedSecondsLeft !== null && priceCalculationProgress.estimatedSecondsLeft > 0 && (
-                <div className="bg-indigo-50 rounded-lg px-4 py-2 text-center">
-                  <p className="text-xs text-indigo-500">Tahmini kalan süre</p>
-                  <p className="text-lg font-bold text-indigo-700">
-                    {priceCalculationProgress.estimatedSecondsLeft >= 60
-                      ? `${Math.floor(priceCalculationProgress.estimatedSecondsLeft / 60)} dk ${priceCalculationProgress.estimatedSecondsLeft % 60} sn`
-                      : `${priceCalculationProgress.estimatedSecondsLeft} saniye`}
-                  </p>
-                </div>
-              )}
             </div>
           </DialogContent>
         </Dialog>
