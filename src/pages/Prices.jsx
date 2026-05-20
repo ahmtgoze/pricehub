@@ -148,26 +148,6 @@ export default function Prices() {
   const startFakeProgress = () => {
     setFakeProgress(0);
     if (fakeIntervalRef.current) clearInterval(fakeIntervalRef.current);
-    fakeIntervalRef.current = setInterval(() => {
-      setFakeProgress(prev => prev < 90 ? prev + 1 : prev);
-    }, 150);
-  };
-
-  const stopFakeProgress = () => {
-    if (fakeIntervalRef.current) {
-      clearInterval(fakeIntervalRef.current);
-      fakeIntervalRef.current = null;
-    }
-    setFakeProgress(100);
-    setTimeout(() => {
-      setShowProgressModal(false);
-      setFakeProgress(0);
-    }, 600);
-  };
-
-  const startFakeProgress = () => {
-    setFakeProgress(0);
-    if (fakeIntervalRef.current) clearInterval(fakeIntervalRef.current);
     let current = 0;
     fakeIntervalRef.current = setInterval(() => {
       current += 1;
