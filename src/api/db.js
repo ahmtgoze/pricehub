@@ -68,6 +68,7 @@ function createEntity(entityName) {
       query = applyConditions(query, conditions);
       const order = parseOrderBy(orderBy);
       if (order) query = query.order(order.column, { ascending: order.ascending });
+      query = query.limit(50000);
       if (limit) query = query.limit(limit);
       const { data, error } = await query;
       if (error) throw new Error(`[db.${entityName}.filter] ${error.message}`);
@@ -78,6 +79,7 @@ function createEntity(entityName) {
       let query = supabase.from(tableName).select('*');
       const order = parseOrderBy(orderBy);
       if (order) query = query.order(order.column, { ascending: order.ascending });
+      query = query.limit(50000);
       if (limit) query = query.limit(limit);
       const { data, error } = await query;
       if (error) throw new Error(`[db.${entityName}.list] ${error.message}`);
