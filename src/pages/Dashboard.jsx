@@ -48,7 +48,7 @@ const { data: platforms = [] } = useQuery({
 
   const { data: productPrices = [] } = useQuery({
     queryKey: ['productPrices', userEmail],
-    queryFn: () => db.entities.ProductPrice.filter({ created_by: userEmail }),
+    queryFn: () => db.entities.ProductPrice.filter({ created_by: userEmail }, '-created_at', 50000),
     enabled: !!userEmail
   });
 
