@@ -371,24 +371,6 @@ const { data: platforms = [] } = useQuery({
           )}
         </div>
 
-        {unpricedProducts.length > 0 && (
-          <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5 mb-6">
-            <h2 className="font-semibold text-amber-800 mb-3 flex items-center gap-2">
-              <AlertCircle className="h-4 w-4" /> Fiyatlanmamış Ürünler ({unpricedProducts.length})
-            </h2>
-            <div className="flex flex-wrap gap-2">
-              {unpricedProducts.slice(0, 20).map(p => (
-                <span key={p.id} className="bg-white border border-amber-200 text-amber-800 text-xs rounded-lg px-2.5 py-1 font-medium">
-                  {p.name} {p.sku ? `(${p.sku})` : ''}
-                </span>
-              ))}
-              {unpricedProducts.length > 20 && (
-                <span className="text-amber-600 text-xs py-1">+{unpricedProducts.length - 20} daha...</span>
-              )}
-            </div>
-          </div>
-        )}
-
         {/* ✅ Alt bölüm: Tarihe Göre + Listelenmemiş Ürünler yan yana */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
 
