@@ -148,6 +148,7 @@ export default function Prices() {
     setCalculationProgress({ current: 0, total: 0 });
     setFailedProducts([]);
     setShowProgressModal(true);
+    await new Promise(r => setTimeout(r, 50));
 
     try {
       const [freshShippingRates, freshUserPlatforms, freshProductPrices, freshPackages, freshPackageItems, freshProducts, freshCommissions, freshSettings, freshAdminPlatforms] = await Promise.all([
@@ -219,9 +220,10 @@ export default function Prices() {
         setPriceCalculationProgress({ isCalculating: true, current: done, total, title: 'Fiyatlar Hesaplanıyor', currentProductName: product.name, estimatedSecondsLeft: done > 2 ? remaining : null, startTime });
         setCalculationProgress({ current: done, total });
         updateTask(done, total);
+        if (done % 50 === 0) await new Promise(r => setTimeout(r, 0));
       }
 
-      // 2. Toplu oluştur (100'lük gruplar)
+      // 2. Toplu oluştur
       const BATCH = 100;
       for (let i = 0; i < allToCreate.length; i += BATCH) {
         await db.entities.ProductPrice.bulkCreate(allToCreate.slice(i, i + BATCH));
