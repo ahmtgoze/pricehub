@@ -297,8 +297,7 @@ export const findSalePriceForTargetProfit = ({
   isSameDayDelivery = false
 }) => {
   let low = minPrice;
-  let high = Math.max(maxPrice, productCost * 20);  let bestResult = null;
-  let iterations = 0;
+  let high = Math.max(maxPrice, productCost * 20);
   
  // Her iki hedefi de hesapla, en yüksek fiyatı seç
   const candidateResults = [];
