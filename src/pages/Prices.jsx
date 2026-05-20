@@ -151,7 +151,7 @@ export default function Prices() {
     let current = 0;
     fakeIntervalRef.current = setInterval(() => {
       current += 1;
-      if (current <= 95) setFakeProgress(current);
+      if (current <= 100) setFakeProgress(current);
     }, 200);
   };
 
