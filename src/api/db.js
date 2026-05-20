@@ -69,7 +69,7 @@ function createEntity(entityName) {
       const order = parseOrderBy(orderBy);
       if (order) query = query.order(order.column, { ascending: order.ascending });
       query = query.limit(50000);
-      if (limit) query = query.limit(limit);
+      query = query.limit(limit || 50000);
       const { data, error } = await query;
       if (error) throw new Error(`[db.${entityName}.filter] ${error.message}`);
       return (data || []).map(normalize);
@@ -80,7 +80,7 @@ function createEntity(entityName) {
       const order = parseOrderBy(orderBy);
       if (order) query = query.order(order.column, { ascending: order.ascending });
       query = query.limit(50000);
-      if (limit) query = query.limit(limit);
+      query = query.limit(limit || 50000);
       const { data, error } = await query;
       if (error) throw new Error(`[db.${entityName}.list] ${error.message}`);
       return (data || []).map(normalize);
