@@ -68,7 +68,6 @@ function createEntity(entityName) {
       query = applyConditions(query, conditions);
       const order = parseOrderBy(orderBy);
       if (order) query = query.order(order.column, { ascending: order.ascending });
-      query = query.limit(50000);
       query = query.limit(limit || 50000);
       const { data, error } = await query;
       if (error) throw new Error(`[db.${entityName}.filter] ${error.message}`);
