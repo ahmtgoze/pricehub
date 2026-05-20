@@ -300,96 +300,55 @@ export const findSalePriceForTargetProfit = ({
   let high = Math.max(maxPrice, productCost * 20);  let bestResult = null;
   let iterations = 0;
   
-  // Hedef belirleme: öncelik sırası tutar > oran
-  const useAmount = targetProfitAmount != null;
-  const targetValue = useAmount ? targetProfitAmount : targetProfitRate;
-  
-  while (low <= high && iterations < maxIterations) {
-    iterations++;
-    const mid = (low + high) / 2;
-    
-    const breakdown = calculatePriceBreakdown({
-      salePriceInclVat: mid,
-      productCost,
-      productVatRate,
-      shippingCost,
-      shippingVatRate,
-      commissionRate,
-      commissionVatRate,
-      platform,
-      packagingCost,
-      printingCost,
-      extraCost,
-      baremUsed: 'search',
-      isSameDayDelivery
-    });
-    
-    // Tutar veya oran hedefine göre karşılaştır
-    const currentValue = useAmount ? breakdown.netProfit : breakdown.profitRate;
-    const diff = currentValue - targetValue;
-    
-    if (Math.abs(diff) <= tolerance) {
-      bestResult = { ...breakdown, salePriceInclVat: mid };
-      break;
+// Her iki hedefi de ayrı ayrı hesapla, en yüksek fiyatı seç
+  const results = [];
+
+  // Hedef kâr oranına göre hesapla
+  if (targetProfitRate != null) {
+    let lo = minPrice, hi = Math.max(maxPrice, productCost * 20), best = null, iter = 0;
+    while (lo <= hi && iter < maxIterations) {
+      iter++;
+      const mid = (lo + hi) / 2;
+      const bd = calculatePriceBreakdown({ salePriceInclVat: mid, productCost, productVatRate, shippingCost, shippingVatRate, commissionRate, commissionVatRate, platform, packagingCost, printingCost, extraCost, baremUsed: 'search', isSameDayDelivery });
+      const diff = bd.profitRate - targetProfitRate;
+      if (Math.abs(diff) <= tolerance) { best = { ...bd, salePriceInclVat: mid }; break; }
+      if (diff < 0) lo = mid + 0.01;
+      else { hi = mid - 0.01; best = { ...bd, salePriceInclVat: mid }; }
     }
-    
-    if (diff < 0) {
-      // Kâr düşük, fiyat artmalı
-      low = mid + 0.01;
-    } else {
-      // Kâr yüksek, fiyat düşebilir
-      high = mid - 0.01;
-      bestResult = { ...breakdown, salePriceInclVat: mid };
+    if (!best) best = calculatePriceBreakdown({ salePriceInclVat: lo, productCost, productVatRate, shippingCost, shippingVatRate, commissionRate, commissionVatRate, platform, packagingCost, printingCost, extraCost, baremUsed: 'search', isSameDayDelivery });
+    results.push(best);
+  }
+
+  // Hedef kâr tutarına göre hesapla
+  if (targetProfitAmount != null) {
+    let lo = minPrice, hi = Math.max(maxPrice, productCost * 20), best = null, iter = 0;
+    while (lo <= hi && iter < maxIterations) {
+      iter++;
+      const mid = (lo + hi) / 2;
+      const bd = calculatePriceBreakdown({ salePriceInclVat: mid, productCost, productVatRate, shippingCost, shippingVatRate, commissionRate, commissionVatRate, platform, packagingCost, printingCost, extraCost, baremUsed: 'search', isSameDayDelivery });
+      const diff = bd.netProfit - targetProfitAmount;
+      if (Math.abs(diff) <= tolerance) { best = { ...bd, salePriceInclVat: mid }; break; }
+      if (diff < 0) lo = mid + 0.01;
+      else { hi = mid - 0.01; best = { ...bd, salePriceInclVat: mid }; }
     }
+    if (!best) best = calculatePriceBreakdown({ salePriceInclVat: lo, productCost, productVatRate, shippingCost, shippingVatRate, commissionRate, commissionVatRate, platform, packagingCost, printingCost, extraCost, baremUsed: 'search', isSameDayDelivery });
+    results.push(best);
   }
-  
-  // Tam bulunamadıysa son hesaplamayı yap
-  if (!bestResult) {
-    bestResult = calculatePriceBreakdown({
-      salePriceInclVat: low,
-      productCost,
-      productVatRate,
-      shippingCost,
-      shippingVatRate,
-      commissionRate,
-      commissionVatRate,
-      platform,
-      packagingCost,
-      printingCost,
-      extraCost,
-      baremUsed: 'search',
-      isSameDayDelivery
-    });
-  }
-  
+
+  // En yüksek fiyatı seç
+  let bestResult = results.reduce((a, b) => a.salePriceInclVat > b.salePriceInclVat ? a : b);
+
+  // Minimum kâr kontrolü
   if (minimumProfitAmount != null && bestResult.netProfit < minimumProfitAmount) {
-  const minAmountResult = findSalePriceForTargetProfit({
-    productCost,
-    productVatRate,
-    shippingCost,
-    shippingVatRate,
-    commissionRate,
-    commissionVatRate,
-    platform,
-    targetProfitAmount: minimumProfitAmount,
-    targetProfitRate: null,
-    minimumProfitAmount: null,
-    packagingCost,
-    printingCost,
-    extraCost,
-    minPrice,
-    maxPrice,
-    tolerance,
-    maxIterations,
-    isSameDayDelivery
-  });
-  // Minimum kâr tutarı hedef kâr oranından daha az kâr sağlıyorsa hedef oranı kullan
-  if (bestResult.netProfit >= minimumProfitAmount) return bestResult;
-  return minAmountResult;
-}
-  
+    const minResult = findSalePriceForTargetProfit({
+      productCost, productVatRate, shippingCost, shippingVatRate, commissionRate, commissionVatRate, platform,
+      targetProfitAmount: minimumProfitAmount, targetProfitRate: null, minimumProfitAmount: null,
+      packagingCost, printingCost, extraCost, minPrice, maxPrice, tolerance, maxIterations, isSameDayDelivery
+    });
+    bestResult = minResult;
+  }
+
   return bestResult;
-};
 
 /**
  * ANA HESAPLAMA FONKSİYONU
