@@ -38,6 +38,8 @@ export default function Prices() {
   const fakeIntervalRef = React.useRef(null);
   const { task, startTask, updateTask, finishTask } = useBackgroundTask();
   const location = useLocation();
+  const searchParams = new URLSearchParams(location.search);
+  const unpricedFilter = searchParams.get('filter') === 'unpriced';
   const queryClient = useQueryClient();
 
   React.useEffect(() => {
@@ -127,6 +129,7 @@ export default function Prices() {
       });
     }
     if (categoryFilter !== 'all') result = result.filter(p => p.category_id === categoryFilter);
+    if (unpricedFilter) result = result.filter(p => !p.prices || Object.keys(p.prices).length === 0);
     result.sort((a, b) => {
       let valA, valB;
       if (sortField.startsWith('platform_')) {
