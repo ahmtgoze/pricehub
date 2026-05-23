@@ -45,7 +45,6 @@ export default function PriceDetailModal({ open, onClose, product, platform, pri
     }
   };
 
-  // ✅ Tüm maliyet kalemlerini hem prop'tan hem priceData'dan oku — 0 olsa da göster
   const printingCost = calculationDetails.printingCost ?? priceData?.printing_cost ?? 0;
   const extraCost = calculationDetails.extraCost ?? priceData?.extra_cost ?? 0;
   const packagingCost = calculationDetails.packagingCost ?? priceData?.packaging_cost ?? 0;
@@ -121,31 +120,26 @@ export default function PriceDetailModal({ open, onClose, product, platform, pri
                     <span className="font-bold text-indigo-700 ml-2 shrink-0">₺{priceData.sale_price?.toFixed(2)}</span>
                   </div>
 
-                  {/* ✅ Ürün Maliyeti — her zaman göster */}
                   <div className="flex justify-between py-2 pl-3 sm:pl-6 border-b border-slate-100">
                     <span className="text-slate-600">- Ürün Maliyeti (KDV Dahil)</span>
                     <span className="font-medium text-rose-600 ml-2 shrink-0">-₺{Number(productCost).toFixed(2)}</span>
                   </div>
 
-                  {/* ✅ Baskı Maliyeti — her zaman göster */}
                   <div className="flex justify-between py-2 pl-3 sm:pl-6 border-b border-slate-100">
                     <span className="text-slate-600">- Baskı Maliyeti (KDV Dahil)</span>
                     <span className="font-medium text-rose-600 ml-2 shrink-0">-₺{Number(printingCost).toFixed(2)}</span>
                   </div>
 
-                  {/* ✅ Ek Maliyet — her zaman göster */}
                   <div className="flex justify-between py-2 pl-3 sm:pl-6 border-b border-slate-100">
                     <span className="text-slate-600">- Ek Maliyet (KDV Dahil)</span>
                     <span className="font-medium text-rose-600 ml-2 shrink-0">-₺{Number(extraCost).toFixed(2)}</span>
                   </div>
 
-                  {/* ✅ Kargo — her zaman göster */}
                   <div className="flex justify-between py-2 pl-3 sm:pl-6 border-b border-slate-100">
                     <span className="text-slate-600">- Kargo Ücreti (KDV Dahil)</span>
                     <span className="font-medium text-rose-600 ml-2 shrink-0">-₺{Number(shippingCost).toFixed(2)}</span>
                   </div>
 
-                  {/* Hizmet Bedeli — priceData'da service_fee alanı varsa (0 dahil) göster */}
                   {priceData.service_fee != null && (
                     <div className="flex justify-between py-2 pl-3 sm:pl-6 border-b border-slate-100">
                       <span className="text-slate-600">
@@ -157,7 +151,6 @@ export default function PriceDetailModal({ open, onClose, product, platform, pri
                     </div>
                   )}
 
-                  {/* POS Hizmet Bedeli — sadece > 0 ise */}
                   {(calculationDetails.posServiceFee > 0) && (
                     <div className="flex justify-between py-2 pl-3 sm:pl-6 border-b border-slate-100">
                       <span className="text-slate-600">- POS Hizmet Bedeli (KDV Dahil)</span>
@@ -165,31 +158,45 @@ export default function PriceDetailModal({ open, onClose, product, platform, pri
                     </div>
                   )}
 
-                  {/* ✅ Paketleme — her zaman göster */}
                   <div className="flex justify-between py-2 pl-3 sm:pl-6 border-b border-slate-100">
                     <span className="text-slate-600">- Paketleme Maliyeti (KDV Dahil)</span>
                     <span className="font-medium text-rose-600 ml-2 shrink-0">-₺{Number(packagingCost).toFixed(2)}</span>
                   </div>
 
-                  {/* ✅ Komisyon — her zaman göster */}
                   <div className="flex justify-between py-2 pl-3 sm:pl-6 border-b border-slate-100">
                     <span className="text-slate-600">- Komisyon Tutarı (KDV Dahil)</span>
                     <span className="font-medium text-rose-600 ml-2 shrink-0">-₺{(priceData.commission_amount || 0)?.toFixed(2)}</span>
                   </div>
 
-                  {/* ✅ Stopaj — her zaman göster */}
                   <div className="flex justify-between py-2 pl-3 sm:pl-6 border-b border-slate-100">
                     <span className="text-slate-600">- Stopaj Tutarı</span>
                     <span className="font-medium text-rose-600 ml-2 shrink-0">-₺{(priceData.withholding_amount || 0)?.toFixed(2)}</span>
                   </div>
 
-                  {/* ✅ Net KDV — her zaman göster */}
-                  <div className="flex justify-between py-2 pl-3 sm:pl-6 border-b-2 border-slate-200">
+                  <div className="flex justify-between py-2 pl-3 sm:pl-6 border-b border-slate-200">
                     <span className="text-slate-600">- Net KDV</span>
                     <span className="font-medium text-rose-600 ml-2 shrink-0">-₺{(priceData.net_vat || 0)?.toFixed(2)}</span>
                   </div>
 
-                  {/* ✅ Net Kâr */}
+                  {/* Vergi Öncesi Net Kâr */}
+                  {((priceData.corporate_tax_amount ?? 0) > 0) && (
+                    <div className="flex justify-between py-2 pl-3 sm:pl-6 border-b border-slate-100 bg-slate-50/50">
+                      <span className="text-slate-600 font-medium">= Vergi Öncesi Net Kâr</span>
+                      <span className="font-medium text-slate-700 ml-2 shrink-0">
+                        ₺{(priceData.net_profit_before_tax ?? ((priceData.net_profit ?? 0) + (priceData.corporate_tax_amount ?? 0))).toFixed(2)}
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Kurumlar (Gelir) Vergisi */}
+                  {((priceData.corporate_tax_amount ?? 0) > 0) && (
+                    <div className="flex justify-between py-2 pl-3 sm:pl-6 border-b-2 border-slate-200">
+                      <span className="text-slate-600">- Kurumlar (Gelir) Vergisi (%{calculationDetails.corporateTaxRate ?? 25})</span>
+                      <span className="font-medium text-rose-600 ml-2 shrink-0">-₺{(priceData.corporate_tax_amount ?? 0).toFixed(2)}</span>
+                    </div>
+                  )}
+
+                  {/* Net Kâr */}
                   <div className="flex justify-between py-3 bg-emerald-50 rounded-lg px-3 mt-3 border-2 border-emerald-200">
                     <span className="font-semibold text-emerald-700 text-base">= NET KÂR</span>
                     <span className="font-bold text-emerald-700 text-lg">₺{(priceData.net_profit || 0)?.toFixed(2)}</span>
@@ -249,6 +256,13 @@ export default function PriceDetailModal({ open, onClose, product, platform, pri
                   <div className="flex justify-between">
                     <span className="text-slate-600">Hedef Kâr Oranı:</span>
                     <span className="font-medium">%{calculationDetails.targetProfitRate}</span>
+                  </div>
+                )}
+
+                {((priceData.corporate_tax_amount ?? 0) > 0) && (
+                  <div className="flex justify-between">
+                    <span className="text-slate-600">Kurumlar Vergisi Oranı:</span>
+                    <span className="font-medium">%{calculationDetails.corporateTaxRate ?? 25}</span>
                   </div>
                 )}
               </div>
