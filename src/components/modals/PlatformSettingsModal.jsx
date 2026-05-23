@@ -90,6 +90,8 @@ export default function PlatformSettingsModal({
     service_fee_vat_rate: 20,
     has_pos_service_fee: false,
     pos_service_fee_rate: 0,
+    has_corporate_tax: true,
+    corporate_tax_rate: 25,
     use_barem: false,
     barem_max_desi: 5,
     barem1_min: 0,
@@ -125,6 +127,8 @@ export default function PlatformSettingsModal({
       same_day_delivery_service_fee: platform.same_day_delivery_service_fee ?? 0,
       has_pos_service_fee: platform.has_pos_service_fee === true,
       pos_service_fee_rate: platform.pos_service_fee_rate ?? 0,
+      has_corporate_tax: platform.has_corporate_tax ?? true,
+      corporate_tax_rate: platform.corporate_tax_rate ?? 25,
       use_barem: platform.use_barem ?? false,
       barem_max_desi: platform.barem_max_desi ?? 5,
       barem1_min: platform.barem1_min ?? 0,
@@ -136,7 +140,7 @@ export default function PlatformSettingsModal({
       integration_api_secret: platform.integration_api_secret || '',
       integration_username: platform.integration_username || '',
       integration_password: platform.integration_password || '',
-        integration_merchant_id: platform.integration_merchant_id || '',
+      integration_merchant_id: platform.integration_merchant_id || '',
       website_adapter: platform.website_adapter || 'shopify',
     });
   }, [platform, open]);
@@ -188,6 +192,8 @@ export default function PlatformSettingsModal({
       custom_shipping_price: parseFloat(formData.custom_shipping_price) || 0,
       has_same_day_delivery: formData.has_same_day_delivery,
       same_day_delivery_vat_rate: 20,
+      has_corporate_tax: formData.has_corporate_tax,
+      corporate_tax_rate: parseFloat(formData.corporate_tax_rate) || 25,
     };
 
     if (isMarketplace && isAdmin) {
@@ -297,7 +303,6 @@ export default function PlatformSettingsModal({
                 <div className="space-y-3 bg-slate-50 border border-slate-200 rounded-xl p-4">
                   <Label className="text-sm font-semibold text-slate-700">Kargo Fiyat Modu</Label>
                   <div className="flex flex-col gap-3">
-
                     <label className="flex items-start gap-3 cursor-pointer">
                       <input
                         type="radio"
@@ -397,7 +402,6 @@ export default function PlatformSettingsModal({
                         )}
                       </div>
                     </label>
-
                   </div>
                 </div>
               )}
@@ -411,6 +415,43 @@ export default function PlatformSettingsModal({
                   <h4 className="font-semibold text-slate-900 text-sm bg-slate-100 rounded-lg px-3 py-2">
                     {isAdmin ? '⚙️ Sistem Yönetim Ayarları' : 'Platform Bilgileri'}
                   </h4>
+
+                  {/* Kurumlar (Gelir) Vergisi */}
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <Label>Kurumlar (Gelir) Vergisi</Label>
+                        <p className="text-xs text-slate-400 mt-0.5">Kâr üzerinden alınan vergi (%{formData.corporate_tax_rate})</p>
+                      </div>
+                      {isAdmin ? (
+                        <Switch
+                          checked={formData.has_corporate_tax}
+                          onCheckedChange={(checked) => setFormData({ ...formData, has_corporate_tax: checked })}
+                        />
+                      ) : (
+                        <span className={`text-sm font-medium px-2 py-0.5 rounded-full ${formData.has_corporate_tax ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'}`}>
+                          {formData.has_corporate_tax ? 'Aktif' : 'Pasif'}
+                        </span>
+                      )}
+                    </div>
+                    {formData.has_corporate_tax && (
+                      <div className="space-y-2 ml-2">
+                        <Label className="text-sm">Vergi Oranı (%)</Label>
+                        {isAdmin ? (
+                          <Input
+                            type="number" step="0.01" min="0" max="100"
+                            value={formData.corporate_tax_rate}
+                            onChange={(e) => setFormData({ ...formData, corporate_tax_rate: e.target.value })}
+                            placeholder="25"
+                          />
+                        ) : (
+                          <div className="px-3 py-2 rounded-lg text-sm font-medium bg-slate-50 border border-slate-100">
+                            %{formData.corporate_tax_rate}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
 
                   {/* Stopaj */}
                   <div className="space-y-3">
@@ -505,7 +546,7 @@ export default function PlatformSettingsModal({
                               />
                             ) : (
                               <div className="px-3 py-2 rounded-lg text-sm font-medium bg-slate-50 border border-slate-100">
-                                {formData.service_fee_type === 'percent_of_sale' ? `%${formData.service_fee_amount}` : `₺${formData.service_fee_amount}`}
+                                {formData.service_fee_type === 'percent_of_sale' ? `%${formData.service_fee_amount}` : `\u20ba${formData.service_fee_amount}`}
                               </div>
                             )}
                           </div>
@@ -540,7 +581,7 @@ export default function PlatformSettingsModal({
                           ) : (
                             <>
                               <div className="px-3 py-2 rounded-lg text-sm font-medium bg-slate-50 border border-slate-100">
-                                ₺{formData.same_day_delivery_service_fee}
+                                \u20ba{formData.same_day_delivery_service_fee}
                               </div>
                               <p className="text-xs text-slate-500 mt-1">"Bugün Kargoda" seçildiğinde bu bedel uygulanır</p>
                             </>
@@ -629,13 +670,13 @@ export default function PlatformSettingsModal({
 
                         <div className="grid grid-cols-2 gap-2 mt-3">
                           <div>
-                            <Label className="text-xs">Barem 1 Aralığı (₺)</Label>
+                            <Label className="text-xs">Barem 1 Aralığı (\u20ba)</Label>
                             <div className="px-3 py-2 rounded-lg text-sm font-medium bg-slate-50 border border-slate-100">
                               {formData.barem1_min} - {formData.barem1_max}
                             </div>
                           </div>
                           <div>
-                            <Label className="text-xs">Barem 2 Aralığı (₺)</Label>
+                            <Label className="text-xs">Barem 2 Aralığı (\u20ba)</Label>
                             <div className="px-3 py-2 rounded-lg text-sm font-medium bg-slate-50 border border-slate-100">
                               {formData.barem2_min} - {formData.barem2_max}
                             </div>
@@ -647,22 +688,22 @@ export default function PlatformSettingsModal({
                             <p className="text-xs font-semibold text-slate-600 mb-2">Admin: Aralıkları Düzenle</p>
                             <div className="grid grid-cols-2 gap-2">
                               <div>
-                                <Label className="text-xs">Barem 1 Min (₺)</Label>
+                                <Label className="text-xs">Barem 1 Min (\u20ba)</Label>
                                 <Input type="number" step="0.01" value={formData.barem1_min}
                                   onChange={(e) => setFormData({ ...formData, barem1_min: e.target.value })} />
                               </div>
                               <div>
-                                <Label className="text-xs">Barem 1 Max (₺)</Label>
+                                <Label className="text-xs">Barem 1 Max (\u20ba)</Label>
                                 <Input type="number" step="0.01" value={formData.barem1_max}
                                   onChange={(e) => setFormData({ ...formData, barem1_max: e.target.value })} />
                               </div>
                               <div>
-                                <Label className="text-xs">Barem 2 Min (₺)</Label>
+                                <Label className="text-xs">Barem 2 Min (\u20ba)</Label>
                                 <Input type="number" step="0.01" value={formData.barem2_min}
                                   onChange={(e) => setFormData({ ...formData, barem2_min: e.target.value })} />
                               </div>
                               <div>
-                                <Label className="text-xs">Barem 2 Max (₺)</Label>
+                                <Label className="text-xs">Barem 2 Max (\u20ba)</Label>
                                 <Input type="number" step="0.01" value={formData.barem2_max}
                                   onChange={(e) => setFormData({ ...formData, barem2_max: e.target.value })} />
                               </div>
@@ -729,7 +770,7 @@ export default function PlatformSettingsModal({
                           value={formData.integration_supplier_id}
                           onChange={(e) => setFormData({ ...formData, integration_supplier_id: e.target.value })}
                           disabled />
-                        <p className="text-xs text-slate-400">Trendyol Satıcı Paneli → Entegrasyon → API Bilgileri</p>
+                        <p className="text-xs text-slate-400">Trendyol Satıcı Paneli \u2192 Entegrasyon \u2192 API Bilgileri</p>
                       </div>
                       <div className="space-y-2">
                         <Label className="text-sm">API Key</Label>
@@ -756,7 +797,7 @@ export default function PlatformSettingsModal({
                           value={formData.integration_username}
                           onChange={(e) => setFormData({ ...formData, integration_username: e.target.value })}
                           disabled />
-                        <p className="text-xs text-slate-400">Hepsiburada Satıcı Paneli → Hesap Ayarları → API Bilgileri</p>
+                        <p className="text-xs text-slate-400">Hepsiburada Satıcı Paneli \u2192 Hesap Ayarları \u2192 API Bilgileri</p>
                       </div>
                       <div className="space-y-2">
                         <Label className="text-sm">Şifre (Password)</Label>
