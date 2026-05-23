@@ -43,6 +43,7 @@ const SYSTEM_FIELDS = [
   'service_fee_amount', 'service_fee_vat_rate', 'same_day_delivery_service_fee',
   'has_pos_service_fee', 'pos_service_fee_rate', 'use_barem', 'barem_max_desi',
   'barem1_min', 'barem1_max', 'barem2_min', 'barem2_max',
+  'has_corporate_tax', 'corporate_tax_rate',
 ];
 
 export default function Platforms() {
@@ -54,13 +55,12 @@ export default function Platforms() {
 
   useEffect(() => {
     db.auth.me().then(u => {
-      console.log('USER:', JSON.stringify(u));
       setUserEmail(u.email);
       setUser(u);
     }).catch(() => {});
   }, []);
 
-  const isAdmin = user?.user_metadata?.is_admin === true;
+  const isAdmin = user?.role === 'admin';
 
   const { data: platforms = [], isLoading } = useQuery({
     queryKey: ['platforms', userEmail],
@@ -89,6 +89,8 @@ export default function Platforms() {
           barem1_max: admin.barem1_max,
           barem2_min: admin.barem2_min,
           barem2_max: admin.barem2_max,
+          has_corporate_tax: admin.has_corporate_tax,
+          corporate_tax_rate: admin.corporate_tax_rate,
         };
       });
       const seen = new Map();
@@ -146,6 +148,15 @@ export default function Platforms() {
   const saveMutation = useMutation({
     mutationFn: async ({ id, data, platformType }) => {
       await PlatformEntity.update(id, data);
+      // Kurumlar vergisi değişince tüm platformlara sync et
+      if (data.has_corporate_tax !== undefined || data.corporate_tax_rate !== undefined) {
+        const taxData = {};
+        if (data.has_corporate_tax !== undefined) taxData.has_corporate_tax = data.has_corporate_tax;
+        if (data.corporate_tax_rate !== undefined) taxData.corporate_tax_rate = data.corporate_tax_rate;
+        const allUserPlatforms = await PlatformEntity.filter({ created_by: userEmail });
+        const othersToSync = allUserPlatforms.filter(r => r.id !== id);
+        await Promise.all(othersToSync.map(r => PlatformEntity.update(r.id, taxData)));
+      }
       if (isAdmin && (platformType === 'trendyol' || platformType === 'hepsiburada')) {
         const systemData = {};
         SYSTEM_FIELDS.forEach(field => {

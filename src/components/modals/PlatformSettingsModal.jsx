@@ -304,47 +304,24 @@ export default function PlatformSettingsModal({
                   <Label className="text-sm font-semibold text-slate-700">Kargo Fiyat Modu</Label>
                   <div className="flex flex-col gap-3">
                     <label className="flex items-start gap-3 cursor-pointer">
-                      <input
-                        type="radio"
-                        name="shipping_mode"
-                        checked={!formData.use_custom_shipping_price}
-                        onChange={() =>
-                          setFormData((prev) => ({
-                            ...prev,
-                            use_custom_shipping_price: false,
-                            shipping_company_id: '',
-                            shipping_company_name: '',
-                          }))
-                        }
-                        className="mt-0.5 accent-indigo-600"
-                      />
+                      <input type="radio" name="shipping_mode" checked={!formData.use_custom_shipping_price}
+                        onChange={() => setFormData((prev) => ({ ...prev, use_custom_shipping_price: false, shipping_company_id: '', shipping_company_name: '' }))}
+                        className="mt-0.5 accent-indigo-600" />
                       <div className="flex-1">
                         <p className="text-sm font-medium text-slate-700">Sistem Tarifesi</p>
                         <p className="text-xs text-slate-400">Yüklenen kargo tarifeleri üzerinden otomatik hesaplanır</p>
                         {!formData.use_custom_shipping_price && (
                           <div className="mt-2">
                             {shippingCompanies.length === 0 ? (
-                              <div className="text-xs text-slate-400 italic bg-white border border-slate-100 rounded-lg px-3 py-2">
-                                Henüz sisteme kargo firması eklenmemiş.
-                              </div>
+                              <div className="text-xs text-slate-400 italic bg-white border border-slate-100 rounded-lg px-3 py-2">Henüz sisteme kargo firması eklenmemiş.</div>
                             ) : shippingCompanies.length === 1 ? (
-                              <div className="text-xs text-slate-700 bg-white border border-slate-200 rounded-lg px-3 py-2">
-                                {shippingCompanies[0].name}{' '}
-                                <span className="text-slate-400">(otomatik seçildi)</span>
-                              </div>
+                              <div className="text-xs text-slate-700 bg-white border border-slate-200 rounded-lg px-3 py-2">{shippingCompanies[0].name}{' '}<span className="text-slate-400">(otomatik seçildi)</span></div>
                             ) : (
-                              <Select
-                                value={formData.shipping_company_id || 'none'}
-                                onValueChange={handleShippingCompanyChange}
-                              >
-                                <SelectTrigger className="bg-white text-sm">
-                                  <SelectValue placeholder="Kargo firması seçin..." />
-                                </SelectTrigger>
+                              <Select value={formData.shipping_company_id || 'none'} onValueChange={handleShippingCompanyChange}>
+                                <SelectTrigger className="bg-white text-sm"><SelectValue placeholder="Kargo firması seçin..." /></SelectTrigger>
                                 <SelectContent>
                                   <SelectItem value="none">-- Seçilmedi --</SelectItem>
-                                  {shippingCompanies.map((c) => (
-                                    <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                                  ))}
+                                  {shippingCompanies.map((c) => (<SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>))}
                                 </SelectContent>
                               </Select>
                             )}
@@ -354,47 +331,24 @@ export default function PlatformSettingsModal({
                     </label>
 
                     <label className="flex items-start gap-3 cursor-pointer">
-                      <input
-                        type="radio"
-                        name="shipping_mode"
-                        checked={formData.use_custom_shipping_price}
-                        onChange={() =>
-                          setFormData((prev) => ({
-                            ...prev,
-                            use_custom_shipping_price: true,
-                            shipping_company_id: '',
-                            shipping_company_name: '',
-                          }))
-                        }
-                        className="mt-0.5 accent-indigo-600"
-                      />
+                      <input type="radio" name="shipping_mode" checked={formData.use_custom_shipping_price}
+                        onChange={() => setFormData((prev) => ({ ...prev, use_custom_shipping_price: true, shipping_company_id: '', shipping_company_name: '' }))}
+                        className="mt-0.5 accent-indigo-600" />
                       <div className="flex-1">
                         <p className="text-sm font-medium text-slate-700">Manuel Anlaşmalı Fiyat</p>
                         <p className="text-xs text-slate-400">Kargo Tarifeleri sayfasında tanımladığınız manuel tarifeler kullanılır</p>
                         {formData.use_custom_shipping_price && (
                           <div className="mt-2">
                             {shippingCompanies.length === 0 ? (
-                              <div className="text-xs text-slate-400 italic bg-white border border-slate-100 rounded-lg px-3 py-2">
-                                Henüz sisteme kargo firması eklenmemiş.
-                              </div>
+                              <div className="text-xs text-slate-400 italic bg-white border border-slate-100 rounded-lg px-3 py-2">Henüz sisteme kargo firması eklenmemiş.</div>
                             ) : shippingCompanies.length === 1 ? (
-                              <div className="text-xs text-slate-700 bg-white border border-slate-200 rounded-lg px-3 py-2">
-                                {shippingCompanies[0].name}{' '}
-                                <span className="text-slate-400">(otomatik seçildi)</span>
-                              </div>
+                              <div className="text-xs text-slate-700 bg-white border border-slate-200 rounded-lg px-3 py-2">{shippingCompanies[0].name}{' '}<span className="text-slate-400">(otomatik seçildi)</span></div>
                             ) : (
-                              <Select
-                                value={formData.shipping_company_id || 'none'}
-                                onValueChange={handleShippingCompanyChange}
-                              >
-                                <SelectTrigger className="bg-white text-sm">
-                                  <SelectValue placeholder="Kargo firması seçin..." />
-                                </SelectTrigger>
+                              <Select value={formData.shipping_company_id || 'none'} onValueChange={handleShippingCompanyChange}>
+                                <SelectTrigger className="bg-white text-sm"><SelectValue placeholder="Kargo firması seçin..." /></SelectTrigger>
                                 <SelectContent>
                                   <SelectItem value="none">-- Seçilmedi --</SelectItem>
-                                  {shippingCompanies.map((c) => (
-                                    <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                                  ))}
+                                  {shippingCompanies.map((c) => (<SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>))}
                                 </SelectContent>
                               </Select>
                             )}
@@ -423,32 +377,20 @@ export default function PlatformSettingsModal({
                         <Label>Kurumlar (Gelir) Vergisi</Label>
                         <p className="text-xs text-slate-400 mt-0.5">Kâr üzerinden alınan vergi (%{formData.corporate_tax_rate})</p>
                       </div>
-                      {isAdmin ? (
-                        <Switch
-                          checked={formData.has_corporate_tax}
-                          onCheckedChange={(checked) => setFormData({ ...formData, has_corporate_tax: checked })}
-                        />
-                      ) : (
-                        <span className={`text-sm font-medium px-2 py-0.5 rounded-full ${formData.has_corporate_tax ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'}`}>
-                          {formData.has_corporate_tax ? 'Aktif' : 'Pasif'}
-                        </span>
-                      )}
+                      <Switch
+                        checked={formData.has_corporate_tax}
+                        onCheckedChange={(checked) => setFormData({ ...formData, has_corporate_tax: checked })}
+                      />
                     </div>
                     {formData.has_corporate_tax && (
                       <div className="space-y-2 ml-2">
                         <Label className="text-sm">Vergi Oranı (%)</Label>
-                        {isAdmin ? (
-                          <Input
-                            type="number" step="0.01" min="0" max="100"
-                            value={formData.corporate_tax_rate}
-                            onChange={(e) => setFormData({ ...formData, corporate_tax_rate: e.target.value })}
-                            placeholder="25"
-                          />
-                        ) : (
-                          <div className="px-3 py-2 rounded-lg text-sm font-medium bg-slate-50 border border-slate-100">
-                            %{formData.corporate_tax_rate}
-                          </div>
-                        )}
+                        <Input
+                          type="number" step="0.01" min="0" max="100"
+                          value={formData.corporate_tax_rate}
+                          onChange={(e) => setFormData({ ...formData, corporate_tax_rate: e.target.value })}
+                          placeholder="25"
+                        />
                       </div>
                     )}
                   </div>
@@ -458,12 +400,7 @@ export default function PlatformSettingsModal({
                     <div className="flex items-center justify-between">
                       <Label>Stopaj {isAdmin ? 'Var mı?' : ''}</Label>
                       {isAdmin ? (
-                        <Switch
-                          checked={formData.has_withholding}
-                          onCheckedChange={(checked) =>
-                            setFormData({ ...formData, has_withholding: checked })
-                          }
-                        />
+                        <Switch checked={formData.has_withholding} onCheckedChange={(checked) => setFormData({ ...formData, has_withholding: checked })} />
                       ) : (
                         <span className={`text-sm font-medium px-2 py-0.5 rounded-full ${formData.has_withholding ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'}`}>
                           {formData.has_withholding ? 'Aktif' : 'Pasif'}
@@ -474,20 +411,9 @@ export default function PlatformSettingsModal({
                       <div className="space-y-2 ml-2">
                         <Label className="text-sm">Stopaj Oranı (%)</Label>
                         {isAdmin ? (
-                          <Input
-                            type="number"
-                            step="0.01"
-                            min="0"
-                            value={formData.withholding_rate}
-                            onChange={(e) =>
-                              setFormData({ ...formData, withholding_rate: e.target.value })
-                            }
-                            placeholder="1"
-                          />
+                          <Input type="number" step="0.01" min="0" value={formData.withholding_rate} onChange={(e) => setFormData({ ...formData, withholding_rate: e.target.value })} placeholder="1" />
                         ) : (
-                          <div className="px-3 py-2 rounded-lg text-sm font-medium bg-slate-50 border border-slate-100">
-                            %{formData.withholding_rate}
-                          </div>
+                          <div className="px-3 py-2 rounded-lg text-sm font-medium bg-slate-50 border border-slate-100">%{formData.withholding_rate}</div>
                         )}
                       </div>
                     )}
@@ -498,12 +424,7 @@ export default function PlatformSettingsModal({
                     <div className="flex items-center justify-between">
                       <Label>Hizmet Bedeli {isAdmin ? 'Var mı?' : ''}</Label>
                       {isAdmin ? (
-                        <Switch
-                          checked={formData.has_service_fee}
-                          onCheckedChange={(checked) =>
-                            setFormData({ ...formData, has_service_fee: checked })
-                          }
-                        />
+                        <Switch checked={formData.has_service_fee} onCheckedChange={(checked) => setFormData({ ...formData, has_service_fee: checked })} />
                       ) : (
                         <span className={`text-sm font-medium px-2 py-0.5 rounded-full ${formData.has_service_fee ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'}`}>
                           {formData.has_service_fee ? 'Aktif' : 'Pasif'}
@@ -514,12 +435,7 @@ export default function PlatformSettingsModal({
                       <div className="space-y-2 ml-2">
                         <Label className="text-sm">Hizmet Bedeli Tipi</Label>
                         {isAdmin ? (
-                          <Select
-                            value={formData.service_fee_type}
-                            onValueChange={(v) =>
-                              setFormData({ ...formData, service_fee_type: v })
-                            }
-                          >
+                          <Select value={formData.service_fee_type} onValueChange={(v) => setFormData({ ...formData, service_fee_type: v })}>
                             <SelectTrigger><SelectValue /></SelectTrigger>
                             <SelectContent>
                               <SelectItem value="none">Yok</SelectItem>
@@ -529,66 +445,43 @@ export default function PlatformSettingsModal({
                           </Select>
                         ) : (
                           <div className="px-3 py-2 rounded-lg text-sm font-medium bg-slate-50 border border-slate-100">
-                            {formData.service_fee_type === 'fixed_per_order' ? 'Sabit (Sipariş Başı)' :
-                             formData.service_fee_type === 'percent_of_sale' ? 'Yüzde (Satış Üzerinden)' : 'Yok'}
+                            {formData.service_fee_type === 'fixed_per_order' ? 'Sabit (Sipariş Başı)' : formData.service_fee_type === 'percent_of_sale' ? 'Yüzde (Satış Üzerinden)' : 'Yok'}
                           </div>
                         )}
                         <div className="grid grid-cols-2 gap-3 mt-2">
                           <div>
-                            <Label className="text-sm">
-                              {formData.service_fee_type === 'percent_of_sale' ? 'Oran (%)' : 'Tutar (₺)'}
-                            </Label>
+                            <Label className="text-sm">{formData.service_fee_type === 'percent_of_sale' ? 'Oran (%)' : 'Tutar (₺)'}</Label>
                             {isAdmin ? (
-                              <Input
-                                type="number" step="0.01" min="0"
-                                value={formData.service_fee_amount}
-                                onChange={(e) => setFormData({ ...formData, service_fee_amount: e.target.value })}
-                              />
+                              <Input type="number" step="0.01" min="0" value={formData.service_fee_amount} onChange={(e) => setFormData({ ...formData, service_fee_amount: e.target.value })} />
                             ) : (
                               <div className="px-3 py-2 rounded-lg text-sm font-medium bg-slate-50 border border-slate-100">
-                                {formData.service_fee_type === 'percent_of_sale' ? `%${formData.service_fee_amount}` : `\u20ba${formData.service_fee_amount}`}
+                                {formData.service_fee_type === 'percent_of_sale' ? `%${formData.service_fee_amount}` : `₺${formData.service_fee_amount}`}
                               </div>
                             )}
                           </div>
                           <div>
                             <Label className="text-sm">KDV (%)</Label>
                             {isAdmin ? (
-                              <Input
-                                type="number"
-                                value={formData.service_fee_vat_rate}
-                                onChange={(e) => setFormData({ ...formData, service_fee_vat_rate: e.target.value })}
-                              />
+                              <Input type="number" value={formData.service_fee_vat_rate} onChange={(e) => setFormData({ ...formData, service_fee_vat_rate: e.target.value })} />
                             ) : (
-                              <div className="px-3 py-2 rounded-lg text-sm font-medium bg-slate-50 border border-slate-100">
-                                %{formData.service_fee_vat_rate}
-                              </div>
+                              <div className="px-3 py-2 rounded-lg text-sm font-medium bg-slate-50 border border-slate-100">%{formData.service_fee_vat_rate}</div>
                             )}
                           </div>
                         </div>
-
                         <div className="border-t border-slate-200 pt-3 mt-3">
                           <Label className="text-sm font-medium block mb-2">Bugün Kargoda Hizmet Bedeli (İndirimli)</Label>
                           {isAdmin ? (
                             <>
-                              <Input
-                                type="number" step="0.01" min="0"
-                                value={formData.same_day_delivery_service_fee}
-                                onChange={(e) => setFormData({ ...formData, same_day_delivery_service_fee: e.target.value })}
-                                placeholder="0" className="text-sm"
-                              />
+                              <Input type="number" step="0.01" min="0" value={formData.same_day_delivery_service_fee} onChange={(e) => setFormData({ ...formData, same_day_delivery_service_fee: e.target.value })} placeholder="0" className="text-sm" />
                               <p className="text-xs text-slate-500 mt-1">"Bugün Kargoda" seçildiğinde bu bedel uygulanır</p>
                             </>
                           ) : (
                             <>
-                              <div className="px-3 py-2 rounded-lg text-sm font-medium bg-slate-50 border border-slate-100">
-                                \u20ba{formData.same_day_delivery_service_fee}
-                              </div>
+                              <div className="px-3 py-2 rounded-lg text-sm font-medium bg-slate-50 border border-slate-100">₺{formData.same_day_delivery_service_fee}</div>
                               <p className="text-xs text-slate-500 mt-1">"Bugün Kargoda" seçildiğinde bu bedel uygulanır</p>
                             </>
                           )}
                         </div>
-
-                        {/* POS Hizmet Bedeli - sadece HepsiBurada */}
                         {platform?.platform_type === 'hepsiburada' && (
                           <div className="border-t border-slate-200 pt-3 mt-3">
                             <div className="flex items-center justify-between mb-2">
@@ -597,10 +490,7 @@ export default function PlatformSettingsModal({
                                 <p className="text-xs text-slate-500 mt-0.5">Sipariş başına yüzdelik kesinti (Bugün Kargoda dahil)</p>
                               </div>
                               {isAdmin ? (
-                                <Switch
-                                  checked={formData.has_pos_service_fee}
-                                  onCheckedChange={(checked) => setFormData({ ...formData, has_pos_service_fee: checked })}
-                                />
+                                <Switch checked={formData.has_pos_service_fee} onCheckedChange={(checked) => setFormData({ ...formData, has_pos_service_fee: checked })} />
                               ) : (
                                 <span className={`text-sm font-medium px-2 py-0.5 rounded-full ${formData.has_pos_service_fee ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'}`}>
                                   {formData.has_pos_service_fee ? 'Aktif' : 'Pasif'}
@@ -610,18 +500,11 @@ export default function PlatformSettingsModal({
                             {formData.has_pos_service_fee && (
                               isAdmin ? (
                                 <>
-                                  <Input
-                                    type="number" step="0.0001" min="0"
-                                    value={formData.pos_service_fee_rate}
-                                    onChange={(e) => setFormData({ ...formData, pos_service_fee_rate: e.target.value })}
-                                    placeholder="0" className="text-sm"
-                                  />
+                                  <Input type="number" step="0.0001" min="0" value={formData.pos_service_fee_rate} onChange={(e) => setFormData({ ...formData, pos_service_fee_rate: e.target.value })} placeholder="0" className="text-sm" />
                                   <p className="text-xs text-slate-500 mt-1">KDV dahil satış fiyatı üzerinden yüzde olarak kesilir</p>
                                 </>
                               ) : (
-                                <div className="px-3 py-2 rounded-lg text-sm font-medium bg-slate-50 border border-slate-100">
-                                  %{formData.pos_service_fee_rate}
-                                </div>
+                                <div className="px-3 py-2 rounded-lg text-sm font-medium bg-slate-50 border border-slate-100">%{formData.pos_service_fee_rate}</div>
                               )
                             )}
                           </div>
@@ -635,12 +518,7 @@ export default function PlatformSettingsModal({
                     <div className="flex items-center justify-between">
                       <Label>Barem Desteği Var mı?</Label>
                       {isAdmin ? (
-                        <Switch
-                          checked={formData.use_barem}
-                          onCheckedChange={(checked) =>
-                            setFormData({ ...formData, use_barem: checked })
-                          }
-                        />
+                        <Switch checked={formData.use_barem} onCheckedChange={(checked) => setFormData({ ...formData, use_barem: checked })} />
                       ) : (
                         <span className={`text-sm font-medium px-2 py-0.5 rounded-full ${formData.use_barem ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'}`}>
                           {formData.use_barem ? 'Aktif' : 'Pasif'}
@@ -652,64 +530,81 @@ export default function PlatformSettingsModal({
                         <Label className="text-sm">Maksimum Desi</Label>
                         {isAdmin ? (
                           <>
-                            <Input
-                              type="number" step="1" min="0"
-                              value={formData.barem_max_desi}
-                              onChange={(e) => setFormData({ ...formData, barem_max_desi: e.target.value })}
-                            />
+                            <Input type="number" step="1" min="0" value={formData.barem_max_desi} onChange={(e) => setFormData({ ...formData, barem_max_desi: e.target.value })} />
                             <p className="text-xs text-slate-500">Bu değerin üzerindeki ürünler desi tarifesiyle hesaplanır</p>
                           </>
                         ) : (
                           <>
-                            <div className="px-3 py-2 rounded-lg text-sm font-medium bg-slate-50 border border-slate-100">
-                              {formData.barem_max_desi} desi
-                            </div>
+                            <div className="px-3 py-2 rounded-lg text-sm font-medium bg-slate-50 border border-slate-100">{formData.barem_max_desi} desi</div>
                             <p className="text-xs text-slate-500">Bu değerin üzerindeki ürünler desi tarifesiyle hesaplanır</p>
                           </>
                         )}
-
                         <div className="grid grid-cols-2 gap-2 mt-3">
                           <div>
-                            <Label className="text-xs">Barem 1 Aralığı (\u20ba)</Label>
-                            <div className="px-3 py-2 rounded-lg text-sm font-medium bg-slate-50 border border-slate-100">
-                              {formData.barem1_min} - {formData.barem1_max}
-                            </div>
+                            <Label className="text-xs">Barem 1 Aralığı (₺)</Label>
+                            <div className="px-3 py-2 rounded-lg text-sm font-medium bg-slate-50 border border-slate-100">{formData.barem1_min} - {formData.barem1_max}</div>
                           </div>
                           <div>
-                            <Label className="text-xs">Barem 2 Aralığı (\u20ba)</Label>
-                            <div className="px-3 py-2 rounded-lg text-sm font-medium bg-slate-50 border border-slate-100">
-                              {formData.barem2_min} - {formData.barem2_max}
-                            </div>
+                            <Label className="text-xs">Barem 2 Aralığı (₺)</Label>
+                            <div className="px-3 py-2 rounded-lg text-sm font-medium bg-slate-50 border border-slate-100">{formData.barem2_min} - {formData.barem2_max}</div>
                           </div>
                         </div>
-
                         {isAdmin && (
                           <div className="mt-3 pt-3 border-t border-slate-200">
                             <p className="text-xs font-semibold text-slate-600 mb-2">Admin: Aralıkları Düzenle</p>
                             <div className="grid grid-cols-2 gap-2">
                               <div>
-                                <Label className="text-xs">Barem 1 Min (\u20ba)</Label>
-                                <Input type="number" step="0.01" value={formData.barem1_min}
-                                  onChange={(e) => setFormData({ ...formData, barem1_min: e.target.value })} />
+                                <Label className="text-xs">Barem 1 Min (₺)</Label>
+                                <Input type="number" step="0.01" value={formData.barem1_min} onChange={(e) => setFormData({ ...formData, barem1_min: e.target.value })} />
                               </div>
                               <div>
-                                <Label className="text-xs">Barem 1 Max (\u20ba)</Label>
-                                <Input type="number" step="0.01" value={formData.barem1_max}
-                                  onChange={(e) => setFormData({ ...formData, barem1_max: e.target.value })} />
+                                <Label className="text-xs">Barem 1 Max (₺)</Label>
+                                <Input type="number" step="0.01" value={formData.barem1_max} onChange={(e) => setFormData({ ...formData, barem1_max: e.target.value })} />
                               </div>
                               <div>
-                                <Label className="text-xs">Barem 2 Min (\u20ba)</Label>
-                                <Input type="number" step="0.01" value={formData.barem2_min}
-                                  onChange={(e) => setFormData({ ...formData, barem2_min: e.target.value })} />
+                                <Label className="text-xs">Barem 2 Min (₺)</Label>
+                                <Input type="number" step="0.01" value={formData.barem2_min} onChange={(e) => setFormData({ ...formData, barem2_min: e.target.value })} />
                               </div>
                               <div>
-                                <Label className="text-xs">Barem 2 Max (\u20ba)</Label>
-                                <Input type="number" step="0.01" value={formData.barem2_max}
-                                  onChange={(e) => setFormData({ ...formData, barem2_max: e.target.value })} />
+                                <Label className="text-xs">Barem 2 Max (₺)</Label>
+                                <Input type="number" step="0.01" value={formData.barem2_max} onChange={(e) => setFormData({ ...formData, barem2_max: e.target.value })} />
                               </div>
                             </div>
                           </div>
                         )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </>
+            )}
+
+            {/* Web Sitesi için Kurumlar Vergisi */}
+            {!isMarketplace && (
+              <>
+                <Separator />
+                <div className="space-y-4">
+                  <h4 className="font-semibold text-slate-900 text-sm bg-slate-100 rounded-lg px-3 py-2">Vergi Ayarları</h4>
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <Label>Kurumlar (Gelir) Vergisi</Label>
+                        <p className="text-xs text-slate-400 mt-0.5">Kâr üzerinden alınan vergi (%{formData.corporate_tax_rate})</p>
+                      </div>
+                      <Switch
+                        checked={formData.has_corporate_tax}
+                        onCheckedChange={(checked) => setFormData({ ...formData, has_corporate_tax: checked })}
+                      />
+                    </div>
+                    {formData.has_corporate_tax && (
+                      <div className="space-y-2 ml-2">
+                        <Label className="text-sm">Vergi Oranı (%)</Label>
+                        <Input
+                          type="number" step="0.01" min="0" max="100"
+                          value={formData.corporate_tax_rate}
+                          onChange={(e) => setFormData({ ...formData, corporate_tax_rate: e.target.value })}
+                          placeholder="25"
+                        />
                       </div>
                     )}
                   </div>
@@ -733,9 +628,7 @@ export default function PlatformSettingsModal({
                   </div>
                   <Switch
                     checked={formData.has_same_day_delivery}
-                    onCheckedChange={(v) =>
-                      setFormData((prev) => ({ ...prev, has_same_day_delivery: v }))
-                    }
+                    onCheckedChange={(v) => setFormData((prev) => ({ ...prev, has_same_day_delivery: v }))}
                   />
                 </div>
                 {!formData.has_same_day_delivery && (
@@ -761,57 +654,37 @@ export default function PlatformSettingsModal({
                     <Info className="h-3.5 w-3.5 mt-0.5 flex-shrink-0" />
                     <span>Bu bölüm şu an aktif değildir. Entegrasyon özelliği yakında devreye girecektir.</span>
                   </div>
-
                   {platform?.platform_type === 'trendyol' && (
                     <div className="space-y-3 opacity-75">
                       <div className="space-y-2">
                         <Label className="text-sm">Satıcı ID (Supplier ID)</Label>
-                        <Input type="text" placeholder="Örn: 123456"
-                          value={formData.integration_supplier_id}
-                          onChange={(e) => setFormData({ ...formData, integration_supplier_id: e.target.value })}
-                          disabled />
-                        <p className="text-xs text-slate-400">Trendyol Satıcı Paneli \u2192 Entegrasyon \u2192 API Bilgileri</p>
+                        <Input type="text" placeholder="Örn: 123456" value={formData.integration_supplier_id} onChange={(e) => setFormData({ ...formData, integration_supplier_id: e.target.value })} disabled />
+                        <p className="text-xs text-slate-400">Trendyol Satıcı Paneli → Entegrasyon → API Bilgileri</p>
                       </div>
                       <div className="space-y-2">
                         <Label className="text-sm">API Key</Label>
-                        <Input type="text" placeholder="API Key"
-                          value={formData.integration_api_key}
-                          onChange={(e) => setFormData({ ...formData, integration_api_key: e.target.value })}
-                          disabled />
+                        <Input type="text" placeholder="API Key" value={formData.integration_api_key} onChange={(e) => setFormData({ ...formData, integration_api_key: e.target.value })} disabled />
                       </div>
                       <div className="space-y-2">
                         <Label className="text-sm">API Secret</Label>
-                        <Input type="password" placeholder="API Secret"
-                          value={formData.integration_api_secret}
-                          onChange={(e) => setFormData({ ...formData, integration_api_secret: e.target.value })}
-                          disabled />
+                        <Input type="password" placeholder="API Secret" value={formData.integration_api_secret} onChange={(e) => setFormData({ ...formData, integration_api_secret: e.target.value })} disabled />
                       </div>
                     </div>
                   )}
-
                   {platform?.platform_type === 'hepsiburada' && (
                     <div className="space-y-3 opacity-75">
                       <div className="space-y-2">
                         <Label className="text-sm">Kullanıcı Adı (Username)</Label>
-                        <Input type="text" placeholder="API Kullanıcı Adı"
-                          value={formData.integration_username}
-                          onChange={(e) => setFormData({ ...formData, integration_username: e.target.value })}
-                          disabled />
-                        <p className="text-xs text-slate-400">Hepsiburada Satıcı Paneli \u2192 Hesap Ayarları \u2192 API Bilgileri</p>
+                        <Input type="text" placeholder="API Kullanıcı Adı" value={formData.integration_username} onChange={(e) => setFormData({ ...formData, integration_username: e.target.value })} disabled />
+                        <p className="text-xs text-slate-400">Hepsiburada Satıcı Paneli → Hesap Ayarları → API Bilgileri</p>
                       </div>
                       <div className="space-y-2">
                         <Label className="text-sm">Şifre (Password)</Label>
-                        <Input type="password" placeholder="API Şifresi"
-                          value={formData.integration_password}
-                          onChange={(e) => setFormData({ ...formData, integration_password: e.target.value })}
-                          disabled />
+                        <Input type="password" placeholder="API Şifresi" value={formData.integration_password} onChange={(e) => setFormData({ ...formData, integration_password: e.target.value })} disabled />
                       </div>
                       <div className="space-y-2">
                         <Label className="text-sm">Merchant ID</Label>
-                        <Input type="text" placeholder="Merchant ID"
-                          value={formData.integration_merchant_id}
-                          onChange={(e) => setFormData({ ...formData, integration_merchant_id: e.target.value })}
-                          disabled />
+                        <Input type="text" placeholder="Merchant ID" value={formData.integration_merchant_id} onChange={(e) => setFormData({ ...formData, integration_merchant_id: e.target.value })} disabled />
                       </div>
                     </div>
                   )}
