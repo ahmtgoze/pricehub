@@ -102,23 +102,23 @@ export default function Dashboard() {
       const max = parseFloat(customMaxProfit) || Infinity;
       const filteredPrices = productPrices.filter(p => { const r = p.profit_rate ?? 0; return r >= min && r <= max; });
       const result = [];
-      if (min < 0) result.push({ name: `${customMinProfit}–0%`, value: filteredPrices.filter(p => (p.profit_rate ?? 0) < 0).length, type: 'negative' });
-      if (max > 0) result.push({ name: `0–${customMaxProfit}%`, value: filteredPrices.filter(p => (p.profit_rate ?? 0) >= 0).length, type: 'positive' });
+      if (min < 0) result.push({ name: `${customMinProfit}\u20130%`, value: filteredPrices.filter(p => (p.profit_rate ?? 0) < 0).length, type: 'negative' });
+      if (max > 0) result.push({ name: `0\u2013${customMaxProfit}%`, value: filteredPrices.filter(p => (p.profit_rate ?? 0) >= 0).length, type: 'positive' });
       return result;
     }
-    const buckets = { '< 0%': 0, '0–10%': 0, '10–20%': 0, '20–30%': 0, '30–40%': 0, '40–50%': 0, '50–75%': 0, '75–100%': 0, '100–200%': 0, '200–300%': 0, '> 300%': 0 };
+    const buckets = { '< 0%': 0, '0\u201310%': 0, '10\u201320%': 0, '20\u201330%': 0, '30\u201340%': 0, '40\u201350%': 0, '50\u201375%': 0, '75\u2013100%': 0, '100\u2013200%': 0, '200\u2013300%': 0, '> 300%': 0 };
     productPrices.forEach(pp => {
       const r = pp.profit_rate ?? 0;
       if (r < 0) buckets['< 0%']++;
-      else if (r < 10) buckets['0–10%']++;
-      else if (r < 20) buckets['10–20%']++;
-      else if (r < 30) buckets['20–30%']++;
-      else if (r < 40) buckets['30–40%']++;
-      else if (r < 50) buckets['40–50%']++;
-      else if (r < 75) buckets['50–75%']++;
-      else if (r < 100) buckets['75–100%']++;
-      else if (r < 200) buckets['100–200%']++;
-      else if (r < 300) buckets['200–300%']++;
+      else if (r < 10) buckets['0\u201310%']++;
+      else if (r < 20) buckets['10\u201320%']++;
+      else if (r < 30) buckets['20\u201330%']++;
+      else if (r < 40) buckets['30\u201340%']++;
+      else if (r < 50) buckets['40\u201350%']++;
+      else if (r < 75) buckets['50\u201375%']++;
+      else if (r < 100) buckets['75\u2013100%']++;
+      else if (r < 200) buckets['100\u2013200%']++;
+      else if (r < 300) buckets['200\u2013300%']++;
       else buckets['> 300%']++;
     });
     return Object.entries(buckets).map(([name, value]) => ({ name, value }));
@@ -157,34 +157,31 @@ export default function Dashboard() {
     setShowProductsList(true);
   };
 
-const range = rangeMap[name];
+  const handleBarClick = (data) => {
+    if (data && data.activePayload && data.activePayload[0]) {
+      const name = data.activePayload[0].payload.name;
+      const rangeMap = {
+        '< 0%': { min: '', max: '0' },
+        '0\u201310%': { min: '0', max: '10' },
+        '10\u201320%': { min: '10', max: '20' },
+        '20\u201330%': { min: '20', max: '30' },
+        '30\u201340%': { min: '30', max: '40' },
+        '40\u201350%': { min: '40', max: '50' },
+        '50\u201375%': { min: '50', max: '75' },
+        '75\u2013100%': { min: '75', max: '100' },
+        '100\u2013200%': { min: '100', max: '200' },
+        '200\u2013300%': { min: '200', max: '300' },
+        '> 300%': { min: '300', max: '' },
+      };
+      const range = rangeMap[name];
       if (range) {
         navigate(`/Prices?minRate=${range.min}&maxRate=${range.max}&label=${encodeURIComponent(name)}`);
       } else {
-        // Özel aralık - isimden min/max çıkar (örn: "0–100%")
-        const match = name.match(/([\d.]+)[–-]([\d.]+)%/);
+        const match = name.match(/([\d.]+)[^\d]+([\d.]+)%/);
         if (match) {
           navigate(`/Prices?minRate=${match[1]}&maxRate=${match[2]}&label=${encodeURIComponent(name)}`);
-        } else if (name.startsWith('< ')) {
-          navigate(`/Prices?minRate=&maxRate=${name.replace('< ', '').replace('%', '')}&label=${encodeURIComponent(name)}`);
-        } else if (name.startsWith('> ')) {
-          navigate(`/Prices?minRate=${name.replace('> ', '').replace('%', '')}&maxRate=&label=${encodeURIComponent(name)}`);
         }
       }
-        '< 0%': { min: '', max: '0' },
-        '0–10%': { min: '0', max: '10' },
-        '10–20%': { min: '10', max: '20' },
-        '20–30%': { min: '20', max: '30' },
-        '30–40%': { min: '30', max: '40' },
-        '40–50%': { min: '40', max: '50' },
-        '50–75%': { min: '50', max: '75' },
-        '75–100%': { min: '75', max: '100' },
-        '100–200%': { min: '100', max: '200' },
-        '200–300%': { min: '200', max: '300' },
-        '> 300%': { min: '300', max: '' },
-      };
-      const range = rangeMap[name] || { min: '', max: '' };
-      navigate(`/Prices?minRate=${range.min}&maxRate=${range.max}&label=${encodeURIComponent(name)}`);
     }
   };
 
@@ -201,15 +198,15 @@ const range = rangeMap[name];
     if (item.type === 'positive') return '#22c55e';
     const name = item.name || item;
     if (name === '< 0%') return '#ef4444';
-    if (name === '0–10%') return '#f97316';
-    if (name === '10–20%') return '#eab308';
-    if (name === '20–30%') return '#fbbf24';
-    if (name === '30–40%') return '#86efac';
-    if (name === '40–50%') return '#4ade80';
-    if (name === '50–75%') return '#22c55e';
-    if (name === '75–100%') return '#16a34a';
-    if (name === '100–200%') return '#15803d';
-    if (name === '200–300%') return '#166534';
+    if (name.startsWith('0\u2013')) return '#f97316';
+    if (name.startsWith('10\u2013')) return '#eab308';
+    if (name.startsWith('20\u2013')) return '#fbbf24';
+    if (name.startsWith('30\u2013')) return '#86efac';
+    if (name.startsWith('40\u2013')) return '#4ade80';
+    if (name.startsWith('50\u2013')) return '#22c55e';
+    if (name.startsWith('75\u2013')) return '#16a34a';
+    if (name.startsWith('100\u2013')) return '#15803d';
+    if (name.startsWith('200\u2013')) return '#166534';
     return '#14532d';
   };
 
