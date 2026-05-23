@@ -48,11 +48,16 @@ export default function Prices() {
   const [maxTargetAmount, setMaxTargetAmount] = useState('');
   const [visiblePlatforms, setVisiblePlatforms] = useState({});
 
+  // Seçim
+  const [selectedIds, setSelectedIds] = useState(new Set());
+
   const { task, startTask, updateTask, finishTask } = useBackgroundTask();
   const location = useLocation();
   const searchParams = new URLSearchParams(location.search);
   const unpricedFilter = searchParams.get('filter') === 'unpriced';
-  const profitRange = searchParams.get('profitRange');
+  const urlMinRate = searchParams.get('minRate');
+  const urlMaxRate = searchParams.get('maxRate');
+  const profitRangeLabel = searchParams.get('label');
   const queryClient = useQueryClient();
 
   React.useEffect(() => {
@@ -69,11 +74,9 @@ export default function Prices() {
     }
   }, [task?.current, task?.total]);
 
-  // profitRange geldiğinde filtre panelini aç
   React.useEffect(() => {
     if (!profitRange) return;
     setShowFilters(true);
-    // profitRange'i min/max orana çevir
     const rangeMap = {
       '< 0%': { min: '', max: '0' },
       '0–10%': { min: '0', max: '10' },
@@ -88,10 +91,7 @@ export default function Prices() {
       '> 300%': { min: '300', max: '' },
     };
     const range = rangeMap[profitRange];
-    if (range) {
-      setMinProfitRate(range.min);
-      setMaxProfitRate(range.max);
-    }
+    if (range) { setMinProfitRate(range.min); setMaxProfitRate(range.max); }
   }, [location.search]);
 
   const { data: products = [], isLoading: productsLoading } = useQuery({
@@ -118,7 +118,6 @@ export default function Prices() {
       .map(p => [p.platform_type, p])
   ).values()];
 
-  // Platform görünürlüğü başlat
   React.useEffect(() => {
     if (platforms.length > 0 && Object.keys(visiblePlatforms).length === 0) {
       const initial = {};
@@ -168,7 +167,7 @@ export default function Prices() {
     return text.toLowerCase().replace(/ş/g, 's').replace(/ç/g, 'c').replace(/ğ/g, 'g').replace(/ı/g, 'i').replace(/ö/g, 'o').replace(/ü/g, 'u');
   };
 
-  const hasActiveFilters = minProfit || maxProfit || minProfitRate || maxProfitRate || minTargetAmount || maxTargetAmount || unpricedFilter || profitRange;
+  const hasActiveFilters = minProfit || maxProfit || minProfitRate || maxProfitRate || minTargetAmount || maxTargetAmount || unpricedFilter || urlMinRate || urlMaxRate;
 
   const filteredProducts = useMemo(() => {
     let result = [...enrichedProducts];
@@ -182,48 +181,34 @@ export default function Prices() {
     }
 
     if (categoryFilter !== 'all') result = result.filter(p => p.category_id === categoryFilter);
-
     if (unpricedFilter) result = result.filter(p => !p.prices || Object.keys(p.prices).length === 0);
 
-    // Dashboard'dan gelen kar oranı aralığı filtresi
+    // Sadece görünür platformların fiyatlarına bak
+    const getVisiblePrices = (p) => visiblePlatformList.map(pl => p.prices[pl.id]).filter(Boolean);
+
     if (profitRange) {
-      result = result.filter(p => {
-        const prices = Object.values(p.prices || {});
-        return prices.some(price => {
-          const r = price.profit_rate ?? 0;
-          if (profitRange === '< 0%') return r < 0;
-          if (profitRange === '0–10%') return r >= 0 && r < 10;
-          if (profitRange === '10–20%') return r >= 10 && r < 20;
-          if (profitRange === '20–30%') return r >= 20 && r < 30;
-          if (profitRange === '30–40%') return r >= 30 && r < 40;
-          if (profitRange === '40–50%') return r >= 40 && r < 50;
-          if (profitRange === '50–75%') return r >= 50 && r < 75;
-          if (profitRange === '75–100%') return r >= 75 && r < 100;
-          if (profitRange === '100–200%') return r >= 100 && r < 200;
-          if (profitRange === '200–300%') return r >= 200 && r < 300;
-          if (profitRange === '> 300%') return r >= 300;
-          return false;
-        });
-      });
+      result = result.filter(p => getVisiblePrices(p).some(price => {
+        const r = price.profit_rate ?? 0;
+        if (profitRange === '< 0%') return r < 0;
+        if (profitRange === '0–10%') return r >= 0 && r < 10;
+        if (profitRange === '10–20%') return r >= 10 && r < 20;
+        if (profitRange === '20–30%') return r >= 20 && r < 30;
+        if (profitRange === '30–40%') return r >= 30 && r < 40;
+        if (profitRange === '40–50%') return r >= 40 && r < 50;
+        if (profitRange === '50–75%') return r >= 50 && r < 75;
+        if (profitRange === '75–100%') return r >= 75 && r < 100;
+        if (profitRange === '100–200%') return r >= 100 && r < 200;
+        if (profitRange === '200–300%') return r >= 200 && r < 300;
+        if (profitRange === '> 300%') return r >= 300;
+        return false;
+      }));
     }
 
-    // Min/Max Kâr Tutarı (₺) filtresi
-    if (minProfit !== '') {
-      result = result.filter(p => Object.values(p.prices || {}).some(price => (price.net_profit ?? 0) >= parseFloat(minProfit)));
-    }
-    if (maxProfit !== '') {
-      result = result.filter(p => Object.values(p.prices || {}).some(price => (price.net_profit ?? 0) <= parseFloat(maxProfit)));
-    }
+    if (minProfit !== '') result = result.filter(p => getVisiblePrices(p).some(price => (price.net_profit ?? 0) >= parseFloat(minProfit)));
+    if (maxProfit !== '') result = result.filter(p => getVisiblePrices(p).some(price => (price.net_profit ?? 0) <= parseFloat(maxProfit)));
+    if (minProfitRate !== '') result = result.filter(p => getVisiblePrices(p).some(price => (price.profit_rate ?? 0) >= parseFloat(minProfitRate)));
+    if (maxProfitRate !== '') result = result.filter(p => getVisiblePrices(p).some(price => (price.profit_rate ?? 0) <= parseFloat(maxProfitRate)));
 
-    // Min/Max Kâr Oranı (%) filtresi
-    if (minProfitRate !== '') {
-      result = result.filter(p => Object.values(p.prices || {}).some(price => (price.profit_rate ?? 0) >= parseFloat(minProfitRate)));
-    }
-    if (maxProfitRate !== '') {
-      result = result.filter(p => Object.values(p.prices || {}).some(price => (price.profit_rate ?? 0) <= parseFloat(maxProfitRate)));
-    }
-
-    // Min/Max Hedef Kâr Tutarı (₺) filtresi — komisyondan
     if (minTargetAmount !== '') {
       result = result.filter(p => {
         const comm = commissions.find(c => c.category_id === p.category_id && c.is_active !== false);
@@ -253,7 +238,7 @@ export default function Prices() {
       return 0;
     });
     return result;
-  }, [enrichedProducts, search, categoryFilter, sortField, sortDir, unpricedFilter, profitRange, minProfit, maxProfit, minProfitRate, maxProfitRate, minTargetAmount, maxTargetAmount, commissions]);
+  }, [enrichedProducts, search, categoryFilter, sortField, sortDir, unpricedFilter, minProfit, maxProfit, minProfitRate, maxProfitRate, minTargetAmount, maxTargetAmount, commissions, visiblePlatformList]);
 
   const clearFilters = () => {
     setMinProfit(''); setMaxProfit('');
@@ -261,6 +246,26 @@ export default function Prices() {
     setMinTargetAmount(''); setMaxTargetAmount('');
     setCategoryFilter('all');
   };
+
+  // Seçim işlemleri
+  const toggleSelect = (id) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === filteredProducts.length && filteredProducts.length > 0) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(filteredProducts.map(p => p.id)));
+    }
+  };
+
+  const isAllSelected = selectedIds.size === filteredProducts.length && filteredProducts.length > 0;
+  const isPartialSelected = selectedIds.size > 0 && selectedIds.size < filteredProducts.length;
 
   const startFakeProgress = () => {
     setFakeProgress(0);
@@ -273,15 +278,9 @@ export default function Prices() {
   };
 
   const stopFakeProgress = () => {
-    if (fakeIntervalRef.current) {
-      clearInterval(fakeIntervalRef.current);
-      fakeIntervalRef.current = null;
-    }
+    if (fakeIntervalRef.current) { clearInterval(fakeIntervalRef.current); fakeIntervalRef.current = null; }
     setFakeProgress(100);
-    setTimeout(() => {
-      setShowProgressModal(false);
-      setFakeProgress(0);
-    }, 600);
+    setTimeout(() => { setShowProgressModal(false); setFakeProgress(0); }, 600);
   };
 
   const handleCalculatePrices = async () => {
@@ -292,7 +291,6 @@ export default function Prices() {
     startFakeProgress();
     await new Promise(r => setTimeout(r, 100));
     setShowProgressModal(true);
-
     try {
       const [freshShippingRates, freshUserPlatforms, freshProductPrices, freshPackages, freshPackageItems, freshProducts, freshCommissions, freshSettings, freshAdminPlatforms] = await Promise.all([
         db.entities.ShippingRate.list('-id', 10000),
@@ -305,32 +303,23 @@ export default function Prices() {
         db.entities.Settings.filter({ created_by: userEmail }),
         db.entities.Platform.filter({ platform_type: { $in: ['trendyol', 'hepsiburada'] } }),
       ]);
-
       const getFreshPackageCost = (packageId) => {
         if (!packageId) return 0;
         return freshPackageItems.filter(item => item.package_id === packageId && item.is_active !== false).reduce((sum, item) => sum + (item.cost || 0), 0);
       };
-
       const freshActivePlatforms = freshUserPlatforms.filter(p => p.is_active !== false);
       const total = freshProducts.length;
       startTask('calc-all-prices', 'Fiyatlar Hesaplanıyor', 'Fiyatlar', 'Prices', total);
-
       let successCount = 0;
       const failedProductsList = [];
       const allToCreate = [];
       const allToUpdate = [];
-
       for (let i = 0; i < freshProducts.length; i++) {
         const product = freshProducts[i];
         try {
-          const calculatedPrices = calculateAllPlatformPrices({
-            product, platforms: freshActivePlatforms, shippingRates: freshShippingRates,
-            commissions: freshCommissions, packages: freshPackages, packageItems: freshPackageItems,
-            getPackageCost: getFreshPackageCost, settings: freshSettings, systemAdminPlatforms: freshAdminPlatforms
-          });
-          if (calculatedPrices.length === 0) {
-            failedProductsList.push({ id: product.id, name: product.name });
-          } else {
+          const calculatedPrices = calculateAllPlatformPrices({ product, platforms: freshActivePlatforms, shippingRates: freshShippingRates, commissions: freshCommissions, packages: freshPackages, packageItems: freshPackageItems, getPackageCost: getFreshPackageCost, settings: freshSettings, systemAdminPlatforms: freshAdminPlatforms });
+          if (calculatedPrices.length === 0) { failedProductsList.push({ id: product.id, name: product.name }); }
+          else {
             for (const calcPrice of calculatedPrices) {
               const existing = freshProductPrices.filter(pp => pp.product_id === product.id && pp.platform_id === calcPrice.platform_id);
               if (existing.length > 0) allToUpdate.push({ id: existing[0].id, data: calcPrice });
@@ -338,27 +327,19 @@ export default function Prices() {
             }
             successCount++;
           }
-        } catch (err) {
-          failedProductsList.push({ id: product.id, name: product.name });
-        }
+        } catch (err) { failedProductsList.push({ id: product.id, name: product.name }); }
       }
-
       const BATCH = 100;
-      for (let i = 0; i < allToCreate.length; i += BATCH) {
-        await db.entities.ProductPrice.bulkCreate(allToCreate.slice(i, i + BATCH));
-      }
+      for (let i = 0; i < allToCreate.length; i += BATCH) await db.entities.ProductPrice.bulkCreate(allToCreate.slice(i, i + BATCH));
       await Promise.all(allToUpdate.map(({ id, data }) => db.entities.ProductPrice.update(id, data)));
       await queryClient.invalidateQueries({ queryKey: ['productPrices', userEmail] });
       setFailedProducts(failedProductsList);
       setSuccessModal({ open: true, successCount, failedCount: failedProductsList.length });
-    } catch (error) {
-      toast.error('Fiyat hesaplama hatası: ' + error.message);
-    } finally {
-      setCalculating(false);
-      setCalculationProgress({ current: 0, total: 0 });
+    } catch (error) { toast.error('Fiyat hesaplama hatası: ' + error.message); }
+    finally {
+      setCalculating(false); setCalculationProgress({ current: 0, total: 0 });
       setPriceCalculationProgress({ isCalculating: false, current: 0, total: 0, title: '', estimatedSecondsLeft: null, startTime: null });
-      stopFakeProgress();
-      finishTask();
+      stopFakeProgress(); finishTask();
     }
   };
 
@@ -366,27 +347,16 @@ export default function Prices() {
     setCalculatingSingle(originalProduct.id);
     try {
       const [freshProducts, freshPrices, freshShippingRates, freshUserPlatforms, freshCommissions, freshPackages, freshPackageItems, freshSettings, freshAdminPlatforms] = await Promise.all([
-        db.entities.Product.filter({ created_by: userEmail }),
-        db.entities.ProductPrice.filter({ created_by: userEmail }),
-        db.entities.ShippingRate.list('-id', 10000),
-        db.entities.Platform.filter({ created_by: userEmail }),
-        db.entities.Commission.filter({ created_by: userEmail }),
-        db.entities.Package.filter({ created_by: userEmail }),
-        db.entities.PackageItem.filter({ created_by: userEmail }),
-        db.entities.Settings.filter({ created_by: userEmail }),
+        db.entities.Product.filter({ created_by: userEmail }), db.entities.ProductPrice.filter({ created_by: userEmail }),
+        db.entities.ShippingRate.list('-id', 10000), db.entities.Platform.filter({ created_by: userEmail }),
+        db.entities.Commission.filter({ created_by: userEmail }), db.entities.Package.filter({ created_by: userEmail }),
+        db.entities.PackageItem.filter({ created_by: userEmail }), db.entities.Settings.filter({ created_by: userEmail }),
         db.entities.Platform.filter({ platform_type: { $in: ['trendyol', 'hepsiburada'] } }),
       ]);
       const activePlatforms = freshUserPlatforms.filter(p => p.is_active !== false);
       const product = freshProducts.find(p => p.id === originalProduct.id) || originalProduct;
-      const getFreshPackageCost = (packageId) => {
-        if (!packageId) return 0;
-        return freshPackageItems.filter(item => item.package_id === packageId && item.is_active !== false).reduce((sum, item) => sum + (item.cost || 0), 0);
-      };
-      const calculatedPrices = calculateAllPlatformPrices({
-        product, platforms: activePlatforms, shippingRates: freshShippingRates,
-        commissions: freshCommissions, packages: freshPackages, packageItems: freshPackageItems,
-        getPackageCost: getFreshPackageCost, settings: freshSettings, systemAdminPlatforms: freshAdminPlatforms
-      });
+      const getFreshPackageCost = (packageId) => { if (!packageId) return 0; return freshPackageItems.filter(item => item.package_id === packageId && item.is_active !== false).reduce((sum, item) => sum + (item.cost || 0), 0); };
+      const calculatedPrices = calculateAllPlatformPrices({ product, platforms: activePlatforms, shippingRates: freshShippingRates, commissions: freshCommissions, packages: freshPackages, packageItems: freshPackageItems, getPackageCost: getFreshPackageCost, settings: freshSettings, systemAdminPlatforms: freshAdminPlatforms });
       if (calculatedPrices.length === 0) { toast.error('Bu ürün için fiyat hesaplanamadı - komisyon veya kargo tarifesi eksik olabilir'); return; }
       await Promise.all(calculatedPrices.map(async (calcPrice) => {
         const existing = freshPrices.filter(pp => pp.product_id === product.id && pp.platform_id === calcPrice.platform_id);
@@ -395,11 +365,8 @@ export default function Prices() {
       }));
       await queryClient.invalidateQueries({ queryKey: ['productPrices', userEmail] });
       toast.success(`${product.name} için fiyatlar güncellendi`);
-    } catch (error) {
-      toast.error('Fiyat hesaplama hatası: ' + error.message);
-    } finally {
-      setCalculatingSingle(null);
-    }
+    } catch (error) { toast.error('Fiyat hesaplama hatası: ' + error.message); }
+    finally { setCalculatingSingle(null); }
   };
 
   const handleResetPrices = async () => {
@@ -413,11 +380,8 @@ export default function Prices() {
       }
       await queryClient.invalidateQueries({ queryKey: ['productPrices', userEmail] });
       toast.success('Tüm fiyatlar sıfırlandı.');
-    } catch (error) {
-      toast.error('Fiyat sıfırlama hatası: ' + error.message);
-    } finally {
-      setCalculating(false);
-    }
+    } catch (error) { toast.error('Fiyat sıfırlama hatası: ' + error.message); }
+    finally { setCalculating(false); }
   };
 
   const handleRecalculateFailed = async () => {
@@ -431,21 +395,14 @@ export default function Prices() {
     startTask('calc-failed-prices', 'Başarısız Ürünler Hesaplanıyor', 'Fiyatlar', 'Prices', total);
     try {
       const [freshShippingRates, freshUserPlatforms, freshProductPrices, freshPackages, freshPackageItems, freshProducts, freshCommissions, freshSettings, freshAdminPlatforms] = await Promise.all([
-        db.entities.ShippingRate.list('-id', 10000),
-        db.entities.Platform.filter({ created_by: userEmail }),
-        db.entities.ProductPrice.filter({ created_by: userEmail }),
-        db.entities.Package.filter({ created_by: userEmail }),
-        db.entities.PackageItem.filter({ created_by: userEmail }),
-        db.entities.Product.filter({ created_by: userEmail }),
-        db.entities.Commission.filter({ created_by: userEmail }),
-        db.entities.Settings.filter({ created_by: userEmail }),
+        db.entities.ShippingRate.list('-id', 10000), db.entities.Platform.filter({ created_by: userEmail }),
+        db.entities.ProductPrice.filter({ created_by: userEmail }), db.entities.Package.filter({ created_by: userEmail }),
+        db.entities.PackageItem.filter({ created_by: userEmail }), db.entities.Product.filter({ created_by: userEmail }),
+        db.entities.Commission.filter({ created_by: userEmail }), db.entities.Settings.filter({ created_by: userEmail }),
         db.entities.Platform.filter({ platform_type: { $in: ['trendyol', 'hepsiburada'] } }),
       ]);
       const freshActivePlatforms = freshUserPlatforms.filter(p => p.is_active !== false);
-      const getFreshPackageCost = (packageId) => {
-        if (!packageId) return 0;
-        return freshPackageItems.filter(item => item.package_id === packageId && item.is_active !== false).reduce((sum, item) => sum + (item.cost || 0), 0);
-      };
+      const getFreshPackageCost = (packageId) => { if (!packageId) return 0; return freshPackageItems.filter(item => item.package_id === packageId && item.is_active !== false).reduce((sum, item) => sum + (item.cost || 0), 0); };
       const allToCreate = [], allToUpdate = [];
       let successCount = 0;
       const stillFailedProducts = [];
@@ -454,11 +411,7 @@ export default function Prices() {
         const product = freshProducts.find(p => p.id === failedProduct.id);
         if (!product) continue;
         try {
-          const calculatedPrices = calculateAllPlatformPrices({
-            product, platforms: freshActivePlatforms, shippingRates: freshShippingRates,
-            commissions: freshCommissions, packages: freshPackages, packageItems: freshPackageItems,
-            getPackageCost: getFreshPackageCost, settings: freshSettings, systemAdminPlatforms: freshAdminPlatforms
-          });
+          const calculatedPrices = calculateAllPlatformPrices({ product, platforms: freshActivePlatforms, shippingRates: freshShippingRates, commissions: freshCommissions, packages: freshPackages, packageItems: freshPackageItems, getPackageCost: getFreshPackageCost, settings: freshSettings, systemAdminPlatforms: freshAdminPlatforms });
           if (calculatedPrices.length === 0) { stillFailedProducts.push(failedProduct); continue; }
           for (const calcPrice of calculatedPrices) {
             const existing = freshProductPrices.filter(pp => pp.product_id === product.id && pp.platform_id === calcPrice.platform_id);
@@ -475,14 +428,11 @@ export default function Prices() {
       setFailedProducts(stillFailedProducts);
       if (stillFailedProducts.length > 0) toast.warning(`${successCount} ürün hesaplandı, ${stillFailedProducts.length} hala hesaplanamadı.`);
       else toast.success(`Tüm başarısız ürünler hesaplandı (${successCount} ürün)`);
-    } catch (error) {
-      toast.error('Hesaplama hatası: ' + error.message);
-    } finally {
-      setCalculating(false);
-      setCalculationProgress({ current: 0, total: 0 });
+    } catch (error) { toast.error('Hesaplama hatası: ' + error.message); }
+    finally {
+      setCalculating(false); setCalculationProgress({ current: 0, total: 0 });
       setPriceCalculationProgress({ isCalculating: false, current: 0, total: 0, title: '', estimatedSecondsLeft: null, startTime: null });
-      stopFakeProgress();
-      finishTask();
+      stopFakeProgress(); finishTask();
     }
   };
 
@@ -496,20 +446,30 @@ export default function Prices() {
     return sortDir === 'asc' ? <ChevronUp className="h-4 w-4 inline ml-1" /> : <ChevronDown className="h-4 w-4 inline ml-1" />;
   };
 
-  const handleExport = () => {
-    const exportData = filteredProducts.flatMap(product =>
-      platforms.map(platform => {
-        const price = product.prices[platform.id];
-        return { sku: product.sku, name: product.name, category: product.category_name, cost: product.cost, printing_cost: product.printing_cost || 0, packaging_cost: price?.packaging_cost || 0, desi: product.desi, platform: platform.name, sale_price: price?.sale_price || 0, profit_rate: price?.profit_rate || 0, net_profit: price?.net_profit || 0 };
-      })
-    );
-    const columns = [
-      { key: 'sku', label: 'SKU' }, { key: 'name', label: 'Ürün Adı' }, { key: 'category', label: 'Kategori' },
-      { key: 'cost', label: 'Maliyet' }, { key: 'printing_cost', label: 'Baskı Maliyeti' }, { key: 'packaging_cost', label: 'Paketleme Maliyeti' },
-      { key: 'desi', label: 'Desi' }, { key: 'platform', label: 'Platform' }, { key: 'sale_price', label: 'Satış Fiyatı' },
-      { key: 'profit_rate', label: 'Kâr Oranı (%)' }, { key: 'net_profit', label: 'Net Kâr' }
-    ];
-    downloadCSV(exportData, columns, 'fiyatlar_rapor');
+  const buildExportData = (productList) => productList.flatMap(product =>
+    visiblePlatformList.map(platform => {
+      const price = product.prices[platform.id];
+      return { sku: product.sku, name: product.name, category: product.category_name, cost: product.cost, printing_cost: product.printing_cost || 0, packaging_cost: price?.packaging_cost || 0, desi: product.desi, platform: platform.name, sale_price: price?.sale_price || 0, profit_rate: price?.profit_rate || 0, net_profit: price?.net_profit || 0 };
+    })
+  );
+
+  const exportColumns = [
+    { key: 'sku', label: 'SKU' }, { key: 'name', label: 'Ürün Adı' }, { key: 'category', label: 'Kategori' },
+    { key: 'cost', label: 'Maliyet' }, { key: 'printing_cost', label: 'Baskı Maliyeti' }, { key: 'packaging_cost', label: 'Paketleme Maliyeti' },
+    { key: 'desi', label: 'Desi' }, { key: 'platform', label: 'Platform' }, { key: 'sale_price', label: 'Satış Fiyatı' },
+    { key: 'profit_rate', label: 'Kâr Oranı (%)' }, { key: 'net_profit', label: 'Net Kâr' }
+  ];
+
+  const handleExportFiltered = () => {
+    downloadCSV(buildExportData(filteredProducts), exportColumns, 'fiyatlar_filtrelenenmis');
+    toast.success(`${filteredProducts.length} ürün indirildi`);
+  };
+
+  const handleExportSelected = () => {
+    if (selectedIds.size === 0) { toast.error('Lütfen önce ürün seçin'); return; }
+    const selected = filteredProducts.filter(p => selectedIds.has(p.id));
+    downloadCSV(buildExportData(selected), exportColumns, 'fiyatlar_secilmis');
+    toast.success(`${selected.length} seçili ürün indirildi`);
   };
 
   const getProfitColor = (rate) => {
@@ -540,11 +500,8 @@ export default function Prices() {
     } catch { return idx === 0 ? (product.desi || '-') : '-'; }
   };
 
-const togglePlatformVisibility = (platformId) => {
+  const togglePlatformVisibility = (platformId) => {
     setVisiblePlatforms(prev => ({ ...prev, [platformId]: !prev[platformId] }));
-    setMinProfit(''); setMaxProfit('');
-    setMinProfitRate(''); setMaxProfitRate('');
-    setMinTargetAmount(''); setMaxTargetAmount('');
   };
 
   const platformColors = { trendyol: 'bg-orange-100 text-orange-700 border-orange-200', hepsiburada: 'bg-yellow-100 text-yellow-700 border-yellow-200', website: 'bg-indigo-100 text-indigo-700 border-indigo-200' };
@@ -574,10 +531,20 @@ const togglePlatformVisibility = (platformId) => {
                 <span className="hidden sm:inline">Tüm Fiyatları Sıfırla</span>
                 <span className="sm:hidden">Sıfırla</span>
               </Button>
-              <Button onClick={handleExport} variant="outline" className="gap-2" size="sm">
+
+              {/* Excel butonları */}
+              <Button onClick={handleExportFiltered} variant="outline" className="gap-2" size="sm">
                 <Download className="h-4 w-4" />
-                <span className="hidden sm:inline">Excel / CSV</span>
+                <span className="hidden sm:inline">Filtrelenenleri İndir</span>
+                <span className="sm:hidden">İndir</span>
               </Button>
+              {selectedIds.size > 0 && (
+                <Button onClick={handleExportSelected} variant="outline" className="gap-2 border-indigo-200 text-indigo-700 hover:bg-indigo-50" size="sm">
+                  <Download className="h-4 w-4" />
+                  <span>Seçilileri İndir ({selectedIds.size})</span>
+                </Button>
+              )}
+
               <Button onClick={() => setShowFilters(!showFilters)} variant={showFilters ? 'default' : 'outline'} className="gap-2 ml-auto" size="sm">
                 <Filter className="h-4 w-4" />
                 <span>Filtrele</span>
@@ -589,18 +556,14 @@ const togglePlatformVisibility = (platformId) => {
               <SearchInput value={search} onChange={setSearch} placeholder="Ürün adı veya SKU ara..." className="w-full sm:w-72" />
             </div>
 
-            {/* Filtre Paneli */}
             {showFilters && (
               <div className="border border-gray-200 rounded-xl p-4 bg-gray-50 space-y-4">
-                {/* Aktif filtre göstergesi */}
-                {profitRange && (
+                {profitRangeLabel && (
                   <div className="flex items-center gap-2 text-sm text-indigo-700 bg-indigo-50 rounded-lg px-3 py-2">
-                    <span>Dashboard filtresi: <strong>{profitRange}</strong></span>
+                    <span>Dashboard filtresi: <strong>{profitRangeLabel}</strong></span>
                   </div>
                 )}
-
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {/* Kategori */}
                   <div>
                     <label className="text-xs text-gray-500 mb-1 block font-medium">Kategori</label>
                     <Select value={categoryFilter} onValueChange={setCategoryFilter}>
@@ -611,8 +574,6 @@ const togglePlatformVisibility = (platformId) => {
                       </SelectContent>
                     </Select>
                   </div>
-
-                  {/* Min/Max Kâr Tutarı */}
                   <div>
                     <label className="text-xs text-gray-500 mb-1 block font-medium">Kâr Tutarı (₺)</label>
                     <div className="flex gap-2">
@@ -620,8 +581,6 @@ const togglePlatformVisibility = (platformId) => {
                       <Input type="number" placeholder="Max" value={maxProfit} onChange={e => setMaxProfit(e.target.value)} className="text-sm" />
                     </div>
                   </div>
-
-                  {/* Min/Max Kâr Oranı */}
                   <div>
                     <label className="text-xs text-gray-500 mb-1 block font-medium">Kâr Oranı (%)</label>
                     <div className="flex gap-2">
@@ -629,8 +588,6 @@ const togglePlatformVisibility = (platformId) => {
                       <Input type="number" placeholder="Max" value={maxProfitRate} onChange={e => setMaxProfitRate(e.target.value)} className="text-sm" />
                     </div>
                   </div>
-
-                  {/* Min/Max Hedef Kâr Tutarı */}
                   <div>
                     <label className="text-xs text-gray-500 mb-1 block font-medium">Hedef Kâr Tutarı (₺)</label>
                     <div className="flex gap-2">
@@ -638,8 +595,6 @@ const togglePlatformVisibility = (platformId) => {
                       <Input type="number" placeholder="Max" value={maxTargetAmount} onChange={e => setMaxTargetAmount(e.target.value)} className="text-sm" />
                     </div>
                   </div>
-
-                  {/* Platform Görünürlüğü */}
                   <div className="sm:col-span-2">
                     <label className="text-xs text-gray-500 mb-1 block font-medium">Platform Görünürlüğü</label>
                     <div className="flex gap-2 flex-wrap">
@@ -647,11 +602,8 @@ const togglePlatformVisibility = (platformId) => {
                         const isVisible = visiblePlatforms[platform.id] !== false;
                         const colorClass = platformColors[platform.platform_type] || 'bg-gray-100 text-gray-700 border-gray-200';
                         return (
-                          <button
-                            key={platform.id}
-                            onClick={() => togglePlatformVisibility(platform.id)}
-                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium transition-all ${isVisible ? colorClass : 'bg-gray-100 text-gray-400 border-gray-200 opacity-50'}`}
-                          >
+                          <button key={platform.id} onClick={() => togglePlatformVisibility(platform.id)}
+                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium transition-all ${isVisible ? colorClass : 'bg-gray-100 text-gray-400 border-gray-200 opacity-50'}`}>
                             {isVisible ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
                             {platform.name}
                           </button>
@@ -660,7 +612,6 @@ const togglePlatformVisibility = (platformId) => {
                     </div>
                   </div>
                 </div>
-
                 <div className="flex justify-end">
                   <Button variant="outline" size="sm" onClick={clearFilters} className="gap-1 text-xs">
                     <X className="h-3 w-3" /> Filtreleri Temizle
@@ -671,10 +622,17 @@ const togglePlatformVisibility = (platformId) => {
           </div>
         </div>
 
-        {/* Sonuç sayısı */}
-        <div className="mb-3 text-sm text-gray-500">
-          <span className="font-semibold text-gray-700">{filteredProducts.length}</span> ürün listeleniyor
-          {hasActiveFilters && <span className="ml-2 text-indigo-600">(filtre aktif)</span>}
+        <div className="mb-3 flex items-center justify-between text-sm text-gray-500">
+          <div>
+            <span className="font-semibold text-gray-700">{filteredProducts.length}</span> ürün listeleniyor
+            {hasActiveFilters && <span className="ml-2 text-indigo-600">(filtre aktif)</span>}
+            {selectedIds.size > 0 && <span className="ml-2 text-indigo-600 font-medium">{selectedIds.size} seçili</span>}
+          </div>
+          {selectedIds.size > 0 && (
+            <Button variant="ghost" size="sm" className="text-xs text-gray-400" onClick={() => setSelectedIds(new Set())}>
+              Seçimi Temizle
+            </Button>
+          )}
         </div>
 
         {/* Mobile Card View */}
@@ -689,11 +647,14 @@ const togglePlatformVisibility = (platformId) => {
             <div className="bg-white rounded-xl border border-gray-100 p-8 text-center text-gray-500">Ürün bulunamadı</div>
           ) : (
             filteredProducts.map(product => (
-              <div key={product.id} className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
+              <div key={product.id} className={`bg-white rounded-xl border shadow-sm p-4 ${selectedIds.has(product.id) ? 'border-indigo-300 bg-indigo-50/30' : 'border-gray-100'}`}>
                 <div className="flex items-start justify-between mb-3">
-                  <div>
-                    <p className="font-semibold text-gray-900 text-sm">{product.name}</p>
-                    <p className="text-xs text-gray-500 font-mono">{product.sku} · {product.category_name}</p>
+                  <div className="flex items-center gap-2">
+                    <input type="checkbox" checked={selectedIds.has(product.id)} onChange={() => toggleSelect(product.id)} className="rounded border-gray-300 text-indigo-600" />
+                    <div>
+                      <p className="font-semibold text-gray-900 text-sm">{product.name}</p>
+                      <p className="text-xs text-gray-500 font-mono">{product.sku} · {product.category_name}</p>
+                    </div>
                   </div>
                   <Button variant="ghost" size="sm" className="h-7 px-2 shrink-0" onClick={() => handleCalculateSingleProduct(product)} disabled={calculating || calculatingSingle === product.id}>
                     <RefreshCw className={`h-3.5 w-3.5 ${calculatingSingle === product.id ? 'animate-spin' : ''}`} />
@@ -731,6 +692,9 @@ const togglePlatformVisibility = (platformId) => {
             <Table>
               <TableHeader>
                 <TableRow className="bg-gray-50 hover:bg-gray-50">
+                  <TableHead className="w-10">
+                    <input type="checkbox" checked={isAllSelected} ref={el => { if (el) el.indeterminate = isPartialSelected; }} onChange={toggleSelectAll} className="rounded border-gray-300 text-indigo-600" />
+                  </TableHead>
                   <TableHead className="font-semibold cursor-pointer hover:text-gray-900" onClick={() => handleSort('sku')}>SKU <SortIcon field="sku" /></TableHead>
                   <TableHead className="font-semibold cursor-pointer hover:text-gray-900" onClick={() => handleSort('name')}>Ürün Adı <SortIcon field="name" /></TableHead>
                   <TableHead className="font-semibold cursor-pointer hover:text-gray-900 text-right" onClick={() => handleSort('cost')}>Maliyet <SortIcon field="cost" /></TableHead>
@@ -749,13 +713,16 @@ const togglePlatformVisibility = (platformId) => {
               <TableBody>
                 {isLoading ? (
                   [...Array(5)].map((_, i) => (
-                    <TableRow key={i}>{[...Array(10 + visiblePlatformList.length)].map((_, j) => <TableCell key={j}><Skeleton className="h-5 w-20" /></TableCell>)}</TableRow>
+                    <TableRow key={i}>{[...Array(11 + visiblePlatformList.length)].map((_, j) => <TableCell key={j}><Skeleton className="h-5 w-20" /></TableCell>)}</TableRow>
                   ))
                 ) : filteredProducts.length === 0 ? (
-                  <TableRow><TableCell colSpan={10 + visiblePlatformList.length} className="h-32 text-center text-slate-500">Ürün bulunamadı</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={11 + visiblePlatformList.length} className="h-32 text-center text-slate-500">Ürün bulunamadı</TableCell></TableRow>
                 ) : (
                   filteredProducts.map(product => (
-                    <TableRow key={product.id} className="hover:bg-slate-50/50">
+                    <TableRow key={product.id} className={`hover:bg-slate-50/50 ${selectedIds.has(product.id) ? 'bg-indigo-50/40' : ''}`}>
+                      <TableCell>
+                        <input type="checkbox" checked={selectedIds.has(product.id)} onChange={() => toggleSelect(product.id)} className="rounded border-gray-300 text-indigo-600" />
+                      </TableCell>
                       <TableCell className="font-mono text-sm text-slate-600">
                         <div className="flex items-center gap-2">
                           <span>{product.sku || '-'}</span>

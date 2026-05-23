@@ -160,7 +160,21 @@ export default function Dashboard() {
   const handleBarClick = (data) => {
     if (data && data.activePayload && data.activePayload[0]) {
       const name = data.activePayload[0].payload.name;
-      navigate(`/Prices?profitRange=${encodeURIComponent(name)}`);
+      const rangeMap = {
+        '< 0%': { min: '', max: '0' },
+        '0–10%': { min: '0', max: '10' },
+        '10–20%': { min: '10', max: '20' },
+        '20–30%': { min: '20', max: '30' },
+        '30–40%': { min: '30', max: '40' },
+        '40–50%': { min: '40', max: '50' },
+        '50–75%': { min: '50', max: '75' },
+        '75–100%': { min: '75', max: '100' },
+        '100–200%': { min: '100', max: '200' },
+        '200–300%': { min: '200', max: '300' },
+        '> 300%': { min: '300', max: '' },
+      };
+      const range = rangeMap[name] || { min: '', max: '' };
+      navigate(`/Prices?minRate=${range.min}&maxRate=${range.max}&label=${encodeURIComponent(name)}`);
     }
   };
 
