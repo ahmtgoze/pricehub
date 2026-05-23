@@ -75,23 +75,10 @@ export default function Prices() {
   }, [task?.current, task?.total]);
 
   React.useEffect(() => {
-    if (!profitRange) return;
+    if (!urlMinRate && !urlMaxRate) return;
     setShowFilters(true);
-    const rangeMap = {
-      '< 0%': { min: '', max: '0' },
-      '0–10%': { min: '0', max: '10' },
-      '10–20%': { min: '10', max: '20' },
-      '20–30%': { min: '20', max: '30' },
-      '30–40%': { min: '30', max: '40' },
-      '40–50%': { min: '40', max: '50' },
-      '50–75%': { min: '50', max: '75' },
-      '75–100%': { min: '75', max: '100' },
-      '100–200%': { min: '100', max: '200' },
-      '200–300%': { min: '200', max: '300' },
-      '> 300%': { min: '300', max: '' },
-    };
-    const range = rangeMap[profitRange];
-    if (range) { setMinProfitRate(range.min); setMaxProfitRate(range.max); }
+    setMinProfitRate(urlMinRate || '');
+    setMaxProfitRate(urlMaxRate || '');
   }, [location.search]);
 
   const { data: products = [], isLoading: productsLoading } = useQuery({
@@ -185,24 +172,6 @@ export default function Prices() {
 
     // Sadece görünür platformların fiyatlarına bak
     const getVisiblePrices = (p) => visiblePlatformList.map(pl => p.prices[pl.id]).filter(Boolean);
-
-    if (profitRange) {
-      result = result.filter(p => getVisiblePrices(p).some(price => {
-        const r = price.profit_rate ?? 0;
-        if (profitRange === '< 0%') return r < 0;
-        if (profitRange === '0–10%') return r >= 0 && r < 10;
-        if (profitRange === '10–20%') return r >= 10 && r < 20;
-        if (profitRange === '20–30%') return r >= 20 && r < 30;
-        if (profitRange === '30–40%') return r >= 30 && r < 40;
-        if (profitRange === '40–50%') return r >= 40 && r < 50;
-        if (profitRange === '50–75%') return r >= 50 && r < 75;
-        if (profitRange === '75–100%') return r >= 75 && r < 100;
-        if (profitRange === '100–200%') return r >= 100 && r < 200;
-        if (profitRange === '200–300%') return r >= 200 && r < 300;
-        if (profitRange === '> 300%') return r >= 300;
-        return false;
-      }));
-    }
 
     if (minProfit !== '') result = result.filter(p => getVisiblePrices(p).some(price => (price.net_profit ?? 0) >= parseFloat(minProfit)));
     if (maxProfit !== '') result = result.filter(p => getVisiblePrices(p).some(price => (price.net_profit ?? 0) <= parseFloat(maxProfit)));
