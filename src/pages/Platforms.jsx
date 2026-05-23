@@ -72,10 +72,44 @@ export default function Platforms() {
 
   const isAdmin = user?.role === 'admin';
 
-  const { data: platforms = [], isLoading } = useQuery({
+const { data: platforms = [], isLoading } = useQuery({
     queryKey: ['platforms', userEmail],
     queryFn: async () => {
       const userPlatforms = await PlatformEntity.filter({ created_by: userEmail });
+      const adminPlatforms = await PlatformEntity.filter({ is_system_admin: true });
+      const adminMap = {};
+      adminPlatforms.forEach(p => { adminMap[p.platform_type] = p; });
+      const merged = userPlatforms.map(p => {
+        const admin = adminMap[p.platform_type];
+        if (!admin) return p;
+        return {
+          ...p,
+          has_withholding: admin.has_withholding,
+          withholding_rate: admin.withholding_rate,
+          has_service_fee: admin.has_service_fee,
+          service_fee_type: admin.service_fee_type,
+          service_fee_amount: admin.service_fee_amount,
+          service_fee_vat_rate: admin.service_fee_vat_rate,
+          same_day_delivery_service_fee: admin.same_day_delivery_service_fee,
+          has_pos_service_fee: admin.has_pos_service_fee,
+          pos_service_fee_rate: admin.pos_service_fee_rate,
+          use_barem: admin.use_barem,
+          barem_max_desi: admin.barem_max_desi,
+          barem1_min: admin.barem1_min,
+          barem1_max: admin.barem1_max,
+          barem2_min: admin.barem2_min,
+          barem2_max: admin.barem2_max,
+        };
+      });
+      const seen = new Map();
+      const sorted = [...merged].sort((a, b) => new Date(b.created_date || 0) - new Date(a.created_date || 0));
+      for (const p of sorted) {
+        if (!seen.has(p.platform_type)) seen.set(p.platform_type, p);
+      }
+      return Array.from(seen.values());
+    },
+    enabled: !!userEmail,
+  });
       // ✅ Her platform_type için sadece en güncel kaydı göster — silme yok
       const seen = new Map();
       const sorted = [...userPlatforms].sort((a, b) =>
