@@ -157,10 +157,20 @@ export default function Dashboard() {
     setShowProductsList(true);
   };
 
-  const handleBarClick = (data) => {
-    if (data && data.activePayload && data.activePayload[0]) {
-      const name = data.activePayload[0].payload.name;
-      const rangeMap = {
+const range = rangeMap[name];
+      if (range) {
+        navigate(`/Prices?minRate=${range.min}&maxRate=${range.max}&label=${encodeURIComponent(name)}`);
+      } else {
+        // Özel aralık - isimden min/max çıkar (örn: "0–100%")
+        const match = name.match(/([\d.]+)[–-]([\d.]+)%/);
+        if (match) {
+          navigate(`/Prices?minRate=${match[1]}&maxRate=${match[2]}&label=${encodeURIComponent(name)}`);
+        } else if (name.startsWith('< ')) {
+          navigate(`/Prices?minRate=&maxRate=${name.replace('< ', '').replace('%', '')}&label=${encodeURIComponent(name)}`);
+        } else if (name.startsWith('> ')) {
+          navigate(`/Prices?minRate=${name.replace('> ', '').replace('%', '')}&maxRate=&label=${encodeURIComponent(name)}`);
+        }
+      }
         '< 0%': { min: '', max: '0' },
         '0–10%': { min: '0', max: '10' },
         '10–20%': { min: '10', max: '20' },
