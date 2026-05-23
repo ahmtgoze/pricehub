@@ -89,8 +89,7 @@ export default function Platforms() {
           barem1_max: admin.barem1_max,
           barem2_min: admin.barem2_min,
           barem2_max: admin.barem2_max,
-          has_corporate_tax: admin.has_corporate_tax,
-          corporate_tax_rate: admin.corporate_tax_rate,
+          
         };
       });
       const seen = new Map();
