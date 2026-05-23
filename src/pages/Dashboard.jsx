@@ -97,14 +97,15 @@ export default function Dashboard() {
   }, [activeProducts, marketplaceProducts, platforms]);
 
   const profitDistribution = useMemo(() => {
-    if (filteredByRange) {
-      const min = parseFloat(customMinProfit) || -Infinity;
-      const max = parseFloat(customMaxProfit) || Infinity;
-      const filteredPrices = productPrices.filter(p => { const r = p.profit_rate ?? 0; return r >= min && r <= max; });
-      const result = [];
-      if (min < 0) result.push({ name: `${customMinProfit}\u20130%`, value: filteredPrices.filter(p => (p.profit_rate ?? 0) < 0).length, type: 'negative' });
-      if (max > 0) result.push({ name: `0\u2013${customMaxProfit}%`, value: filteredPrices.filter(p => (p.profit_rate ?? 0) >= 0).length, type: 'positive' });
-      return result;
+if (filteredByRange) {
+      const min = customMinProfit !== '' ? parseFloat(customMinProfit) : -Infinity;
+      const max = customMaxProfit !== '' ? parseFloat(customMaxProfit) : Infinity;
+      const filteredPrices = productPrices.filter(p => {
+        const r = p.profit_rate ?? 0;
+        return r >= min && r <= max;
+      });
+      const label = `${customMinProfit !== '' ? customMinProfit : ''}–${customMaxProfit !== '' ? customMaxProfit : ''}%`;
+      return [{ name: label, value: filteredPrices.length, type: 'positive' }];
     }
     const buckets = { '< 0%': 0, '0\u201310%': 0, '10\u201320%': 0, '20\u201330%': 0, '30\u201340%': 0, '40\u201350%': 0, '50\u201375%': 0, '75\u2013100%': 0, '100\u2013200%': 0, '200\u2013300%': 0, '> 300%': 0 };
     productPrices.forEach(pp => {
