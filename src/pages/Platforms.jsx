@@ -59,7 +59,7 @@ export default function Platforms() {
     }).catch(() => {});
   }, []);
 
-  const isAdmin = user?.role === 'admin';
+  const isAdmin = user?.user_metadata?.is_admin === true;
 
   const { data: platforms = [], isLoading } = useQuery({
     queryKey: ['platforms', userEmail],
