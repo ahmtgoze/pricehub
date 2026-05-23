@@ -95,7 +95,7 @@ export default function Prices() {
 
   const { data: adminPlatforms = [] } = useQuery({
     queryKey: ['adminPlatforms'],
-    queryFn: () => db.entities.Platform.filter({ platform_type: { $in: ['trendyol', 'hepsiburada'] } }),
+    queryFn: () => db.entities.Platform.filter({ is_system_admin: true }),
   });
 
   const PLATFORM_ORDER = ['trendyol', 'hepsiburada', 'website'];
@@ -270,7 +270,7 @@ export default function Prices() {
         db.entities.Product.filter({ created_by: userEmail }),
         db.entities.Commission.filter({ created_by: userEmail }),
         db.entities.Settings.filter({ created_by: userEmail }),
-        db.entities.Platform.filter({ platform_type: { $in: ['trendyol', 'hepsiburada'] } }),
+        db.entities.Platform.filter({ is_system_admin: true }),
       ]);
       const getFreshPackageCost = (packageId) => {
         if (!packageId) return 0;
@@ -320,7 +320,7 @@ export default function Prices() {
         db.entities.ShippingRate.list('-id', 10000), db.entities.Platform.filter({ created_by: userEmail }),
         db.entities.Commission.filter({ created_by: userEmail }), db.entities.Package.filter({ created_by: userEmail }),
         db.entities.PackageItem.filter({ created_by: userEmail }), db.entities.Settings.filter({ created_by: userEmail }),
-        db.entities.Platform.filter({ platform_type: { $in: ['trendyol', 'hepsiburada'] } }),
+        db.entities.Platform.filter({ is_system_admin: true }),
       ]);
       const activePlatforms = freshUserPlatforms.filter(p => p.is_active !== false);
       const product = freshProducts.find(p => p.id === originalProduct.id) || originalProduct;
@@ -368,7 +368,7 @@ export default function Prices() {
         db.entities.ProductPrice.filter({ created_by: userEmail }), db.entities.Package.filter({ created_by: userEmail }),
         db.entities.PackageItem.filter({ created_by: userEmail }), db.entities.Product.filter({ created_by: userEmail }),
         db.entities.Commission.filter({ created_by: userEmail }), db.entities.Settings.filter({ created_by: userEmail }),
-        db.entities.Platform.filter({ platform_type: { $in: ['trendyol', 'hepsiburada'] } }),
+        db.entities.Platform.filter({ is_system_admin: true }),
       ]);
       const freshActivePlatforms = freshUserPlatforms.filter(p => p.is_active !== false);
       const getFreshPackageCost = (packageId) => { if (!packageId) return 0; return freshPackageItems.filter(item => item.package_id === packageId && item.is_active !== false).reduce((sum, item) => sum + (item.cost || 0), 0); };

@@ -67,8 +67,7 @@ export default function Calculator() {
     queryFn: async () => {
       const userPlatforms = await Platform.filter({ created_by: userEmail });
       // Marketplace platformlarını da ekle (admin tarafından oluşturulanlar)
-      const marketplacePlatforms = await db.entities.Platform.filter({ 
-        platform_type: { $in: ['trendyol', 'hepsiburada'] }
+      const marketplacePlatforms = await db.entities.Platform.filter({ is_system_admin: true })
       });
       
       const merged = [...userPlatforms];
