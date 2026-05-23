@@ -540,8 +540,11 @@ export default function Prices() {
     } catch { return idx === 0 ? (product.desi || '-') : '-'; }
   };
 
-  const togglePlatformVisibility = (platformId) => {
+const togglePlatformVisibility = (platformId) => {
     setVisiblePlatforms(prev => ({ ...prev, [platformId]: !prev[platformId] }));
+    setMinProfit(''); setMaxProfit('');
+    setMinProfitRate(''); setMaxProfitRate('');
+    setMinTargetAmount(''); setMaxTargetAmount('');
   };
 
   const platformColors = { trendyol: 'bg-orange-100 text-orange-700 border-orange-200', hepsiburada: 'bg-yellow-100 text-yellow-700 border-yellow-200', website: 'bg-indigo-100 text-indigo-700 border-indigo-200' };
