@@ -75,12 +75,6 @@ export const findCommission = (commissions, platformId, categoryId) => {
 
 /**
  * Hizmet bedelini hesapla
- * İki koşul kontrol: ürün same_day_delivery=true ve platform has_same_day_delivery=true
- * Her iki koşul da true ise → indirimli hizmet bedeli (same_day_delivery_service_fee)
- * Aksi halde → normal hizmet bedeli (service_fee_amount)
- * 
- * ÖNEMLI: Admin hiçbir şey 0'a girmediği sürece hizmet bedeli 0 TL olmamalıdır.
- * Eğer admin platform ayarlarında has_service_fee=false olarak ayarlamışsa, hizmet bedeli 0 TL'dir.
  */
 export const calculateServiceFee = (platform, salePriceInclVat, isSameDayDelivery = false) => {
   if (!platform || !platform.has_service_fee) return { amount: 0, vat: 0, amountExclVat: 0 };
@@ -88,27 +82,19 @@ export const calculateServiceFee = (platform, salePriceInclVat, isSameDayDeliver
   let feeExclVat = 0;
   let vatRate = platform.service_fee_vat_rate || 20;
   
-  // Kural: Her iki koşul da aktif mi?
-  // Koşul 1: ürün.same_day_delivery = true
-  // Koşul 2: platform.has_same_day_delivery = true
   const shouldUseSameDayFee = isSameDayDelivery && platform.has_same_day_delivery;
   
   if (shouldUseSameDayFee) {
-    // Bugün Kargoda indirimli hizmet bedeli (KDV dahil verilir, KDV hariç hesaplanır)
     const sameDayFee = platform.same_day_delivery_service_fee || 0;
     feeExclVat = removeVat(sameDayFee, vatRate);
   } else {
-    // Normal hizmet bedeli
     if (platform.service_fee_type === 'fixed_per_order') {
-      // Sabit tutarı sistem yöneticisi tarafından platform ayarlarında girilir (KDV dahil)
       const feeAmount = platform.service_fee_amount || 0;
       feeExclVat = removeVat(feeAmount, vatRate);
     } else if (platform.service_fee_type === 'percent_of_sale') {
-      // Satışın yüzde olarak hesaplanır
       const salePriceExclVat = removeVat(salePriceInclVat, 20);
       feeExclVat = salePriceExclVat * (platform.service_fee_amount || 0) / 100;
     }
-    // service_fee_type === 'none' durumunda feeExclVat = 0 kalır
   }
   
   const feeVat = feeExclVat * vatRate / 100;
@@ -122,8 +108,6 @@ export const calculateServiceFee = (platform, salePriceInclVat, isSameDayDeliver
 
 /**
  * Stopaj tutarını hesapla
- * Stopaj = KDV hariç satış fiyatı × stopaj oranı
- * Web sitesi platformu için stopaj hesaplanmaz
  */
 export const calculateWithholding = (platform, salePriceExclVat) => {
   if (!platform.has_withholding) return 0;
@@ -133,7 +117,6 @@ export const calculateWithholding = (platform, salePriceExclVat) => {
 
 /**
  * Komisyon tutarını hesapla
- * Komisyon = KDV hariç satış fiyatı × komisyon oranı
  */
 export const calculateCommission = (salePriceExclVat, commissionRate, commissionVatRate) => {
   const commissionExclVat = salePriceExclVat * commissionRate / 100;
@@ -164,58 +147,39 @@ export const calculatePriceBreakdown = ({
   extraCost = 0,
   isSameDayDelivery = false
 }) => {
-  // Satış fiyatı hesaplamaları
   const salePriceExclVat = removeVat(salePriceInclVat, productVatRate);
   const saleVat = salePriceInclVat - salePriceExclVat;
-  
-  // Ürün maliyeti (KDV dahil geliyor)
   const productCostExclVat = removeVat(productCost, productVatRate);
   const productVat = productCost - productCostExclVat;
-  
-  // Baskı maliyeti (KDV dahil geliyor)
   const printingCostExclVat = removeVat(printingCost, productVatRate);
   const printingVat = printingCost - printingCostExclVat;
-
-  // Ek maliyet (KDV dahil geliyor)
   const extraCostExclVat = removeVat(extraCost, productVatRate);
   const extraCostVat = extraCost - extraCostExclVat;
-  
-  // Kargo
   const shippingExclVat = removeVat(shippingCost, shippingVatRate);
   const shippingVat = shippingCost - shippingExclVat;
-  
-  // Paketleme maliyeti (KDV dahil geliyor)
   const packagingCostExclVat = removeVat(packagingCost, productVatRate);
   const packagingVat = packagingCost - packagingCostExclVat;
-  
-  // Komisyon
   const commission = calculateCommission(salePriceExclVat, commissionRate, commissionVatRate);
-  
-  // Hizmet bedeli
   const serviceFee = calculateServiceFee(platform, salePriceInclVat, isSameDayDelivery);
-  
-  // Stopaj
   const withholdingAmount = calculateWithholding(platform, salePriceExclVat);
-
-  // İşlem başına ücret (sanal pos vb.)
   const transactionFeeInclVat = platform.has_transaction_fee ? (platform.transaction_fee_amount || 0) : 0;
   const transactionFeeVatRate = platform.transaction_fee_vat_rate || 20;
   const transactionFeeExclVat = transactionFeeInclVat / (1 + transactionFeeVatRate / 100);
   const transactionFeeVat = transactionFeeInclVat - transactionFeeExclVat;
-
-  // POS Hizmet Bedeli (sadece HepsiBurada, sipariş başına yüzdelik, KDV dahil satış fiyatı üzerinden)
   const posServiceFeeRate = (platform.has_pos_service_fee && platform.platform_type === 'hepsiburada')
     ? (platform.pos_service_fee_rate || 0)
     : 0;
   const posServiceFeeInclVat = salePriceInclVat * posServiceFeeRate / 100;
   const posServiceFeeExclVat = removeVat(posServiceFeeInclVat, productVatRate);
   const posServiceFeeVat = posServiceFeeInclVat - posServiceFeeExclVat;
-  
-  // Net KDV = Satış KDV - Ürün KDV - Baskı KDV - Ek Maliyet KDV - Kargo KDV - Paket KDV - Komisyon KDV - Hizmet Bedeli KDV - İşlem Ücreti KDV - POS Hizmet Bedeli KDV
   const netVat = saleVat - productVat - printingVat - extraCostVat - shippingVat - packagingVat - commission.vat - serviceFee.vat - transactionFeeVat - posServiceFeeVat;
   
-  // Net Kâr = Satış Fiyatı - Ürün Maliyeti - Baskı Maliyeti - Ek Maliyet - Kargo - Paketleme - Komisyon - Stopaj - Hizmet Bedeli - İşlem Ücreti - POS Hizmet Bedeli - Net KDV
-  const netProfit = salePriceInclVat - productCost - printingCost - extraCost - shippingCost - packagingCost - commission.amount - withholdingAmount - serviceFee.amount - transactionFeeInclVat - posServiceFeeInclVat - netVat;
+  // Net Kâr (vergi öncesi)
+  const netProfitBeforeTax = salePriceInclVat - productCost - printingCost - extraCost - shippingCost - packagingCost - commission.amount - withholdingAmount - serviceFee.amount - transactionFeeInclVat - posServiceFeeInclVat - netVat;
+  // Kurumlar (Gelir) Vergisi
+  const corporateTaxAmount = (platform?.has_corporate_tax !== false && netProfitBeforeTax > 0) ? netProfitBeforeTax * (platform?.corporate_tax_rate ?? 25) / 100 : 0;
+  // Vergi sonrası net kâr
+  const netProfit = netProfitBeforeTax - corporateTaxAmount;
   
   // Kâr oranı = Net Kâr / Ürün Maliyeti × 100
   const profitRate = productCost > 0 ? (netProfit / productCost) * 100 : 0;
@@ -255,6 +219,8 @@ export const calculatePriceBreakdown = ({
     posServiceFeeVat,
     posServiceFeeRate,
     netVat,
+    netProfitBeforeTax,
+    corporateTaxAmount,
     netProfit,
     profitRate,
     baremUsed
@@ -270,7 +236,7 @@ export const isPriceInBaremRange = (salePrice, platform, baremType) => {
   } else if (baremType === 'barem2') {
     return salePrice >= (platform.barem2_min || 150) && salePrice <= (platform.barem2_max || 299.99);
   }
-  return true; // desi tarifesi için her zaman true
+  return true;
 };
 
 /**
@@ -337,7 +303,6 @@ export const findSalePriceForTargetProfit = ({
 
 /**
  * ANA HESAPLAMA FONKSİYONU
- * Bir ürün için bir platformda en uygun fiyatı hesapla
  */
 export const calculateProductPrice = ({
   product,
@@ -360,35 +325,23 @@ export const calculateProductPrice = ({
   const commissionVatRate = commission?.commission_vat_rate ?? 20;
   const productVatRate = product.vat_rate ?? 20;
   
-  // En az bir kâr hedefi olmalı
   if (targetProfitRate == null && targetProfitAmount == null) {
     throw new Error('Hedef kâr oranı veya tutarından en az biri belirtilmelidir');
   }
   
-  // Platform kargo tarifelerini filtrele:
-  // use_custom_shipping_price = true  → kullanıcının manuel tarifeleri (is_manual=true, platform_id eşleşmeli)
-  // use_custom_shipping_price = false → admin tarifeleri (is_admin_created=true, platform_type eşleşmeli)
-  //   + tercih edilen kargo firması seçildiyse sadece o firmaya ait tarifeleri al
-  // Hesaplayıcı'dan manuel kargo ücreti geldiyse kargo tarifesi aramaya gerek yok
   const hasOverrideShipping = overrideShippingCost !== null && overrideShippingCost !== undefined;
 
   const platformShippingRates = hasOverrideShipping ? [] : shippingRates.filter(r => {
     if (r.is_active === false) return false;
-
-    // Hesaplayıcı'dan belirli kargo firması seçildiyse sadece o firmayı kullan
     if (overrideShippingCompany && r.shipping_company !== overrideShippingCompany) return false;
-
     if (platform.use_custom_shipping_price) {
-      // Manuel fiyat modunda: kullanıcının kendi platform'a özel manuel tarifelerini kullan
       if (r.is_manual !== true || r.is_admin_created === true) return false;
       if (r.platform_id !== platform.id) return false;
-      // Platform düzeyinde kargo firması seçilmişse sadece o firmayı kullan
       if (!overrideShippingCompany && platform.shipping_company_name && platform.shipping_company_name.trim() !== '') {
         return r.shipping_company === platform.shipping_company_name;
       }
       return true;
     } else {
-      // Sistem tarifesi modunda: hem admin tarifeleri hem de manuel tarifeleri kontrol et
       if (r.is_admin_created === true) {
         if (r.platform_type !== platform.platform_type) return false;
         if (!overrideShippingCompany && platform.shipping_company_name && platform.shipping_company_name.trim() !== '') {
@@ -407,7 +360,6 @@ export const calculateProductPrice = ({
     }
   });
   
-  // Toplam desi hesapla (çok paketli veya tek paket)
   let totalDesi = product.desi || 0;
   let actualPackageCount = 0;
   if (product.multi_package && product.packages) {
@@ -421,25 +373,15 @@ export const calculateProductPrice = ({
     }
   }
   
-  // Eğer multi_package=true ama sadece 1 paket varsa, tek paket gibi davran
   const isActuallyMultiPackage = product.multi_package && actualPackageCount > 1;
-  
-  // Özel kargo veya çok paketli ürünler için barem kullanma
-  // Web sitesi platformu için hiçbir zaman barem kullanma (sadece desi tarifesi)
-  // Sadece tek paket ve özel kargo olmayan ürünler için barem dene
-  // barem_max_desi: platformda tanımlanan maksimum desi (varsayılan 5)
   const baremMaxDesi = platform.barem_max_desi ?? 5;
   const isWebsite = platform.platform_type === 'website';
   const canUseBarem = !isWebsite && platform.use_barem && !product.special_shipping && !isActuallyMultiPackage && totalDesi <= baremMaxDesi;
-
-  // Web sitesi için "Bugün Kargoda" kavramı geçerli değil,
-  // kargo tarife aramasında same_day_delivery filtresi uygulanmasın
   const effectiveSameDayDelivery = isWebsite ? false : isSameDayDelivery;
   
   let result = null;
   let candidates = [];
 
-  // Manuel kargo ücreti override varsa direkt hesapla (barem/desi arama yapma)
   if (hasOverrideShipping) {
     const overrideResult = findSalePriceForTargetProfit({
       productCost: product.cost,
@@ -461,7 +403,6 @@ export const calculateProductPrice = ({
   }
   
   if (!result && canUseBarem) {
-    // Her iki baremi de hesapla ve karşılaştır
     const barem1Rate = findBaremShippingRate(platformShippingRates, 'barem1', effectiveSameDayDelivery);
     if (barem1Rate) {
       const barem1Result = findSalePriceForTargetProfit({
@@ -481,7 +422,6 @@ export const calculateProductPrice = ({
         isSameDayDelivery: effectiveSameDayDelivery
       });
       
-      // Bulunan fiyat Barem 1 aralığında mı?
       if (isPriceInBaremRange(barem1Result.salePriceInclVat, platform, 'barem1')) {
         candidates.push({
           ...barem1Result,
@@ -511,7 +451,6 @@ export const calculateProductPrice = ({
         isSameDayDelivery: effectiveSameDayDelivery
       });
       
-      // Bulunan fiyat Barem 2 aralığında mı?
       if (isPriceInBaremRange(barem2Result.salePriceInclVat, platform, 'barem2')) {
         candidates.push({
           ...barem2Result,
@@ -522,15 +461,11 @@ export const calculateProductPrice = ({
       }
     }
     
-    // Adaylar arasından en düşük satış fiyatını seç (kâr hedefini sağlıyor)
-    // Öncelik: Barem 1 > Barem 2 (eşit fiyatsa)
     if (candidates.length > 0) {
       candidates.sort((a, b) => {
-        // Önce fiyata göre sırala
         if (Math.abs(a.salePriceInclVat - b.salePriceInclVat) > 0.5) {
           return a.salePriceInclVat - b.salePriceInclVat;
         }
-        // Fiyat eşitse, Barem 1'i tercih et
         if (a.baremUsed === 'barem1') return -1;
         if (b.baremUsed === 'barem1') return 1;
         return 0;
@@ -539,14 +474,11 @@ export const calculateProductPrice = ({
     }
   }
   
-  // Adım 3: Barem olmadıysa veya 5 desi üstüyse desi tarifesi kullan
   if (!result && !hasOverrideShipping) {
-    // Çok paketli ise her paket için kargo ücreti hesapla
     let shippingCost = 0;
     let shippingVatRate = 20;
 
     if (isActuallyMultiPackage && product.packages) {
-      // Parse packages
       let productPackages = [];
       try {
         productPackages = typeof product.packages === 'string' ? JSON.parse(product.packages) : product.packages;
@@ -556,7 +488,6 @@ export const calculateProductPrice = ({
       }
 
       if (productPackages.length > 0) {
-        // Özel kargo hesaplama (Her paket için: 2 gidiş + 1 iade)
         if (product.special_shipping) {
           const returnCostSetting = settings.find(s => s.setting_key === 'return_cost_per_package');
           const returnCostPerPackage = returnCostSetting ? parseFloat(returnCostSetting.setting_value) : 180.096;
@@ -564,15 +495,12 @@ export const calculateProductPrice = ({
           for (const pkg of productPackages) {
             const desiRate = findDesiShippingRate(platformShippingRates, pkg.desi || 0);
             if (desiRate) {
-              // 2 gidiş (desi bazlı kargo)
               const desiShippingCost = desiRate.price * 2;
-              // 1 iade (sabit)
               shippingCost += desiShippingCost + returnCostPerPackage;
               shippingVatRate = desiRate.vat_rate || 20;
             }
           }
         } else {
-          // Normal çok paketli (her paket için 1 gidiş)
           for (const pkg of productPackages) {
             const desiRate = findDesiShippingRate(platformShippingRates, pkg.desi || 0);
             if (desiRate) {
@@ -582,13 +510,11 @@ export const calculateProductPrice = ({
           }
         }
       } else {
-        // Paket bilgisi parse edilemedi, fallback olarak tek desi kullan
         const desiRate = findDesiShippingRate(platformShippingRates, product.desi || 0);
         shippingCost = desiRate?.price || 0;
         shippingVatRate = desiRate?.vat_rate || 20;
       }
     } else {
-      // Tek paket
       const desiRate = findDesiShippingRate(platformShippingRates, product.desi || 0);
       shippingCost = desiRate?.price || 0;
       shippingVatRate = desiRate?.vat_rate || 20;
@@ -618,12 +544,9 @@ export const calculateProductPrice = ({
       baremUsed: 'desi'
     };
     
-    // Kontrol: Eğer desi ile hesaplanan fiyat barem aralığına giriyorsa ve barem kullanılabilirse,
-    // daha ucuz olan barem kargo ücretini kullan
     if (canUseBarem) {
       const desiPrice = result.salePriceInclVat;
       
-      // Önce barem 1'i kontrol et
        if (isPriceInBaremRange(desiPrice, platform, 'barem1')) {
          const barem1Rate = findBaremShippingRate(platformShippingRates, 'barem1', effectiveSameDayDelivery);
          if (barem1Rate && barem1Rate.price < shippingCost) {
@@ -644,7 +567,6 @@ export const calculateProductPrice = ({
             isSameDayDelivery: effectiveSameDayDelivery
           });
           
-          // Barem 1 ile hesaplanan fiyat da aralıkta mı kontrol et
           if (isPriceInBaremRange(barem1Result.salePriceInclVat, platform, 'barem1')) {
             result = {
               ...barem1Result,
@@ -655,7 +577,6 @@ export const calculateProductPrice = ({
           }
         }
       } 
-      // Barem 1 olmadıysa barem 2'yi kontrol et
       else if (isPriceInBaremRange(desiPrice, platform, 'barem2')) {
         const barem2Rate = findBaremShippingRate(platformShippingRates, 'barem2', effectiveSameDayDelivery);
         if (barem2Rate && barem2Rate.price < shippingCost) {
@@ -676,7 +597,6 @@ export const calculateProductPrice = ({
             isSameDayDelivery: effectiveSameDayDelivery
           });
           
-          // Barem 2 ile hesaplanan fiyat da aralıkta mı kontrol et
           if (isPriceInBaremRange(barem2Result.salePriceInclVat, platform, 'barem2')) {
             result = {
               ...barem2Result,
@@ -690,11 +610,9 @@ export const calculateProductPrice = ({
     }
   }
   
-  // Fiyatı .49 veya .99'a yuvarla
   const roundToPrice = (price) => {
     const integer = Math.floor(price);
     const decimal = price - integer;
-    
     if (decimal < 0.50) {
       return integer + 0.49;
     } else {
@@ -702,11 +620,9 @@ export const calculateProductPrice = ({
     }
   };
 
-  // Fiyatı yuvarlama SONRASI yeni hesaplama yap (popup'ta gösterilenle aynı olması için)
   const finalSalePrice = roundToPrice(result.salePriceInclVat);
   const finalSalePriceExclVat = roundToPrice(result.salePriceExclVat);
   
-  // Yuvarlanmış fiyatla gerçek hesaplamayı yap
   const finalBreakdown = calculatePriceBreakdown({
     salePriceInclVat: finalSalePrice,
     productCost: product.cost,
@@ -723,7 +639,6 @@ export const calculateProductPrice = ({
     isSameDayDelivery: effectiveSameDayDelivery
   });
   
-  // Sonucu döndür
   return {
     product_id: product.id,
     product_name: product.name,
@@ -733,6 +648,8 @@ export const calculateProductPrice = ({
     sale_price: finalSalePrice,
     sale_price_excl_vat: finalSalePriceExclVat,
     net_profit: Math.round(finalBreakdown.netProfit * 100) / 100,
+    net_profit_before_tax: Math.round((finalBreakdown.netProfitBeforeTax || 0) * 100) / 100,
+    corporate_tax_amount: Math.round((finalBreakdown.corporateTaxAmount || 0) * 100) / 100,
     profit_rate: Math.round(finalBreakdown.profitRate * 100) / 100,
     shipping_cost: Math.round(finalBreakdown.shippingCost * 100) / 100,
     commission_amount: Math.round(finalBreakdown.commissionAmount * 100) / 100,
@@ -763,7 +680,8 @@ export const calculateProductPrice = ({
       serviceFeeVat: Math.round(finalBreakdown.serviceFeeVat * 100) / 100,
       posServiceFee: Math.round(finalBreakdown.posServiceFee * 100) / 100,
       posServiceFeeVat: Math.round(finalBreakdown.posServiceFeeVat * 100) / 100,
-      posServiceFeeRate: finalBreakdown.posServiceFeeRate
+      posServiceFeeRate: finalBreakdown.posServiceFeeRate,
+      corporateTaxAmount: Math.round((finalBreakdown.corporateTaxAmount || 0) * 100) / 100,
     })
   };
 };
@@ -780,25 +698,17 @@ export const calculateAllPlatformPrices = ({
   packageItems = [],
   getPackageCost = null,
   settings = [],
-  systemAdminPlatforms = [] // Admin tarafından tanımlanan global platform ayarları
+  systemAdminPlatforms = []
 }) => {
   const results = [];
   const isSameDayDelivery = product.same_day_delivery === true;
-  
-  // Baskı maliyetini al
   const printingCost = product.printing_cost || 0;
-
-  // Ek maliyeti al
   const extraCost = product.extra_cost || 0;
-  
-  // Paketleme maliyetini hesapla
   let packagingCost = 0;
   
-  // Çok paketli mi?
   if (product.multi_package && product.packages) {
     try {
       const productPackages = typeof product.packages === 'string' ? JSON.parse(product.packages) : product.packages;
-      // Her paket için maliyet hesapla (paket sayısı kadar topla)
       for (const pkg of productPackages) {
         const packageId = pkg.package_id;
         if (packageId) {
@@ -814,9 +724,7 @@ export const calculateAllPlatformPrices = ({
           }
         }
       }
-    } catch (e) {
-      // Parse hatası varsa devam et
-    }
+    } catch (e) {}
   } else if (!product.multi_package && (product.package_id || product.auto_package_id)) {
     const packageId = product.package_id || product.auto_package_id;
     if (getPackageCost) {
@@ -835,13 +743,11 @@ export const calculateAllPlatformPrices = ({
     if (!platform.is_active) continue;
     
     try {
-      // Marketplace platformları için admin'in tanımladığı global ayarları kullan
       let platformForCalculation = platform;
       
       if (platform.platform_type === 'trendyol' || platform.platform_type === 'hepsiburada') {
         const adminPlatformData = systemAdminPlatforms.find(p => p.platform_type === platform.platform_type);
         if (adminPlatformData) {
-          // Admin verisini kullan, müşteri verisini override et
           platformForCalculation = {
             ...platform,
             has_withholding: adminPlatformData.has_withholding,
@@ -859,14 +765,14 @@ export const calculateAllPlatformPrices = ({
             barem1_max: adminPlatformData.barem1_max,
             barem2_min: adminPlatformData.barem2_min,
             barem2_max: adminPlatformData.barem2_max,
+            has_corporate_tax: adminPlatformData.has_corporate_tax,
+            corporate_tax_rate: adminPlatformData.corporate_tax_rate,
           };
         }
       }
       
-      // Platform_type eşleştirmesini kontrol et: marketplace platformları için alternative lookup
       let commission = findCommission(commissions, platform.id, product.category_id);
       
-      // Eğer komisyon bulunamazsa, aynı platform_type'daki diğer platformlara da bak
       if (!commission) {
         const samePlatforms = platforms.filter(p => p.platform_type === platform.platform_type && p.id !== platform.id);
         for (const samePlatform of samePlatforms) {
@@ -920,7 +826,6 @@ export const calculateManual = ({
   specialShipping = false,
   settings = []
 }) => {
-  // Sahte ürün oluştur
   const fakeProduct = {
     id: 'manual',
     name: 'Manuel Hesaplama',
@@ -934,7 +839,6 @@ export const calculateManual = ({
     packages: isMultiPackage ? JSON.stringify(packages) : null
   };
   
-  // Sahte komisyon oluştur
   const fakeCommission = {
     commission_rate: commissionRate,
     commission_vat_rate: commissionVatRate,
