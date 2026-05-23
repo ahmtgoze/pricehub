@@ -157,6 +157,13 @@ export default function Dashboard() {
     setShowProductsList(true);
   };
 
+  const handleBarClick = (data) => {
+    if (data && data.activePayload && data.activePayload[0]) {
+      const name = data.activePayload[0].payload.name;
+      navigate(`/Prices?profitRange=${encodeURIComponent(name)}`);
+    }
+  };
+
   const profitColor = (rate) => {
     if (rate === null) return 'text-gray-400';
     if (rate < 0) return 'text-red-600';
@@ -256,7 +263,7 @@ export default function Dashboard() {
               <div className="flex items-center justify-center h-32 text-gray-400 text-sm">Henüz fiyat hesaplanmamış</div>
             ) : (
               <ResponsiveContainer width="100%" height={160}>
-                <BarChart data={profitDistribution} barSize={36}>
+                <BarChart data={profitDistribution} barSize={36} style={{ cursor: 'pointer' }} onClick={handleBarClick}>
                   <XAxis dataKey="name" tick={{ fontSize: 12, fill: '#6b7280' }} axisLine={false} tickLine={false} />
                   <YAxis tick={{ fontSize: 11, fill: '#9ca3af' }} axisLine={false} tickLine={false} allowDecimals={false} />
                   <Tooltip contentStyle={{ borderRadius: 10, border: '1px solid #e5e7eb', fontSize: 12 }} formatter={(v) => [`${v} fiyat`, 'Adet']} />
@@ -266,6 +273,7 @@ export default function Dashboard() {
                 </BarChart>
               </ResponsiveContainer>
             )}
+            <p className="text-xs text-gray-400 mt-2 text-center">Bir sütuna tıklayarak o kâr aralığındaki ürünleri görün</p>
           </div>
         </div>
 
