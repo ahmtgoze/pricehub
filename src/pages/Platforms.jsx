@@ -89,7 +89,6 @@ export default function Platforms() {
           barem1_max: admin.barem1_max,
           barem2_min: admin.barem2_min,
           barem2_max: admin.barem2_max,
-          
         };
       });
       const seen = new Map();
@@ -131,6 +130,8 @@ export default function Platforms() {
           barem2_min: 150,
           barem2_max: 299.99,
           use_custom_shipping_price: m.platform_type === 'website',
+          has_corporate_tax: true,
+          corporate_tax_rate: 25,
         }))).then(() => queryClient.invalidateQueries(['platforms']));
       }
     }
@@ -147,14 +148,11 @@ export default function Platforms() {
   const saveMutation = useMutation({
     mutationFn: async ({ id, data, platformType }) => {
       await PlatformEntity.update(id, data);
-// Kurumlar vergisi değişince tüm platformlara sync et
-      const savedPlatform = await PlatformEntity.filter({ created_by: userEmail }).then(all => all.find(p => p.id === id));
-      const taxChanged = savedPlatform && (
-        savedPlatform.has_corporate_tax !== data.has_corporate_tax ||
-        String(savedPlatform.corporate_tax_rate) !== String(data.corporate_tax_rate)
-      );
-      if (taxChanged) {
-        const taxData = { has_corporate_tax: data.has_corporate_tax, corporate_tax_rate: data.corporate_tax_rate };
+      // Kurumlar vergisi tüm platformlara sync et
+      if (data.has_corporate_tax !== undefined || data.corporate_tax_rate !== undefined) {
+        const taxData = {};
+        if (data.has_corporate_tax !== undefined) taxData.has_corporate_tax = data.has_corporate_tax;
+        if (data.corporate_tax_rate !== undefined) taxData.corporate_tax_rate = data.corporate_tax_rate;
         const allUserPlatforms = await PlatformEntity.filter({ created_by: userEmail });
         const othersToSync = allUserPlatforms.filter(r => r.id !== id);
         await Promise.all(othersToSync.map(r => PlatformEntity.update(r.id, taxData)));
