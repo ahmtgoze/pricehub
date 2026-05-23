@@ -100,7 +100,7 @@ export default function Prices() {
 
   const PLATFORM_ORDER = ['trendyol', 'hepsiburada', 'website'];
   const platforms = [...new Map(
-    allPlatforms.filter(p => p.is_active)
+    allPlatforms.filter(p => p.is_active === true)
       .sort((a, b) => PLATFORM_ORDER.indexOf(a.platform_type) - PLATFORM_ORDER.indexOf(b.platform_type))
       .map(p => [p.platform_type, p])
   ).values()];
