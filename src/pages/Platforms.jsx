@@ -54,6 +54,7 @@ export default function Platforms() {
 
   useEffect(() => {
     db.auth.me().then(u => {
+      console.log('USER:', JSON.stringify(u));
       setUserEmail(u.email);
       setUser(u);
     }).catch(() => {});
