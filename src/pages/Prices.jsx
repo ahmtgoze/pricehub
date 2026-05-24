@@ -309,7 +309,8 @@ export default function Prices() {
         const product = freshProducts.find(p => p.id === oldPrice.product_id);
         const platform = freshActivePlatforms.find(p => p.id === oldPrice.platform_id);
         if (!product || !platform) return null;
-        if (oldPrice.sale_price === data.sale_price) return null;
+        console.log('RAPOR KONTROL:', oldPrice.sale_price, '===', data.sale_price);
+if (oldPrice.sale_price === data.sale_price) return null;
         return {
           created_by: userEmail,
           product_id: product.id,
