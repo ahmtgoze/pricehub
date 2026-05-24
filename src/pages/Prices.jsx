@@ -313,7 +313,7 @@ export default function Prices() {
         if (!product || !platform) return null;
         
         console.log('RAPOR KONTROL:', oldPrice.sale_price, '===', data.sale_price);
-        if (oldPrice.sale_price === data.sale_price) return null;
+        // if (oldPrice.sale_price === data.sale_price) return null;
         return {
           created_by: userEmail,
           product_id: product.id,
