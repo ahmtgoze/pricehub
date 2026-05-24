@@ -329,6 +329,7 @@ export default function Prices() {
           change_reason: 'Fiyatları Hesapla',
         };
       }).filter(Boolean);
+      console.log('Kaydedilecek rapor sayısı:', reportsToCreate.length);
       if (reportsToCreate.length > 0) {
         const RBATCH = 100;
         for (let i = 0; i < reportsToCreate.length; i += RBATCH) {
