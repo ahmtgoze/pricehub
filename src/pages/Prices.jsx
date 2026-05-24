@@ -298,6 +298,8 @@ export default function Prices() {
           }
         } catch (err) { failedProductsList.push({ id: product.id, name: product.name }); }
       }
+      console.log('allToUpdate sayısı:', allToUpdate.length);
+      console.log('allToCreate sayısı:', allToCreate.length);
       const BATCH = 100;
       for (let i = 0; i < allToCreate.length; i += BATCH) await db.entities.ProductPrice.bulkCreate(allToCreate.slice(i, i + BATCH));
       await Promise.all(allToUpdate.map(({ id, data }) => db.entities.ProductPrice.update(id, data)));
