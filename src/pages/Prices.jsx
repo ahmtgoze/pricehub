@@ -298,9 +298,43 @@ export default function Prices() {
           }
         } catch (err) { failedProductsList.push({ id: product.id, name: product.name }); }
       }
-      console.log('allToUpdate sayısı:', allToUpdate.length);
-      console.log('allToCreate sayısı:', allToCreate.length);
       const BATCH = 100;
+      for (let i = 0; i < allToCreate.length; i += BATCH) await db.entities.ProductPrice.bulkCreate(allToCreate.slice(i, i + BATCH));
+      await Promise.all(allToUpdate.map(({ id, data }) => db.entities.ProductPrice.update(id, data)));
+
+      // Güncelleme raporlarını kaydet
+      try {
+        const reportsToCreate = allToUpdate.map(({ id, data }) => {
+          const oldPrice = freshProductPrices.find(pp => pp.id === id);
+          if (!oldPrice) return null;
+          const product = freshProducts.find(p => p.id === oldPrice.product_id);
+          const platform = freshActivePlatforms.find(p => p.id === oldPrice.platform_id);
+          if (!product || !platform) return null;
+          if (oldPrice.sale_price === data.sale_price) return null;
+          return {
+            created_by: userEmail,
+            product_id: product.id,
+            product_name: product.name,
+            product_sku: product.sku,
+            platform_id: platform.id,
+            platform_name: platform.name,
+            old_sale_price: oldPrice.sale_price,
+            new_sale_price: data.sale_price,
+            old_profit_rate: oldPrice.profit_rate,
+            new_profit_rate: data.profit_rate,
+            change_type: 'manual',
+            change_reason: 'Fiyatları Hesapla',
+          };
+        }).filter(Boolean);
+        if (reportsToCreate.length > 0) {
+          const RBATCH = 100;
+          for (let i = 0; i < reportsToCreate.length; i += RBATCH) {
+            await db.entities.UpdateReport.bulkCreate(reportsToCreate.slice(i, i + RBATCH));
+          }
+        }
+      } catch (reportError) {
+        console.error('Rapor kaydetme hatası:', reportError.message);
+      }
       for (let i = 0; i < allToCreate.length; i += BATCH) await db.entities.ProductPrice.bulkCreate(allToCreate.slice(i, i + BATCH));
       await Promise.all(allToUpdate.map(({ id, data }) => db.entities.ProductPrice.update(id, data)));
 
