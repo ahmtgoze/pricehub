@@ -141,6 +141,8 @@ export default function ProductModal({
   const chainResults = useMemo(() => filterProds(products, chainSearch, chainMembers.map(p => p.id)), [products, chainSearch, chainMembers, product]);
   const matchResults = useMemo(() => filterProds(products, matchSearch, matchMembers.map(p => p.id)), [products, matchSearch, matchMembers, product]);
 
+  console.log('Products prop sayısı:', products.length, '| refResults:', refResults.length, '| chainResults:', chainResults.length);
+
   const refProduct = products.find(p => p.id === form.ref_product_id);
 
   const handleAddChain = (p) => {
@@ -231,19 +233,16 @@ export default function ProductModal({
           <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
             <div className="overflow-y-auto flex-1 px-6 py-5 space-y-5">
 
-              {/* Ürün Adı */}
               <div className="space-y-2">
                 <Label>Ürün Adı *</Label>
                 <Input value={form.name} onChange={e => upd('name', e.target.value)} placeholder="Ürün adını girin" required />
               </div>
 
-              {/* SKU */}
               <div className="space-y-2">
                 <Label>SKU (Opsiyonel)</Label>
                 <Input value={form.sku} onChange={e => upd('sku', e.target.value)} placeholder="SKU-001" />
               </div>
 
-              {/* Maliyet + Baskı */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Maliyet (KDV Dahil) *</Label>
@@ -255,13 +254,11 @@ export default function ProductModal({
                 </div>
               </div>
 
-              {/* Ek Maliyet */}
               <div className="space-y-2">
                 <Label>Ek Maliyet (KDV Dahil)</Label>
                 <Input type="number" step="0.01" min="0" value={form.extra_cost} onChange={e => upd('extra_cost', e.target.value)} placeholder="0.00" />
               </div>
 
-              {/* Desi + KDV */}
               {!form.multi_package && (
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
@@ -311,7 +308,6 @@ export default function ProductModal({
                   )}
                 </div>
                 <div className="p-4 space-y-4">
-                  {/* Seçili referans */}
                   {refProduct ? (
                     <div className="flex items-center gap-2 p-2.5 bg-indigo-50 border border-indigo-200 rounded-lg text-sm">
                       <span className="font-medium text-indigo-800 flex-1 truncate">{refProduct.name}</span>
@@ -333,7 +329,6 @@ export default function ProductModal({
                     </div>
                   )}
 
-                  {/* Maliyet eki - sadece referans seçilince */}
                   {form.ref_product_id && (
                     <>
                       <div className="space-y-2">
@@ -372,7 +367,6 @@ export default function ProductModal({
                         )}
                       </div>
 
-                      {/* Baz Maliyet */}
                       <div className="space-y-2">
                         <Label className="text-sm">Baz maliyet (otomatik)</Label>
                         {baseCost !== null ? (
@@ -389,7 +383,6 @@ export default function ProductModal({
                         )}
                       </div>
 
-                      {/* Uyarı */}
                       {baseCost !== null && baseCost <= (parseFloat(form.cost) || 0) && (
                         <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-lg p-3 text-xs text-amber-700">
                           <span className="mt-0.5 shrink-0">⚠️</span>
@@ -530,13 +523,11 @@ export default function ProductModal({
                 </Select>
               </div>
 
-              {/* Bugün Kargoda */}
               <div className="flex items-center justify-between py-2">
                 <Label>Bugün Kargoda</Label>
                 <Switch checked={form.same_day_delivery} onCheckedChange={v => upd('same_day_delivery', v)} />
               </div>
 
-              {/* Aktif */}
               <div className="flex items-center justify-between py-2">
                 <Label>Aktif</Label>
                 <Switch checked={form.is_active} onCheckedChange={v => upd('is_active', v)} />

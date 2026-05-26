@@ -738,6 +738,12 @@ export const calculateAllPlatformPrices = ({
       if (pkg) packagingCost = pkg.total_cost || 0;
     }
   }
+
+  // Baz maliyet varsa ve normal maliyetten yüksekse onu kullan
+  const effectiveCost = (product.ref_product_id && product.base_cost && product.base_cost > product.cost)
+    ? product.base_cost
+    : product.cost;
+  const productForCalc = { ...product, cost: effectiveCost };
   
   for (const platform of platforms) {
     if (!platform.is_active) continue;
@@ -787,7 +793,7 @@ export const calculateAllPlatformPrices = ({
       }
       
       const priceResult = calculateProductPrice({
-        product,
+        product: productForCalc,
         platform: platformForCalculation,
         shippingRates,
         commission,
