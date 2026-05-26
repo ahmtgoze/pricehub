@@ -170,7 +170,6 @@ export default function Prices() {
     if (categoryFilter !== 'all') result = result.filter(p => p.category_id === categoryFilter);
     if (unpricedFilter) result = result.filter(p => !p.prices || Object.keys(p.prices).length === 0);
 
-    // Sadece görünür platformların fiyatlarına bak
     const getVisiblePrices = (p) => visiblePlatformList.map(pl => p.prices[pl.id]).filter(Boolean);
 
     if (minProfit !== '') result = result.filter(p => getVisiblePrices(p).some(price => (price.net_profit ?? 0) >= parseFloat(minProfit)));
@@ -216,7 +215,6 @@ export default function Prices() {
     setCategoryFilter('all');
   };
 
-  // Seçim işlemleri
   const toggleSelect = (id) => {
     setSelectedIds(prev => {
       const next = new Set(prev);
@@ -277,6 +275,14 @@ export default function Prices() {
         return freshPackageItems.filter(item => item.package_id === packageId && item.is_active !== false).reduce((sum, item) => sum + (item.cost || 0), 0);
       };
       const freshActivePlatforms = freshUserPlatforms.filter(p => p.is_active !== false);
+
+      // Referans ürünü olmayanlar önce hesaplansın (şelale sırası)
+      freshProducts.sort((a, b) => {
+        if (!a.ref_product_id && b.ref_product_id) return -1;
+        if (a.ref_product_id && !b.ref_product_id) return 1;
+        return 0;
+      });
+
       const total = freshProducts.length;
       startTask('calc-all-prices', 'Fiyatlar Hesaplanıyor', 'Fiyatlar', 'Prices', total);
       let successCount = 0;
@@ -334,41 +340,6 @@ export default function Prices() {
         }
       } catch (reportError) {
         console.error('Rapor kaydetme hatası:', reportError.message);
-      }
-      for (let i = 0; i < allToCreate.length; i += BATCH) await db.entities.ProductPrice.bulkCreate(allToCreate.slice(i, i + BATCH));
-      await Promise.all(allToUpdate.map(({ id, data }) => db.entities.ProductPrice.update(id, data)));
-
-      // Güncelleme raporlarını kaydet
-      const reportsToCreate = allToUpdate.map(({ id, data }) => {
-        const oldPrice = freshProductPrices.find(pp => pp.id === id);
-        if (!oldPrice) return null;
-        const product = freshProducts.find(p => p.id === oldPrice.product_id);
-        const platform = freshActivePlatforms.find(p => p.id === oldPrice.platform_id);
-        if (!product || !platform) return null;
-        
-        console.log('RAPOR KONTROL:', oldPrice.sale_price, '===', data.sale_price);
-        // if (oldPrice.sale_price === data.sale_price) return null;
-        return {
-          created_by: userEmail,
-          product_id: product.id,
-          product_name: product.name,
-          product_sku: product.sku,
-          platform_id: platform.id,
-          platform_name: platform.name,
-          old_sale_price: oldPrice.sale_price,
-          new_sale_price: data.sale_price,
-          old_profit_rate: oldPrice.profit_rate,
-          new_profit_rate: data.profit_rate,
-          change_type: 'manual',
-          change_reason: 'Fiyatları Hesapla',
-        };
-      }).filter(Boolean);
-      console.log('Kaydedilecek rapor sayısı:', reportsToCreate.length);
-      if (reportsToCreate.length > 0) {
-        const RBATCH = 100;
-        for (let i = 0; i < reportsToCreate.length; i += RBATCH) {
-          await db.entities.UpdateReport.bulkCreate(reportsToCreate.slice(i, i + RBATCH));
-        }
       }
 
       await queryClient.invalidateQueries({ queryKey: ['productPrices', userEmail] });
@@ -571,7 +542,6 @@ export default function Prices() {
                 <span className="sm:hidden">Sıfırla</span>
               </Button>
 
-              {/* Excel butonları */}
               <Button onClick={handleExportFiltered} variant="outline" className="gap-2" size="sm">
                 <Download className="h-4 w-4" />
                 <span className="hidden sm:inline">Filtrelenenleri İndir</span>

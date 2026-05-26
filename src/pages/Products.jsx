@@ -206,6 +206,35 @@ export default function Products() {
         });
       }
 
+      // Zincir tutarsızlığı kontrolü
+      if (_chainMembers.length > 0 && parseInt(saveData.unit_quantity) > 0 && newCost > 0) {
+        const myUnitCost = newCost / parseInt(saveData.unit_quantity);
+        const inconsistentMembers = [];
+        for (const memberId of _chainMembers) {
+          const member = products.find(p => p.id === memberId);
+          if (!member || !member.unit_quantity || member.unit_quantity === 0) continue;
+          const memberUnitCost = parseFloat(member.cost) / member.unit_quantity;
+          const diff = Math.abs(memberUnitCost - myUnitCost) / myUnitCost;
+          if (diff > 0.02) inconsistentMembers.push(member);
+        }
+        if (inconsistentMembers.length > 0) {
+          try {
+            await UpdateReport.create({
+              created_by: userEmail,
+              product_id: productId,
+              product_name: saveData.name,
+              product_sku: saveData.sku,
+              change_type: 'chain_inconsistency',
+              change_reason: `Zincir Tutarsızlığı — Bu ürün: ₺${myUnitCost.toFixed(4)}/adet | ${inconsistentMembers.map(m => `${m.name}: ₺${(parseFloat(m.cost) / m.unit_quantity).toFixed(4)}/adet`).join(', ')}`,
+              old_sale_price: oldCost,
+              new_sale_price: newCost,
+            });
+          } catch (e) {
+            console.error('Zincir tutarsızlık raporu hatası:', e);
+          }
+        }
+      }
+
       // Eşleştirme grubu güncelle
       const currentMatchGroupId = editingProduct?.match_group_id;
       const newMatchGroupId = (_matchMembers.length > 0)

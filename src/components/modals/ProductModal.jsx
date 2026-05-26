@@ -19,19 +19,12 @@ const norm = (t) => (t || '').toLowerCase()
   .replace(/ş/g,'s').replace(/ç/g,'c').replace(/ğ/g,'g')
   .replace(/ı/g,'i').replace(/ö/g,'o').replace(/ü/g,'u');
 
-const genUUID = () => {
-  if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID();
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
-    const r = Math.random() * 16 | 0;
-    return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
-  });
-};
-
 const INIT_FORM = {
   name: '', sku: '', cost: '', printing_cost: '', extra_cost: '',
   desi: '', multi_package: false, packages: [], category_id: '',
   vat_rate: 20, same_day_delivery: false, is_active: true,
   ref_product_id: null, cost_addon: '', cost_addon_type: 'total_tl', ref_product_qty: '',
+  unit_quantity: '',
 };
 
 export default function ProductModal({
@@ -40,7 +33,6 @@ export default function ProductModal({
 }) {
   const [form, setForm] = useState(INIT_FORM);
   const [showPackages, setShowPackages] = useState(false);
-
   const [chainMembers, setChainMembers] = useState([]);
   const [matchMembers, setMatchMembers] = useState([]);
   const [chainSearch, setChainSearch] = useState('');
@@ -62,7 +54,6 @@ export default function ProductModal({
           ? (typeof product.packages === 'string' ? JSON.parse(product.packages) : product.packages)
           : [];
       } catch (e) {}
-
       setForm({
         name: product.name || '', sku: product.sku || '',
         cost: product.cost || '', printing_cost: product.printing_cost || '',
@@ -75,6 +66,7 @@ export default function ProductModal({
         cost_addon: product.cost_addon || '',
         cost_addon_type: product.cost_addon_type || 'total_tl',
         ref_product_qty: product.ref_product_qty || '',
+        unit_quantity: product.unit_quantity || '',
       });
       setShowPackages(product.multi_package || false);
       setChainMembers(
@@ -98,29 +90,24 @@ export default function ProductModal({
     setChainConflict(null);
   }, [product, open]);
 
-  // Baz maliyet hesaplama
   const baseCost = useMemo(() => {
     if (!form.ref_product_id) return null;
     const ref = products.find(p => p.id === form.ref_product_id);
     if (!ref) return null;
     const refCost = (ref.ref_product_id && ref.base_cost > 0)
-      ? ref.base_cost
-      : (parseFloat(ref.cost) || 0);
+      ? ref.base_cost : (parseFloat(ref.cost) || 0);
     const addon = parseFloat(form.cost_addon) || 0;
     const normalCost = parseFloat(form.cost) || 0;
     let baz = 0;
-    if (form.cost_addon_type === 'total_tl') {
-      baz = refCost + addon;
-    } else if (form.cost_addon_type === 'total_pct') {
-      baz = refCost * (1 + addon / 100);
-    } else if (form.cost_addon_type === 'unit_tl') {
+    if (form.cost_addon_type === 'total_tl') baz = refCost + addon;
+    else if (form.cost_addon_type === 'total_pct') baz = refCost * (1 + addon / 100);
+    else if (form.cost_addon_type === 'unit_tl') {
       const qty = parseFloat(form.ref_product_qty) || 1;
       baz = (refCost / qty + addon) * qty;
     }
     return Math.max(baz, normalCost);
   }, [form.ref_product_id, form.cost_addon, form.cost_addon_type, form.ref_product_qty, form.cost, products]);
 
-  // Döngüsel referans önleme
   const availableRefProducts = useMemo(() => {
     const refsThis = new Set(products.filter(p => p.ref_product_id === product?.id).map(p => p.id));
     return products.filter(p => p.id !== product?.id && !refsThis.has(p.id));
@@ -140,8 +127,6 @@ export default function ProductModal({
   const refResults = useMemo(() => filterProds(availableRefProducts, refSearch), [availableRefProducts, refSearch]);
   const chainResults = useMemo(() => filterProds(products, chainSearch, chainMembers.map(p => p.id)), [products, chainSearch, chainMembers, product]);
   const matchResults = useMemo(() => filterProds(products, matchSearch, matchMembers.map(p => p.id)), [products, matchSearch, matchMembers, product]);
-
-  console.log('Products prop sayısı:', products.length, '| refResults:', refResults.length, '| chainResults:', chainResults.length);
 
   const refProduct = products.find(p => p.id === form.ref_product_id);
 
@@ -187,6 +172,7 @@ export default function ProductModal({
       cost_addon_type: form.cost_addon_type,
       base_cost: finalBaseCost,
       ref_product_qty: parseFloat(form.ref_product_qty) || 0,
+      unit_quantity: parseInt(form.unit_quantity) || 0,
       _chainMembers: chainMembers.map(p => p.id),
       _matchMembers: matchMembers.map(p => p.id),
     });
@@ -401,10 +387,25 @@ export default function ProductModal({
                   <p className="text-xs text-gray-500 mt-0.5">Aynı ürünün farklı adetli varyantlarını bağla. Birinin maliyeti değişince tüm zincir birim maliyete göre güncellenir.</p>
                 </div>
                 <div className="p-4 space-y-3">
+                  <div className="space-y-2">
+                    <Label className="text-sm">Bu ürünün adeti</Label>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        type="number" step="1" min="0"
+                        value={form.unit_quantity}
+                        onChange={e => upd('unit_quantity', e.target.value)}
+                        placeholder="örn: 100"
+                        className="w-32"
+                      />
+                      <p className="text-xs text-gray-400">Zincir tutarsızlığı kontrolü için kullanılır</p>
+                    </div>
+                  </div>
+
                   {chainMembers.length > 0 && (
                     <div className="flex flex-wrap gap-2">
                       {chainMembers.map(p => (
-                        <Tag key={p.id} label={p.name} onRemove={() => setChainMembers(prev => prev.filter(m => m.id !== p.id))} />
+                        <Tag key={p.id} label={`${p.name}${p.unit_quantity ? ` (${p.unit_quantity} adet)` : ''}`}
+                          onRemove={() => setChainMembers(prev => prev.filter(m => m.id !== p.id))} />
                       ))}
                     </div>
                   )}
@@ -514,7 +515,6 @@ export default function ProductModal({
                 )}
               </div>
 
-              {/* KATEGORİ */}
               <div className="space-y-2">
                 <Label>Kategori *</Label>
                 <Select value={form.category_id} onValueChange={v => upd('category_id', v)} required>
@@ -546,7 +546,6 @@ export default function ProductModal({
         </DialogContent>
       </Dialog>
 
-      {/* Zincir Çakışması Popup */}
       <AlertDialog open={!!chainConflict} onOpenChange={() => setChainConflict(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
