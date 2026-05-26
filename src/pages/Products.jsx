@@ -146,24 +146,93 @@ export default function Products() {
     enabled: !!userEmail
   });
 
-  const saveMutation = useMutation({
-    mutationFn: async (data) => {
-      if (editingProduct) {
-        return Product.update(editingProduct.id, data);
-      }
-      const existingProduct = products.find(p => p.sku === data.sku && p.id !== editingProduct?.id);
+const saveMutation = useMutation({
+  mutationFn: async (data) => {
+    const { _chainMembers, _matchMembers, ...saveData } = data;
+
+    // Ana ürünü kaydet
+    let savedProduct;
+    if (editingProduct) {
+      savedProduct = await Product.update(editingProduct.id, saveData);
+      savedProduct = { ...editingProduct, ...saveData };
+    } else {
+      const existingProduct = products.find(p => p.sku === data.sku);
       if (existingProduct) {
-        return Product.update(existingProduct.id, data);
+        await Product.update(existingProduct.id, saveData);
+        savedProduct = { ...existingProduct, ...saveData };
+      } else {
+        savedProduct = await Product.create(saveData);
       }
-      return Product.create(data);
-    },
-    onSuccess: async () => {
-      queryClient.invalidateQueries(['products']);
-      setModalOpen(false);
-      setEditingProduct(null);
-      toast.success('Ürün kaydedildi');
     }
-  });
+
+    const productId = savedProduct?.id || editingProduct?.id;
+
+    // Zincir grubu güncelle
+    const currentChainGroupId = editingProduct?.chain_group_id;
+    const newChainGroupId = (_chainMembers.length > 0)
+      ? (currentChainGroupId || crypto.randomUUID())
+      : null;
+
+    if (productId) {
+      await Product.update(productId, { chain_group_id: newChainGroupId });
+    }
+
+    // Mevcut zincir üyelerini bul
+    const oldChainMembers = currentChainGroupId
+      ? products.filter(p => p.chain_group_id === currentChainGroupId && p.id !== productId)
+      : [];
+
+    // Zincirden çıkarılanları temizle
+    for (const old of oldChainMembers) {
+      if (!_chainMembers.includes(old.id)) {
+        await Product.update(old.id, { chain_group_id: null });
+      }
+    }
+
+    // Zincire yeni eklenenleri güncelle
+    for (const memberId of _chainMembers) {
+      await Product.update(memberId, { chain_group_id: newChainGroupId });
+    }
+
+    // Eşleştirme grubu güncelle
+    const currentMatchGroupId = editingProduct?.match_group_id;
+    const newMatchGroupId = (_matchMembers.length > 0)
+      ? (currentMatchGroupId || crypto.randomUUID())
+      : null;
+
+    if (productId) {
+      await Product.update(productId, { match_group_id: newMatchGroupId });
+    }
+
+    // Mevcut eşleştirme üyelerini bul
+    const oldMatchMembers = currentMatchGroupId
+      ? products.filter(p => p.match_group_id === currentMatchGroupId && p.id !== productId)
+      : [];
+
+    // Eşleştirmeden çıkarılanları temizle
+    for (const old of oldMatchMembers) {
+      if (!_matchMembers.includes(old.id)) {
+        await Product.update(old.id, { match_group_id: null });
+      }
+    }
+
+    // Eşleştirmeye yeni eklenenleri güncelle + maliyet senkronizasyonu
+    for (const memberId of _matchMembers) {
+      await Product.update(memberId, {
+        match_group_id: newMatchGroupId,
+        cost: saveData.cost,
+      });
+    }
+
+    return savedProduct;
+  },
+  onSuccess: async () => {
+    queryClient.invalidateQueries(['products']);
+    setModalOpen(false);
+    setEditingProduct(null);
+    toast.success('Ürün kaydedildi');
+  }
+});
 
   const deleteMutation = useMutation({
     mutationFn: (id) => Product.delete(id),
@@ -896,14 +965,15 @@ export default function Products() {
         />
 
         <ProductModal
-          open={modalOpen}
-          onOpenChange={setModalOpen}
-          product={editingProduct}
-          categories={categories}
-          packages={packages}
-          onSave={(data) => saveMutation.mutate(data)}
-          isSaving={saveMutation.isPending}
-        />
+  open={modalOpen}
+  onOpenChange={setModalOpen}
+  product={editingProduct}
+  categories={categories}
+  packages={packages}
+  products={products}
+  onSave={(data) => saveMutation.mutate(data)}
+  isSaving={saveMutation.isPending}
+/>
 
         <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
           <AlertDialogContent>
