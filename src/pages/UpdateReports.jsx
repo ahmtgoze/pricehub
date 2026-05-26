@@ -91,40 +91,43 @@ export default function UpdateReports() {
 
   const filteredReports = useMemo(() => {
     let result = [...reports];
-    
-    // Arşiv durumuna göre filtrele
-    result = result.filter(r => 
+    result = result.filter(r =>
       tab === 'aktif' ? r.archived !== true : r.archived === true
     );
-    
     if (search) {
       const s = search.toLowerCase();
-      result = result.filter(r => 
+      result = result.filter(r =>
         r.product_name?.toLowerCase().includes(s) ||
         r.product_sku?.toLowerCase().includes(s)
       );
     }
-    
     if (platformFilter !== 'all') {
       result = result.filter(r => r.platform_id === platformFilter);
     }
-    
     if (typeFilter !== 'all') {
       result = result.filter(r => r.change_type === typeFilter);
     }
-    
     return result;
   }, [reports, search, platformFilter, typeFilter, tab]);
 
   const paginatedReports = filteredReports.slice((page - 1) * pageSize, page * pageSize);
 
-  const toggleSelectAll = () => {
-    if (selectedIds.length === paginatedReports.length && paginatedReports.length > 0) {
+  const allFilteredIds = filteredReports.map(r => r.id);
+  const isAllSelected = selectedIds.length === filteredReports.length && filteredReports.length > 0;
+  const isPageSelected = selectedIds.length === paginatedReports.length && paginatedReports.length > 0;
+
+  // Sadece bu sayfayı seç/kaldır
+  const toggleSelectPage = () => {
+    if (isPageSelected) {
       setSelectedIds([]);
     } else {
       setSelectedIds(paginatedReports.map(r => r.id));
     }
   };
+
+  // Tüm filtrelenmiş raporları seç
+  const selectAll = () => setSelectedIds(allFilteredIds);
+  const clearSelection = () => setSelectedIds([]);
 
   const toggleSelect = (id) => {
     setSelectedIds(prev =>
@@ -135,7 +138,6 @@ export default function UpdateReports() {
   const getPriceChange = (oldPrice, newPrice) => {
     const diff = newPrice - oldPrice;
     const percent = oldPrice > 0 ? (diff / oldPrice) * 100 : 0;
-    
     if (diff > 0) {
       return (
         <div className="flex items-center gap-1 text-emerald-600">
@@ -176,8 +178,8 @@ export default function UpdateReports() {
       header: (
         <input
           type="checkbox"
-          checked={selectedIds.length === paginatedReports.length && paginatedReports.length > 0}
-          onChange={toggleSelectAll}
+          checked={isPageSelected}
+          onChange={toggleSelectPage}
           className="rounded border-gray-300"
         />
       ),
@@ -213,10 +215,7 @@ export default function UpdateReports() {
         </div>
       )
     },
-    {
-      header: 'Platform',
-      accessor: 'platform_name'
-    },
+    { header: 'Platform', accessor: 'platform_name' },
     {
       header: 'Eski Fiyat',
       accessor: 'old_sale_price',
@@ -281,21 +280,18 @@ export default function UpdateReports() {
           <div className="flex items-center gap-3">
             {selectedIds.length > 0 && (
               <>
-                <Button 
+                <Button
                   variant="outline"
                   onClick={() => {
-                    if (tab === 'aktif') {
-                      archiveMutation.mutate(selectedIds);
-                    } else {
-                      restoreMutation.mutate(selectedIds);
-                    }
+                    if (tab === 'aktif') archiveMutation.mutate(selectedIds);
+                    else restoreMutation.mutate(selectedIds);
                   }}
                   className="gap-2"
                 >
                   <Archive className="h-4 w-4" />
                   {tab === 'aktif' ? 'Arşivle' : 'Geri Al'} ({selectedIds.length})
                 </Button>
-                <Button 
+                <Button
                   variant="destructive"
                   onClick={() => setBulkDeleteOpen(true)}
                   className="gap-2"
@@ -315,21 +311,17 @@ export default function UpdateReports() {
 
         <div className="mb-4 flex gap-2 border-b border-slate-200">
           <button
-            onClick={() => setTab('aktif')}
+            onClick={() => { setTab('aktif'); setSelectedIds([]); setPage(1); }}
             className={`px-4 py-2 font-medium border-b-2 transition-colors ${
-              tab === 'aktif'
-                ? 'border-indigo-600 text-indigo-600'
-                : 'border-transparent text-slate-600 hover:text-slate-900'
+              tab === 'aktif' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-600 hover:text-slate-900'
             }`}
           >
             Aktif Raporlar
           </button>
           <button
-            onClick={() => setTab('arsiv')}
+            onClick={() => { setTab('arsiv'); setSelectedIds([]); setPage(1); }}
             className={`px-4 py-2 font-medium border-b-2 transition-colors ${
-              tab === 'arsiv'
-                ? 'border-indigo-600 text-indigo-600'
-                : 'border-transparent text-slate-600 hover:text-slate-900'
+              tab === 'arsiv' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-600 hover:text-slate-900'
             }`}
           >
             Arşiv
@@ -338,27 +330,16 @@ export default function UpdateReports() {
 
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 mb-6">
           <div className="flex flex-col sm:flex-row gap-4">
-            <SearchInput
-              value={search}
-              onChange={setSearch}
-              placeholder="Ürün adı veya SKU ara..."
-              className="flex-1"
-            />
+            <SearchInput value={search} onChange={setSearch} placeholder="Ürün adı veya SKU ara..." className="flex-1" />
             <Select value={platformFilter} onValueChange={setPlatformFilter}>
-              <SelectTrigger className="w-full sm:w-48">
-                <SelectValue placeholder="Platform" />
-              </SelectTrigger>
+              <SelectTrigger className="w-full sm:w-48"><SelectValue placeholder="Platform" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Tüm Platformlar</SelectItem>
-                {platforms.map(p => (
-                  <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-                ))}
+                {platforms.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
               </SelectContent>
             </Select>
             <Select value={typeFilter} onValueChange={setTypeFilter}>
-              <SelectTrigger className="w-full sm:w-40">
-                <SelectValue placeholder="Tip" />
-              </SelectTrigger>
+              <SelectTrigger className="w-full sm:w-40"><SelectValue placeholder="Tip" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Tüm Tipler</SelectItem>
                 <SelectItem value="cost_update">Maliyet</SelectItem>
@@ -370,6 +351,21 @@ export default function UpdateReports() {
             </Select>
           </div>
         </div>
+
+        {/* Toplu seçim bilgi bandı */}
+        {selectedIds.length > 0 && (
+          <div className="mb-4 flex items-center gap-3 bg-indigo-50 border border-indigo-200 rounded-xl px-4 py-3 text-sm text-indigo-700">
+            <span className="font-medium">{selectedIds.length} rapor seçili</span>
+            {!isAllSelected && (
+              <button onClick={selectAll} className="underline hover:text-indigo-900 font-medium">
+                Tüm {filteredReports.length} raporu seç
+              </button>
+            )}
+            <button onClick={clearSelection} className="underline hover:text-indigo-900 ml-auto">
+              Seçimi temizle
+            </button>
+          </div>
+        )}
 
         <DataTable
           columns={columns}
