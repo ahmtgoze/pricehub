@@ -7,7 +7,8 @@ import {
   LayoutDashboard, Package, FolderTree, Store, Truck, Percent,
   Calculator, FileText, BadgeDollarSign, Tag, BadgePercent,
   Sparkles, Zap, HelpCircle, ChevronDown, ChevronRight,
-  ExternalLink, CheckCircle2, ArrowRight, AlertCircle, Info
+  ExternalLink, CheckCircle2, ArrowRight, AlertCircle, Info,
+  BookOpen, Map, CheckCheck, Circle
 } from 'lucide-react';
 
 function Field({ name, required, children }) {
@@ -78,671 +79,644 @@ function FAQ({ items }) {
   );
 }
 
+// ─── Kurulum Sihirbazı ───────────────────────────────────────────────────────
+
+const WIZARD_STEPS = [
+  {
+    id: 1,
+    title: 'Kategorileri Ekle',
+    page: 'Categories',
+    icon: '🗂️',
+    color: 'bg-yellow-50 border-yellow-200',
+    badge: 'bg-yellow-100 text-yellow-700',
+    desc: 'Ürün gruplarını ve KDV oranlarını tanımla. Komisyon hesaplamasının temel taşı.',
+    items: [
+      '"Kategoriler" sayfasına git',
+      '"+ Yeni Kategori" butonuna tıkla',
+      'Kategori adını gir (örn: Kargo Poşeti, Etiket)',
+      'KDV oranını seç (%1, %10 veya %20)',
+      'Tüm ürün grupların için tekrarla',
+    ],
+    tip: 'Kategorileri doğru tanımlamazsan komisyon hesaplamaları çalışmaz. İlk adım olarak tüm ürün gruplarını buraya ekle.',
+  },
+  {
+    id: 2,
+    title: 'Platformları Yapılandır',
+    page: 'Platforms',
+    icon: '🏪',
+    color: 'bg-indigo-50 border-indigo-200',
+    badge: 'bg-indigo-100 text-indigo-700',
+    desc: 'Trendyol, Hepsiburada ve Web Sitesi için kargo firması ve ayarları yap.',
+    items: [
+      '"Platformlar" sayfasına git',
+      'Her platform için "Tüm Ayarlar" butonuna tıkla',
+      'Kargo firması adını gir',
+      '"Bugün Kargoda" ayarını gerekiyorsa aç',
+      'Aktif platformları işaretle',
+    ],
+    tip: 'Trendyol ve Hepsiburada için stopaj, hizmet bedeli ve barem bilgileri admin tarafından belirlenir — bunları değiştirmene gerek yok.',
+  },
+  {
+    id: 3,
+    title: 'Kargo Tarifelerini Gir',
+    page: 'ShippingRates',
+    icon: '🚚',
+    color: 'bg-orange-50 border-orange-200',
+    badge: 'bg-orange-100 text-orange-700',
+    desc: 'Her platform için barem ve desi bazlı kargo ücretlerini tanımla.',
+    items: [
+      '"Kargo Tarifeleri" sayfasına git',
+      'Platform seç',
+      'Barem1 tarifesini gir (örn: 0-149.99 TL arası satışlar)',
+      'Barem2 tarifesini gir (örn: 150-299.99 TL arası satışlar)',
+      'Desi bazlı tarifeleri gir (farklı desi aralıkları için)',
+    ],
+    tip: 'Barem ve desi tarifeleri birlikte tanımlanmalı. Ürün barem limitini aşarsa sistem otomatik desi tarifesine geçer.',
+  },
+  {
+    id: 4,
+    title: 'Komisyonları Gir',
+    page: 'Commissions',
+    icon: '💹',
+    color: 'bg-red-50 border-red-200',
+    badge: 'bg-red-100 text-red-700',
+    desc: 'Her platform × kategori için komisyon oranı ve hedef kâr marjı belirle.',
+    items: [
+      '"Komisyonlar" sayfasına git',
+      '"+ Yeni Komisyon" butonuna tıkla',
+      'Platform seç',
+      'Kategori seç (1. adımda eklediğin kategoriler)',
+      'Komisyon oranını gir (örn: %18)',
+      'Hedef kâr oranını gir (örn: %80)',
+      'Tüm platform × kategori kombinasyonları için tekrarla',
+    ],
+    tip: 'Her platform için her kategori ayrı komisyon satırı gerektirir. Trendyol\'da "Kargo Poşeti" kategorisi varsa Trendyol + Kargo Poşeti için ayrı bir satır oluştur.',
+  },
+  {
+    id: 5,
+    title: 'Paketleme Maliyetlerini Gir',
+    page: 'PackageManagement',
+    icon: '📦',
+    color: 'bg-cyan-50 border-cyan-200',
+    badge: 'bg-cyan-100 text-cyan-700',
+    desc: 'Kargo poşeti, kutu, etiket gibi paketleme malzemelerinin maliyetini ekle.',
+    items: [
+      '"Paketleme" sayfasına git',
+      '"+ Yeni Paket" ile paket grubu oluştur (örn: Küçük Poşet)',
+      'Min ve Max desi aralığını gir',
+      'Paket grubunun içine malzeme ekle (Poşet, Etiket, Bant...)',
+      'Her malzemenin KDV dahil maliyetini gir',
+    ],
+    tip: 'Opsiyonel ama önerilen. Paketleme maliyeti girilmezse fiyat hesaplamada bu gider sıfır alınır.',
+  },
+  {
+    id: 6,
+    title: 'Ürünleri Ekle',
+    page: 'Products',
+    icon: '🛍️',
+    color: 'bg-blue-50 border-blue-200',
+    badge: 'bg-blue-100 text-blue-700',
+    desc: 'Ürün kataloğunu tek tek veya Excel ile toplu yükle.',
+    items: [
+      '"Ürünler" sayfasına git',
+      'Tekil ekleme: "+ Yeni Ürün" butonuyla SKU, maliyet, desi ve kategori gir',
+      'Toplu ekleme: "Excel İşlemleri → Şablon İndir" ile şablonu doldur, sonra "Yükle"',
+      'Ürün Zinciri (opsiyonel): Aynı ürünün farklı adetli varyantlarını birbirine bağla',
+      'Referans Ürün (opsiyonel): Büyük paketi küçük paketin referansı olarak ayarla',
+    ],
+    tip: 'Excel ile toplu yükleme yapabilirsin. Mevcut SKU\'lar güncellenir, yeni SKU\'lar eklenir.',
+  },
+  {
+    id: 7,
+    title: 'Fiyatları Hesapla',
+    page: 'Prices',
+    icon: '💰',
+    color: 'bg-green-50 border-green-200',
+    badge: 'bg-green-100 text-green-700',
+    desc: '"Fiyatları Hesapla" butonuna bas — tüm ürünler için platform bazlı fiyatlar otomatik çıkar.',
+    items: [
+      '"Fiyatlar" sayfasına git',
+      '"Fiyatları Hesapla" butonuna tıkla',
+      'İşlem tamamlanana kadar bekle',
+      'Her ürün için Trendyol, Hepsiburada ve Web Sitesi fiyatlarını gör',
+      'Detay butonu ile her platformdaki kâr dökümünü incele',
+    ],
+    tip: 'Bu adım her maliyet güncellemesinden sonra tekrarlanmalıdır. Fiyatlar otomatik güncellenmez, hesaplama manuel başlatılır.',
+  },
+  {
+    id: 8,
+    title: 'Pazaryeri Verilerini Yükle',
+    page: 'MarketplaceProducts',
+    icon: '🔗',
+    color: 'bg-sky-50 border-sky-200',
+    badge: 'bg-sky-100 text-sky-700',
+    desc: 'Trendyol/Hepsiburada panelinden indirdiğin ürün listesini yükle ve eşleştir.',
+    items: [
+      'Trendyol/Hepsiburada panelinden ürün listesi Excel\'ini indir',
+      '"Pazaryeri Ürünleri" sayfasına git',
+      'Platformu seç ve Excel\'i yükle',
+      'Ürünleri sistemizdeki master ürünlerle eşleştir',
+      'Otomatik eşleştirme sonrası mutlaka kontrol et',
+    ],
+    tip: 'Hatalı eşleştirme yanlış fiyat güncellemesine yol açabilir. Otomatik eşleştirmeyi mutlaka gözden geçir.',
+  },
+  {
+    id: 9,
+    title: 'Fiyatları İndir ve Platforma Yükle',
+    page: 'UpdatedPrices',
+    icon: '📤',
+    color: 'bg-violet-50 border-violet-200',
+    badge: 'bg-violet-100 text-violet-700',
+    desc: 'Hesaplanan güncel fiyatları platform formatında indir, pazaryerine yükle.',
+    items: [
+      '"Düzenlenen Fiyatlar" sayfasına git',
+      'Platformu seç',
+      'Değişim oranı yüksek ürünleri kontrol et',
+      '"Excel\'e Aktar" ile dosyayı indir',
+      'Trendyol: Ürün → Toplu Ürün İşlemleri → Şablon Yükle → Stok & Fiyat',
+      'Hepsiburada: Ürünler → Envanter → Toplu Güncelleme → Fiyat Güncelleme',
+    ],
+    tip: 'İndirilen Excel doğrudan platforma yüklenebilir — ek düzenleme gerekmez.',
+  },
+];
+
+function WizardStep({ step, done, onToggle, isActive, onActivate }) {
+  return (
+    <div
+      className={`rounded-2xl border-2 transition-all cursor-pointer ${
+        done
+          ? 'border-green-200 bg-green-50'
+          : isActive
+          ? step.color + ' shadow-md'
+          : 'border-gray-100 bg-white hover:border-gray-200'
+      }`}
+    >
+      <div className="flex items-center gap-4 p-4" onClick={onActivate}>
+        <button
+          onClick={(e) => { e.stopPropagation(); onToggle(); }}
+          className={`w-8 h-8 rounded-full border-2 flex items-center justify-center shrink-0 transition-all ${
+            done ? 'bg-green-500 border-green-500 text-white' : 'border-gray-300 bg-white hover:border-green-400'
+          }`}
+        >
+          {done ? <CheckCheck className="w-4 h-4" /> : <span className="text-xs font-bold text-gray-500">{step.id}</span>}
+        </button>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2">
+            <span className="text-lg">{step.icon}</span>
+            <span className={`font-semibold text-sm ${done ? 'text-green-700 line-through' : 'text-gray-800'}`}>{step.title}</span>
+            {done && <Badge className="bg-green-100 text-green-700 text-xs">Tamamlandı</Badge>}
+          </div>
+          <p className="text-xs text-gray-500 mt-0.5">{step.desc}</p>
+        </div>
+        <ChevronRight className={`w-4 h-4 text-gray-400 shrink-0 transition-transform ${isActive ? 'rotate-90' : ''}`} />
+      </div>
+
+      {isActive && (
+        <div className="px-5 pb-5 border-t border-gray-100">
+          <ol className="space-y-2 my-4">
+            {step.items.map((item, i) => (
+              <li key={i} className="flex items-start gap-3 text-sm text-gray-700">
+                <span className="w-5 h-5 rounded-full bg-gray-800 text-white flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">{i + 1}</span>
+                <span>{item}</span>
+              </li>
+            ))}
+          </ol>
+          <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 mb-4">
+            <p className="text-xs text-amber-700"><strong>💡 İpucu:</strong> {step.tip}</p>
+          </div>
+          <div className="flex items-center gap-3">
+            <Link
+              to={createPageUrl(step.page)}
+              className="flex items-center gap-2 bg-gray-900 text-white text-sm font-medium px-4 py-2 rounded-xl hover:bg-gray-700 transition-colors"
+            >
+              {step.title} sayfasına git
+              <ExternalLink className="w-3.5 h-3.5" />
+            </Link>
+            {!done && (
+              <button
+                onClick={onToggle}
+                className="flex items-center gap-2 border border-green-300 text-green-700 text-sm font-medium px-4 py-2 rounded-xl hover:bg-green-50 transition-colors"
+              >
+                <CheckCheck className="w-4 h-4" />
+                Tamamlandı olarak işaretle
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Sayfa Dokümantasyonu ────────────────────────────────────────────────────
+
 const PAGES = [
   {
-    id: 'dashboard',
-    title: 'Dashboard',
-    page: 'Dashboard',
-    icon: LayoutDashboard,
-    color: 'bg-gray-100 text-gray-700',
-    border: 'border-gray-200',
+    id: 'dashboard', title: 'Dashboard', page: 'Dashboard', icon: LayoutDashboard,
+    color: 'bg-gray-100 text-gray-700', border: 'border-gray-200',
     short: 'Sistemin genel durumunu tek ekranda görüntüleyin.',
     content: (
       <div className="space-y-4">
-        <p className="text-gray-700 text-sm leading-relaxed">
-          Dashboard, sisteminizin anlık özetini gösterir. Ürün sayısı, platform dağılımı ve fiyat metrikleri burada toplanır.
-          Başka sayfalarda yaptığınız değişiklikler otomatik yansır; herhangi bir işlem yapmanıza gerek yoktur.
-        </p>
-        <div className="bg-gray-50 border border-gray-200 rounded-xl p-4">
-          <p className="text-sm font-semibold text-gray-700 mb-2">Göreceğiniz metrikler:</p>
-          <ul className="space-y-1 text-sm text-gray-600">
-            <li>• <strong>Toplam ürün sayısı</strong> — sistemde kayıtlı ürün adedi</li>
-            <li>• <strong>Platform dağılımı</strong> — her platformdaki fiyatlandırılmış ürün sayısı</li>
-            <li>• <strong>Kategori bazlı özet</strong> — hangi kategoride kaç ürün var</li>
-            <li>• <strong>Ortalama kar marjı</strong> — platforma göre ortalama karlılık</li>
-          </ul>
-        </div>
-        <NoteBox color="blue" icon={Info}>
-          Dashboard salt görüntüleme amaçlıdır. Veri değişikliği yapamazsınız. Detaylar için ilgili sayfalara gidin.
-        </NoteBox>
+        <p className="text-gray-700 text-sm leading-relaxed">Dashboard anlık özet gösterir. Başka sayfalarda yaptığın değişiklikler otomatik yansır.</p>
+        <NoteBox color="blue" icon={Info}>Dashboard salt görüntüleme amaçlıdır. Detaylar için ilgili sayfalara gidin.</NoteBox>
       </div>
     ),
-    faq: []
   },
-
   {
-    id: 'kategoriler',
-    title: 'Kategoriler',
-    page: 'Categories',
-    icon: FolderTree,
-    color: 'bg-yellow-100 text-yellow-700',
-    border: 'border-yellow-200',
+    id: 'kategoriler', title: 'Kategoriler', page: 'Categories', icon: FolderTree,
+    color: 'bg-yellow-100 text-yellow-700', border: 'border-yellow-200',
     short: 'Ürün kategorilerinizi tanımlayın. Komisyon hesaplamalarında temel referans noktasıdır.',
     content: (
       <div className="space-y-4">
-        <p className="text-gray-700 text-sm leading-relaxed">
-          Kategoriler, sistemin en temel verisidir. Komisyon oranları <strong>platform + kategori kombinasyonuna</strong> göre tanımlandığından,
-          önce tüm ürün kategorilerinizi buraya girmeniz gerekmektedir.
-        </p>
-        <div>
-          <p className="text-sm font-semibold text-gray-700 mb-2">Kategori alanları:</p>
-          <div className="border border-gray-200 rounded-xl overflow-hidden">
-            <Field name="Kategori Adı" required>Ürün grubunun adı. Örneğin: "Ev Tekstili", "Elektronik", "Kozmetik".</Field>
-            <Field name="Varsayılan KDV Oranı">Bu kategorideki ürünler için standart KDV oranı (%). Örn: %20 veya %10.</Field>
-            <Field name="Aktif / Pasif">Pasif kategoriler ürün ekleme formunda görünmez.</Field>
-          </div>
+        <p className="text-gray-700 text-sm leading-relaxed">Komisyon oranları <strong>platform + kategori</strong> kombinasyonuna göre tanımlanır. Önce tüm kategorileri ekleyin.</p>
+        <div className="border border-gray-200 rounded-xl overflow-hidden">
+          <Field name="Kategori Adı" required>Ürün grubunun adı. Örn: "Kargo Poşeti", "Etiket".</Field>
+          <Field name="KDV Oranı">Standart KDV oranı (%). Örn: %20.</Field>
         </div>
-        <NoteBox color="yellow" icon={AlertCircle} title="Önemli">
-          Kategori adını değiştirirseniz komisyon kayıtlarını manuel kontrol edin.
-        </NoteBox>
-        <div>
-          <p className="text-sm font-semibold text-gray-700 mb-1">Nasıl eklersiniz?</p>
-          <StepList steps={['"+ Yeni Kategori" butonuna tıklayın.', 'Kategori adını ve KDV oranını girin.', '"Kaydet" butonuna basın.']} />
-        </div>
-        <FAQ items={[
-          { q: 'Kaç kategori ekleyebilirim?', a: 'Sınırsız.' },
-          { q: 'KDV oranını yanlış girdim, değiştirsem ne olur?', a: 'Mevcut ürünlerin KDV oranı otomatik güncellenmez. Ürün düzenleme ekranından tek tek değiştirmeniz gerekir.' },
-        ]} />
+        <NoteBox color="yellow" icon={AlertCircle} title="Önemli">Kategori adını değiştirirseniz komisyon kayıtlarını kontrol edin.</NoteBox>
+        <FAQ items={[{ q: 'KDV oranını yanlış girdim?', a: 'Ürün düzenleme ekranından tek tek değiştirmeniz gerekir.' }]} />
       </div>
-    )
+    ),
   },
-
   {
-    id: 'platformlar',
-    title: 'Platformlar',
-    page: 'Platforms',
-    icon: Store,
-    color: 'bg-indigo-100 text-indigo-700',
-    border: 'border-indigo-200',
-    short: 'Trendyol, Hepsiburada ve Web Sitesi platformlarını aktif/pasif yapın ve kargo ayarlarını yönetin.',
+    id: 'platformlar', title: 'Platformlar', page: 'Platforms', icon: Store,
+    color: 'bg-indigo-100 text-indigo-700', border: 'border-indigo-200',
+    short: 'Trendyol, Hepsiburada ve Web Sitesi platformlarını aktif/pasif yapın.',
     content: (
       <div className="space-y-4">
-        <p className="text-gray-700 text-sm leading-relaxed">
-          Sistem üç sabit platform içerir: <strong>Trendyol</strong>, <strong>Hepsiburada</strong> ve <strong>Web Sitesi</strong>.
-          İlk girişte otomatik oluşturulurlar.
-        </p>
-        <div>
-          <p className="text-sm font-semibold text-gray-700 mb-2">Her platformda yapabileceğiniz ayarlar:</p>
-          <div className="border border-gray-200 rounded-xl overflow-hidden">
-            <Field name="Aktif / Pasif">Platform aktifse fiyat hesaplama yapılır.</Field>
-            <Field name="Kargo Firması">Platform için kullanılacak kargo firması.</Field>
-            <Field name="Barem Sistemi">Aktifse ürün satış fiyatına göre kargo ücreti barema göre belirlenir.</Field>
-            <Field name="Bugün Kargoda">Her iki tarafta da açıksa indirimli hizmet bedeli uygulanır.</Field>
-            <Field name="Stopaj Oranı">Platform stopaj yüzdesi. Trendyol ve Hepsiburada için admin belirler.</Field>
-            <Field name="Hizmet Bedeli">Platform'un sipariş başına aldığı ücret.</Field>
-          </div>
+        <p className="text-gray-700 text-sm leading-relaxed">Sistem üç sabit platform içerir. İlk girişte otomatik oluşturulurlar.</p>
+        <div className="border border-gray-200 rounded-xl overflow-hidden">
+          <Field name="Aktif / Pasif">Platform aktifse fiyat hesaplama yapılır.</Field>
+          <Field name="Kargo Firması">Platform için kullanılacak kargo firması.</Field>
+          <Field name="Barem Sistemi">Satış fiyatına göre kargo ücreti barema göre belirlenir.</Field>
         </div>
-        <NoteBox color="yellow" icon={AlertCircle} title="Pazaryeri özel notu">
-          Trendyol ve Hepsiburada için barem, stopaj ve hizmet bedelleri <strong>admin</strong> tarafından belirlenir.
-        </NoteBox>
-        <FAQ items={[
-          { q: 'Web Sitesi platformunu nasıl yapılandırırım?', a: '"Tüm Ayarlar" butonuna tıklayın. Admin kısıtlaması yoktur.' },
-          { q: '"Bugün Kargoda" nasıl çalışır?', a: 'Hem platform hem ürün bazında açık olmalıdır.' },
-        ]} />
+        <NoteBox color="yellow" icon={AlertCircle} title="Pazaryeri notu">Trendyol ve Hepsiburada için barem, stopaj ve hizmet bedelleri admin tarafından belirlenir.</NoteBox>
       </div>
-    )
+    ),
   },
-
   {
-    id: 'paketleme',
-    title: 'Paketleme',
-    page: 'PackageManagement',
-    icon: Package,
-    color: 'bg-cyan-100 text-cyan-700',
-    border: 'border-cyan-200',
-    short: 'Kargo poşeti, kutu, etiket gibi paketleme malzemelerinin maliyetini sisteme girin.',
+    id: 'paketleme', title: 'Paketleme', page: 'PackageManagement', icon: Package,
+    color: 'bg-cyan-100 text-cyan-700', border: 'border-cyan-200',
+    short: 'Kargo poşeti, kutu, etiket gibi paketleme malzemelerinin maliyetini girin.',
     content: (
       <div className="space-y-4">
-        <p className="text-gray-700 text-sm leading-relaxed">
-          Paketleme maliyeti satış fiyatından düşülen giderler arasındadır. Paket grupları oluşturun, malzeme kalemleri ekleyin.
-        </p>
-        <div>
-          <p className="text-sm font-semibold text-gray-700 mb-1">1. Paket Grubu Oluşturma</p>
-          <div className="border border-gray-200 rounded-xl overflow-hidden">
-            <Field name="Paket Adı" required>Örn: "Küçük Poşet", "Karton Kutu M".</Field>
-            <Field name="Min / Max Desi">Bu aralıktaki ürünlere otomatik paket atanır.</Field>
-          </div>
+        <p className="text-gray-700 text-sm leading-relaxed">Paketleme maliyeti satış fiyatından düşülen giderler arasındadır. Paket grupları oluşturun, malzeme kalemleri ekleyin.</p>
+        <div className="border border-gray-200 rounded-xl overflow-hidden">
+          <Field name="Paket Adı" required>Örn: "Küçük Poşet", "Karton Kutu M".</Field>
+          <Field name="Min / Max Desi">Bu aralıktaki ürünlere otomatik paket atanır.</Field>
+          <Field name="Maliyet (KDV dahil)" required>Birim maliyet. Tüm kalemlerin toplamı paketin maliyetidir.</Field>
         </div>
-        <div>
-          <p className="text-sm font-semibold text-gray-700 mb-1">2. Paket Kalemi Ekleme</p>
-          <div className="border border-gray-200 rounded-xl overflow-hidden">
-            <Field name="Kalem Tipi" required>Poşet, kutu, etiket, bant veya ek gider.</Field>
-            <Field name="Maliyet (KDV dahil)" required>Birim maliyet. Tüm kalemlerin toplamı paketin maliyetidir.</Field>
-          </div>
-        </div>
-        <FAQ items={[
-          { q: 'Paket maliyeti KDV dahil mi girilmeli?', a: 'Evet, tüm maliyet alanları KDV dahil girilmelidir.' },
-        ]} />
       </div>
-    )
+    ),
   },
-
   {
-    id: 'kargo',
-    title: 'Kargo Tarifeleri',
-    page: 'ShippingRates',
-    icon: Truck,
-    color: 'bg-orange-100 text-orange-700',
-    border: 'border-orange-200',
+    id: 'kargo', title: 'Kargo Tarifeleri', page: 'ShippingRates', icon: Truck,
+    color: 'bg-orange-100 text-orange-700', border: 'border-orange-200',
     short: 'Platform ve kargo firması bazlı kargo ücretlerini tanımlayın.',
     content: (
       <div className="space-y-4">
-        <p className="text-gray-700 text-sm leading-relaxed">
-          Kargo tarifeleri satış fiyatı hesaplanırken gönderim maliyetini belirler. Barem veya desi bazlı tarife seçilebilir.
-        </p>
+        <p className="text-gray-700 text-sm leading-relaxed">Barem veya desi bazlı tarife seçilebilir.</p>
         <div className="border border-gray-200 rounded-xl overflow-hidden">
           <Field name="Platform" required>Hangi platforma ait olduğu.</Field>
           <Field name="Tarife Tipi" required>barem1, barem2 veya desi.</Field>
           <Field name="Ücret" required>KDV dahil TL olarak.</Field>
         </div>
-        <FAQ items={[
-          { q: 'Barem ve desi tarifesini aynı anda tanımlamalı mıyım?', a: 'Evet. Desi barem limitini aşarsa sistem otomatik desi bazlı tarifeye geçer.' },
-        ]} />
+        <FAQ items={[{ q: 'Barem ve desi tarifesini aynı anda tanımlamalı mıyım?', a: 'Evet. Desi barem limitini aşarsa sistem otomatik desi bazlı tarifeye geçer.' }]} />
       </div>
-    )
+    ),
   },
-
   {
-    id: 'komisyonlar',
-    title: 'Komisyonlar',
-    page: 'Commissions',
-    icon: Percent,
-    color: 'bg-red-100 text-red-700',
-    border: 'border-red-200',
+    id: 'komisyonlar', title: 'Komisyonlar', page: 'Commissions', icon: Percent,
+    color: 'bg-red-100 text-red-700', border: 'border-red-200',
     short: 'Platform + kategori kombinasyonuna göre komisyon oranlarını ve hedef kar marjlarını tanımlayın.',
     content: (
       <div className="space-y-4">
-        <p className="text-gray-700 text-sm leading-relaxed">
-          Komisyon, platformun satış fiyatından aldığı yüzdedir. Her ürün için <strong>kategori + platform</strong> kombinasyonuna göre belirlenir.
-        </p>
+        <p className="text-gray-700 text-sm leading-relaxed">Komisyon, platformun satış fiyatından aldığı yüzdedir. Her ürün için <strong>kategori + platform</strong> kombinasyonuna göre belirlenir.</p>
         <div className="border border-gray-200 rounded-xl overflow-hidden">
           <Field name="Platform" required>Açılır menüden seçin.</Field>
           <Field name="Kategori" required>Açılır menüden seçin.</Field>
           <Field name="Komisyon Oranı (%)" required>Örn: %18.</Field>
           <Field name="Hedef Kâr Oranı (%)">Sistem bu orana göre optimal fiyatı hesaplar.</Field>
         </div>
-        <FAQ items={[
-          { q: 'Komisyon değişirse fiyatlar otomatik güncellenir mi?', a: 'Hayır. Komisyonu güncelledikten sonra ürünü kaydedin veya yeniden hesaplayın.' },
-        ]} />
       </div>
-    )
+    ),
   },
-
   {
-    id: 'urunler',
-    title: 'Ürünler',
-    page: 'Products',
-    icon: Package,
-    color: 'bg-blue-100 text-blue-700',
-    border: 'border-blue-200',
-    short: 'Ana ürün kataloğunuzu yönetin.',
+    id: 'urunler', title: 'Ürünler', page: 'Products', icon: Package,
+    color: 'bg-blue-100 text-blue-700', border: 'border-blue-200',
+    short: 'Ana ürün kataloğunuzu yönetin. Tekil veya Excel ile toplu ekleme yapabilirsiniz.',
     content: (
       <div className="space-y-4">
-        <p className="text-gray-700 text-sm leading-relaxed">
-          Ürünler sayfası sistemin merkezidir. Buraya girilen her ürün tüm aktif platformlarda otomatik fiyatlandırılır.
-        </p>
+        <p className="text-gray-700 text-sm leading-relaxed">Ürünler sayfası sistemin merkezidir. Buraya girilen her ürün tüm aktif platformlarda otomatik fiyatlandırılır.</p>
         <div className="border border-gray-200 rounded-xl overflow-hidden">
           <Field name="SKU" required>Benzersiz stok kodu.</Field>
           <Field name="Maliyet (KDV dahil)" required>Tedarik maliyeti.</Field>
+          <Field name="Baskı Maliyeti">Varsa baskı gideri.</Field>
+          <Field name="Ek Maliyet">Diğer ek giderler.</Field>
+          <Field name="Desi" required>Kargo hesaplamasında kullanılır.</Field>
           <Field name="Kategori" required>Komisyon hesabında kullanılır.</Field>
-          <Field name="Desi">Kargo hesaplamasında kullanılır.</Field>
         </div>
+
+        <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 space-y-3">
+          <p className="text-sm font-bold text-blue-800">🆕 Yeni Özellikler</p>
+
+          <div>
+            <p className="text-sm font-semibold text-blue-700 mb-1">📎 Referans Ürün</p>
+            <p className="text-sm text-blue-800">Büyük/pahalı bir ürünün maliyetini küçük/ucuz ürüne referans olarak bağlayabilirsin. Örn: 500 Adet paketin maliyetinden 100 Adet paketin baz maliyeti otomatik hesaplanır.</p>
+            <ul className="mt-1 text-xs text-blue-700 space-y-0.5 list-disc list-inside">
+              <li>Toplam ₺, Toplam % veya Birim ₺/adet şeklinde maliyet eki belirle</li>
+              <li>Baz maliyet otomatik hesaplanır ve normal maliyetten yüksekse fiyat baz maliyete göre hesaplanır</li>
+            </ul>
+          </div>
+
+          <div>
+            <p className="text-sm font-semibold text-blue-700 mb-1">🔗 Adet Bazlı Ürün Zinciri</p>
+            <p className="text-sm text-blue-800">Aynı ürünün farklı adetli varyantlarını (50 adet, 100 adet, 500 adet) birbirine bağla. Birinin maliyeti değişince tüm zincir orantılı güncellenir.</p>
+            <ul className="mt-1 text-xs text-blue-700 space-y-0.5 list-disc list-inside">
+              <li>"Bu ürünün adeti" alanını doldurursan birim maliyet tutarsızlığı otomatik raporlanır</li>
+            </ul>
+          </div>
+
+          <div>
+            <p className="text-sm font-semibold text-blue-700 mb-1">🔀 Ürün Eşleştirme</p>
+            <p className="text-sm text-blue-800">Aynı maliyete sahip olması gereken ürünleri eşleştir. Birinin maliyeti değişince diğerleri de otomatik güncellenir.</p>
+          </div>
+        </div>
+
         <FAQ items={[
           { q: "Aynı SKU'yu tekrar yüklersem ne olur?", a: 'Mevcut kayıt güncellenir; çift kayıt oluşmaz.' },
+          { q: 'Zincirdeki ürünlerden birinin maliyetini değiştirirsem ne olur?', a: 'Sistemin o ürünü kaydetmesiyle zincirdeki diğer ürünlerin maliyetleri orantılı olarak güncellenir.' },
+          { q: 'Referans ürün silinirse ne olur?', a: 'Referans bağlantısı otomatik temizlenir, ürün normal maliyet üzerinden çalışmaya devam eder.' },
         ]} />
       </div>
-    )
+    ),
   },
-
   {
-    id: 'fiyatlar',
-    title: 'Fiyatlar',
-    page: 'Prices',
-    icon: BadgeDollarSign,
-    color: 'bg-green-100 text-green-700',
-    border: 'border-green-200',
+    id: 'fiyatlar', title: 'Fiyatlar', page: 'Prices', icon: BadgeDollarSign,
+    color: 'bg-green-100 text-green-700', border: 'border-green-200',
     short: 'Ürünlerinizin platform bazlı hesaplanmış satış fiyatlarını görüntüleyin.',
     content: (
       <div className="space-y-4">
-        <p className="text-gray-700 text-sm leading-relaxed">
-          Fiyatlar sayfası sistemin çıktısıdır. Salt görüntüleme amaçlıdır; fiyatlar otomatik hesaplanır.
-        </p>
-        <NoteBox color="yellow" icon={AlertCircle} title="Fiyat güncel değilse">
-          İlgili ürünü Ürünler sayfasından açıp tekrar kaydedin.
-        </NoteBox>
-        <FAQ items={[
-          { q: 'Satış fiyatını manuel değiştirebilir miyim?', a: 'Hayır. Fiyatlar tamamen otomatik hesaplanır.' },
-        ]} />
+        <p className="text-gray-700 text-sm leading-relaxed">Fiyatlar sayfası sistemin çıktısıdır. "Fiyatları Hesapla" butonuna basarak tüm ürünler için fiyatlar yeniden hesaplanır.</p>
+        <NoteBox color="yellow" icon={AlertCircle} title="Fiyat güncel değilse">Fiyatları Hesapla butonuna basın. Referans ürünü olan ürünler en sona hesaplanır.</NoteBox>
+        <FAQ items={[{ q: 'Satış fiyatını manuel değiştirebilir miyim?', a: 'Hayır. Fiyatlar tamamen otomatik hesaplanır.' }]} />
       </div>
-    )
+    ),
   },
-
   {
-    id: 'hesaplayici',
-    title: 'Hesaplayıcı',
-    page: 'Calculator',
-    icon: Calculator,
-    color: 'bg-teal-100 text-teal-700',
-    border: 'border-teal-200',
+    id: 'hesaplayici', title: 'Hesaplayıcı', page: 'Calculator', icon: Calculator,
+    color: 'bg-teal-100 text-teal-700', border: 'border-teal-200',
     short: 'Belirli bir ürün ve platform için farklı satış fiyatlarında kâr durumunu anlık görün.',
     content: (
       <div className="space-y-4">
-        <p className="text-gray-700 text-sm leading-relaxed">
-          Hesaplayıcı, "Bu ürünü bu fiyata satsam ne kadar kazanırım?" sorusunu anlık yanıtlar.
-        </p>
-        <StepList steps={['Ürünü seçin.', 'Platformu seçin.', 'Satış fiyatını girin.', 'Sistem kâr detayını gösterir.']} />
-        <NoteBox color="green" icon={Info}>
-          Bu sayfada yaptığınız denemeler sisteme kaydedilmez.
-        </NoteBox>
+        <p className="text-gray-700 text-sm leading-relaxed">"Bu ürünü bu fiyata satsam ne kadar kazanırım?" sorusunu anlık yanıtlar.</p>
+        <NoteBox color="green" icon={Info}>Bu sayfada yaptığın denemeler sisteme kaydedilmez.</NoteBox>
       </div>
-    )
+    ),
   },
-
   {
-    id: 'pazaryeri',
-    title: 'Pazaryeri Ürünleri',
-    page: 'MarketplaceProducts',
-    icon: Store,
-    color: 'bg-sky-100 text-sky-700',
-    border: 'border-sky-200',
-    short: 'Trendyol veya Hepsiburada\'dan indirdiğiniz Excel dosyalarını yükleyin ve sistem ürünleriyle eşleştirin.',
+    id: 'pazaryeri', title: 'Pazaryeri Ürünleri', page: 'MarketplaceProducts', icon: Store,
+    color: 'bg-sky-100 text-sky-700', border: 'border-sky-200',
+    short: 'Trendyol veya Hepsiburada\'dan indirdiğiniz Excel dosyalarını yükleyin ve eşleştirin.',
     content: (
       <div className="space-y-4">
-        <p className="text-gray-700 text-sm leading-relaxed">
-          Bu sayfanın amacı, platforma yüklediğiniz ürünlerin mevcut durumunu sisteme aktarmaktır.
-          Eşleştirildikten sonra "Düzenlenen Fiyatlar" sayfasından güncel fiyatları indirip platforma yükleyebilirsiniz.
-        </p>
-
-        {/* HepsiBurada Adımları */}
-        <div className="rounded-xl border border-orange-200 bg-orange-50 p-4">
-          <p className="text-sm font-bold text-orange-800 mb-3">📦 HepsiBurada — Ürün Listesi Nasıl Yüklenir?</p>
-          <StepList steps={[
-            'HepsiBurada paneline girin.',
-            'Üst menüden <strong>"Ürünler"</strong> butonuna tıklayın.',
-            '<strong>"Envanter"</strong> seçeneğine girin.',
-            '"Tümü" veya "Satışta" olarak ürünleri listeleyin.',
-            '<strong>"İndir"</strong> butonuna basın.',
-            'Açılan pencerede <strong>"Satış Bilgisi Listeleri" → "Satıştaki Ürünler"</strong> butonuna tıklayın.',
-            'Excel oluşturulduktan sonra <strong>"İndirme Geçmişi"</strong> butonuna tıklayın.',
-            'En üstteki oluşturulan Excel için <strong>"İndir"</strong> butonuna basın.',
-            'İndirilen Excel\'i bu sayfada <strong>HepsiBurada platformunu seçip</strong> "Excel Yükle" butonuyla yükleyin.',
-            'Ürünler yüklendikten sonra sistemizdeki master ürünlerle eşleştirin.',
-          ]} />
-          <NoteBox color="yellow" icon={AlertCircle}>
-            <strong>⚠️ Otomatik eşleştirme yaparsanız mutlaka kontrol edin!</strong> Hatalı eşleştirme yanlış fiyat güncellemesine yol açabilir.
-          </NoteBox>
-        </div>
-
-        {/* Trendyol Adımları */}
-        <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
-          <p className="text-sm font-bold text-amber-800 mb-3">🛒 Trendyol — Ürün Listesi Nasıl Yüklenir?</p>
-          <StepList steps={[
-            'Trendyol Satıcı Paneline girin.',
-            'Üst menüden <strong>"Ürün"</strong> butonuna tıklayın.',
-            'Açılan dropdown\'dan <strong>"Ürün Listesi"</strong> seçeneğine tıklayın.',
-            '"Tüm Ürünler" veya "Aktif Ürünler" seçeneğini seçin.',
-            'Sağ tarafta bulunan <strong>"Excel ile İndir"</strong> butonuna tıklayın.',
-            '<strong>"İndirme Geçmişim"</strong> bölümünde oluşturulan son Excel\'i indirin.',
-            'İndirilen Excel\'i bu sayfada <strong>Trendyol platformunu seçip</strong> "Excel Yükle" butonuyla yükleyin.',
-            'Ürünler yüklendikten sonra sistemizdeki master ürünlerle eşleştirin.',
-          ]} />
-          <NoteBox color="yellow" icon={AlertCircle}>
-            <strong>⚠️ Otomatik eşleştirme yaparsanız mutlaka kontrol edin!</strong> Hatalı eşleştirme yanlış fiyat güncellemesine yol açabilir.
-          </NoteBox>
-        </div>
-
+        <p className="text-gray-700 text-sm leading-relaxed">Platform Excel dosyasını yükle, sistem ürünleriyle eşleştir. Eşleştirme sonrası "Düzenlenen Fiyatlar" sayfasından fiyatları indir.</p>
+        <NoteBox color="yellow" icon={AlertCircle} title="Uyarı">Otomatik eşleştirme yaparsanız mutlaka kontrol edin! Hatalı eşleştirme yanlış fiyat güncellemesine yol açabilir.</NoteBox>
         <FAQ items={[
           { q: "Aynı Excel'i iki kez yüklersem ne olur?", a: 'Sistem mevcut kayıtları günceller. Çift kayıt oluşmaz.' },
-          { q: 'Yükleme sonrası bazı ürünler neden "Eşleşmemiş" görünüyor?', a: 'Barkod veya model kodu, sistem ürünlerindeki SKU ile örtüşmüyordur. Manuel eşleştirme yapın.' },
-          { q: 'Otomatik eşleştirme ne kadar doğru?', a: 'Ürün adına göre çalışır. Hatalı eşleştirme olabilir; mutlaka kontrol edin ve yanlış olanları düzeltin.' },
+          { q: 'Bazı ürünler neden eşleşmemiş görünüyor?', a: 'Barkod veya SKU örtüşmüyordur. Manuel eşleştirme yapın.' },
         ]} />
       </div>
-    )
+    ),
   },
-
   {
-    id: 'duzenlenen-fiyatlar',
-    title: 'Düzenlenen Fiyatlar',
-    page: 'UpdatedPrices',
-    icon: Tag,
-    color: 'bg-blue-100 text-blue-700',
-    border: 'border-blue-200',
-    short: 'Sistem tarafından hesaplanan güncel satış fiyatlarını görüntüleyin ve platforma yüklemek için indirin.',
+    id: 'duzenlenen-fiyatlar', title: 'Düzenlenen Fiyatlar', page: 'UpdatedPrices', icon: Tag,
+    color: 'bg-blue-100 text-blue-700', border: 'border-blue-200',
+    short: 'Hesaplanan güncel satış fiyatlarını görüntüleyin ve platforma yüklemek için indirin.',
     content: (
       <div className="space-y-4">
-        <p className="text-gray-700 text-sm leading-relaxed">
-          Pazaryeri Ürünleri sayfasında yüklenen ve eşleştirilen ürünlerin yeni satış fiyatları bu sayfada listelenir.
-          Platform bazlı Excel dosyası olarak indirilip doğrudan platforma yüklenebilir.
-        </p>
-
-        {/* HepsiBurada Fiyat Güncelleme */}
-        <div className="rounded-xl border border-orange-200 bg-orange-50 p-4">
-          <p className="text-sm font-bold text-orange-800 mb-3">📦 HepsiBurada — Fiyat Güncelleme Nasıl Yapılır?</p>
-          <StepList steps={[
-            'Sağ üstteki <strong>"Sırala"</strong> butonuna tıklayarak <strong>"Değişim Oranı (Yüksekten Düşüğe)"</strong> veya <strong>"Değişim Tutarı (Yüksekten Düşüğe)"</strong> seçin.',
-            'Değişim oranı çok yüksek olan ürünler varsa <strong>Pazaryeri Ürünleri</strong> sayfasında eşleştirme hatasını düzeltin.',
-            'Hata düzeltildikten sonra bu sayfaya dönüp <strong>"Güncelle"</strong> butonuna tıklayın.',
-            'Sıralamayı tekrar kontrol edin. Her şey doğruysa <strong>"Excel\'e Aktar"</strong> butonuna tıklayın.',
-            'İndirdiğiniz Excel\'i HepsiBurada panelinde yüklemek için: <strong>"Ürünler" → "Envanter" → "Toplu Güncelleme"</strong> sayfasına gidin.',
-            '<strong>"Hazırladığınız Excel dosyasını sisteme yükleyin"</strong> bölümüne Excel dosyanızı yükleyin.',
-            '<strong>"Yükleme Tipi"</strong> olarak <strong>"Fiyat Güncelleme"</strong> tipini seçin.',
-            'En alttaki <strong>"Yükle"</strong> butonuna tıklayın.',
-          ]} />
-        </div>
-
-        {/* Trendyol Fiyat Güncelleme */}
-        <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
-          <p className="text-sm font-bold text-amber-800 mb-3">🛒 Trendyol — Fiyat Güncelleme Nasıl Yapılır?</p>
-          <StepList steps={[
-            'Sağ üstteki <strong>"Sırala"</strong> butonuna tıklayarak <strong>"Değişim Oranı (Yüksekten Düşüğe)"</strong> veya <strong>"Değişim Tutarı (Yüksekten Düşüğe)"</strong> seçin.',
-            'Değişim oranı çok yüksek olan ürünler varsa <strong>Pazaryeri Ürünleri</strong> sayfasında eşleştirme hatasını düzeltin.',
-            'Hata düzeltildikten sonra bu sayfaya dönüp <strong>"Güncelle"</strong> butonuna tıklayın.',
-            'Sıralamayı tekrar kontrol edin. Her şey doğruysa <strong>"Excel\'e Aktar"</strong> butonuna tıklayın.',
-            'İndirdiğiniz Excel\'i Trendyol panelinde yüklemek için: <strong>"Ürün" → "Toplu Ürün İşlemleri"</strong> sayfasına gidin.',
-            '<strong>"Şablon Yükle"</strong> butonuna tıklayın.',
-            '<strong>"Şablon Tipi"</strong> olarak <strong>"Stok & Fiyat Güncelleme"</strong> tipini seçin.',
-            'Hazırladığınız Excel dosyasını sisteme yükleyin ve <strong>"Yükle"</strong> butonuna tıklayın.',
-          ]} />
-        </div>
-
-        <NoteBox color="blue" icon={Info} title="Platform bazlı formatlar">
-          Trendyol ve Hepsiburada için platforma özgü Excel sütun düzeni oluşturulur. Ek düzenleme gerekmez.
-        </NoteBox>
-
-        <FAQ items={[
-          { q: 'Tabloda ürün görünmüyorsa ne yapmalıyım?', a: 'Pazaryeri Ürünleri sayfasında ürünü eşleştirmiş olduğunuzu ve doğru platformu seçtiğinizi kontrol edin.' },
-          { q: "İndirdiğim Excel'i doğrudan platforma yükleyebilir miyim?", a: 'Evet. Dosya platform tarafından beklenen sütun formatında oluşturulur.' },
-          { q: 'Değişim oranı neden bu kadar yüksek?', a: 'Büyük ihtimalle Pazaryeri Ürünleri sayfasında hatalı eşleştirme yapılmıştır. O sayfaya gidip eşleştirmeyi kontrol edin.' },
-        ]} />
+        <p className="text-gray-700 text-sm leading-relaxed">Eşleştirilen ürünlerin yeni satış fiyatları burada listelenir. Platform formatında Excel olarak indirilip yüklenebilir.</p>
+        <NoteBox color="blue" icon={Info} title="Platform bazlı formatlar">Trendyol ve Hepsiburada için platforma özgü Excel sütun düzeni oluşturulur. Ek düzenleme gerekmez.</NoteBox>
       </div>
-    )
+    ),
   },
-
   {
-    id: 'duzenlenen-maliyetler',
-    title: 'Düzenlenen Maliyetler',
-    page: 'UpdatedCosts',
-    icon: FileText,
-    color: 'bg-blue-100 text-blue-700',
-    border: 'border-blue-200',
-    short: 'Güncel maliyet bilgilerini platforma yüklemek üzere indirin.',
+    id: 'raporlar', title: 'Güncelleme Raporları', page: 'UpdateReports', icon: FileText,
+    color: 'bg-purple-100 text-purple-700', border: 'border-purple-200',
+    short: 'Fiyat değişiklik geçmişini takip edin. Toplu seçim ve silme yapabilirsiniz.',
     content: (
       <div className="space-y-4">
-        <p className="text-gray-700 text-sm leading-relaxed">
-          Eşleştirilmiş ürünlerin güncel maliyetlerini platform formatında çıktı olarak verir.
-        </p>
-        <StepList steps={['Platformu seçin.', '"Excel\'e Aktar" butonuna tıklayın.', 'İndirilen dosyayı ilgili platforma yükleyin.']} />
-      </div>
-    )
-  },
-
-  {
-    id: 'komisyon-tarifesi',
-    title: 'Ürün Komisyon Tarifesi',
-    page: 'TrendyolPriceRange',
-    icon: BadgePercent,
-    color: 'bg-orange-100 text-orange-700',
-    border: 'border-orange-200',
-    short: 'Trendyol\'un dönemsel fiyat aralığı kampanyalarını analiz edin.',
-    content: (
-      <div className="space-y-4">
-        <p className="text-gray-700 text-sm leading-relaxed">
-          Trendyol belirli dönemlerde fiyat aralığı kampanyaları sunar. Bu sayfa her ürün için 4 aralıkta kâr hesaplar.
-        </p>
-        <StepList steps={[
-          'Trendyol panelinden komisyon tarifesi Excel\'ini indirin.',
-          '"Excel Yükle" butonuyla sisteme aktarın.',
-          'Her ürün için en karlı aralığı seçin.',
-          '"Excel İndir" ile dışa aktarın.',
-        ]} />
-      </div>
-    )
-  },
-
-  {
-    id: 'avantajli-urun',
-    title: 'Avantajlı Ürün Etiketi',
-    page: 'AdvantageProductTag',
-    icon: Sparkles,
-    color: 'bg-amber-100 text-amber-700',
-    border: 'border-amber-200',
-    short: 'Trendyol\'un Avantaj kampanyalarını analiz edin.',
-    content: (
-      <div className="space-y-4">
-        <p className="text-gray-700 text-sm leading-relaxed">
-          Avantaj, Çok Avantaj, Süper Avantaj — 3 seviyeden hangisinin daha karlı olduğunu hesaplar.
-        </p>
-        <StepList steps={[
-          'Trendyol panelinden Avantajlı Ürün Etiketi Excel\'ini indirin.',
-          '"Excel Yükle" butonuyla sisteme aktarın.',
-          'Her ürün için en karlı seviyeyi seçin.',
-          '"Excel İndir" ile dışa aktarın.',
-        ]} />
-      </div>
-    )
-  },
-
-  {
-    id: 'flash-urunler',
-    title: 'Flaş Ürünler',
-    page: 'FlashProducts',
-    icon: Zap,
-    color: 'bg-yellow-100 text-yellow-700',
-    border: 'border-yellow-200',
-    short: '24 Saat ve 3 Saat Flaş kampanyalarında karlılığınızı kontrol edin.',
-    content: (
-      <div className="space-y-4">
-        <p className="text-gray-700 text-sm leading-relaxed">
-          Trendyol Flaş Satış kampanyasına katılmadan önce kâr/zarar durumunu analiz edin.
-        </p>
-        <StepList steps={[
-          'Trendyol panelinden Flaş Satış Excel\'ini indirin.',
-          '"Excel Yükle" butonuyla sisteme aktarın.',
-          'Her ürün için 24 Saat veya 3 Saat flaş fiyatını seçin.',
-          'Kâr oranını kontrol edin.',
-          '"Excel İndir" ile dışa aktarın.',
-        ]} />
-        <NoteBox color="red" icon={AlertCircle}>
-          Flaş fiyat kârı negatif görünüyorsa o ürünle kampanyaya katılmayın.
-        </NoteBox>
-      </div>
-    )
-  },
-
-  {
-    id: 'mesajlar-duyurular',
-    title: 'Mesajlar ve Duyurular',
-    page: 'Dashboard',
-    icon: HelpCircle,
-    color: 'bg-violet-100 text-violet-700',
-    border: 'border-violet-200',
-    short: 'Sistem duyurularını takip edin ve yönetici ile mesajlaşın.',
-    content: (
-      <div className="space-y-4">
-        <p className="text-gray-700 text-sm leading-relaxed">
-          Ekranın sağ üst köşesindeki <strong>🔔 çan ikonu</strong> (Duyurular) ve <strong>💬 mesaj ikonu</strong> ile erişilir.
-        </p>
+        <p className="text-gray-700 text-sm leading-relaxed">Her fiyat hesaplama sonrası değişen fiyatlar otomatik kaydedilir. Hangi ürünün ne zaman değiştiğini görebilirsin.</p>
         <div className="border border-gray-200 rounded-xl overflow-hidden">
-          <Field name="Duyurular">Admin'in tüm kullanıcılara ilettiği bildirimler. Okunmamışlar kırmızı sayıyla gösterilir.</Field>
-          <Field name="Mesajlar">Yönetici ile birebir mesajlaşma. Mesajlar anında iletilir.</Field>
-        </div>
-        <FAQ items={[
-          { q: 'Mesaj gönderince yönetici ne zaman görür?', a: 'Mesajınız anında yönetici paneline düşer.' },
-        ]} />
-      </div>
-    )
-  },
-
-  {
-    id: 'raporlar',
-    title: 'Raporlar',
-    page: 'UpdateReports',
-    icon: FileText,
-    color: 'bg-purple-100 text-purple-700',
-    border: 'border-purple-200',
-    short: 'Fiyat değişiklik geçmişini takip edin.',
-    content: (
-      <div className="space-y-4">
-        <p className="text-gray-700 text-sm leading-relaxed">
-          Sistem her otomatik fiyat güncellemesini kayıt altına alır. Hangi ürünün fiyatının ne zaman değiştiğini görebilirsiniz.
-        </p>
-        <div className="border border-gray-200 rounded-xl overflow-hidden">
-          <Field name="Ürün / SKU">Hangi ürünün fiyatının değiştiği.</Field>
-          <Field name="Eski / Yeni Fiyat">Değişiklik öncesi ve sonrası satış fiyatı.</Field>
-          <Field name="Değişiklik Nedeni">Maliyet, kargo veya komisyon güncellemesi.</Field>
+          <Field name="Toplu Seçim">Sayfadaki onay kutusuyla 20 rapor seçilir. Üstteki "Tüm X raporu seç" linkiyle tümü seçilir.</Field>
+          <Field name="Arşivle">Önemli raporları arşive taşı, Arşiv sekmesinden erişebilirsin.</Field>
+          <Field name="Sil">Seçili raporları kalıcı olarak sil.</Field>
         </div>
       </div>
-    )
+    ),
   },
 ];
 
-const QUICK_START = [
-  { step: 1, label: 'Kategorileri Tanımlayın', page: 'Categories', desc: 'Ürün gruplarınızı ve KDV oranlarını girin.' },
-  { step: 2, label: 'Platformları Yapılandırın', page: 'Platforms', desc: 'Kargo firması ve "Bugün Kargoda" ayarlarını yapın.' },
-  { step: 3, label: 'Kargo Tarifelerini Girin', page: 'ShippingRates', desc: 'Barem1, Barem2 ve desi bazlı kargo ücretlerini tanımlayın.' },
-  { step: 4, label: 'Komisyonları Girin', page: 'Commissions', desc: 'Her platform × kategori için komisyon oranı ve hedef kâr belirleyin.' },
-  { step: 5, label: 'Paketleme Maliyetlerini Girin', page: 'PackageManagement', desc: 'Paket grupları oluşturun, her malzemeyi ekleyin.' },
-  { step: 6, label: 'Ürünlerinizi Ekleyin', page: 'Products', desc: 'Tekil veya toplu Excel yükleme ile ürün kataloğunuzu oluşturun.' },
-  { step: 7, label: 'Pazaryeri Verilerini Yükleyin', page: 'MarketplaceProducts', desc: 'Platform Excel dosyalarını yükleyin ve ürünleri eşleştirin.' },
-  { step: 8, label: 'Fiyatları İndirin', page: 'UpdatedPrices', desc: 'Hesaplanan fiyatları platform formatında indirip pazaryerine yükleyin.' },
-];
+// ─── Ana Component ───────────────────────────────────────────────────────────
 
 export default function Help() {
+  const [tab, setTab] = useState('wizard');
   const [openId, setOpenId] = useState(null);
+  const [activeStep, setActiveStep] = useState(1);
+  const [doneSteps, setDoneSteps] = useState(new Set());
+
+  const toggleDone = (id) => {
+    setDoneSteps(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const completedCount = doneSteps.size;
+  const totalSteps = WIZARD_STEPS.length;
+  const progress = Math.round((completedCount / totalSteps) * 100);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-100 via-gray-50 to-purple-50 p-6">
-      <div className="max-w-4xl mx-auto space-y-8">
+      <div className="max-w-4xl mx-auto space-y-6">
 
+        {/* Başlık */}
         <div className="flex items-center gap-4">
           <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shadow-lg">
             <HelpCircle className="w-7 h-7 text-white" />
           </div>
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Kullanım Kılavuzu</h1>
-            <p className="text-gray-500 mt-0.5">Her sayfanın ne işe yaradığını, nasıl doldurulacağını ve neyi etkilediğini öğrenin.</p>
+            <h1 className="text-3xl font-bold text-gray-900">PriceHub Kılavuzu</h1>
+            <p className="text-gray-500 mt-0.5">Adım adım kurulum rehberi ve tüm sayfa detayları.</p>
           </div>
         </div>
 
-        <Card className="border-blue-200 bg-gradient-to-br from-blue-50 to-indigo-50">
-          <CardContent className="pt-6">
-            <h2 className="text-xl font-bold text-blue-900 mb-2">PriceHub Nedir?</h2>
-            <p className="text-blue-800 leading-relaxed text-sm mb-4">
-              PriceHub, e-ticaret satıcılarının <strong>Trendyol</strong>, <strong>Hepsiburada</strong> ve <strong>Web Sitesi</strong> gibi
-              farklı satış kanallarındaki ürün fiyatlarını tek bir merkezden yönetmesini sağlayan kapsamlı bir fiyatlandırma sistemidir.
-            </p>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              {[
-                { icon: '💰', title: 'Otomatik Fiyatlama', desc: 'Maliyet, kargo, komisyon, paketleme ve KDV dahil tüm giderleri hesaba katarak optimal satış fiyatını otomatik bulur.' },
-                { icon: '📊', title: 'Kampanya Analizi', desc: 'Flaş satış, avantajlı ürün etiketi ve komisyon tarifesi kampanyalarında kâr/zarar durumunu anlık gösterir.' },
-                { icon: '📥', title: 'Hazır Çıktılar', desc: 'Platform formatında Excel/CSV oluşturarak doğrudan yüklenebilir dosyalar üretir.' },
-              ].map((item) => (
-                <div key={item.title} className="bg-white rounded-xl p-4 border border-blue-100">
-                  <div className="text-2xl mb-2">{item.icon}</div>
-                  <div className="font-semibold text-gray-800 text-sm">{item.title}</div>
-                  <div className="text-gray-500 text-xs mt-1 leading-relaxed">{item.desc}</div>
+        {/* Tab geçişi */}
+        <div className="flex gap-2 bg-white rounded-2xl border border-gray-200 p-1.5 w-fit">
+          <button
+            onClick={() => setTab('wizard')}
+            className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all ${
+              tab === 'wizard' ? 'bg-gray-900 text-white shadow' : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            <Map className="w-4 h-4" /> Kurulum Rehberi
+          </button>
+          <button
+            onClick={() => setTab('docs')}
+            className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all ${
+              tab === 'docs' ? 'bg-gray-900 text-white shadow' : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            <BookOpen className="w-4 h-4" /> Sayfa Kılavuzu
+          </button>
+        </div>
+
+        {/* ── Kurulum Rehberi ── */}
+        {tab === 'wizard' && (
+          <div className="space-y-4">
+            {/* İlerleme */}
+            <div className="bg-white rounded-2xl border border-gray-200 p-5">
+              <div className="flex items-center justify-between mb-3">
+                <div>
+                  <p className="font-bold text-gray-900">Kurulum İlerlemesi</p>
+                  <p className="text-sm text-gray-500">{completedCount} / {totalSteps} adım tamamlandı</p>
                 </div>
+                <span className="text-3xl font-bold text-indigo-600">%{progress}</span>
+              </div>
+              <div className="w-full bg-gray-100 rounded-full h-3 overflow-hidden">
+                <div
+                  className="bg-gradient-to-r from-indigo-500 to-purple-500 h-3 rounded-full transition-all duration-500"
+                  style={{ width: `${progress}%` }}
+                />
+              </div>
+              {completedCount === totalSteps && (
+                <div className="mt-3 flex items-center gap-2 text-green-700 bg-green-50 border border-green-200 rounded-xl p-3">
+                  <CheckCheck className="w-5 h-5" />
+                  <span className="font-semibold text-sm">Tüm kurulum adımları tamamlandı! 🎉</span>
+                </div>
+              )}
+            </div>
+
+            {/* Nasıl kullanılır */}
+            <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 text-sm text-blue-800">
+              <strong>Nasıl kullanılır?</strong> Her adımı genişletmek için tıkla. Adımı tamamlayınca yeşil tik butonuna veya "Tamamlandı olarak işaretle" butonuna bas. İlerleme otomatik güncellenir.
+            </div>
+
+            {/* Adımlar */}
+            <div className="space-y-3">
+              {WIZARD_STEPS.map((step) => (
+                <WizardStep
+                  key={step.id}
+                  step={step}
+                  done={doneSteps.has(step.id)}
+                  onToggle={() => toggleDone(step.id)}
+                  isActive={activeStep === step.id}
+                  onActivate={() => setActiveStep(activeStep === step.id ? null : step.id)}
+                />
               ))}
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        )}
 
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <ArrowRight className="w-5 h-5 text-green-600" />
-              İlk Kez Kullananlar İçin — Hızlı Başlangıç
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              {QUICK_START.map((item) => (
-                <div key={item.step} className="flex items-start gap-4 p-3 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors group">
-                  <div className="w-8 h-8 rounded-full bg-gray-900 text-white flex items-center justify-center text-sm font-bold shrink-0">{item.step}</div>
-                  <div className="flex-1 min-w-0">
-                    <Link to={createPageUrl(item.page)} className="font-semibold text-gray-900 hover:text-blue-600 transition-colors flex items-center gap-1 group-hover:text-blue-600">
-                      {item.label}
-                      <ExternalLink className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition-opacity" />
-                    </Link>
-                    <p className="text-sm text-gray-500 mt-0.5">{item.desc}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-
-        <div>
-          <h2 className="text-xl font-bold text-gray-900 mb-4">Detaylı Sayfa Rehberi</h2>
-          <div className="space-y-2">
-            {PAGES.map((p) => {
-              const Icon = p.icon;
-              const isOpen = openId === p.id;
-              return (
-                <div key={p.id} className={`bg-white rounded-2xl border ${p.border} overflow-hidden shadow-sm`}>
-                  <button
-                    className="w-full flex items-center gap-4 p-4 text-left hover:bg-gray-50 transition-colors"
-                    onClick={() => setOpenId(isOpen ? null : p.id)}
-                  >
-                    <div className={`w-10 h-10 rounded-xl ${p.color} flex items-center justify-center shrink-0`}>
-                      <Icon className="w-5 h-5" />
+        {/* ── Sayfa Kılavuzu ── */}
+        {tab === 'docs' && (
+          <div className="space-y-4">
+            {/* PriceHub nedir */}
+            <Card className="border-blue-200 bg-gradient-to-br from-blue-50 to-indigo-50">
+              <CardContent className="pt-6">
+                <h2 className="text-xl font-bold text-blue-900 mb-2">PriceHub Nedir?</h2>
+                <p className="text-blue-800 leading-relaxed text-sm mb-4">
+                  PriceHub, e-ticaret satıcılarının <strong>Trendyol</strong>, <strong>Hepsiburada</strong> ve <strong>Web Sitesi</strong> gibi farklı satış kanallarındaki ürün fiyatlarını tek merkezden yönetmesini sağlayan kapsamlı bir fiyatlandırma sistemidir.
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  {[
+                    { icon: '💰', title: 'Otomatik Fiyatlama', desc: 'Maliyet, kargo, komisyon, paketleme ve KDV dahil tüm giderleri hesaba katarak optimal satış fiyatını otomatik bulur.' },
+                    { icon: '📊', title: 'Kampanya Analizi', desc: 'Flaş satış, avantajlı ürün etiketi ve komisyon tarifesi kampanyalarında kâr/zarar durumunu anlık gösterir.' },
+                    { icon: '📥', title: 'Hazır Çıktılar', desc: 'Platform formatında Excel/CSV oluşturarak doğrudan yüklenebilir dosyalar üretir.' },
+                  ].map((item) => (
+                    <div key={item.title} className="bg-white rounded-xl p-4 border border-blue-100">
+                      <div className="text-2xl mb-2">{item.icon}</div>
+                      <div className="font-semibold text-gray-800 text-sm">{item.title}</div>
+                      <div className="text-gray-500 text-xs mt-1 leading-relaxed">{item.desc}</div>
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <Link
-                          to={createPageUrl(p.page)}
-                          onClick={(e) => e.stopPropagation()}
-                          className="font-semibold text-gray-900 hover:text-blue-600 transition-colors flex items-center gap-1"
-                        >
-                          {p.title}
-                          <ExternalLink className="w-3.5 h-3.5 text-blue-400" />
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Sayfa listesi */}
+            <div className="space-y-2">
+              {PAGES.map((p) => {
+                const Icon = p.icon;
+                const isOpen = openId === p.id;
+                return (
+                  <div key={p.id} className={`bg-white rounded-2xl border ${p.border} overflow-hidden shadow-sm`}>
+                    <button
+                      className="w-full flex items-center gap-4 p-4 text-left hover:bg-gray-50 transition-colors"
+                      onClick={() => setOpenId(isOpen ? null : p.id)}
+                    >
+                      <div className={`w-10 h-10 rounded-xl ${p.color} flex items-center justify-center shrink-0`}>
+                        <Icon className="w-5 h-5" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <Link
+                            to={createPageUrl(p.page)}
+                            onClick={(e) => e.stopPropagation()}
+                            className="font-semibold text-gray-900 hover:text-blue-600 transition-colors flex items-center gap-1"
+                          >
+                            {p.title}
+                            <ExternalLink className="w-3.5 h-3.5 text-blue-400" />
+                          </Link>
+                        </div>
+                        <p className="text-sm text-gray-500 mt-0.5 leading-relaxed">{p.short}</p>
+                      </div>
+                      <div className="shrink-0 text-gray-400">
+                        {isOpen ? <ChevronDown className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
+                      </div>
+                    </button>
+                    {isOpen && (
+                      <div className="px-4 pb-5 border-t border-gray-100 bg-gray-50/50 pt-4">
+                        {p.content}
+                        <Link to={createPageUrl(p.page)} className="inline-flex items-center gap-2 mt-4 text-sm font-semibold text-blue-600 hover:text-blue-700 transition-colors">
+                          {p.title} sayfasını aç
+                          <ArrowRight className="w-4 h-4" />
                         </Link>
                       </div>
-                      <p className="text-sm text-gray-500 mt-0.5 leading-relaxed">{p.short}</p>
-                    </div>
-                    <div className="shrink-0 text-gray-400">
-                      {isOpen ? <ChevronDown className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
-                    </div>
-                  </button>
-                  {isOpen && (
-                    <div className="px-4 pb-5 border-t border-gray-100 bg-gray-50/50 pt-4">
-                      {p.content}
-                      {p.faq && p.faq.length > 0 && <FAQ items={p.faq} />}
-                      <Link to={createPageUrl(p.page)} className="inline-flex items-center gap-2 mt-4 text-sm font-semibold text-blue-600 hover:text-blue-700 transition-colors">
-                        {p.title} sayfasını aç
-                        <ArrowRight className="w-4 h-4" />
-                      </Link>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Genel ipuçları */}
+            <Card className="border-green-200 bg-gradient-to-br from-green-50 to-emerald-50">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-green-800 text-lg">💡 Genel İpuçları</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ul className="space-y-2 text-sm text-gray-700">
+                  {[
+                    'Sisteme ilk girişte sıralamayı takip edin: Kategori → Platform → Kargo → Komisyon → Paket → Ürün.',
+                    'Tüm maliyet alanlarını KDV dahil girin.',
+                    'Maliyet değiştirdiğinizde ürünü kaydetmek yeterlidir; tüm platformlar için fiyat otomatik yeniden hesaplanır.',
+                    'Ürün Zinciri ile aynı ürünün farklı adetli varyantlarını bağlayın; birinin maliyeti değişince tümü güncellenir.',
+                    'Referans Ürün ile büyük paketin maliyetinden küçük paketin baz maliyetini otomatik hesaplayın.',
+                    'Flaş satış veya kampanyalara katılmadan önce kâr hesaplarını mutlaka kontrol edin.',
+                    '"Hesaplayıcı" sayfası ile farklı fiyat senaryolarını risksiz deneyebilirsiniz.',
+                    'Raporlar sayfasında "Tüm raporları seç" linki ile binlerce raporu tek seferde silebilirsiniz.',
+                  ].map((tip, i) => (
+                    <li key={i} className="flex items-start gap-2">
+                      <span className="text-green-500 mt-0.5 shrink-0">•</span>
+                      <span>{tip}</span>
+                    </li>
+                  ))}
+                </ul>
+              </CardContent>
+            </Card>
           </div>
-        </div>
-
-        <Card className="border-green-200 bg-gradient-to-br from-green-50 to-emerald-50">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-green-800 text-lg">💡 Genel İpuçları</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ul className="space-y-2 text-sm text-gray-700">
-              {[
-                'Sisteme ilk girişte sıralamayı takip edin: Kategori → Platform → Kargo → Komisyon → Paket → Ürün.',
-                'Tüm maliyet alanlarını KDV dahil girin.',
-                'Maliyet değiştirdiğinizde ürünü kaydetmek yeterlidir; tüm platformlar için fiyat otomatik yeniden hesaplanır.',
-                'Flaş satış veya kampanyalara katılmadan önce kâr hesaplarını mutlaka kontrol edin.',
-                '"Hesaplayıcı" sayfası ile farklı fiyat senaryolarını risksiz deneyebilirsiniz.',
-                'Düzenlenen Fiyatlar sayfasında değişim oranı çok yüksek ürünler varsa eşleştirme hatasını kontrol edin.',
-              ].map((tip, i) => (
-                <li key={i} className="flex items-start gap-2">
-                  <span className="text-green-500 mt-0.5 shrink-0">•</span>
-                  <span>{tip}</span>
-                </li>
-              ))}
-            </ul>
-          </CardContent>
-        </Card>
-
+        )}
       </div>
     </div>
   );
