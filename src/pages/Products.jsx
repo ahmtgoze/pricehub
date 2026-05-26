@@ -146,93 +146,105 @@ export default function Products() {
     enabled: !!userEmail
   });
 
-const saveMutation = useMutation({
-  mutationFn: async (data) => {
-    const { _chainMembers, _matchMembers, ...saveData } = data;
+  const saveMutation = useMutation({
+    mutationFn: async (data) => {
+      const { _chainMembers, _matchMembers, ...saveData } = data;
 
-    // Ana ürünü kaydet
-    let savedProduct;
-    if (editingProduct) {
-      savedProduct = await Product.update(editingProduct.id, saveData);
-      savedProduct = { ...editingProduct, ...saveData };
-    } else {
-      const existingProduct = products.find(p => p.sku === data.sku);
-      if (existingProduct) {
-        await Product.update(existingProduct.id, saveData);
-        savedProduct = { ...existingProduct, ...saveData };
+      // Ana ürünü kaydet
+      let savedProduct;
+      if (editingProduct) {
+        savedProduct = await Product.update(editingProduct.id, saveData);
+        savedProduct = { ...editingProduct, ...saveData };
       } else {
-        savedProduct = await Product.create(saveData);
+        const existingProduct = products.find(p => p.sku === data.sku);
+        if (existingProduct) {
+          await Product.update(existingProduct.id, saveData);
+          savedProduct = { ...existingProduct, ...saveData };
+        } else {
+          savedProduct = await Product.create(saveData);
+        }
       }
-    }
 
-    const productId = savedProduct?.id || editingProduct?.id;
+      const productId = savedProduct?.id || editingProduct?.id;
 
-    // Zincir grubu güncelle
-    const currentChainGroupId = editingProduct?.chain_group_id;
-    const newChainGroupId = (_chainMembers.length > 0)
-      ? (currentChainGroupId || crypto.randomUUID())
-      : null;
+      // Zincir grubu güncelle
+      const currentChainGroupId = editingProduct?.chain_group_id;
+      const newChainGroupId = (_chainMembers.length > 0)
+        ? (currentChainGroupId || crypto.randomUUID())
+        : null;
 
-    if (productId) {
-      await Product.update(productId, { chain_group_id: newChainGroupId });
-    }
-
-    // Mevcut zincir üyelerini bul
-    const oldChainMembers = currentChainGroupId
-      ? products.filter(p => p.chain_group_id === currentChainGroupId && p.id !== productId)
-      : [];
-
-    // Zincirden çıkarılanları temizle
-    for (const old of oldChainMembers) {
-      if (!_chainMembers.includes(old.id)) {
-        await Product.update(old.id, { chain_group_id: null });
+      if (productId) {
+        await Product.update(productId, { chain_group_id: newChainGroupId });
       }
-    }
 
-    // Zincire yeni eklenenleri güncelle
-    for (const memberId of _chainMembers) {
-      await Product.update(memberId, { chain_group_id: newChainGroupId });
-    }
+      // Mevcut zincir üyelerini bul
+      const oldChainMembers = currentChainGroupId
+        ? products.filter(p => p.chain_group_id === currentChainGroupId && p.id !== productId)
+        : [];
 
-    // Eşleştirme grubu güncelle
-    const currentMatchGroupId = editingProduct?.match_group_id;
-    const newMatchGroupId = (_matchMembers.length > 0)
-      ? (currentMatchGroupId || crypto.randomUUID())
-      : null;
-
-    if (productId) {
-      await Product.update(productId, { match_group_id: newMatchGroupId });
-    }
-
-    // Mevcut eşleştirme üyelerini bul
-    const oldMatchMembers = currentMatchGroupId
-      ? products.filter(p => p.match_group_id === currentMatchGroupId && p.id !== productId)
-      : [];
-
-    // Eşleştirmeden çıkarılanları temizle
-    for (const old of oldMatchMembers) {
-      if (!_matchMembers.includes(old.id)) {
-        await Product.update(old.id, { match_group_id: null });
+      // Zincirden çıkarılanları temizle
+      for (const old of oldChainMembers) {
+        if (!_chainMembers.includes(old.id)) {
+          await Product.update(old.id, { chain_group_id: null });
+        }
       }
-    }
 
-    // Eşleştirmeye yeni eklenenleri güncelle + maliyet senkronizasyonu
-    for (const memberId of _matchMembers) {
-      await Product.update(memberId, {
-        match_group_id: newMatchGroupId,
-        cost: saveData.cost,
-      });
-    }
+      // Zincire yeni eklenenleri güncelle + maliyet senkronizasyonu (oran bazlı)
+      const oldCost = parseFloat(editingProduct?.cost) || 0;
+      const newCost = parseFloat(saveData.cost) || 0;
+      const costRatio = oldCost > 0 ? newCost / oldCost : 1;
 
-    return savedProduct;
-  },
-  onSuccess: async () => {
-    queryClient.invalidateQueries(['products']);
-    setModalOpen(false);
-    setEditingProduct(null);
-    toast.success('Ürün kaydedildi');
-  }
-});
+      for (const memberId of _chainMembers) {
+        const member = products.find(p => p.id === memberId);
+        if (!member) continue;
+        const memberNewCost = oldCost > 0
+          ? Math.round(parseFloat(member.cost) * costRatio * 100) / 100
+          : parseFloat(member.cost);
+        await Product.update(memberId, {
+          chain_group_id: newChainGroupId,
+          cost: memberNewCost,
+        });
+      }
+
+      // Eşleştirme grubu güncelle
+      const currentMatchGroupId = editingProduct?.match_group_id;
+      const newMatchGroupId = (_matchMembers.length > 0)
+        ? (currentMatchGroupId || crypto.randomUUID())
+        : null;
+
+      if (productId) {
+        await Product.update(productId, { match_group_id: newMatchGroupId });
+      }
+
+      // Mevcut eşleştirme üyelerini bul
+      const oldMatchMembers = currentMatchGroupId
+        ? products.filter(p => p.match_group_id === currentMatchGroupId && p.id !== productId)
+        : [];
+
+      // Eşleştirmeden çıkarılanları temizle
+      for (const old of oldMatchMembers) {
+        if (!_matchMembers.includes(old.id)) {
+          await Product.update(old.id, { match_group_id: null });
+        }
+      }
+
+      // Eşleştirmeye yeni eklenenleri güncelle + maliyet senkronizasyonu
+      for (const memberId of _matchMembers) {
+        await Product.update(memberId, {
+          match_group_id: newMatchGroupId,
+          cost: saveData.cost,
+        });
+      }
+
+      return savedProduct;
+    },
+    onSuccess: async () => {
+      queryClient.invalidateQueries(['products']);
+      setModalOpen(false);
+      setEditingProduct(null);
+      toast.success('Ürün kaydedildi');
+    }
+  });
 
   const deleteMutation = useMutation({
     mutationFn: (id) => Product.delete(id),
@@ -365,13 +377,11 @@ const saveMutation = useMutation({
       return;
     }
 
-    // Metni normalize et: baş/son boşluk, çift boşluk temizle, Türkçe korunur
     const normalizeField = (val) => {
       if (val === null || val === undefined) return '';
       return String(val).trim().replace(/\s+/g, ' ');
     };
 
-    // Eşleştirme anahtarı: SKU + Ürün Adı + Kategori (normalize edilmiş)
     const matchKey = (sku, name, catName) =>
       `${normalizeField(sku)}|||${normalizeField(name)}|||${normalizeField(catName)}`;
 
@@ -416,14 +426,13 @@ const saveMutation = useMutation({
       return mapped;
     };
 
-    // ─── 1. Excel içi duplicate tespiti (SKU + Ürün Adı + Kategori) ───
     const seenKeys = new Set();
     const excelDuplicateRows = [];
     const processedData = [];
 
     for (const row of data) {
       const mapped = mapExcelHeaders(row);
-      if (!mapped.sku) continue; // SKU yoksa atla
+      if (!mapped.sku) continue;
       const key = matchKey(mapped.sku, mapped.name, mapped.category_name);
       if (seenKeys.has(key)) {
         excelDuplicateRows.push(row);
@@ -448,7 +457,6 @@ const saveMutation = useMutation({
     setImportProgress({ isImporting: true, current: 0, total: processedData.length });
     startTask('products-import', 'Excel Yükleniyor', 'Ürünler', 'Products', processedData.length);
 
-    // ─── 2. Sistemdeki ürünleri çek, SKU+Ad+Kategori anahtarıyla map oluştur ───
     const existingProducts = await Product.filter({ created_by: userEmail });
     const existingByTripleKey = {};
     existingProducts.forEach(p => {
@@ -484,7 +492,6 @@ const saveMutation = useMutation({
       for (let attempt = 0; attempt < 5 && !success; attempt++) {
         try {
           if (existing) {
-            // ─── Mevcut ürün: sadece değişen alanları güncelle ───
             const newCost = parseFloat(row.cost) || existing.cost;
             const newPrinting = parseFloat(row.printing_cost) || 0;
             const newExtra = parseFloat(row.extra_cost) || 0;
@@ -518,7 +525,6 @@ const saveMutation = useMutation({
               skippedCount++;
             }
           } else {
-            // ─── Yeni ürün ───
             if (!row.name) { skippedCount++; break; }
             if (!category?.id) {
               failedCount++;
@@ -537,7 +543,6 @@ const saveMutation = useMutation({
               is_active: row.is_active !== false,
               special_shipping: false, ...pkgData
             });
-            // Yeni ürünü de map'e ekle (aynı Excel'de tekrarına karşı)
             existingByTripleKey[key] = created;
             createdCount++;
           }
@@ -965,15 +970,15 @@ const saveMutation = useMutation({
         />
 
         <ProductModal
-  open={modalOpen}
-  onOpenChange={setModalOpen}
-  product={editingProduct}
-  categories={categories}
-  packages={packages}
-  products={products}
-  onSave={(data) => saveMutation.mutate(data)}
-  isSaving={saveMutation.isPending}
-/>
+          open={modalOpen}
+          onOpenChange={setModalOpen}
+          product={editingProduct}
+          categories={categories}
+          packages={packages}
+          products={products}
+          onSave={(data) => saveMutation.mutate(data)}
+          isSaving={saveMutation.isPending}
+        />
 
         <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
           <AlertDialogContent>
