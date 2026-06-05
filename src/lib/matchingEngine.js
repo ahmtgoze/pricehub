@@ -1,14 +1,15 @@
-// ─── Yüksek Doğruluklu Pazaryeri Eşleştirme Motoru (v2) ─────────────────────
+// ─── Yüksek Doğruluklu Pazaryeri Eşleştirme Motoru (v3) ─────────────────────
 //
 // Sektörden bağımsız, genel amaçlı eşleştirme motoru.
 // Güven skoru 0-100 arasında üretilir.
 // MIN_AUTO_SCORE altında kalan eşleşmeler otomatik uygulanmaz.
 //
-// v2 düzeltmeleri:
+// v3 düzeltmeleri:
 //  - Tek haneli sayılar artık SİLİNMİYOR (1 Adet, 6 Adet, 9 Adet ayırt edilir).
-//  - "100x100" gibi ebatlar "100100" olarak normalize edilir (SKU ile uyumlu).
+//  - "100x100" gibi ebatlar "100100" olarak, "1.000" gibi sayılar "1000" olarak normalize edilir.
 //  - Sayı eşleşmesi ÇİFT YÖNLÜ: ebat/sarım/adet birebir uyuşmazsa otomatik eleme.
-//  - Aday listede (öneri) sayı uyuşmazsa skor 40'ı geçemez (asla otomatik eşleşmez).
+//  - KRİTİK: SKU birebir eşleşse bile, ürün adındaki sayılar master ile uyuşmuyorsa
+//    o SKU eşleşmesine GÜVENİLMEZ (Shopify'da aynı SKU birden çok varyantta tekrarlanabiliyor).
 
 export const MIN_AUTO_SCORE = 65;
 
@@ -25,14 +26,20 @@ export function normalizeText(text) {
     .replace(/ı/g, 'i').replace(/ö/g, 'o').replace(/ü/g, 'u');
 }
 
-// "100x100" / "100 x 100" → "100100" (SKU kodlamasıyla uyumlu olsun diye)
+// "100x100" → "100100", "1.000" → "1000" (SKU/ad kodlamasıyla uyumlu olsun diye)
 function unifyNumbers(text) {
-  return normalizeText(text).replace(/(\d)\s*[x×]\s*(\d)/g, '$1$2');
+  let t = normalizeText(text);
+  // rakam x rakam  →  birleştir (ebatlar)
+  t = t.replace(/(\d)\s*[x×]\s*(\d)/g, '$1$2');
+  t = t.replace(/(\d)\s*[x×]\s*(\d)/g, '$1$2');
+  // binlik ayıracı (1.000 / 1,000) → birleştir
+  t = t.replace(/(\d)[.,](\d)/g, '$1$2');
+  t = t.replace(/(\d)[.,](\d)/g, '$1$2');
+  return t;
 }
 
 /**
  * Metinden TÜM sayıları çıkarır (tek haneli dahil), kanonik hale getirir.
- * Örn "100x100 / 500 Sarım / 1 Adet" → ["100100", "500", "1"]
  */
 function extractNumbers(text) {
   const t = unifyNumbers(text);
@@ -42,7 +49,6 @@ function extractNumbers(text) {
 
 /**
  * Metinden anlamlı KELIME (alfabetik) tokenları çıkarır.
- * Saf sayılar buraya dahil edilmez (onlar ayrı ele alınır).
  */
 function tokenizeAlpha(text) {
   return unifyNumbers(text)
@@ -52,26 +58,37 @@ function tokenizeAlpha(text) {
 }
 
 /**
- * İki sayı kümesi arasında çakışma var mı?
- * Çift yönlü: bir tarafta olup diğerinde olmayan herhangi bir sayı = çakışma.
- * (ebat/sarım/adet farklıysa true döner → farklı üründür)
+ * İki sayı kümesi arasında GERÇEK çakışma var mı?
+ * Çakışma YOK sayılır eğer biri diğerinin alt kümesiyse (fazladan/eksik açıklama).
+ * Çakışma VAR sayılır eğer her iki tarafta da diğerinde olmayan sayı varsa
+ * (örn. 250 Sarım vs 500 Sarım → aynı yerde farklı değer).
  */
-function numbersConflict(mpNums, pNums) {
-  const setMP = new Set(mpNums);
-  const setP = new Set(pNums);
-  for (const n of setMP) if (!setP.has(n)) return true;
-  for (const n of setP) if (!setMP.has(n)) return true;
-  return false;
+function numbersConflict(aNums, bNums) {
+  const setA = new Set(aNums);
+  const setB = new Set(bNums);
+  let aSubsetB = true;
+  for (const n of setA) if (!setB.has(n)) { aSubsetB = false; break; }
+  let bSubsetA = true;
+  for (const n of setB) if (!setA.has(n)) { bSubsetA = false; break; }
+  // Biri diğerinin alt kümesiyse çakışma yok
+  return !(aSubsetB || bSubsetA);
+}
+
+/**
+ * Pazaryeri ürün adı ile master ürün adındaki sayılar uyuşuyor mu?
+ * (SKU eşleşmesini doğrulamak için kullanılır)
+ */
+function nameNumbersAgree(mp, product) {
+  const mpNums = extractNumbers(`${mp.platform_product_name || ''} ${mp.variant_title || ''}`);
+  const pNums = extractNumbers(`${product.name || ''}`);
+  // İki taraftan biri hiç sayı içermiyorsa engelleme (isim eşleşmesine bırak)
+  if (mpNums.length === 0 || pNums.length === 0) return true;
+  return !numbersConflict(mpNums, pNums);
 }
 
 /**
  * İki ürün arasındaki güven skorunu hesaplar (0-100).
- *
- * @param {string} mpName - Pazaryeri ürün adı
- * @param {string} mpVariant - Pazaryeri varyant başlığı (opsiyonel)
- * @param {object} product - Master ürün kaydı {name, sku}
- * @param {boolean} strict - true ise sayı çakışmasında direkt 0 döner (otomatik eşleşme için)
- * @returns {number} güven skoru (0-100)
+ * @param {boolean} strict - true ise sayı çakışmasında direkt 0 döner.
  */
 export function computeMatchScore(mpName, mpVariant, product, strict = true) {
   const mpText = `${mpName} ${mpVariant || ''}`;
@@ -82,35 +99,28 @@ export function computeMatchScore(mpName, mpVariant, product, strict = true) {
 
   if (mpAlpha.length === 0 || pAlpha.length === 0) return 0;
 
-  const mpNums = extractNumbers(mpText);
-  const pNums = extractNumbers(pText);
+  const mpNums = extractNumbers(`${mpName} ${mpVariant || ''}`);
+  const pNumsName = extractNumbers(`${product.name || ''}`);
 
-  // ── 1. Sayı çakışması: ebat/sarım/adet birebir uyuşmuyorsa ────────────────
-  const conflict = numbersConflict(mpNums, pNums);
+  // Sayı çakışması: ebat/sarım/adet birebir uyuşmuyorsa (ürün adı bazında)
+  const conflict = (mpNums.length > 0 && pNumsName.length > 0) && numbersConflict(mpNums, pNumsName);
   if (conflict && strict) return 0;
 
-  // ── 2. Alfabetik token örtüşmesi ──────────────────────────────────────────
   const setMP = new Set(mpAlpha);
   const setP = new Set(pAlpha);
   let intersection = 0;
   for (const t of setP) { if (setMP.has(t)) intersection++; }
 
-  // En az bir anlamlı kelime örtüşmeli (örn. "dikkat", "termal", "etiket")
   if (intersection === 0) return 0;
 
-  // ── 3. productCoverage: ürün tokenlarının kaçı MP'de geçiyor ──────────────
   const productCoverage = intersection / setP.size;
-
-  // ── 4. Jaccard: genel kelime örtüşmesi ────────────────────────────────────
   const union = new Set([...setMP, ...setP]).size;
   const jaccard = union > 0 ? intersection / union : 0;
 
-  // ── 5. Ağırlıklı final skor ───────────────────────────────────────────────
   const rawScore = 0.65 * productCoverage + 0.35 * jaccard;
   let score = Math.round(rawScore * 100);
 
-  // ── 6. Sayı uyuşmuyorsa (strict değilse) skor 40'ı geçemez ────────────────
-  // Böylece aday olarak görünür ama ASLA otomatik eşleşme eşiğine (65) ulaşmaz.
+  // Sayı uyuşmuyorsa skor 40'ı geçemez (asla otomatik eşleşmez)
   if (conflict) score = Math.min(score, 40);
 
   return score;
@@ -118,11 +128,9 @@ export function computeMatchScore(mpName, mpVariant, product, strict = true) {
 
 /**
  * Tüm master ürünler arasında en iyi eşleşmeyi bulur.
- * SKU tam eşleşmesi varsa önce onu döner (skor: 100).
- * @returns {{ product: object|null, score: number }}
+ * SKU tam eşleşmesi varsa VE sayılar uyuşuyorsa onu döner (skor: 100).
  */
 export function findBestMatch(mp, products) {
-  // Adım 1: SKU tam eşleşmesi (en yüksek güven)
   const barkod = mp.barkod || '';
   const variantSku = mp.variant_sku || '';
   const modelCode = mp.model_code || '';
@@ -130,9 +138,13 @@ export function findBestMatch(mp, products) {
     p.sku && p.sku.trim() !== '' &&
     (p.sku === barkod || p.sku === variantSku || p.sku === modelCode)
   );
-  if (skuMatch) return { product: skuMatch, score: 100 };
 
-  // Adım 2: İsim tabanlı skor hesapla (strict: sayı çakışması = eleme)
+  // SKU eşleşse bile ürün adındaki sayılar (ebat/sarım/adet) master ile uyuşmalı.
+  if (skuMatch && nameNumbersAgree(mp, skuMatch)) {
+    return { product: skuMatch, score: 100 };
+  }
+
+  // İsim tabanlı skor (strict: sayı çakışması = eleme)
   let best = null;
   let bestScore = 0;
   for (const p of products) {
@@ -144,9 +156,6 @@ export function findBestMatch(mp, products) {
 
 /**
  * En iyi N aday ürünü döner (öneri listesi için).
- * Sayı uyuşmayan adaylar da gösterilir ama skorları 40 ile sınırlıdır
- * (kullanıcıya gösterim için; otomatik asla uygulanmaz).
- * @returns {{ product: object, score: number }[]}
  */
 export function findTopMatches(mp, products, n = 3) {
   const barkod = mp.barkod || '';
@@ -156,7 +165,9 @@ export function findTopMatches(mp, products, n = 3) {
     p.sku && p.sku.trim() !== '' &&
     (p.sku === barkod || p.sku === variantSku || p.sku === modelCode)
   );
-  if (skuMatch) return [{ product: skuMatch, score: 100 }];
+  if (skuMatch && nameNumbersAgree(mp, skuMatch)) {
+    return [{ product: skuMatch, score: 100 }];
+  }
 
   return products
     .map(p => ({ product: p, score: computeMatchScore(mp.platform_product_name || '', mp.variant_title || '', p, false) }))
