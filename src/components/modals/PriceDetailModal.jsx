@@ -138,12 +138,7 @@ export default function PriceDetailModal({ open, onClose, product, platform, pri
 
                   <div className="flex justify-between py-2 pl-3 sm:pl-6 border-b border-slate-100">
                     <span className="text-slate-600">
-                      - Kargo Ücreti (KDV Dahil)
-                      {isDoubleShipping && (
-                        <span className="ml-2 inline-block text-xs font-semibold text-orange-600 bg-orange-50 border border-orange-200 rounded px-1.5 py-0.5 align-middle">
-                          Çift Kargo ×2
-                        </span>
-                      )}
+                      {isDoubleShipping ? '- Çift Kargo Ücreti (KDV Dahil)' : '- Kargo Ücreti (KDV Dahil)'}
                     </span>
                     <span className="font-medium text-rose-600 ml-2 shrink-0">-₺{Number(shippingCost).toFixed(2)}</span>
                   </div>
@@ -217,12 +212,6 @@ export default function PriceDetailModal({ open, onClose, product, platform, pri
                   <span className="text-slate-600">Ürün Desisi:</span>
                   <span className="font-medium">{product?.desi || '-'}</span>
                 </div>
-                {isDoubleShipping && (
-                  <div className="flex justify-between">
-                    <span className="text-slate-600">Çift Kargo:</span>
-                    <span className="font-medium text-orange-600">Evet (kargo ×2)</span>
-                  </div>
-                )}
                 <div className="flex justify-between">
                   <span className="text-slate-600">Komisyon Oranı:</span>
                   <span className="font-medium">%{Number(calculationDetails.commissionRate || 0).toFixed(2)}</span>
