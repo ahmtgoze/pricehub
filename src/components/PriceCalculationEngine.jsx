@@ -324,6 +324,10 @@ export const calculateProductPrice = ({
   const commissionRate = commission?.commission_rate ?? 0;
   const commissionVatRate = commission?.commission_vat_rate ?? 20;
   const productVatRate = product.vat_rate ?? 20;
+
+  // ÇİFT KARGO: ürün "double_shipping" işaretliyse tüm kargo bedelleri 2 ile çarpılır
+  // (üretim→depo + depo→müşteri = iki kargo)
+  const shippingMultiplier = product.double_shipping ? 2 : 1;
   
   if (targetProfitRate == null && targetProfitAmount == null) {
     throw new Error('Hedef kâr oranı veya tutarından en az biri belirtilmelidir');
@@ -383,10 +387,11 @@ export const calculateProductPrice = ({
   let candidates = [];
 
   if (hasOverrideShipping) {
+    const ovShippingCost = overrideShippingCost * shippingMultiplier;
     const overrideResult = findSalePriceForTargetProfit({
       productCost: product.cost,
       productVatRate,
-      shippingCost: overrideShippingCost,
+      shippingCost: ovShippingCost,
       shippingVatRate: 20,
       commissionRate,
       commissionVatRate,
@@ -399,16 +404,17 @@ export const calculateProductPrice = ({
       minimumProfitAmount,
       isSameDayDelivery
     });
-    result = { ...overrideResult, shippingCost: overrideShippingCost, shippingVatRate: 20, baremUsed: 'desi' };
+    result = { ...overrideResult, shippingCost: ovShippingCost, shippingVatRate: 20, baremUsed: 'desi' };
   }
   
   if (!result && canUseBarem) {
     const barem1Rate = findBaremShippingRate(platformShippingRates, 'barem1', effectiveSameDayDelivery);
     if (barem1Rate) {
+      const barem1Cost = barem1Rate.price * shippingMultiplier;
       const barem1Result = findSalePriceForTargetProfit({
         productCost: product.cost,
         productVatRate,
-        shippingCost: barem1Rate.price,
+        shippingCost: barem1Cost,
         shippingVatRate: barem1Rate.vat_rate || 20,
         commissionRate,
         commissionVatRate,
@@ -425,7 +431,7 @@ export const calculateProductPrice = ({
       if (isPriceInBaremRange(barem1Result.salePriceInclVat, platform, 'barem1')) {
         candidates.push({
           ...barem1Result,
-          shippingCost: barem1Rate.price,
+          shippingCost: barem1Cost,
           shippingVatRate: barem1Rate.vat_rate || 20,
           baremUsed: 'barem1'
         });
@@ -434,10 +440,11 @@ export const calculateProductPrice = ({
     
     const barem2Rate = findBaremShippingRate(platformShippingRates, 'barem2', effectiveSameDayDelivery);
     if (barem2Rate) {
+      const barem2Cost = barem2Rate.price * shippingMultiplier;
       const barem2Result = findSalePriceForTargetProfit({
         productCost: product.cost,
         productVatRate,
-        shippingCost: barem2Rate.price,
+        shippingCost: barem2Cost,
         shippingVatRate: barem2Rate.vat_rate || 20,
         commissionRate,
         commissionVatRate,
@@ -454,7 +461,7 @@ export const calculateProductPrice = ({
       if (isPriceInBaremRange(barem2Result.salePriceInclVat, platform, 'barem2')) {
         candidates.push({
           ...barem2Result,
-          shippingCost: barem2Rate.price,
+          shippingCost: barem2Cost,
           shippingVatRate: barem2Rate.vat_rate || 20,
           baremUsed: 'barem2'
         });
@@ -519,6 +526,9 @@ export const calculateProductPrice = ({
       shippingCost = desiRate?.price || 0;
       shippingVatRate = desiRate?.vat_rate || 20;
     }
+
+    // ÇİFT KARGO: hesaplanan kargo bedelini 2 ile çarp (gerekirse)
+    shippingCost = shippingCost * shippingMultiplier;
     
     const desiResult = findSalePriceForTargetProfit({
       productCost: product.cost,
@@ -549,11 +559,12 @@ export const calculateProductPrice = ({
       
        if (isPriceInBaremRange(desiPrice, platform, 'barem1')) {
          const barem1Rate = findBaremShippingRate(platformShippingRates, 'barem1', effectiveSameDayDelivery);
-         if (barem1Rate && barem1Rate.price < shippingCost) {
+         const barem1Cost = barem1Rate ? barem1Rate.price * shippingMultiplier : null;
+         if (barem1Rate && barem1Cost < shippingCost) {
           const barem1Result = findSalePriceForTargetProfit({
             productCost: product.cost,
             productVatRate,
-            shippingCost: barem1Rate.price,
+            shippingCost: barem1Cost,
             shippingVatRate: barem1Rate.vat_rate || 20,
             commissionRate,
             commissionVatRate,
@@ -570,7 +581,7 @@ export const calculateProductPrice = ({
           if (isPriceInBaremRange(barem1Result.salePriceInclVat, platform, 'barem1')) {
             result = {
               ...barem1Result,
-              shippingCost: barem1Rate.price,
+              shippingCost: barem1Cost,
               shippingVatRate: barem1Rate.vat_rate || 20,
               baremUsed: 'barem1'
             };
@@ -579,11 +590,12 @@ export const calculateProductPrice = ({
       } 
       else if (isPriceInBaremRange(desiPrice, platform, 'barem2')) {
         const barem2Rate = findBaremShippingRate(platformShippingRates, 'barem2', effectiveSameDayDelivery);
-        if (barem2Rate && barem2Rate.price < shippingCost) {
+        const barem2Cost = barem2Rate ? barem2Rate.price * shippingMultiplier : null;
+        if (barem2Rate && barem2Cost < shippingCost) {
           const barem2Result = findSalePriceForTargetProfit({
             productCost: product.cost,
             productVatRate,
-            shippingCost: barem2Rate.price,
+            shippingCost: barem2Cost,
             shippingVatRate: barem2Rate.vat_rate || 20,
             commissionRate,
             commissionVatRate,
@@ -600,7 +612,7 @@ export const calculateProductPrice = ({
           if (isPriceInBaremRange(barem2Result.salePriceInclVat, platform, 'barem2')) {
             result = {
               ...barem2Result,
-              shippingCost: barem2Rate.price,
+              shippingCost: barem2Cost,
               shippingVatRate: barem2Rate.vat_rate || 20,
               baremUsed: 'barem2'
             };
@@ -669,6 +681,7 @@ export const calculateProductPrice = ({
       commissionVatRate,
       targetProfitRate,
       shippingCost: Math.round(result.shippingCost * 100) / 100,
+      doubleShipping: !!product.double_shipping,
       baremUsed: result.baremUsed,
       saleVat: Math.round(finalBreakdown.saleVat * 100) / 100,
       productVat: Math.round(finalBreakdown.productVat * 100) / 100,
@@ -830,6 +843,7 @@ export const calculateManual = ({
   isMultiPackage = false,
   packages = [],
   specialShipping = false,
+  doubleShipping = false,
   settings = []
 }) => {
   const fakeProduct = {
@@ -842,6 +856,7 @@ export const calculateManual = ({
     printing_cost: printingCost,
     multi_package: isMultiPackage,
     special_shipping: specialShipping,
+    double_shipping: doubleShipping,
     packages: isMultiPackage ? JSON.stringify(packages) : null
   };
   
