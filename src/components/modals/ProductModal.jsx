@@ -23,6 +23,7 @@ const INIT_FORM = {
   name: '', sku: '', cost: '', printing_cost: '', extra_cost: '',
   desi: '', multi_package: false, packages: [], category_id: '',
   vat_rate: 20, same_day_delivery: false, is_active: true,
+  double_shipping: false,
   ref_product_id: null, cost_addon: '', cost_addon_type: 'total_tl', ref_product_qty: '',
   unit_quantity: '',
 };
@@ -62,6 +63,7 @@ export default function ProductModal({
         category_id: product.category_id || '', vat_rate: product.vat_rate || 20,
         same_day_delivery: product.same_day_delivery === true,
         is_active: product.is_active !== false,
+        double_shipping: product.double_shipping === true,
         ref_product_id: product.ref_product_id || null,
         cost_addon: product.cost_addon || '',
         cost_addon_type: product.cost_addon_type || 'total_tl',
@@ -167,6 +169,7 @@ export default function ProductModal({
       multi_package: finalMulti,
       packages: finalMulti ? JSON.stringify(validPkgs) : null,
       special_shipping: false,
+      double_shipping: form.double_shipping === true,
       ref_product_id: form.ref_product_id || null,
       cost_addon: parseFloat(form.cost_addon) || 0,
       cost_addon_type: form.cost_addon_type,
@@ -526,6 +529,14 @@ export default function ProductModal({
               <div className="flex items-center justify-between py-2">
                 <Label>Bugün Kargoda</Label>
                 <Switch checked={form.same_day_delivery} onCheckedChange={v => upd('same_day_delivery', v)} />
+              </div>
+
+              <div className="flex items-center justify-between py-2 border-t border-gray-100">
+                <div className="space-y-0.5">
+                  <Label>Çift Kargo</Label>
+                  <p className="text-xs text-slate-500">Açık olursa kargo ücreti 2 katı hesaplanır (üretim→depo→müşteri)</p>
+                </div>
+                <Switch checked={form.double_shipping} onCheckedChange={v => upd('double_shipping', v)} />
               </div>
 
               <div className="flex items-center justify-between py-2">
