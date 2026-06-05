@@ -50,6 +50,7 @@ export default function PriceDetailModal({ open, onClose, product, platform, pri
   const packagingCost = calculationDetails.packagingCost ?? priceData?.packaging_cost ?? 0;
   const productCost = calculationDetails.productCost ?? priceData?.product_cost ?? 0;
   const shippingCost = calculationDetails.shippingCost ?? priceData?.shipping_cost ?? 0;
+  const isDoubleShipping = calculationDetails.doubleShipping ?? product?.double_shipping ?? false;
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
@@ -136,7 +137,14 @@ export default function PriceDetailModal({ open, onClose, product, platform, pri
                   </div>
 
                   <div className="flex justify-between py-2 pl-3 sm:pl-6 border-b border-slate-100">
-                    <span className="text-slate-600">- Kargo Ücreti (KDV Dahil)</span>
+                    <span className="text-slate-600">
+                      - Kargo Ücreti (KDV Dahil)
+                      {isDoubleShipping && (
+                        <span className="ml-2 inline-block text-xs font-semibold text-orange-600 bg-orange-50 border border-orange-200 rounded px-1.5 py-0.5 align-middle">
+                          Çift Kargo ×2
+                        </span>
+                      )}
+                    </span>
                     <span className="font-medium text-rose-600 ml-2 shrink-0">-₺{Number(shippingCost).toFixed(2)}</span>
                   </div>
 
@@ -209,6 +217,12 @@ export default function PriceDetailModal({ open, onClose, product, platform, pri
                   <span className="text-slate-600">Ürün Desisi:</span>
                   <span className="font-medium">{product?.desi || '-'}</span>
                 </div>
+                {isDoubleShipping && (
+                  <div className="flex justify-between">
+                    <span className="text-slate-600">Çift Kargo:</span>
+                    <span className="font-medium text-orange-600">Evet (kargo ×2)</span>
+                  </div>
+                )}
                 <div className="flex justify-between">
                   <span className="text-slate-600">Komisyon Oranı:</span>
                   <span className="font-medium">%{Number(calculationDetails.commissionRate || 0).toFixed(2)}</span>
