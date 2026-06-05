@@ -675,11 +675,17 @@ export default function Products() {
 
   const paginatedProducts = filteredProducts.slice((page - 1) * pageSize, page * pageSize);
 
+  // Bu sayfadaki tüm ürünler seçili mi?
+  const allCurrentPageSelected = paginatedProducts.length > 0 && paginatedProducts.every(p => selectedIds.includes(p.id));
+
   const toggleSelectAll = () => {
-    if (selectedIds.length === paginatedProducts.length) {
-      setSelectedIds([]);
+    const pageIds = paginatedProducts.map(p => p.id);
+    if (allCurrentPageSelected) {
+      // Sadece bu sayfadakileri seçimden çıkar (diğer sayfalar korunur)
+      setSelectedIds(prev => prev.filter(id => !pageIds.includes(id)));
     } else {
-      setSelectedIds(paginatedProducts.map(p => p.id));
+      // Bu sayfadakileri mevcut seçime EKLE (önceki sayfalar korunur)
+      setSelectedIds(prev => Array.from(new Set([...prev, ...pageIds])));
     }
   };
 
@@ -692,7 +698,7 @@ export default function Products() {
       header: (
         <input
           type="checkbox"
-          checked={selectedIds.length === paginatedProducts.length && paginatedProducts.length > 0}
+          checked={allCurrentPageSelected}
           onChange={toggleSelectAll}
           className="rounded border-gray-300"
         />
