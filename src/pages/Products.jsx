@@ -419,6 +419,13 @@ export default function Products() {
       return (!val || isNaN(parsed) || parsed <= 0) ? null : parsed;
     };
 
+    // "Çift Kargo" sütununu oku (true/false/evet/hayir/1/0)
+    const parseBoolCol = (val) => {
+      if (val === undefined || val === null || val === '') return false;
+      const s = String(val).trim().toLowerCase();
+      return s === 'true' || s === 'evet' || s === 'var' || s === '1' || s === 'x' || s === 'aktif';
+    };
+
     const mapExcelHeaders = (row) => {
       const mapped = {
         sku: normalizeField(row['SKU'] || row.sku),
@@ -435,7 +442,8 @@ export default function Products() {
           : true,
         printing_cost: parseFloat(row['Baskı Maliyeti'] ?? row.printing_cost ?? 0) || 0,
         extra_cost: parseFloat(row['Ek Maliyet'] ?? row.extra_cost ?? 0) || 0,
-        special_shipping: false
+        special_shipping: false,
+        double_shipping: parseBoolCol(row['Çift Kargo'] ?? row['Cift Kargo'] ?? row.double_shipping)
       };
 
       const desiValues = [
@@ -529,6 +537,7 @@ export default function Products() {
             const newVat = parseFloat(row.vat_rate) || existing.vat_rate;
             const newSameDay = row.same_day_delivery === true;
             const newActive = row.is_active !== false;
+            const newDoubleShipping = row.double_shipping === true;
 
             const hasChange =
               existing.cost !== newCost ||
@@ -539,6 +548,7 @@ export default function Products() {
               (existing.vat_rate || 20) !== newVat ||
               (existing.same_day_delivery === true) !== newSameDay ||
               (existing.is_active !== false) !== newActive ||
+              (existing.double_shipping === true) !== newDoubleShipping ||
               (existing.multi_package === true) !== pkgData.multi_package ||
               existing.packages !== pkgData.packages;
 
@@ -547,6 +557,7 @@ export default function Products() {
                 cost: newCost, printing_cost: newPrinting, extra_cost: newExtra,
                 desi: newDesi, category_id: newCatId, category_name: category?.name || existing.category_name,
                 vat_rate: newVat, same_day_delivery: newSameDay, is_active: newActive,
+                double_shipping: newDoubleShipping,
                 special_shipping: false, ...pkgData
               });
               updatedCount++;
@@ -570,6 +581,7 @@ export default function Products() {
               vat_rate: parseFloat(row.vat_rate) || 20,
               same_day_delivery: row.same_day_delivery === true,
               is_active: row.is_active !== false,
+              double_shipping: row.double_shipping === true,
               special_shipping: false, ...pkgData
             });
             existingByTripleKey[key] = created;
@@ -757,6 +769,15 @@ export default function Products() {
       )
     },
     {
+      header: 'Çift Kargo',
+      accessor: 'double_shipping',
+      cell: (row) => (
+        <Badge variant={row.double_shipping === true ? 'default' : 'outline'} className={row.double_shipping === true ? 'bg-orange-600' : ''}>
+          {row.double_shipping === true ? '✓ x2' : '-'}
+        </Badge>
+      )
+    },
+    {
       header: 'Paket',
       cell: (row) => {
         const autoPackageId = getAutoPackageId(row.desi);
@@ -827,6 +848,7 @@ export default function Products() {
       'Desi': p.desi || '', 'Desi 1': '', 'Desi 2': '', 'Desi 3': '', 'Desi 4': '', 'Desi 5': '',
       'Kategori': p.category_name, 'KDV Oranı': p.vat_rate,
       'Bugün Kargoda': p.same_day_delivery === true ? 'true' : 'false',
+      'Çift Kargo': p.double_shipping === true ? 'true' : 'false',
       'Aktif': p.is_active !== false ? 'true' : 'false'
     };
     if (p.packages) {
@@ -846,6 +868,7 @@ export default function Products() {
     { key: 'Desi 3', label: 'Desi 3' }, { key: 'Desi 4', label: 'Desi 4' },
     { key: 'Desi 5', label: 'Desi 5' }, { key: 'Kategori', label: 'Kategori' },
     { key: 'KDV Oranı', label: 'KDV Oranı' }, { key: 'Bugün Kargoda', label: 'Bugün Kargoda' },
+    { key: 'Çift Kargo', label: 'Çift Kargo' },
     { key: 'Aktif', label: 'Aktif' }
   ];
 
@@ -863,6 +886,7 @@ export default function Products() {
     { key: 'Kategori', label: 'Kategori', example: categories[0]?.name || 'Kategori Adı' },
     { key: 'KDV Oranı', label: 'KDV Oranı', example: '20' },
     { key: 'Bugün Kargoda', label: 'Bugün Kargoda', example: 'false' },
+    { key: 'Çift Kargo', label: 'Çift Kargo', example: 'false' },
     { key: 'Aktif', label: 'Aktif', example: 'true' }
   ];
 
@@ -926,6 +950,7 @@ export default function Products() {
                     'Kategori: Aşağıdaki listeden tam olarak kopyalayın (zorunlu)',
                     'KDV Oranı: Ürün KDV oranı, örn: 20 veya 10 (zorunlu)',
                     'Bugün Kargoda: true veya false',
+                    'Çift Kargo: true veya false (true ise kargo ücreti 2 katı hesaplanır - üretim→depo→müşteri)',
                     'Aktif: true veya false',
                   ]
                 },
