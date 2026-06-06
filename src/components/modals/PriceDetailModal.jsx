@@ -50,6 +50,7 @@ export default function PriceDetailModal({ open, onClose, product, platform, pri
   const packagingCost = calculationDetails.packagingCost ?? priceData?.packaging_cost ?? 0;
   const productCost = calculationDetails.productCost ?? priceData?.product_cost ?? 0;
   const shippingCost = calculationDetails.shippingCost ?? priceData?.shipping_cost ?? 0;
+  const isDoubleShipping = calculationDetails.doubleShipping ?? product?.double_shipping ?? false;
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
@@ -136,7 +137,9 @@ export default function PriceDetailModal({ open, onClose, product, platform, pri
                   </div>
 
                   <div className="flex justify-between py-2 pl-3 sm:pl-6 border-b border-slate-100">
-                    <span className="text-slate-600">- Kargo Ücreti (KDV Dahil)</span>
+                    <span className="text-slate-600">
+                      {isDoubleShipping ? '- Çift Kargo Ücreti (KDV Dahil)' : '- Kargo Ücreti (KDV Dahil)'}
+                    </span>
                     <span className="font-medium text-rose-600 ml-2 shrink-0">-₺{Number(shippingCost).toFixed(2)}</span>
                   </div>
 

@@ -29,6 +29,7 @@ export default function BulkOperationsModal({
   const [statusValue, setStatusValue] = useState('active');
   const [packageId, setPackageId] = useState('');
   const [sameDayDelivery, setSameDayDelivery] = useState(false);
+  const [doubleShipping, setDoubleShipping] = useState(false);
 
   const handleApply = () => {
     let updates = {};
@@ -44,6 +45,9 @@ export default function BulkOperationsModal({
         break;
       case 'same_day_delivery':
         updates.same_day_delivery = sameDayDelivery;
+        break;
+      case 'double_shipping':
+        updates.double_shipping = doubleShipping;
         break;
     }
     
@@ -68,6 +72,7 @@ export default function BulkOperationsModal({
                 <SelectItem value="status">Durum Güncelle</SelectItem>
                 <SelectItem value="package">Paket Ata</SelectItem>
                 <SelectItem value="same_day_delivery">Bugün Kargoda</SelectItem>
+                <SelectItem value="double_shipping">Çift Kargo</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -116,6 +121,19 @@ export default function BulkOperationsModal({
               <Switch
                 checked={sameDayDelivery}
                 onCheckedChange={setSameDayDelivery}
+              />
+            </div>
+          )}
+
+          {operation === 'double_shipping' && (
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label>Çift Kargo</Label>
+                <p className="text-xs text-slate-500">Açık olursa kargo ücreti 2 katı hesaplanır (üretim→depo→müşteri)</p>
+              </div>
+              <Switch
+                checked={doubleShipping}
+                onCheckedChange={setDoubleShipping}
               />
             </div>
           )}
