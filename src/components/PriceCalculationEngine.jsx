@@ -240,7 +240,8 @@ export const isPriceInBaremRange = (salePrice, platform, baremType) => {
 };
 
 /**
- * Hedef kâr oranını veya tutarını sağlayan satış fiyatını binary search ile bul
+ * Hedef kâr oranını, hedef tutarını ve MİNİMUM kâr tutarını birlikte sağlayan
+ * satış fiyatını binary search ile bul. Tüm koşulları karşılamak için en yüksek fiyat seçilir.
  */
 export const findSalePriceForTargetProfit = ({
   productCost,
@@ -262,12 +263,25 @@ export const findSalePriceForTargetProfit = ({
   maxIterations = 100,
   isSameDayDelivery = false
 }) => {
-  let low = minPrice;
-  let high = Math.max(maxPrice, productCost * 20);
-  
- // Her iki hedefi de hesapla, en yüksek fiyatı seç
+  // Her hedef icin fiyat hesaplanir, EN YUKSEK fiyat secilir (tum kosullar birlikte saglansin)
   const candidateResults = [];
 
+  // Belirli bir NET KAR TUTARINI saglayan satis fiyatini bul (hedef tutar ve minimum tutar icin)
+  const searchForAmount = (amount) => {
+    let lo = minPrice, hi = Math.max(maxPrice, productCost * 20), best = null, iter = 0;
+    while (lo <= hi && iter < maxIterations) {
+      iter++;
+      const mid = (lo + hi) / 2;
+      const bd = calculatePriceBreakdown({ salePriceInclVat: mid, productCost, productVatRate, shippingCost, shippingVatRate, commissionRate, commissionVatRate, platform, packagingCost, printingCost, extraCost, baremUsed: 'search', isSameDayDelivery });
+      const diff = bd.netProfit - amount;
+      if (Math.abs(diff) <= tolerance) { best = { ...bd, salePriceInclVat: mid }; break; }
+      if (diff < 0) lo = mid + 0.01; else { hi = mid - 0.01; best = { ...bd, salePriceInclVat: mid }; }
+    }
+    if (!best) best = calculatePriceBreakdown({ salePriceInclVat: lo, productCost, productVatRate, shippingCost, shippingVatRate, commissionRate, commissionVatRate, platform, packagingCost, printingCost, extraCost, baremUsed: 'search', isSameDayDelivery });
+    return best;
+  };
+
+  // 1) Hedef KAR ORANI (% )
   if (targetProfitRate != null) {
     let lo = minPrice, hi = Math.max(maxPrice, productCost * 20), best = null, iter = 0;
     while (lo <= hi && iter < maxIterations) {
@@ -282,22 +296,23 @@ export const findSalePriceForTargetProfit = ({
     candidateResults.push(best);
   }
 
-  if (targetProfitAmount != null) {
-    let lo = minPrice, hi = Math.max(maxPrice, productCost * 20), best = null, iter = 0;
-    while (lo <= hi && iter < maxIterations) {
-      iter++;
-      const mid = (lo + hi) / 2;
-      const bd = calculatePriceBreakdown({ salePriceInclVat: mid, productCost, productVatRate, shippingCost, shippingVatRate, commissionRate, commissionVatRate, platform, packagingCost, printingCost, extraCost, baremUsed: 'search', isSameDayDelivery });
-      const diff = bd.netProfit - targetProfitAmount;
-      if (Math.abs(diff) <= tolerance) { best = { ...bd, salePriceInclVat: mid }; break; }
-      if (diff < 0) lo = mid + 0.01; else { hi = mid - 0.01; best = { ...bd, salePriceInclVat: mid }; }
-    }
-    if (!best) best = calculatePriceBreakdown({ salePriceInclVat: lo, productCost, productVatRate, shippingCost, shippingVatRate, commissionRate, commissionVatRate, platform, packagingCost, printingCost, extraCost, baremUsed: 'search', isSameDayDelivery });
-    candidateResults.push(best);
+  // 2) Hedef KAR TUTARI (TL)
+  if (targetProfitAmount != null && targetProfitAmount > 0) {
+    candidateResults.push(searchForAmount(targetProfitAmount));
   }
 
+  // 3) MINIMUM KAR TUTARI (TL taban) - kar bu tutarin altina dusemez
+  if (minimumProfitAmount != null && minimumProfitAmount > 0) {
+    candidateResults.push(searchForAmount(minimumProfitAmount));
+  }
+
+  if (candidateResults.length === 0) {
+    return calculatePriceBreakdown({ salePriceInclVat: minPrice, productCost, productVatRate, shippingCost, shippingVatRate, commissionRate, commissionVatRate, platform, packagingCost, printingCost, extraCost, baremUsed: 'search', isSameDayDelivery });
+  }
+
+  // Tum kosullari birden saglamak icin EN YUKSEK fiyati sec
   let bestResult = candidateResults.reduce((a, b) => a.salePriceInclVat > b.salePriceInclVat ? a : b);
-  
+
   return bestResult;
 };
 
