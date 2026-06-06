@@ -677,6 +677,8 @@ export default function Products() {
 
   // Bu sayfadaki tüm ürünler seçili mi?
   const allCurrentPageSelected = paginatedProducts.length > 0 && paginatedProducts.every(p => selectedIds.includes(p.id));
+  // Filtredeki TÜM ürünler seçili mi?
+  const allFilteredSelected = filteredProducts.length > 0 && filteredProducts.every(p => selectedIds.includes(p.id));
 
   const toggleSelectAll = () => {
     const pageIds = paginatedProducts.map(p => p.id);
@@ -691,6 +693,11 @@ export default function Products() {
 
   const toggleSelect = (id) => {
     setSelectedIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
+  };
+
+  // Filtrelenen TÜM ürünleri seç (tüm sayfalar dahil)
+  const selectAllFiltered = () => {
+    setSelectedIds(filteredProducts.map(p => p.id));
   };
 
   const columns = [
@@ -1018,6 +1025,39 @@ export default function Products() {
           </div>
         </div>
 
+        {selectedIds.length > 0 && (
+          <div className="flex flex-wrap items-center justify-between gap-3 bg-indigo-50 border border-indigo-200 rounded-xl px-4 py-3 mb-4">
+            <span className="text-sm text-indigo-800 font-medium">
+              {selectedIds.length} ürün seçili
+              {allCurrentPageSelected && !allFilteredSelected && filteredProducts.length > selectedIds.length && (
+                <button
+                  onClick={selectAllFiltered}
+                  className="ml-2 underline text-indigo-700 hover:text-indigo-900"
+                >
+                  Filtredeki tüm {filteredProducts.length} ürünü seç
+                </button>
+              )}
+              {allFilteredSelected && filteredProducts.length > pageSize && (
+                <span className="ml-2 text-indigo-600">(filtredeki tüm ürünler seçili)</span>
+              )}
+            </span>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" onClick={() => setSelectedIds([])}>
+                Seçimi Temizle
+              </Button>
+              <Button
+                variant="destructive"
+                size="sm"
+                className="gap-2"
+                onClick={() => setShowBulkDelete(true)}
+              >
+                <Trash2 className="h-4 w-4" />
+                Sil ({selectedIds.length})
+              </Button>
+            </div>
+          </div>
+        )}
+
         <DataTable
           columns={columns}
           data={paginatedProducts}
@@ -1096,11 +1136,24 @@ export default function Products() {
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle>Toplu Ürün Silme</AlertDialogTitle>
-              <AlertDialogDescription>{selectedIds.length} ürünü silmek istediğinizden emin misiniz?</AlertDialogDescription>
+              <AlertDialogDescription>
+                {selectedIds.length} ürünü silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.
+                {selectedIds.length > 50 && (
+                  <span className="block mt-2 text-amber-600 font-medium">
+                    Not: {selectedIds.length} ürün tek tek silineceği için işlem biraz sürebilir, sayfayı kapatma.
+                  </span>
+                )}
+              </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel>İptal</AlertDialogCancel>
-              <AlertDialogAction onClick={() => bulkDeleteMutation.mutate(selectedIds)} className="bg-rose-600 hover:bg-rose-700">Sil</AlertDialogAction>
+              <AlertDialogAction
+                onClick={() => bulkDeleteMutation.mutate(selectedIds)}
+                disabled={bulkDeleteMutation.isPending}
+                className="bg-rose-600 hover:bg-rose-700"
+              >
+                {bulkDeleteMutation.isPending ? 'Siliniyor...' : `Sil (${selectedIds.length})`}
+              </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
