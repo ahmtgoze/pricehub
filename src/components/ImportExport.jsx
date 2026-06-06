@@ -34,16 +34,24 @@ export const parseExcel = (arrayBuffer, dataSheetName = null) => {
 
 /**
  * CSV'den JSON'a dönüştür
- * ✅ BOM temizleme, tırnak içi noktalı virgül desteği, virgüllü sayı desteği
+ * ✅ BOM temizleme
+ * ✅ Ayracı otomatik algılar (virgül , veya noktalı virgül ;)
+ * ✅ SADECE tamamen sayı olan hücreleri sayıya çevirir ("50 Adet", "60x62" metin kalır)
  */
 export const parseCSV = (csvText) => {
   // ✅ BOM karakterini temizle
   csvText = csvText.replace(/^\uFEFF/, '');
 
-  const lines = csvText.trim().split('\n');
+  const lines = csvText.trim().split(/\r?\n/);
   if (lines.length < 2) return [];
 
-  // ✅ Satırı doğru parse et — tırnak içindeki noktalı virgülleri koru
+  // ✅ Ayracı otomatik algıla: başlık satırında ; mi , mı daha çok?
+  const headerLine = lines[0];
+  const semiCount = (headerLine.match(/;/g) || []).length;
+  const commaCount = (headerLine.match(/,/g) || []).length;
+  const delimiter = semiCount >= commaCount ? ';' : ',';
+
+  // ✅ Satırı ayraca göre parse et — tırnak içindeki ayracı koru
   const parseLine = (line) => {
     const result = [];
     let current = '';
@@ -52,7 +60,7 @@ export const parseCSV = (csvText) => {
       const char = line[i];
       if (char === '"') {
         inQuotes = !inQuotes;
-      } else if (char === ';' && !inQuotes) {
+      } else if (char === delimiter && !inQuotes) {
         result.push(current.trim());
         current = '';
       } else {
@@ -63,7 +71,7 @@ export const parseCSV = (csvText) => {
     return result;
   };
 
-  const headers = parseLine(lines[0]);
+  const headers = parseLine(headerLine);
   const data = [];
 
   for (let i = 1; i < lines.length; i++) {
@@ -72,14 +80,19 @@ export const parseCSV = (csvText) => {
     const row = {};
     headers.forEach((header, idx) => {
       let value = values[idx] !== undefined ? values[idx] : '';
-      // ✅ Virgüllü sayıları da parse et (20,4 → 20.4)
-      const normalized = String(value).replace(',', '.');
-      const numVal = parseFloat(normalized);
-      if (!isNaN(numVal) && value !== '') {
-        value = numVal;
+      const trimmed = String(value).trim();
+      // ✅ SADECE baştan sona sayı olan değerleri sayıya çevir (20,4 → 20.4).
+      //    "50 Adet", "60x62", "Bant-kes" gibi metinler OLDUĞU GİBİ kalır.
+      const normalized = trimmed.replace(',', '.');
+      if (trimmed !== '' && /^-?\d+(\.\d+)?$/.test(normalized)) {
+        value = parseFloat(normalized);
+      } else if (trimmed === 'true' || trimmed === 'TRUE') {
+        value = true;
+      } else if (trimmed === 'false' || trimmed === 'FALSE') {
+        value = false;
+      } else {
+        value = trimmed;
       }
-      if (value === 'true') value = true;
-      if (value === 'false') value = false;
       row[header] = value;
     });
     data.push(row);
@@ -315,30 +328,3 @@ export default function ImportExport({
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
-          <DropdownMenuItem onClick={() => downloadCSV(data, columns, filename)}>
-            <FileSpreadsheet className="mr-2 h-4 w-4" />
-            CSV Olarak İndir
-          </DropdownMenuItem>
-          {templateColumns && (
-            <DropdownMenuItem onClick={() => downloadTemplate(templateColumns, filename, templateInfoData)}>
-              <FileSpreadsheet className="mr-2 h-4 w-4" />
-              Boş Şablon İndir
-            </DropdownMenuItem>
-          )}
-        </DropdownMenuContent>
-      </DropdownMenu>
-
-      {onImport && (
-        <Button
-          variant="outline"
-          size="sm"
-          className="gap-2"
-          onClick={() => fileInputRef.current?.click()}
-        >
-          <Upload className="h-4 w-4" />
-          İçe Aktar
-        </Button>
-      )}
-    </div>
-  );
-}
