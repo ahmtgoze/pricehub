@@ -328,3 +328,34 @@ export default function ImportExport({
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
+          <DropdownMenuItem
+            onClick={() => downloadCSV(data, columns, filename)}
+            className="gap-2 cursor-pointer"
+          >
+            <FileSpreadsheet className="h-4 w-4" />
+            CSV Olarak İndir
+          </DropdownMenuItem>
+          {templateColumns && (
+            <DropdownMenuItem
+              onClick={() => downloadTemplate(templateColumns, filename, templateInfoData)}
+              className="gap-2 cursor-pointer"
+            >
+              <Download className="h-4 w-4" />
+              Boş Şablon İndir
+            </DropdownMenuItem>
+          )}
+        </DropdownMenuContent>
+      </DropdownMenu>
+
+      <Button
+        variant="outline"
+        size="sm"
+        className="gap-2"
+        onClick={() => fileInputRef.current?.click()}
+      >
+        <Upload className="h-4 w-4" />
+        İçe Aktar
+      </Button>
+    </div>
+  );
+}
