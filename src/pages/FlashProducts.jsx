@@ -64,8 +64,8 @@ export default function FlashProducts() {
   });
 
   const { data: shippingRates = [] } = useQuery({
-    queryKey: ['shippingRates', userEmail],
-    queryFn: () => db.entities.ShippingRate.filter({ created_by: userEmail }),
+    queryKey: ['shippingRates'],
+    queryFn: () => db.entities.ShippingRate.list('-id', 10000),
     enabled: !!userEmail
   });
 
@@ -518,8 +518,8 @@ export default function FlashProducts() {
         return { profit: 0, profitRate: 0, breakdown: null };
       }
 
-      const platformShippingRates = shippingRates.filter(
-        r => r.platform_id === platform.id && r.is_active !== false
+      const platformShippingRates = shippingRates.filter(r =>
+        r.is_active !== false && (r.platform_id === platform.id || r.platform_type === platform.platform_type)
       );
 
       // Paketleme maliyeti
@@ -1267,32 +1267,29 @@ export default function FlashProducts() {
                   <Button 
                     variant="outline" 
                     onClick={async () => {
+                      const startDate = format(dateRangeValue.from, 'yyyy-MM-dd');
+                      const endDate = format(dateRangeValue.to, 'yyyy-MM-dd');
+                      const recordsToDelete = savedFlashProducts.filter(
+                        r => r.platform_account === selectedPlatform &&
+                             r.start_date === startDate &&
+                             r.end_date === endDate
+                      );
+                      // Ekranı HEMEN temizle, silmeyi arka planda yap (anında tepki için)
+                      setUploadedData([]);
+                      setOriginalExcelData(null);
+                      setExcludedCount(0);
+                      toast.success('Excel silindi');
                       try {
-                        // Veritabanından seçili platform ve tarihle eşleşen kayıtları sil
-                        const startDate = format(dateRangeValue.from, 'yyyy-MM-dd');
-                        const endDate = format(dateRangeValue.to, 'yyyy-MM-dd');
-                        
-                        const recordsToDelete = savedFlashProducts.filter(
-                          r => r.platform_account === selectedPlatform &&
-                               r.start_date === startDate &&
-                               r.end_date === endDate
-                        );
-                        
-                        if (recordsToDelete.length > 0) {
-                          for (let i = 0; i < recordsToDelete.length; i += 10) {
-                            const batch = recordsToDelete.slice(i, i + 10);
-                            await Promise.all(batch.map(r => db.entities.FlashProduct.delete(r.id)));
-                            if (i + 10 < recordsToDelete.length) {
-                              await new Promise(resolve => setTimeout(resolve, 1000));
-                            }
+                        for (let i = 0; i < recordsToDelete.length; i += 30) {
+                          const batch = recordsToDelete.slice(i, i + 30);
+                          await Promise.all(batch.map(r => db.entities.FlashProduct.delete(r.id)));
+                          if (i + 30 < recordsToDelete.length) {
+                            await new Promise(resolve => setTimeout(resolve, 150));
                           }
                         }
-                        setUploadedData([]);
-                        setExcludedCount(0);
                         queryClient.invalidateQueries(['flashProducts']);
-                        toast.success('Excel silindi');
                       } catch (error) {
-                        toast.error('Silme hatası: ' + error.message);
+                        toast.error('Silme hatası (arka plan): ' + error.message);
                       }
                     }}
                     className="text-rose-600 hover:text-rose-700 hover:bg-rose-50"
