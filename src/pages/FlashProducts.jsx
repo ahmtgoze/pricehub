@@ -890,11 +890,11 @@ export default function FlashProducts() {
           
           // Güncellenecek Fiyat
           if (header === 'Güncellenecek Fiyat') {
-            let guncellenecekFiyat = '';
+            let guncellenecekFiyat = 'Hiçbiri';
             
-            // Seçim yoksa veya 'none' ise boş bırak
+            // Seçim yoksa 'Hiçbiri' (Trendyol boş satırı hatalı sayıyor; "Hiçbiri" = atla)
             if (!item.selected_type || item.selected_type === 'none') {
-              guncellenecekFiyat = '';
+              guncellenecekFiyat = 'Hiçbiri';
             } else if (item.selected_type === 'flash_24h') {
               guncellenecekFiyat = '24 Saat';
             } else if (item.selected_type === 'flash_3h') {
