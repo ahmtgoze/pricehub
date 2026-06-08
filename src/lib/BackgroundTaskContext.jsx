@@ -62,11 +62,6 @@ const AuthenticatedApp = () => {
           <Campaigns />
         </LayoutWrapper>
       } />
-      <Route path="/PlusProductCommissionTariff" element={
-        <LayoutWrapper currentPageName="PlusProductCommissionTariff">
-          <PlusProductCommissionTariff />
-        </LayoutWrapper>
-      } />
       <Route path="/plus-product-commission-tariff" element={
         <LayoutWrapper currentPageName="PlusProductCommissionTariff">
           <PlusProductCommissionTariff />
