@@ -442,16 +442,18 @@ export default function AdvantageProductTag() {
     let skippedTargetNotMet = 0;
 
     const updated = uploadedData.map(item => {
-      if (item.selected_range !== 'none' || (item.manual_price && item.manual_price > 0)) {
+      // Elle fiyat girilen seçimleri koru; diğer tüm önceki seçimleri sıfırlayıp baştan değerlendir
+      const isManual = item.selected_range === 'manual' || (item.manual_price && item.manual_price > 0);
+      if (isManual) {
         skippedAlreadySelected++;
         return item;
       }
 
       const matchedProduct = getMatchedProduct(item);
-      if (!matchedProduct) { skippedNoProduct++; return item; }
+      if (!matchedProduct) { skippedNoProduct++; return { ...item, selected_range: 'none', selected_price: 0 }; }
 
       const commission = findCommission(matchedProduct);
-      if (!commission) { skippedNoMatch++; return item; }
+      if (!commission) { skippedNoMatch++; return { ...item, selected_range: 'none', selected_price: 0 }; }
 
       // ✅ 0/boş hedefleri "tanımsız" say — aksi halde hedef tutar 0 iken "kâr >= 0"
       //    her zaman sağlanıp, indirimli hedef kâr oranı dikkate alınmadan en
@@ -465,7 +467,7 @@ export default function AdvantageProductTag() {
       const minAmount = (rawMin != null && rawMin > 0) ? rawMin : null;
 
       const hasDiscountedTarget = targetRate != null || targetAmount != null;
-      if (!hasDiscountedTarget) { skippedNoCommission++; return item; }
+      if (!hasDiscountedTarget) { skippedNoCommission++; return { ...item, selected_range: 'none', selected_price: 0 }; }
 
       // Süper Avantaj → Çok Avantaj → Avantaj (en indirimliden başla),
       // hedefi karşılayan İLK aralıkta dur. Komisyon kartla aynı (getDynamicCommissionForPrice).
@@ -500,7 +502,7 @@ export default function AdvantageProductTag() {
       }
 
       skippedTargetNotMet++;
-      return item;
+      return { ...item, selected_range: 'none', selected_price: 0 };
     });
 
     setUploadedData(updated);
@@ -581,11 +583,24 @@ export default function AdvantageProductTag() {
     const selectedItems = uploadedData.filter(item => item.selected_range !== 'none');
     if (selectedItems.length === 0) { toast.error('Lütfen en az bir ürün seçin'); return; }
     try {
-      await Promise.all(selectedItems.map(item => {
-        if (item.id) return db.entities.AdvantageProductTag.update(item.id, item);
-        return db.entities.AdvantageProductTag.create(item);
-      }));
-      toast.success(`${selectedItems.length} ürün güncellendi`);
+      // Ekrandaki TÜM kayıtları DB ile eşitle: kayıtlı olanları güncelle
+      // (seçimi kaldırılanlar 'none' olarak yazılır), id'siz seçili olanları oluştur.
+      // Böylece eski/yanlış seçimler DB'de kalmaz, sayfa yenilenince geri gelmez.
+      const toUpdate = uploadedData.filter(item => item.id);
+      const toCreate = uploadedData.filter(item => !item.id && item.selected_range !== 'none');
+
+      for (let i = 0; i < toUpdate.length; i += 30) {
+        const batch = toUpdate.slice(i, i + 30);
+        await Promise.all(batch.map(item => db.entities.AdvantageProductTag.update(item.id, item)));
+        if (i + 30 < toUpdate.length) await new Promise(resolve => setTimeout(resolve, 200));
+      }
+      for (let i = 0; i < toCreate.length; i += 30) {
+        const batch = toCreate.slice(i, i + 30);
+        await Promise.all(batch.map(item => db.entities.AdvantageProductTag.create(item)));
+        if (i + 30 < toCreate.length) await new Promise(resolve => setTimeout(resolve, 200));
+      }
+
+      toast.success(`${selectedItems.length} ürün kaydedildi`);
       queryClient.invalidateQueries(['advantageProductTags']);
     } catch (error) {
       toast.error('Kayıt hatası: ' + error.message);
@@ -609,12 +624,18 @@ export default function AdvantageProductTag() {
       }
       const barcode = row['BARKOD'];
       const item = uploadedData.find(i => i.barcode === barcode);
-      if (item && item.selected_range !== 'none') {
-        for (let C = range.s.c; C <= range.e.c; C++) {
-          const header = worksheet[XLSX.utils.encode_cell({ r: range.s.r, c: C })]?.v;
-          const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
-          if (header === 'YENİ TSF (FİYAT GÜNCELLE)') worksheet[cellAddress] = { v: item.selected_price || 0, t: 'n' };
-          if (header === 'Tarife Sonuna Kadar Uygula') worksheet[cellAddress] = { v: 'Evet', t: 's' };
+      const isSelected = item && item.selected_range !== 'none';
+
+      // Her satırda önce TSF ve "Uygula" hücrelerini TEMİZLE, sadece seçili olanlara yaz.
+      // (Önceden indirilip tekrar yüklenen dosyalardaki hayalet "Evet" değerleri böylece silinir.)
+      for (let C = range.s.c; C <= range.e.c; C++) {
+        const header = worksheet[XLSX.utils.encode_cell({ r: range.s.r, c: C })]?.v;
+        const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
+        if (header === 'YENİ TSF (FİYAT GÜNCELLE)') {
+          worksheet[cellAddress] = isSelected ? { v: item.selected_price || 0, t: 'n' } : { v: '', t: 's' };
+        }
+        if (header === 'Tarife Sonuna Kadar Uygula') {
+          worksheet[cellAddress] = isSelected ? { v: 'Evet', t: 's' } : { v: '', t: 's' };
         }
       }
     }
