@@ -806,7 +806,7 @@ export default function FlashProducts() {
       'Senin Belirlediğin Flaş Fiyatı', '24 Saat Flaş Başlangıç Tarihi',
       '24 Saat Flaş Bitiş Tarihi', '3 Saat Flaş Başlangıç Tarihi',
       '3 Saat Flaş Bitiş Tarihi', 'Ürün Komisyon Tarife Seçeneği',
-      'Kampanyalı Ürün'
+      'Kampanyalı Ürün', 'Ürün Id'
     ];
 
     // FRESH workbook kopyası oluştur (değişikliklerin birbirini etkilememesi için)
@@ -917,25 +917,9 @@ export default function FlashProducts() {
             worksheet[cellAddress] = { v: value, t: value === '' ? 's' : 'n' };
           }
 
-          // 24 Saat Flaş Başlangıç Tarihi - ÖZGÜN VERİSİ KORU
-          else if (header === '24 Saat Flaş Başlangıç Tarihi') {
-            worksheet[cellAddress] = { v: item.start_24h || '', t: 's' };
-          }
-
-          // 24 Saat Flaş Bitiş Tarihi - ÖZGÜN VERİSİ KORU
-          else if (header === '24 Saat Flaş Bitiş Tarihi') {
-            worksheet[cellAddress] = { v: item.end_24h || '', t: 's' };
-          }
-
-          // 3 Saat Flaş Başlangıç Tarihi - ÖZGÜN VERİSİ KORU
-          else if (header === '3 Saat Flaş Başlangıç Tarihi') {
-            worksheet[cellAddress] = { v: item.start_3h || '', t: 's' };
-          }
-
-          // 3 Saat Flaş Bitiş Tarihi - ÖZGÜN VERİSİ KORU
-          else if (header === '3 Saat Flaş Bitiş Tarihi') {
-            worksheet[cellAddress] = { v: item.end_3h || '', t: 's' };
-          }
+          // Flaş tarih sütunları: orijinal dosyadaki değerlere DOKUNULMAZ,
+          // aynen korunur (Trendyol bu tarihleri ve formatını bekliyor; üzerine
+          // yazılırsa boşalıyor ve hiçbir ürün güncellenmiyordu).
 
           // Ürün Komisyon Tarife Seçeneği
           else if (header === 'Ürün Komisyon Tarife Seçeneği') {
@@ -1544,6 +1528,8 @@ export default function FlashProducts() {
                                                         withholding_amount: calc.breakdown.withholdingAmount,
                                                         service_fee: calc.breakdown.serviceFee,
                                                         net_vat: calc.breakdown.netVat,
+                                                        corporate_tax_amount: calc.breakdown.corporateTaxAmount,
+                                                        net_profit_before_tax: calc.breakdown.netProfitBeforeTax,
                                                         barem_used: calc.baremUsed
                                                       },
                                                       calculationDetails: {
@@ -1621,6 +1607,8 @@ export default function FlashProducts() {
                                                         withholding_amount: calc.breakdown.withholdingAmount,
                                                         service_fee: calc.breakdown.serviceFee,
                                                         net_vat: calc.breakdown.netVat,
+                                                        corporate_tax_amount: calc.breakdown.corporateTaxAmount,
+                                                        net_profit_before_tax: calc.breakdown.netProfitBeforeTax,
                                                         barem_used: calc.baremUsed
                                                       },
                                                       calculationDetails: {
@@ -1759,6 +1747,8 @@ export default function FlashProducts() {
                                                 withholding_amount: bestBaremSuggestion.breakdown.withholdingAmount,
                                                 service_fee: bestBaremSuggestion.breakdown.serviceFee,
                                                 net_vat: bestBaremSuggestion.breakdown.netVat,
+                                                corporate_tax_amount: bestBaremSuggestion.breakdown.corporateTaxAmount,
+                                                net_profit_before_tax: bestBaremSuggestion.breakdown.netProfitBeforeTax,
                                                 barem_used: bestBaremSuggestion.baremType === 'Barem 1' ? 'barem1' : 'barem2'
                                               },
                                               calculationDetails: {
@@ -1835,6 +1825,8 @@ export default function FlashProducts() {
                                                        withholding_amount: calc.breakdown.withholdingAmount,
                                                        service_fee: calc.breakdown.serviceFee,
                                                        net_vat: calc.breakdown.netVat,
+                                                        corporate_tax_amount: calc.breakdown.corporateTaxAmount,
+                                                        net_profit_before_tax: calc.breakdown.netProfitBeforeTax,
                                                        barem_used: calc.baremUsed
                                                      },
                                                      calculationDetails: {
