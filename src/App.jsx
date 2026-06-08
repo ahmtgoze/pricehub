@@ -12,18 +12,14 @@ import Landing from './pages/Landing';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import Campaigns from './pages/Campaigns';
 import PlusProductCommissionTariff from './pages/PlusProductCommissionTariff';
-
 const { Pages, Layout, mainPage } = pagesConfig;
 const mainPageKey = mainPage ?? Object.keys(Pages)[0];
 const MainPage = mainPageKey ? Pages[mainPageKey] : <></>;
-
 const LayoutWrapper = ({ children, currentPageName }) => Layout ?
   <Layout currentPageName={currentPageName}>{children}</Layout>
   : <>{children}</>;
-
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
-
   // Show loading spinner while checking app public settings or auth
   if (isLoadingPublicSettings || isLoadingAuth) {
     return (
@@ -32,7 +28,6 @@ const AuthenticatedApp = () => {
       </div>
     );
   }
-
   // Handle authentication errors
   if (authError) {
     if (authError.type === 'user_not_registered') {
@@ -43,7 +38,6 @@ const AuthenticatedApp = () => {
       return null;
     }
   }
-
   // Render the main app
   return (
     <Routes>
@@ -68,6 +62,11 @@ const AuthenticatedApp = () => {
           <Campaigns />
         </LayoutWrapper>
       } />
+      <Route path="/PlusProductCommissionTariff" element={
+        <LayoutWrapper currentPageName="PlusProductCommissionTariff">
+          <PlusProductCommissionTariff />
+        </LayoutWrapper>
+      } />
       <Route path="/plus-product-commission-tariff" element={
         <LayoutWrapper currentPageName="PlusProductCommissionTariff">
           <PlusProductCommissionTariff />
@@ -79,10 +78,7 @@ const AuthenticatedApp = () => {
     </Routes>
   );
 };
-
-
 function App() {
-
   return (
     <AuthProvider>
       <BackgroundTaskProvider>
@@ -97,5 +93,4 @@ function App() {
     </AuthProvider>
   )
 }
-
 export default App
