@@ -712,6 +712,8 @@ export default function AdvantageProductTag() {
                   withholding_amount: calc.breakdown.withholdingAmount,
                   service_fee: calc.breakdown.serviceFee,
                   net_vat: calc.breakdown.netVat,
+                  corporate_tax_amount: calc.breakdown.corporateTaxAmount,
+                  net_profit_before_tax: calc.breakdown.netProfitBeforeTax,
                   barem_used: calc.baremUsed
                 },
                 calculationDetails: {
