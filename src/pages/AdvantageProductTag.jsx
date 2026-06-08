@@ -834,21 +834,21 @@ export default function AdvantageProductTag() {
                     Akıllı Otomatik Seç
                   </Button>
                   <Button variant="outline" onClick={async () => {
+                    const startDate = format(dateRangeValue.from, 'yyyy-MM-dd');
+                    const endDate = format(dateRangeValue.to, 'yyyy-MM-dd');
+                    const recordsToDelete = savedItems.filter(r => r.platform_account === selectedPlatform && r.start_date === startDate && r.end_date === endDate);
+                    // Ekranı HEMEN temizle, silmeyi arka planda yap (anında tepki için)
+                    setUploadedData([]);
+                    setOriginalExcelData(null);
+                    toast.success('Excel silindi');
                     try {
-                      const startDate = format(dateRangeValue.from, 'yyyy-MM-dd');
-                      const endDate = format(dateRangeValue.to, 'yyyy-MM-dd');
-                      const recordsToDelete = savedItems.filter(r => r.platform_account === selectedPlatform && r.start_date === startDate && r.end_date === endDate);
-                      if (recordsToDelete.length > 0) {
-                        for (let i = 0; i < recordsToDelete.length; i += 10) {
-                          const batch = recordsToDelete.slice(i, i + 10);
-                          await Promise.all(batch.map(r => db.entities.AdvantageProductTag.delete(r.id)));
-                          if (i + 10 < recordsToDelete.length) await new Promise(resolve => setTimeout(resolve, 300));
-                        }
+                      for (let i = 0; i < recordsToDelete.length; i += 30) {
+                        const batch = recordsToDelete.slice(i, i + 30);
+                        await Promise.all(batch.map(r => db.entities.AdvantageProductTag.delete(r.id)));
+                        if (i + 30 < recordsToDelete.length) await new Promise(resolve => setTimeout(resolve, 150));
                       }
-                      setUploadedData([]);
                       queryClient.invalidateQueries(['advantageProductTags']);
-                      toast.success('Excel silindi');
-                    } catch (error) { toast.error('Silme hatası: ' + error.message); }
+                    } catch (error) { toast.error('Silme hatası (arka plan): ' + error.message); }
                   }} className="text-rose-600 hover:text-rose-700 hover:bg-rose-50">
                     <Trash2 className="mr-2 h-4 w-4" />Excel'i Sil
                   </Button>
