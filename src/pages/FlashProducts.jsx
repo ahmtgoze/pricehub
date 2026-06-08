@@ -164,7 +164,20 @@ export default function FlashProducts() {
       });
       setLocalSelections(selections);
 
-      // Excel dosyası artık base64 olarak saklanmıyor — kayıtları göster
+      // Excel'i geri yükle (sayfa yenilenince state sıfırlanmış olur)
+      const recordWithExcel = filtered.find(r => r.excel_file_url);
+      if (recordWithExcel) {
+        fetch(recordWithExcel.excel_file_url)
+          .then(r => r.arrayBuffer())
+          .then(ab => {
+            const wb = XLSX.read(new Uint8Array(ab), { type: 'array' });
+            const sn = wb.SheetNames[0];
+            setOriginalExcelData({ workbook: wb, sheetName: sn, jsonData: XLSX.utils.sheet_to_json(wb.Sheets[sn]) });
+          })
+          .catch(e => console.error('Excel restore hatası:', e));
+      } else {
+        setOriginalExcelData(null);
+      }
     } else {
       setUploadedData([]);
       setOriginalExcelData(null);
@@ -200,7 +213,17 @@ export default function FlashProducts() {
         // Orijinal Excel'i sakla
         setOriginalExcelData({ workbook, sheetName, jsonData });
 
-        // Excel dosyası orijinal formda tutulur (base64 saklanmaz)
+        // Excel'i dosya olarak yükle (URL sakla) — sayfa yenilenince geri yüklensin
+        const excelBuffer = XLSX.write(workbook, { type: 'array', bookType: 'xlsx' });
+        const excelBlob = new Blob([new Uint8Array(excelBuffer)], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+        const excelFileObj = new File([excelBlob], file.name || 'flash.xlsx', { type: excelBlob.type });
+        let excelFileUrl = null;
+        try {
+          const uploadResult = await db.integrations.Core.UploadFile({ file: excelFileObj });
+          excelFileUrl = uploadResult.file_url;
+        } catch (uploadErr) {
+          console.error('Excel upload hatası:', uploadErr);
+        }
 
         // Debug: İlk satırın sütun adlarını göster
         if (jsonData.length > 0) {
@@ -312,6 +335,10 @@ export default function FlashProducts() {
         setUploadProgress({ current: 0, total: parsed.length });
         for (let i = 0; i < parsed.length; i += 10) {
           const batch = parsed.slice(i, i + 10);
+          // Sadece ilk batch'in ilk kaydına Excel URL'ini ekle
+          if (i === 0 && batch.length > 0 && excelFileUrl) {
+            batch[0].excel_file_url = excelFileUrl;
+          }
           await db.entities.FlashProduct.bulkCreate(batch);
           setUploadProgress({ current: Math.min(i + 10, parsed.length), total: parsed.length });
           if (i + 10 < parsed.length) {
