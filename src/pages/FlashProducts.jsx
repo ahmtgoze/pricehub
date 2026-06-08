@@ -660,12 +660,11 @@ export default function FlashProducts() {
     let skippedAlreadySelected = 0;
 
     const updated = uploadedData.map(item => {
-      // Manuel seçilmişse kesinlikle dokunma
+      // Elle seçilen (manuel) ürünleri koru; diğer önceki seçimleri sıfırlayıp baştan değerlendir
       if (item.selected_type === 'manual') { skippedAlreadySelected++; return item; }
-      if (item.selected_type !== 'none') { skippedAlreadySelected++; return item; }
 
       const matchedProduct = getMatchedProduct(item);
-      if (!matchedProduct) return item;
+      if (!matchedProduct) return { ...item, selected_type: 'none', selected_price: 0 };
 
       const commission = freshCommissions.find(c =>
         c.platform_id === platform?.id &&
@@ -673,7 +672,7 @@ export default function FlashProducts() {
         c.is_active !== false
       );
 
-      if (!commission) { skippedNoCommission++; return item; }
+      if (!commission) { skippedNoCommission++; return { ...item, selected_type: 'none', selected_price: 0 }; }
 
       // ✅ 0/boş hedefleri "tanımsız" say — aksi halde hedef tutar 0 iken "kâr >= 0"
       //    her zaman sağlanıp, indirimli hedef kâr oranı dikkate alınmadan en
@@ -687,7 +686,7 @@ export default function FlashProducts() {
       const minAmount = (rawMin != null && rawMin > 0) ? rawMin : null;
 
       const hasDiscountedTarget = targetRate != null || targetAmount != null;
-      if (!hasDiscountedTarget) { skippedNoCommission++; return item; }
+      if (!hasDiscountedTarget) { skippedNoCommission++; return { ...item, selected_type: 'none', selected_price: 0 }; }
 
       // 3 Saat → 24 Saat sırasıyla dene (en düşük/en indirimli fiyattan başla)
       const ranges = [
@@ -718,7 +717,7 @@ export default function FlashProducts() {
         }
       }
 
-      return item;
+      return { ...item, selected_type: 'none', selected_price: 0 };
     });
 
     setUploadedData(updated);
@@ -1113,12 +1112,21 @@ export default function FlashProducts() {
     }
 
     try {
-      await Promise.all(selectedItems.map(item => {
-        if (item.id) {
-          return db.entities.FlashProduct.update(item.id, item);
-        }
-        return db.entities.FlashProduct.create(item);
-      }));
+      // Ekrandaki TÜM kayıtları DB ile eşitle: kayıtlı olanları güncelle
+      // (seçimi kaldırılanlar 'none' olur), id'siz seçili olanları oluştur.
+      const toUpdate = uploadedData.filter(item => item.id);
+      const toCreate = uploadedData.filter(item => !item.id && item.selected_type !== 'none');
+
+      for (let i = 0; i < toUpdate.length; i += 30) {
+        const batch = toUpdate.slice(i, i + 30);
+        await Promise.all(batch.map(item => db.entities.FlashProduct.update(item.id, item)));
+        if (i + 30 < toUpdate.length) await new Promise(resolve => setTimeout(resolve, 200));
+      }
+      for (let i = 0; i < toCreate.length; i += 30) {
+        const batch = toCreate.slice(i, i + 30);
+        await Promise.all(batch.map(item => db.entities.FlashProduct.create(item)));
+        if (i + 30 < toCreate.length) await new Promise(resolve => setTimeout(resolve, 200));
+      }
 
       // Güncel veriyi veritabanından yeniden yükle
       const startDate = format(dateRangeValue.from, 'yyyy-MM-dd');
@@ -1133,7 +1141,7 @@ export default function FlashProducts() {
 
       setUploadedData(updatedData);
 
-      toast.success(`${selectedItems.length} ürün güncellendi`);
+      toast.success(`${selectedItems.length} ürün kaydedildi`);
       queryClient.invalidateQueries(['flashProducts']);
     } catch (error) {
       toast.error('Kayıt hatası: ' + error.message);
