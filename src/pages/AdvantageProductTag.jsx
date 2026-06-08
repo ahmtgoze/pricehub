@@ -235,6 +235,8 @@ export default function AdvantageProductTag() {
             size: row['BEDEN'] || '',
             model_code: row['MODEL KODU'] || '',
             category: matchedProduct?.category_name || row['KATEGORİ'] || '',
+            stock: parseFloat(row['STOK']) || 0,
+            brand: row['MARKA'] || '',
             commission_rate: commissionRate,
             has_commission_tariff: row['Ürün Komisyon Tarife Seçeneği'] || row['KOMİSYON TARİFESİ'] || 'Yok',
             advantage_min: parseFloat(row['Avantajlı Ürün Alt Limit'] ?? row['1 YILDIZ ALT FİYAT']) || 0,
