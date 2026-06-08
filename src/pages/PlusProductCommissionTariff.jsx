@@ -547,15 +547,14 @@ export default function PlusProductCommissionTariff() {
         (barcode != null && i.barcode && String(i.barcode) === String(barcode)) ||
         (urunId != null && i.product_id && String(i.product_id) === String(urunId))
       );
-      const secimCell = XLSX.utils.encode_cell({ r: R, c: colPlusSecim });
-      const iptalCell = colIptal >= 0 ? XLSX.utils.encode_cell({ r: R, c: colIptal }) : null;
+      // SADECE seçili satıra yaz; seçilmeyenlere DOKUNMA (Trendyol'un orijinal hücreleri/formülü korunsun)
       if (item && item.selected_type !== 'none' && item.selected_price > 0) {
-        worksheet[secimCell] = { v: item.selected_price, t: 'n' };
-        if (iptalCell) worksheet[iptalCell] = { v: 'Hayır', t: 's' };
-      } else {
-        // seçilmeyenleri boş bırak
-        worksheet[secimCell] = { v: '', t: 's' };
-        if (iptalCell) worksheet[iptalCell] = { v: '', t: 's' };
+        const secimCell = XLSX.utils.encode_cell({ r: R, c: colPlusSecim });
+        worksheet[secimCell] = { v: Number(item.selected_price), t: 'n', z: '0.00' };
+        if (colIptal >= 0) {
+          const iptalCell = XLSX.utils.encode_cell({ r: R, c: colIptal });
+          worksheet[iptalCell] = { v: 'Hayır', t: 's' };
+        }
       }
     }
 
