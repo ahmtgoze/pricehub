@@ -169,7 +169,7 @@ export default function PlusProductCommissionTariff() {
         setOriginalExcelData({ workbook, sheetName, jsonData });
 
         // Excel'i dosya olarak yükle (URL sakla) — yenilemede kaybolmasın
-        const excelBuffer = XLSX.write(workbook, { type: 'array', bookType: 'xlsx' });
+        const excelBuffer = XLSX.write(workbook, { type: 'array', bookType: 'xlsx', bookSST: true });
         const excelBlob = new Blob([new Uint8Array(excelBuffer)], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
         const excelFileObj = new File([excelBlob], file.name || 'plus.xlsx', { type: excelBlob.type });
         let excelFileUrl = null;
@@ -562,7 +562,7 @@ export default function PlusProductCommissionTariff() {
     const fromStr = dateRangeValue?.from ? format(dateRangeValue.from, 'd MMMM', { locale: tr }) : '';
     const toStr = dateRangeValue?.to ? format(dateRangeValue.to, 'd MMMM', { locale: tr }) : '';
     const fileName = `plus-komisyon-${slugify(fromStr)}-${slugify(toStr)}.xlsx`;
-    XLSX.writeFile(workbook, fileName);
+    XLSX.writeFile(workbook, fileName, { bookSST: true });
     toast.success('Excel dosyası indirildi');
   };
 
