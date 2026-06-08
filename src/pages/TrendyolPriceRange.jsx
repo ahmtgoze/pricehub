@@ -548,9 +548,16 @@ export default function TrendyolPriceRange() {
       }
 
       const toNum = (v) => (v != null && v !== '') ? Number(v) : null;
-      const targetRate = toNum(commission.discounted_target_profit_rate);
-      const targetAmount = toNum(commission.discounted_target_profit_amount);
-      const minAmount = toNum(commission.discounted_minimum_profit_amount);
+      // ÖNEMLİ: 0 (veya boş) değerleri "tanımsız" say. Aksi halde hedef tutar 0 iken
+      // "kâr >= 0" şartı her zaman sağlanıp, kâr oranı hedefine (ör. %50) hiç bakılmadan
+      // en ucuz barem (Aralık 4) seçiliyordu. 0'ı null'a çevirince sadece geçerli
+      // (0'dan büyük) hedefler dikkate alınır.
+      const rawRate = toNum(commission.discounted_target_profit_rate);
+      const rawAmount = toNum(commission.discounted_target_profit_amount);
+      const rawMin = toNum(commission.discounted_minimum_profit_amount);
+      const targetRate = (rawRate != null && rawRate > 0) ? rawRate : null;
+      const targetAmount = (rawAmount != null && rawAmount > 0) ? rawAmount : null;
+      const minAmount = (rawMin != null && rawMin > 0) ? rawMin : null;
 
       const hasDiscountedTarget = targetRate != null || targetAmount != null;
       if (!hasDiscountedTarget) {
@@ -562,7 +569,8 @@ export default function TrendyolPriceRange() {
       const systemPrice = getSystemPrice(item);
       const systemCommissionRate = systemPrice?.commission_rate ?? 0;
 
-      // Aralık 4'ten 1'e doğru dene
+      // Aralık 4'ten 1'e doğru dene (en uygun/en ucuz fiyattan başla),
+      // hedefi karşılayan İLK aralıkta dur.
       const ranges = [
         { rangeNum: 4, price: item.price_range_4_max, commissionRate: systemCommissionRate },
         { rangeNum: 3, price: item.price_range_3_max, commissionRate: systemCommissionRate },
@@ -577,11 +585,16 @@ export default function TrendyolPriceRange() {
         const profit = calc.profit || 0;
         const profitRate = calc.profitRate || 0;
 
-        if (minAmount != null && minAmount > 0 && profit < minAmount) continue;
+        // Minimum kâr tutarı altındaki aralıkları ele
+        if (minAmount != null && profit < minAmount) continue;
 
-        let meetsTarget = false;
-        if (targetRate != null && profitRate >= targetRate) meetsTarget = true;
-        if (targetAmount != null && profit >= targetAmount) meetsTarget = true;
+        // Hedefe ulaşma kontrolü:
+        // - Oran hedefi varsa, kâr oranı >= hedef oran OLMALI (alt sınır)
+        // - Tutar hedefi varsa, kâr tutarı >= hedef tutar OLMALI
+        // Her iki hedef tanımlıysa ikisi birden sağlanmalı (sıkı kontrol).
+        let meetsTarget = true;
+        if (targetRate != null && profitRate < targetRate) meetsTarget = false;
+        if (targetAmount != null && profit < targetAmount) meetsTarget = false;
 
         if (meetsTarget) {
           selectedCount++;
