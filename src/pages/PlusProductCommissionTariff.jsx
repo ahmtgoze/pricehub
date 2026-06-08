@@ -520,6 +520,23 @@ export default function PlusProductCommissionTariff() {
     }
   };
 
+  const handleDeleteExcel = async () => {
+    const toDelete = uploadedData.filter(i => i.id).map(i => i.id);
+    setUploadedData([]);
+    setOriginalExcelData(null);
+    toast.success('Excel silindi');
+    try {
+      for (let i = 0; i < toDelete.length; i += 30) {
+        const batch = toDelete.slice(i, i + 30);
+        await Promise.all(batch.map(id => PlusEntity.delete(id)));
+        if (i + 30 < toDelete.length) await new Promise(r => setTimeout(r, 150));
+      }
+      queryClient.invalidateQueries(['plusProductCommissionTariffs']);
+    } catch (e) {
+      console.error('Silme hatası:', e);
+    }
+  };
+
   const handleExport = () => {
     if (uploadedData.length === 0) { toast.error('Yüklenmiş Excel dosyası bulunamadı'); return; }
     if (!originalExcelData) { toast.error('Orijinal Excel dosyası bulunamadı'); return; }
@@ -682,7 +699,7 @@ export default function PlusProductCommissionTariff() {
               {uploadedData.length > 0 && (
                 <>
                   <Button onClick={handleSmartAutoSelect} className="bg-orange-500 hover:bg-orange-600 text-white gap-2"><Sparkles className="h-4 w-4" />Akıllı Otomatik Seç</Button>
-                  <Button variant="outline" onClick={() => { setUploadedData([]); setOriginalExcelData(null); toast.success('Excel silindi'); }} className="text-rose-600 hover:text-rose-700 hover:bg-rose-50"><Trash2 className="mr-2 h-4 w-4" />Excel'i Sil</Button>
+                  <Button variant="outline" onClick={handleDeleteExcel} className="text-rose-600 hover:text-rose-700 hover:bg-rose-50"><Trash2 className="mr-2 h-4 w-4" />Excel'i Sil</Button>
                   <Button variant="outline" onClick={handleSave}><Check className="mr-2 h-4 w-4" />Seçimleri Kaydet ({selectedCount})</Button>
                   <Button variant="outline" onClick={() => { setUploadedData(uploadedData.map(item => ({ ...item, selected_type: 'none', selected_price: 0 }))); toast.success('Tüm seçimler kaldırıldı'); }}>Seçimleri Kaldır</Button>
                   <Button variant="outline" onClick={handleExport}><Download className="mr-2 h-4 w-4" />Excel İndir</Button>
