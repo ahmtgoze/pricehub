@@ -675,15 +675,21 @@ export default function FlashProducts() {
 
       if (!commission) { skippedNoCommission++; return item; }
 
-      const hasDiscountedRate = commission.discounted_target_profit_rate != null;
-      const hasDiscountedAmount = commission.discounted_target_profit_amount != null;
-      if (!hasDiscountedRate && !hasDiscountedAmount) { skippedNoCommission++; return item; }
+      // ✅ 0/boş hedefleri "tanımsız" say — aksi halde hedef tutar 0 iken "kâr >= 0"
+      //    her zaman sağlanıp, indirimli hedef kâr oranı dikkate alınmadan en
+      //    indirimli (en düşük fiyat) aralık seçiliyordu.
+      const toNum = (v) => (v != null && v !== '') ? Number(v) : null;
+      const rawRate = toNum(commission.discounted_target_profit_rate);
+      const rawAmount = toNum(commission.discounted_target_profit_amount);
+      const rawMin = toNum(commission.discounted_minimum_profit_amount);
+      const targetRate = (rawRate != null && rawRate > 0) ? rawRate : null;
+      const targetAmount = (rawAmount != null && rawAmount > 0) ? rawAmount : null;
+      const minAmount = (rawMin != null && rawMin > 0) ? rawMin : null;
 
-      const targetRate = commission.discounted_target_profit_rate ?? null;
-      const targetAmount = commission.discounted_target_profit_amount ?? null;
-      const minAmount = commission.discounted_minimum_profit_amount ?? null;
+      const hasDiscountedTarget = targetRate != null || targetAmount != null;
+      if (!hasDiscountedTarget) { skippedNoCommission++; return item; }
 
-      // 3 Saat → 24 Saat sırasıyla dene (en düşük fiyattan başla)
+      // 3 Saat → 24 Saat sırasıyla dene (en düşük/en indirimli fiyattan başla)
       const ranges = [
         { rangeType: 'flash_3h', price: item.price_3h },
         { rangeType: 'flash_24h', price: item.price_24h },
@@ -695,11 +701,16 @@ export default function FlashProducts() {
         if (commissionRate === null) continue;
         const calc = calculateProfit(range.price, commissionRate, item);
         if (!calc.breakdown) continue;
+
+        // İndirimli minimum kâr tutarı altındaki aralıkları ele
         if (minAmount != null && calc.profit < minAmount) continue;
 
-        let meetsTarget = false;
-        if (targetRate != null && calc.profitRate >= targetRate) meetsTarget = true;
-        if (targetAmount != null && calc.profit >= targetAmount) meetsTarget = true;
+        // Tanımlı olan TÜM hedefler sağlanmalı (sıkı kontrol):
+        // - indirimli hedef kâr oranı varsa, kâr oranı >= hedef OLMALI
+        // - indirimli hedef kâr tutarı varsa, kâr tutarı >= hedef OLMALI
+        let meetsTarget = true;
+        if (targetRate != null && calc.profitRate < targetRate) meetsTarget = false;
+        if (targetAmount != null && calc.profit < targetAmount) meetsTarget = false;
 
         if (meetsTarget) {
           selectedCount++;
