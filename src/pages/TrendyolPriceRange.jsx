@@ -569,13 +569,20 @@ export default function TrendyolPriceRange() {
       const systemPrice = getSystemPrice(item);
       const systemCommissionRate = systemPrice?.commission_rate ?? 0;
 
+      // Her baremin KENDİ (indirimli) komisyonunu kullan — kartta gösterilen oranla aynı.
+      // Excel'deki barem komisyonu 0/boşsa sistem komisyonuna düş.
+      const commFor = (n) => {
+        const c = Number(item[`commission_${n}`]);
+        return (c && c > 0) ? c : systemCommissionRate;
+      };
+
       // Aralık 4'ten 1'e doğru dene (en uygun/en ucuz fiyattan başla),
       // hedefi karşılayan İLK aralıkta dur.
       const ranges = [
-        { rangeNum: 4, price: item.price_range_4_max, commissionRate: systemCommissionRate },
-        { rangeNum: 3, price: item.price_range_3_max, commissionRate: systemCommissionRate },
-        { rangeNum: 2, price: item.price_range_2_max, commissionRate: systemCommissionRate },
-        { rangeNum: 1, price: item.price_range_1_min, commissionRate: systemCommissionRate },
+        { rangeNum: 4, price: item.price_range_4_max, commissionRate: commFor(4) },
+        { rangeNum: 3, price: item.price_range_3_max, commissionRate: commFor(3) },
+        { rangeNum: 2, price: item.price_range_2_max, commissionRate: commFor(2) },
+        { rangeNum: 1, price: item.price_range_1_min, commissionRate: commFor(1) },
       ];
 
       for (const range of ranges) {
