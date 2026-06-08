@@ -453,39 +453,26 @@ export default function AdvantageProductTag() {
       const commission = findCommission(matchedProduct);
       if (!commission) { skippedNoMatch++; return item; }
 
-      const targetRate = commission.discounted_target_profit_rate ?? null;
-      const targetAmount = commission.discounted_target_profit_amount ?? null;
-      const minAmount = commission.discounted_minimum_profit_amount ?? null;
+      // ✅ 0/boş hedefleri "tanımsız" say — aksi halde hedef tutar 0 iken "kâr >= 0"
+      //    her zaman sağlanıp, indirimli hedef kâr oranı dikkate alınmadan en
+      //    indirimli aralık seçiliyordu. 0'ı null'a çevirince sadece geçerli hedefler işler.
+      const toNum = (v) => (v != null && v !== '') ? Number(v) : null;
+      const rawRate = toNum(commission.discounted_target_profit_rate);
+      const rawAmount = toNum(commission.discounted_target_profit_amount);
+      const rawMin = toNum(commission.discounted_minimum_profit_amount);
+      const targetRate = (rawRate != null && rawRate > 0) ? rawRate : null;
+      const targetAmount = (rawAmount != null && rawAmount > 0) ? rawAmount : null;
+      const minAmount = (rawMin != null && rawMin > 0) ? rawMin : null;
 
       const hasDiscountedTarget = targetRate != null || targetAmount != null;
       if (!hasDiscountedTarget) { skippedNoCommission++; return item; }
 
-      // ✅ Süper Avantaj → Çok Avantaj → Avantaj
+      // Süper Avantaj → Çok Avantaj → Avantaj (en indirimliden başla),
+      // hedefi karşılayan İLK aralıkta dur. Komisyon kartla aynı (getDynamicCommissionForPrice).
       const ranges = [
-        {
-          rangeType: 'mega_advantage',
-          price: item.mega_advantage_max,
-          min: item.mega_advantage_min,
-          commission: item.has_commission_tariff === 'Var'
-            ? (item.mega_advantage_commission || 0)
-            : getDynamicCommissionForPrice(item, item.mega_advantage_max)
-        },
-        {
-          rangeType: 'super_advantage',
-          price: item.super_advantage_max,
-          min: item.super_advantage_min,
-          commission: item.has_commission_tariff === 'Var'
-            ? (item.super_advantage_commission || 0)
-            : getDynamicCommissionForPrice(item, item.super_advantage_max)
-        },
-        {
-          rangeType: 'advantage',
-          price: item.advantage_max,
-          min: item.advantage_min,
-          commission: item.has_commission_tariff === 'Var'
-            ? (item.advantage_commission || 0)
-            : getDynamicCommissionForPrice(item, item.advantage_max)
-        },
+        { rangeType: 'mega_advantage', price: item.mega_advantage_max, min: item.mega_advantage_min, commission: getDynamicCommissionForPrice(item, item.mega_advantage_max) },
+        { rangeType: 'super_advantage', price: item.super_advantage_max, min: item.super_advantage_min, commission: getDynamicCommissionForPrice(item, item.super_advantage_max) },
+        { rangeType: 'advantage', price: item.advantage_max, min: item.advantage_min, commission: getDynamicCommissionForPrice(item, item.advantage_max) },
       ];
 
       for (const range of ranges) {
@@ -496,11 +483,15 @@ export default function AdvantageProductTag() {
         const profit = calc.profit || 0;
         const profitRate = calc.profitRate || 0;
 
-        if (minAmount != null && minAmount > 0 && profit < minAmount) continue;
+        // İndirimli minimum kâr tutarı altındaki aralıkları ele
+        if (minAmount != null && profit < minAmount) continue;
 
-        let meetsTarget = false;
-        if (targetRate != null && profitRate >= targetRate) meetsTarget = true;
-        if (targetAmount != null && profit >= targetAmount) meetsTarget = true;
+        // Tanımlı olan TÜM hedefler sağlanmalı (sıkı kontrol):
+        // - indirimli hedef kâr oranı varsa, kâr oranı >= hedef OLMALI
+        // - indirimli hedef kâr tutarı varsa, kâr tutarı >= hedef OLMALI
+        let meetsTarget = true;
+        if (targetRate != null && profitRate < targetRate) meetsTarget = false;
+        if (targetAmount != null && profit < targetAmount) meetsTarget = false;
 
         if (meetsTarget) {
           selectedCount++;
