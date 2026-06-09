@@ -109,6 +109,18 @@ export default function Campaigns() {
     queryFn: () => CampaignProduct.filter({ created_by: userEmail }),
     enabled: !!userEmail,
   });
+  // Ürün Komisyon Tarifesi (normal kampanyalar için komisyon kaynağı)
+  const { data: priceRanges = [] } = useQuery({
+    queryKey: ['trendyolPriceRanges', userEmail],
+    queryFn: () => db.entities.TrendyolPriceRange.filter({ created_by: userEmail }),
+    enabled: !!userEmail,
+  });
+  // Plus Ürün Komisyon Tarifesi (Plus kampanyaları için komisyon kaynağı)
+  const { data: plusTariffs = [] } = useQuery({
+    queryKey: ['plusProductCommissionTariffs', userEmail],
+    queryFn: () => db.entities.PlusProductCommissionTariff.filter({ created_by: userEmail }),
+    enabled: !!userEmail,
+  });
 
   const uniquePlatforms = platforms.filter((p, idx, arr) => arr.findIndex(x => x.id === p.id) === idx);
   const trendyolPlatforms = uniquePlatforms
@@ -254,6 +266,51 @@ export default function Campaigns() {
     ) || null;
   };
 
+  // Bir tarife tablosunda ürünün kaydını bul (seçimi olan + en güncel tercih edilir)
+  const matchTariffRecord = (records, item) => {
+    const matchedProduct = getMatchedProduct(item);
+    const cands = records.filter(r =>
+      (item.matched_product_id && r.matched_product_id === item.matched_product_id) ||
+      (matchedProduct && r.matched_product_id === matchedProduct.id) ||
+      (r.barcode && item.barcode && String(r.barcode) === String(item.barcode))
+    );
+    if (cands.length === 0) return null;
+    const hasSel = (r) => ((r.selected_range && r.selected_range !== 'none') || (r.selected_type && r.selected_type !== 'none')) ? 1 : 0;
+    return [...cands].sort((a, b) => {
+      if (hasSel(a) !== hasSel(b)) return hasSel(b) - hasSel(a);
+      return String(b.start_date || '').localeCompare(String(a.start_date || ''));
+    })[0];
+  };
+
+  // Ürünün komisyon oranı — kampanya türüne göre ilgili tarife sayfasından çekilir
+  const getProductCommissionRate = (item) => {
+    const isPlus = managingCampaign?.campaign_type === 'trendyol_plus';
+    if (isPlus) {
+      const pr = matchTariffRecord(plusTariffs, item);
+      if (pr) {
+        const c = parseFloat(pr.plus_commission_offer) || parseFloat(pr.calculated_commission) || parseFloat(pr.current_commission) || 0;
+        if (c > 0) return c;
+      }
+    } else {
+      const tr = matchTariffRecord(priceRanges, item);
+      if (tr) {
+        let c = 0;
+        if (tr.has_commission_tariff === 'Var' || tr.has_commission_tariff === 'true') {
+          if (tr.selected_range === 'range_1') c = tr.commission_1;
+          else if (tr.selected_range === 'range_2') c = tr.commission_2;
+          else if (tr.selected_range === 'range_3') c = tr.commission_3;
+          else if (tr.selected_range === 'range_4') c = tr.commission_4;
+          else if (tr.selected_range === 'manual') c = tr.manual_commission;
+        }
+        if (!c) c = parseFloat(tr.current_commission) || 0;
+        if (c > 0) return c;
+      }
+    }
+    // yedek: kategori komisyonu (Komisyonlar tablosu)
+    const commRec = getCommissionRecord(item);
+    return parseFloat(commRec?.commission_rate) || parseFloat(item.current_commission) || 0;
+  };
+
   const calculateProfit = (campaignPrice, item) => {
     try {
       const effPrice = effectiveSellerPrice(campaignPrice);
@@ -263,8 +320,7 @@ export default function Campaigns() {
       const platform = uniquePlatforms.find(p => p.name === selectedPlatform);
       if (!platform) return { profit: 0, profitRate: 0, breakdown: null };
 
-      const commRec = getCommissionRecord(item);
-      const commissionRate = parseFloat(commRec?.commission_rate) || parseFloat(item.current_commission) || 0;
+      const commissionRate = getProductCommissionRate(item);
 
       const platformShippingRates = shippingRates.filter(r =>
         r.is_active !== false && (r.platform_id === platform.id || r.platform_type === platform.platform_type)
