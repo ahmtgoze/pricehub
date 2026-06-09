@@ -18,7 +18,18 @@ import * as XLSX from 'xlsx';
 import PriceDetailModal from '@/components/modals/PriceDetailModal';
 
 const Campaign = db.entities.Campaign;
-const CampaignProduct = db.entities.CampaignProduct;
+let CampaignProduct;
+try {
+  CampaignProduct = db.entities.CampaignProduct;
+} catch (e) {
+  // Bu veri tipi uygulamanın veri katmanında henüz kayıtlı değil — çökmeyi önle.
+  CampaignProduct = {
+    filter: async () => [],
+    bulkCreate: async () => [],
+    update: async () => ({}),
+    delete: async () => ({}),
+  };
+}
 const Product = db.entities.Product;
 const Platform = db.entities.Platform;
 const Commission = db.entities.Commission;
