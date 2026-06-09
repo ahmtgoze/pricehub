@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { db } from '@/api/db';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Plus, Edit2, Trash2, Calendar as CalendarIcon, PackagePlus, ArrowLeft, Download, Sparkles, Check, Info } from 'lucide-react';
+import { Plus, Edit2, Trash2, Calendar as CalendarIcon, Download, Sparkles, Check, Info } from 'lucide-react';
 import { calculatePriceBreakdown, findDesiShippingRate } from '@/components/PriceCalculationEngine';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -680,7 +680,7 @@ export default function Campaigns() {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-indigo-50/30">
         <div className="max-w-[1600px] mx-auto px-6 py-8">
-          <Button variant="outline" onClick={closeManager} className="mb-4"><ArrowLeft className="h-4 w-4 mr-2" />Kampanyalara Dön</Button>
+          <Button variant="outline" onClick={closeManager} className="mb-4">← Kampanyalara Dön</Button>
           <div className="mb-6">
             <h1 className="text-2xl font-bold text-slate-900">Ürün Ekle — {getTypeLabel(managingCampaign.campaign_type)}</h1>
             <p className="text-slate-500 mt-1">{campaignTitle(managingCampaign)} · {safeDate(managingCampaign.start_date)} - {safeDate(managingCampaign.end_date)}</p>
@@ -928,7 +928,7 @@ export default function Campaigns() {
                     <p className="text-sm text-slate-500 mt-3">{safeDate(campaign.start_date)} - {safeDate(campaign.end_date)}</p>
                   </div>
                   <div className="flex gap-2 shrink-0">
-                    <Button size="sm" className="bg-orange-500 hover:bg-orange-600" onClick={() => openManager(campaign)}><PackagePlus className="h-4 w-4 mr-1" />Ürün Ekle</Button>
+                    <Button size="sm" className="bg-orange-500 hover:bg-orange-600" onClick={() => openManager(campaign)}><Plus className="h-4 w-4 mr-1" />Ürün Ekle</Button>
                     <Button size="sm" variant="outline" onClick={() => openEdit(campaign)}><Edit2 className="h-4 w-4" /></Button>
                     <Button size="sm" variant="outline" className="text-rose-600 hover:text-rose-700" onClick={() => handleDelete(campaign.id)}><Trash2 className="h-4 w-4" /></Button>
                   </div>
