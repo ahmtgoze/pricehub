@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Download, Trash2, RefreshCw, Search, Package } from 'lucide-react';
+import { Download, Trash2, RefreshCw, Search, PackageOpen } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
@@ -163,108 +163,120 @@ export default function UpdatedCosts() {
 
     const exportData = isHepsiburada
       ? updatedCosts.map(p => ({
-          'HB Sku': p.hb_sku, 'Barkod': p.barkod, 'Merchant Sku': p.merchant_sku,
-          'Kategori İsmi': p.category, 'Ürün Adı': p.product_name,
-          'Hepsiburada  Satış Fiyatı': p.sale_price, 'Stok': p.stock,
-          'Ürün Maliyeti ( KDV Dahil)': p.cost, 'Maliyet KDV Oranı': p.vat_rate,
-          'Para Birimi': p.currency, 'Ürün Desisi': p.desi,
-          'Ekstra Maliyet (%)': '', 'Ekstra Maliyet (TL)': p.extra_cost || ''
+          'HB Sku': p.hb_sku,
+          'Barkod': p.barkod,
+          'Merchant Sku': p.merchant_sku,
+          'Kategori İsmi': p.category,
+          'Ürün Adı': p.product_name,
+          'Hepsiburada  Satış Fiyatı': p.sale_price,
+          'Stok': p.stock,
+          'Ürün Maliyeti ( KDV Dahil)': p.cost,
+          'Maliyet KDV Oranı': p.vat_rate,
+          'Para Birimi': p.currency,
+          'Ürün Desisi': p.desi,
+          'Ekstra Maliyet (%)': '',
+          'Ekstra Maliyet (TL)': p.extra_cost || ''
         }))
       : updatedCosts.map(p => ({
-          'Barkod': p.barkod, 'Model Kodu': p.model_code, 'Stok Kodu': p.merchant_sku,
-          'Kategori İsmi': p.category, 'Ürün Adı': p.product_name,
-          'Trendyol  Satış Fiyatı': p.sale_price, 'Stok': p.stock,
-          'Ürün Maliyeti ( KDV Dahil)': p.cost, 'Maliyet KDV Oranı': p.vat_rate,
-          'Para Birimi': p.currency, 'Ürün Desisi': p.desi,
-          'Ekstra Maliyet (%)': '', 'Ekstra Maliyet (TL)': p.extra_cost || ''
+          'Barkod': p.barkod,
+          'Model Kodu': p.model_code,
+          'Stok Kodu': p.merchant_sku,
+          'Kategori İsmi': p.category,
+          'Ürün Adı': p.product_name,
+          'Trendyol  Satış Fiyatı': p.sale_price,
+          'Stok': p.stock,
+          'Ürün Maliyeti ( KDV Dahil)': p.cost,
+          'Maliyet KDV Oranı': p.vat_rate,
+          'Para Birimi': p.currency,
+          'Ürün Desisi': p.desi,
+          'Ekstra Maliyet (%)': '',
+          'Ekstra Maliyet (TL)': p.extra_cost || ''
         }));
 
     const worksheet = XLSX.utils.json_to_sheet(exportData);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, 'Maliyetler');
-    XLSX.writeFile(workbook, `${selectedPlatform.replace(/\s+/g, '_')}_guncellenenmis_maliyetler.xlsx`);
+    XLSX.writeFile(workbook, `${selectedPlatform.replace(/\s+/g, '_')}_guncellenen_maliyetler.xlsx`);
     toast.success('Excel indirildi');
   };
 
   const isHB = activePlatforms.find(p => p.name === selectedPlatform)?.platform_type === 'hepsiburada';
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <div className="max-w-[1600px] mx-auto px-6 py-8">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-indigo-50/30">
+      <div className="max-w-[1400px] mx-auto px-3 sm:px-6 py-5 sm:py-8">
 
         {/* Başlık */}
-        <div className="mb-8">
+        <div className="mb-6">
           <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Ürün Maliyetleri</h1>
-          <p className="text-slate-500 text-sm mt-1">Eşleşmiş ürünlerin güncel maliyet verilerini görüntüleyin ve indirin</p>
+          <p className="text-slate-500 text-sm mt-1">Eşleşmiş pazaryeri ürünlerinin maliyet verilerini görüntüleyin ve dışa aktarın</p>
         </div>
 
-        {/* Kontrol Çubuğu */}
-        <div className="bg-white rounded-2xl border border-slate-200 p-5 mb-5 shadow-sm">
-          <div className="flex flex-col gap-3 md:flex-row md:items-center md:gap-3">
-            {/* Platform seçici */}
-            <Select value={selectedPlatform} onValueChange={setSelectedPlatform}>
-              <SelectTrigger className="w-full md:w-56 h-9 rounded-lg border-slate-200 text-sm">
-                <SelectValue placeholder="Platform seçin" />
-              </SelectTrigger>
-              <SelectContent>
-                {activePlatforms.map(p => (
-                  <SelectItem key={p.id} value={p.name}>{p.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            {/* Arama */}
-            <div className="relative flex-1 max-w-sm">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
-              <Input
-                placeholder="Ürün, barkod veya SKU ara..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-8 h-9 rounded-lg border-slate-200 text-sm"
-              />
+        {/* Filtre / Kontrol Kartı */}
+        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 mb-6">
+          <div className="flex flex-wrap gap-3 items-end">
+            <div>
+              <p className="text-xs font-medium text-slate-500 mb-1.5">Platform</p>
+              <Select value={selectedPlatform} onValueChange={setSelectedPlatform}>
+                <SelectTrigger className="w-56">
+                  <SelectValue placeholder="Platform seçin" />
+                </SelectTrigger>
+                <SelectContent>
+                  {activePlatforms.map(p => (
+                    <SelectItem key={p.id} value={p.name}>{p.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
-            {/* Sıralama */}
-            <Select value={sortBy} onValueChange={setSortBy}>
-              <SelectTrigger className="w-full md:w-52 h-9 rounded-lg border-slate-200 text-sm">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="name">Barkoda göre (A→Z)</SelectItem>
-                <SelectItem value="cost">Maliyete göre (↑)</SelectItem>
-              </SelectContent>
-            </Select>
+            <div className="flex-1 min-w-[200px] max-w-xs">
+              <p className="text-xs font-medium text-slate-500 mb-1.5">Arama</p>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+                <Input
+                  placeholder="Ürün, barkod veya SKU..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-8"
+                />
+              </div>
+            </div>
 
-            <div className="flex items-center gap-2 md:ml-auto">
-              <Button
-                onClick={handleRefresh}
-                variant="outline"
-                size="sm"
-                className="h-9 rounded-lg border-slate-200 text-slate-600 text-sm gap-1.5"
-              >
-                <RefreshCw className="h-3.5 w-3.5" />
-                Yenile
+            <div>
+              <p className="text-xs font-medium text-slate-500 mb-1.5">Sırala</p>
+              <Select value={sortBy} onValueChange={setSortBy}>
+                <SelectTrigger className="w-48">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="name">Barkod (A→Z)</SelectItem>
+                  <SelectItem value="cost">Maliyet (Artan)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex items-center gap-2 ml-auto">
+              <Button variant="outline" onClick={handleRefresh} className="gap-1.5">
+                <RefreshCw className="h-4 w-4" />
+                Güncelle
               </Button>
-
               {selectedPlatform && (
                 <Button
                   onClick={handleExcelDownload}
                   disabled={updatedCosts.length === 0}
-                  size="sm"
-                  className="h-9 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-sm gap-1.5"
+                  className="bg-green-600 hover:bg-green-700 gap-1.5"
                 >
-                  <Download className="h-3.5 w-3.5" />
-                  Excel İndir
+                  <Download className="h-4 w-4" />
+                  Excel'e Aktar
                 </Button>
               )}
-
               {selectedRows.size > 0 && (
                 <Button
+                  variant="destructive"
                   onClick={() => setDeleteDialogOpen(true)}
-                  size="sm"
-                  className="h-9 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-sm gap-1.5"
+                  className="gap-1.5"
                 >
-                  <Trash2 className="h-3.5 w-3.5" />
+                  <Trash2 className="h-4 w-4" />
                   Sil ({selectedRows.size})
                 </Button>
               )}
@@ -272,150 +284,114 @@ export default function UpdatedCosts() {
           </div>
         </div>
 
-        {/* Özet Bant */}
+        {/* Özet satırı */}
         {updatedCosts.length > 0 && (
-          <div className="flex items-center gap-4 mb-3 px-1">
+          <div className="flex items-center gap-3 mb-3 px-1">
             <span className="text-sm text-slate-500">
-              <span className="font-semibold text-slate-900">{updatedCosts.length}</span> ürün
-              {selectedRows.size > 0 && (
-                <span className="ml-2 text-indigo-600 font-medium">· {selectedRows.size} seçili</span>
-              )}
+              Toplam <span className="font-semibold text-slate-900">{updatedCosts.length}</span> ürün
             </span>
+            {selectedRows.size > 0 && (
+              <span className="text-sm text-indigo-600 font-medium">· {selectedRows.size} seçili</span>
+            )}
           </div>
         )}
 
         {/* Tablo */}
         {updatedCosts.length > 0 ? (
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-slate-50 border-b border-slate-200 hover:bg-slate-50">
-                    <TableHead className="w-10 pl-4">
+          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-x-auto">
+            <Table>
+              <TableHeader className="bg-gray-50">
+                <TableRow>
+                  <TableHead className="w-12">
+                    <Checkbox
+                      checked={selectedRows.size === updatedCosts.length && updatedCosts.length > 0}
+                      onCheckedChange={handleSelectAll}
+                    />
+                  </TableHead>
+                  {isHB ? (
+                    <>
+                      <TableHead>HB Sku</TableHead>
+                      <TableHead>Barkod</TableHead>
+                      <TableHead>Merchant Sku</TableHead>
+                    </>
+                  ) : (
+                    <>
+                      <TableHead>Barkod</TableHead>
+                      <TableHead>Model Kodu</TableHead>
+                      <TableHead>Stok Kodu</TableHead>
+                    </>
+                  )}
+                  <TableHead>Kategori</TableHead>
+                  <TableHead className="min-w-[180px]">Ürün Adı</TableHead>
+                  <TableHead>{isHB ? 'HB Satış Fiyatı' : 'Trendyol Satış Fiyatı'}</TableHead>
+                  <TableHead>Stok</TableHead>
+                  <TableHead className="bg-yellow-50">Maliyet (KDV Dahil)</TableHead>
+                  <TableHead className="bg-yellow-50">KDV Oranı</TableHead>
+                  <TableHead className="bg-yellow-50">Para Birimi</TableHead>
+                  <TableHead className="bg-yellow-50">Desi</TableHead>
+                  <TableHead className="bg-yellow-50">Ekstra Maliyet (%)</TableHead>
+                  <TableHead className="bg-yellow-50">Ekstra Maliyet (TL)</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {updatedCosts.map((row) => (
+                  <TableRow key={row.id} className={selectedRows.has(row.id) ? 'bg-blue-50' : ''}>
+                    <TableCell>
                       <Checkbox
-                        checked={selectedRows.size === updatedCosts.length && updatedCosts.length > 0}
-                        onCheckedChange={handleSelectAll}
-                        className="border-slate-300"
+                        checked={selectedRows.has(row.id)}
+                        onCheckedChange={() => handleSelectRow(row.id)}
                       />
-                    </TableHead>
+                    </TableCell>
                     {isHB ? (
                       <>
-                        <TableHead className="text-xs font-semibold text-slate-500 uppercase tracking-wide">HB Sku</TableHead>
-                        <TableHead className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Barkod</TableHead>
-                        <TableHead className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Merchant Sku</TableHead>
+                        <TableCell className="text-sm">{row.hb_sku}</TableCell>
+                        <TableCell className="text-sm">{row.barkod}</TableCell>
+                        <TableCell className="text-sm">{row.merchant_sku}</TableCell>
                       </>
                     ) : (
                       <>
-                        <TableHead className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Barkod</TableHead>
-                        <TableHead className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Model Kodu</TableHead>
-                        <TableHead className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Stok Kodu</TableHead>
+                        <TableCell className="text-sm">{row.barkod}</TableCell>
+                        <TableCell className="text-sm">{row.model_code}</TableCell>
+                        <TableCell className="text-sm">{row.merchant_sku}</TableCell>
                       </>
                     )}
-                    <TableHead className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Kategori</TableHead>
-                    <TableHead className="text-xs font-semibold text-slate-500 uppercase tracking-wide min-w-[200px]">Ürün Adı</TableHead>
-                    <TableHead className="text-xs font-semibold text-slate-500 uppercase tracking-wide text-right">Satış Fiyatı</TableHead>
-                    <TableHead className="text-xs font-semibold text-slate-500 uppercase tracking-wide text-right">Stok</TableHead>
-                    {/* Sarı grup — maliyet sütunları */}
-                    <TableHead className="text-xs font-semibold text-amber-700 uppercase tracking-wide text-right bg-amber-50 border-l border-amber-200">Maliyet (KDV Dahil)</TableHead>
-                    <TableHead className="text-xs font-semibold text-amber-700 uppercase tracking-wide text-center bg-amber-50">KDV Oranı</TableHead>
-                    <TableHead className="text-xs font-semibold text-amber-700 uppercase tracking-wide text-center bg-amber-50">Para Birimi</TableHead>
-                    <TableHead className="text-xs font-semibold text-amber-700 uppercase tracking-wide text-center bg-amber-50">Desi</TableHead>
-                    <TableHead className="text-xs font-semibold text-amber-700 uppercase tracking-wide text-right bg-amber-50">Ekstra Maliyet (%)</TableHead>
-                    <TableHead className="text-xs font-semibold text-amber-700 uppercase tracking-wide text-right bg-amber-50 border-r border-amber-200">Ekstra Maliyet (TL)</TableHead>
+                    <TableCell className="text-sm">{row.category}</TableCell>
+                    <TableCell className="text-sm">{row.product_name}</TableCell>
+                    <TableCell className="text-sm font-medium">₺{row.sale_price?.toFixed(2)}</TableCell>
+                    <TableCell className="text-sm">{row.stock}</TableCell>
+                    <TableCell className="text-sm font-medium bg-yellow-50">₺{row.cost?.toFixed(2)}</TableCell>
+                    <TableCell className="text-sm bg-yellow-50">%{row.vat_rate}</TableCell>
+                    <TableCell className="text-sm bg-yellow-50">{row.currency}</TableCell>
+                    <TableCell className="text-sm bg-yellow-50">{row.desi}</TableCell>
+                    <TableCell className="text-sm bg-yellow-50"></TableCell>
+                    <TableCell className="text-sm bg-yellow-50">{row.extra_cost > 0 ? row.extra_cost.toFixed(2) : ''}</TableCell>
                   </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {updatedCosts.map((row, idx) => (
-                    <TableRow
-                      key={row.id}
-                      className={`border-b border-slate-100 transition-colors ${
-                        selectedRows.has(row.id)
-                          ? 'bg-indigo-50/60'
-                          : idx % 2 === 0 ? 'bg-white hover:bg-slate-50/60' : 'bg-slate-50/30 hover:bg-slate-50/60'
-                      }`}
-                    >
-                      <TableCell className="pl-4">
-                        <Checkbox
-                          checked={selectedRows.has(row.id)}
-                          onCheckedChange={() => handleSelectRow(row.id)}
-                          className="border-slate-300"
-                        />
-                      </TableCell>
-                      {isHB ? (
-                        <>
-                          <TableCell className="text-xs text-slate-600 font-mono">{row.hb_sku}</TableCell>
-                          <TableCell className="text-xs text-slate-600 font-mono">{row.barkod}</TableCell>
-                          <TableCell className="text-xs text-slate-600 font-mono">{row.merchant_sku}</TableCell>
-                        </>
-                      ) : (
-                        <>
-                          <TableCell className="text-xs text-slate-600 font-mono">{row.barkod}</TableCell>
-                          <TableCell className="text-xs text-slate-600 font-mono">{row.model_code}</TableCell>
-                          <TableCell className="text-xs text-slate-600 font-mono">{row.merchant_sku}</TableCell>
-                        </>
-                      )}
-                      <TableCell className="text-xs text-slate-500">{row.category}</TableCell>
-                      <TableCell className="text-sm text-slate-800 font-medium max-w-xs">
-                        <span className="line-clamp-2 leading-snug">{row.product_name}</span>
-                      </TableCell>
-                      <TableCell className="text-sm font-semibold text-slate-900 text-right tabular-nums">
-                        {row.sale_price > 0 ? `₺${row.sale_price.toFixed(2)}` : <span className="text-slate-300">—</span>}
-                      </TableCell>
-                      <TableCell className="text-sm text-slate-700 text-right tabular-nums">{row.stock}</TableCell>
-                      {/* Maliyet grubu */}
-                      <TableCell className="text-sm font-bold text-slate-900 text-right tabular-nums bg-amber-50/60 border-l border-amber-100">
-                        {row.cost > 0 ? `₺${row.cost.toFixed(2)}` : <span className="text-slate-300">—</span>}
-                      </TableCell>
-                      <TableCell className="text-xs text-slate-600 text-center bg-amber-50/60">
-                        <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 font-medium text-xs">
-                          %{row.vat_rate}
-                        </span>
-                      </TableCell>
-                      <TableCell className="text-xs text-slate-500 text-center bg-amber-50/60">{row.currency}</TableCell>
-                      <TableCell className="text-xs text-slate-600 text-center bg-amber-50/60 tabular-nums">{row.desi}</TableCell>
-                      <TableCell className="text-xs text-slate-400 text-right bg-amber-50/60">—</TableCell>
-                      <TableCell className="text-xs text-slate-700 text-right tabular-nums bg-amber-50/60 border-r border-amber-100">
-                        {row.extra_cost > 0 ? row.extra_cost.toFixed(2) : ''}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
+                ))}
+              </TableBody>
+            </Table>
           </div>
         ) : (
-          /* Boş durum */
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm flex flex-col items-center justify-center py-20 gap-4">
-            <div className="w-14 h-14 rounded-2xl bg-slate-100 flex items-center justify-center">
-              <Package className="h-7 w-7 text-slate-400" />
-            </div>
-            <div className="text-center">
-              <p className="text-slate-700 font-medium">Gösterilecek ürün yok</p>
-              <p className="text-slate-400 text-sm mt-1">
-                {selectedPlatform
-                  ? 'Bu platform için eşleşmiş ürün bulunamadı'
-                  : 'Başlamak için yukarıdan bir platform seçin'}
-              </p>
-            </div>
+          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-16 text-center">
+            <PackageOpen className="h-12 w-12 text-slate-300 mx-auto mb-3" />
+            <p className="text-slate-500 font-medium">
+              {selectedPlatform ? 'Bu platform için gösterilecek ürün yok' : 'Başlamak için bir platform seçin'}
+            </p>
           </div>
         )}
       </div>
 
       {/* Silme Dialog */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent className="rounded-2xl">
+        <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Ürünleri Sil</AlertDialogTitle>
             <AlertDialogDescription>
-              <span className="font-semibold text-slate-900">{selectedRows.size} ürün</span> kalıcı olarak silinecek. Bu işlem geri alınamaz.
+              {selectedRows.size} ürün kalıcı olarak silinecek. Bu işlem geri alınamaz.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <div className="flex gap-2 justify-end mt-2">
-            <AlertDialogCancel className="rounded-lg">İptal</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDelete}
-              className="rounded-lg bg-rose-600 hover:bg-rose-700"
-            >
+          <div className="flex gap-2 justify-end">
+            <AlertDialogCancel>İptal</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} className="bg-red-600 hover:bg-red-700">
               Sil
             </AlertDialogAction>
           </div>
