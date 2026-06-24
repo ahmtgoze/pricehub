@@ -51,14 +51,14 @@ export default function UploadSummaryModal({ summary, onClose, onReviewZeroStock
               </div>
             )}
 
-            {/* Hepsiburada atlanan */}
+            {/* Hepsiburada güncellenen */}
             {hepsiSkipped > 0 && (
-              <div className="bg-orange-50 border border-orange-100 rounded-xl p-4 text-center">
+              <div className="bg-green-50 border border-green-100 rounded-xl p-4 text-center">
                 <div className="flex items-center justify-center mb-2">
-                  <AlertTriangle className="w-5 h-5 text-orange-500" />
+                  <RefreshCw className="w-5 h-5 text-green-500" />
                 </div>
-                <p className="text-2xl font-bold text-orange-700">{hepsiSkipped}</p>
-                <p className="text-xs text-orange-500 mt-1">HB Duplicate (Atlandı)</p>
+                <p className="text-2xl font-bold text-green-700">{hepsiSkipped}</p>
+                <p className="text-xs text-green-500 mt-1">Fiyat / Stok Güncellendi</p>
               </div>
             )}
 
