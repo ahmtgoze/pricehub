@@ -3,6 +3,29 @@
  * Her adapter: id, name, fileType, parseLine, parseFile, getRowKey, mapToInternal, exportRow
  */
 
+import { supabase } from '@/api/supabaseClient';
+
+// Storage bucket private olduğu için saklanan public-formatlı URL'i
+// signed URL'e çevirir. URL zaten signed/imzalı veya farklı bir kaynaktan
+// geliyorsa (örn. ?token= içeriyorsa) olduğu gibi döner.
+async function resolveFileUrl(originalFileUrl) {
+  if (!originalFileUrl) return originalFileUrl;
+  const marker = '/storage/v1/object/public/excel-files/';
+  const idx = originalFileUrl.indexOf(marker);
+  if (idx === -1) return originalFileUrl; // signed url veya farklı kaynak, dokunma
+
+  const filePath = originalFileUrl.slice(idx + marker.length).split('?')[0];
+  const { data, error } = await supabase.storage
+    .from('excel-files')
+    .createSignedUrl(filePath, 60 * 10); // 10 dakika geçerli
+
+  if (error || !data?.signedUrl) {
+    console.error('Signed URL oluşturulamadı:', error);
+    return originalFileUrl; // fallback — eski davranış, hata zaten görünür olur
+  }
+  return data.signedUrl;
+}
+
 // CSV satırını parse eder (noktalı virgül veya virgül ayraçlı)
 export function parseCSVLine(line, delimiter = ';') {
   const result = [];
@@ -167,7 +190,8 @@ export const SHOPIFY_ADAPTER = {
   getRowKey: (item) => item.sku || item.barcode || item.product_name,
 
   exportFile: async (originalFileUrl, priceMap) => {
-    const resp = await fetch(originalFileUrl);
+    const resolvedUrl = await resolveFileUrl(originalFileUrl);
+    const resp = await fetch(resolvedUrl);
     const text = await resp.text();
     const { headers, lines } = parseCSVText(text, ',');
     const priceColIdx = headers.findIndex(h => h === 'Variant Price');
@@ -239,7 +263,8 @@ export const IKAS_ADAPTER = {
   getRowKey: (item) => item.sku || item.barcode || item.product_name,
 
   exportFile: async (originalFileUrl, priceMap) => {
-    const resp = await fetch(originalFileUrl);
+    const resolvedUrl = await resolveFileUrl(originalFileUrl);
+    const resp = await fetch(resolvedUrl);
     const text = await resp.text();
     const { headers, lines } = parseCSVText(text, ',');
     const priceColIdx = headers.findIndex(h => h === 'Price' || h === 'Fiyat');
@@ -288,7 +313,8 @@ export const TICIMAX_ADAPTER = {
 
   exportFile: async (originalFileUrl, priceMap) => {
     const XLSX = await import('xlsx');
-    const resp = await fetch(originalFileUrl);
+    const resolvedUrl = await resolveFileUrl(originalFileUrl);
+    const resp = await fetch(resolvedUrl);
     const arrayBuffer = await resp.arrayBuffer();
     const wb = XLSX.read(arrayBuffer, { type: 'array' });
     const wsName = wb.SheetNames[0];
@@ -354,7 +380,8 @@ export const GENERIC_EXCEL_ADAPTER = {
 
   exportFile: async (originalFileUrl, priceMap) => {
     const XLSX = await import('xlsx');
-    const resp = await fetch(originalFileUrl);
+    const resolvedUrl = await resolveFileUrl(originalFileUrl);
+    const resp = await fetch(resolvedUrl);
     const arrayBuffer = await resp.arrayBuffer();
     const wb = XLSX.read(arrayBuffer, { type: 'array' });
     const wsName = wb.SheetNames[0];
