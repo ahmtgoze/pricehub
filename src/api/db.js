@@ -162,8 +162,13 @@ const integrations = {
       const fileName = `${Date.now()}_${file.name}`;
       const { data, error } = await supabase.storage.from('excel-files').upload(fileName, file, { upsert: true });
       if (error) throw new Error(`[db.storage.upload] ${error.message}`);
-      const { data: { publicUrl } } = supabase.storage.from('excel-files').getPublicUrl(data.path);
-      return { file_url: publicUrl };
+      // Kova artık private (sahibe özel RLS). Herkese açık URL yerine uzun ömürlü imzalı URL
+      // dönüyoruz; böylece yüklenen dosya sahibi tarafından erişilebilir kalıyor ama kova açığa çıkmıyor.
+      const { data: signed, error: signError } = await supabase.storage
+        .from('excel-files')
+        .createSignedUrl(data.path, 60 * 60 * 24 * 365 * 10); // ~10 yıl
+      if (signError) throw new Error(`[db.storage.sign] ${signError.message}`);
+      return { file_url: signed.signedUrl };
     },
   },
 };
