@@ -79,7 +79,7 @@ export default function UploadSummaryModal({ summary, onClose, onReviewZeroStock
                 <TrendingDown className={`w-5 h-5 ${stockChangedCount > 0 ? 'text-indigo-500' : 'text-gray-400'}`} />
               </div>
               <p className={`text-2xl font-bold ${stockChangedCount > 0 ? 'text-indigo-700' : 'text-gray-400'}`}>{stockChangedCount}</p>
-              <p className={`text-xs mt-1 ${stockChangedCount > 0 ? 'text-indigo-500' : 'text-gray-400'}`}>Stoku Değişen Ürün</p>
+              <p className={`text-xs mt-1 ${stockChangedCount > 0 ? 'text-indigo-500' : 'text-gray-400'}`}>Güncellenen Ürün</p>
             </div>
 
             {/* Excel'de olmayan */}
