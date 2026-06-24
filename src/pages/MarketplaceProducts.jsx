@@ -261,8 +261,8 @@ export default function MarketplaceProducts() {
           const existing = freshMarketplaceProducts.find(m => isWebsiteDuplicate(excelRowNorm, m));
 
           if (existing) {
-            // Duplicate: sadece stok güncelle (website CSV'de stok yok, 0 kalır — eşleşme ve diğer alanlar korunur)
-            await db.functions.invoke('updateMarketplaceProduct', { id: existing.id, data: { stock_quantity: 0 } });
+            // Mevcut ürün: fiyatı güncelle (website CSV'de stok yok, 0 kalır — eşleşme korunur)
+            await db.functions.invoke('updateMarketplaceProduct', { id: existing.id, data: { stock_quantity: 0, marketplace_sale_price: item.price } });
             stockUpdatedCount++;
           } else {
             await createMutation.mutateAsync({
