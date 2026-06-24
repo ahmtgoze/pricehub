@@ -2,7 +2,6 @@ import React from 'react';
 import { useBackgroundTask } from '@/lib/BackgroundTaskContext';
 import { useLocation } from 'react-router-dom';
 import { Loader2, X } from 'lucide-react';
-import { createPageUrl } from '@/utils';
 
 export default function BackgroundTaskWidget() {
   const { task, finishTask } = useBackgroundTask();

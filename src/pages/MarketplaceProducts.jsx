@@ -2,7 +2,7 @@ import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { db } from '@/api/db';
 import { getAdapter, getCombinedName } from '@/lib/platformAdapters';
-import { computeMatchScore, findBestMatch, findTopMatches, MIN_AUTO_SCORE } from '@/lib/matchingEngine';
+import { findBestMatch, findTopMatches, MIN_AUTO_SCORE } from '@/lib/matchingEngine';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';

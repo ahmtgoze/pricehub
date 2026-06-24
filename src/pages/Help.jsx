@@ -5,10 +5,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import {
   LayoutDashboard, Package, FolderTree, Store, Truck, Percent,
-  Calculator, FileText, BadgeDollarSign, Tag, BadgePercent,
-  Sparkles, Zap, HelpCircle, ChevronDown, ChevronRight,
-  ExternalLink, CheckCircle2, ArrowRight, AlertCircle, Info,
-  BookOpen, Map, CheckCheck, Circle
+  Calculator, FileText, BadgeDollarSign, Tag, HelpCircle, ChevronDown, ChevronRight,
+  ExternalLink, ArrowRight, AlertCircle, Info,
+  BookOpen, Map, CheckCheck
 } from 'lucide-react';
 
 function Field({ name, required, children }) {

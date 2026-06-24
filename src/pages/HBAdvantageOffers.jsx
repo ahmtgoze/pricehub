@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { db } from '@/api/db';
 import { useQuery } from '@tanstack/react-query';
-import { Upload, Download, Filter, Check, AlertCircle, Info, Trash2, Sparkles } from 'lucide-react';
+import { Upload, Download, Filter, AlertCircle, Info, Trash2, Sparkles } from 'lucide-react';
 import { calculatePriceBreakdown, findDesiShippingRate } from '@/components/PriceCalculationEngine';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';

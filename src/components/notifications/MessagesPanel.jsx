@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { db } from '@/api/db';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
-import { MessageSquare, Send, ChevronLeft, Archive, User, Users, ChevronDown, Trash2, Pencil, Check, X } from 'lucide-react';
+import { MessageSquare, Send, ChevronLeft, Archive, User, ChevronDown, Trash2, Pencil, Check, X } from 'lucide-react';
 import { format } from 'date-fns';
 import { tr } from 'date-fns/locale';
 import { cn } from '@/lib/utils';

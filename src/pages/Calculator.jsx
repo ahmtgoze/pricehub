@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { db } from '@/api/db';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/lib/AuthContext';
-import { Calculator as CalcIcon, ArrowRight, Package, Info, Plus, X } from 'lucide-react';
+import { Calculator as CalcIcon, ArrowRight, Info, Plus, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';

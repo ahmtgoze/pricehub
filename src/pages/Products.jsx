@@ -38,7 +38,7 @@ import SearchInput from '@/components/ui/SearchInput';
 import DataTable from '@/components/ui/DataTable';
 import ProductModal from '@/components/modals/ProductModal';
 import BulkOperationsModal from '@/components/modals/BulkOperationsModal';
-import ImportExport, { parseCSV } from '@/components/ImportExport';
+import ImportExport from '@/components/ImportExport';
 import * as XLSX from 'xlsx';
 import { calculateAllPlatformPrices } from '@/components/PriceCalculationEngine';
 import { toast } from 'sonner';

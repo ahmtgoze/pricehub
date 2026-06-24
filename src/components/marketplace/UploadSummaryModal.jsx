@@ -1,6 +1,6 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { CheckCircle2, Plus, RefreshCw, AlertTriangle, X, TrendingDown, PackageX } from 'lucide-react';
+import { Plus, RefreshCw, AlertTriangle, X, TrendingDown, PackageX } from 'lucide-react';
 
 /**
  * UploadSummaryModal — Excel yükleme sonrası özet ekranı

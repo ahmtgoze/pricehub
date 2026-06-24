@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import { AlertTriangle, Trash2, EyeOff, X, RotateCcw } from 'lucide-react';
+import { AlertTriangle, Trash2, EyeOff, X } from 'lucide-react';
 
 /**
  * StockSyncModal

@@ -1,9 +1,7 @@
 import React, { useState } from 'react';
 import { db } from '@/api/db';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Bell, Archive, ArchiveRestore, Trash2, CheckCheck, Megaphone, Zap, Reply, X } from 'lucide-react';
+import { Bell, Archive, ArchiveRestore, Trash2, Megaphone, Zap, Reply, X } from 'lucide-react';
 import { format, addDays, differenceInDays } from 'date-fns';
 import { tr } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
