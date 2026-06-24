@@ -361,7 +361,8 @@ export default function MarketplaceProducts() {
           const existing = freshMarketplaceProducts.find(m => isHepsiDuplicate(excelRowNorm, m));
 
           if (existing) {
-            // Hepsiburada duplicate: hiçbir şey güncelleme, atla
+            // Hepsiburada: mevcut ürünün fiyat ve stoğunu güncelle
+            await db.functions.invoke('updateMarketplaceProduct', { id: existing.id, data: { stock_quantity: stockQuantity, marketplace_sale_price: parseFloat(row['Fiyat'] || 0) } });
             hepsiSkipped++;
           } else {
             await db.entities.MarketplaceProduct.create({
@@ -408,9 +409,9 @@ export default function MarketplaceProducts() {
           const existing = freshMarketplaceProducts.find(m => isTrendyolDuplicate(excelRowNorm, m));
 
           if (existing) {
-            // Trendyol duplicate: sadece stok güncelle, eşleşme ve diğer alanlar korunur
+            // Trendyol: mevcut ürünün stok ve fiyatını güncelle, eşleşme korunur
             if (existing.stock_quantity !== stockQuantity) stockChangedCount++;
-            await db.functions.invoke('updateMarketplaceProduct', { id: existing.id, data: { stock_quantity: stockQuantity } });
+            await db.functions.invoke('updateMarketplaceProduct', { id: existing.id, data: { stock_quantity: stockQuantity, marketplace_sale_price: newPrice } });
             trendyolStockUpdated++;
           } else {
             await db.entities.MarketplaceProduct.create({
