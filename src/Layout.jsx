@@ -47,6 +47,9 @@ const baseNavigation = [
   { name: 'Plus Ürün Komisyon Tarifesi', page: 'PlusProductCommissionTariff', icon: BadgePercent, trendyolOnly: true },
   { name: 'Avantajlı Ürün Etiketi', page: 'AdvantageProductTag', icon: Sparkles, trendyolOnly: true },
   { name: 'Flaş Ürünler', page: 'FlashProducts', icon: Zap, trendyolOnly: true },
+  { name: 'HB Avantajlı Teklifler', page: 'HBAdvantageOffers', icon: Sparkles, hepsiburadaOnly: true },
+  { name: 'HB Sepet Kampanyaları', page: 'HBBasketCampaigns', icon: BadgePercent, hepsiburadaOnly: true },
+  { name: 'HB Kendi Kampanyan', page: 'HBOwnCampaign', icon: BadgePercent, hepsiburadaOnly: true },
   { name: 'Kullanım Kılavuzu', page: 'Help', icon: HelpCircle },
 ];
 
@@ -60,7 +63,10 @@ export default function Layout({ children, currentPageName }) {
   });
 
   const hasTrendyol = platforms.some(p => p.platform_type === 'trendyol' && p.is_active !== false);
-  const navigation = baseNavigation.filter(item => !item.trendyolOnly || hasTrendyol);
+  const hasHepsiburada = platforms.some(p => p.platform_type === 'hepsiburada' && p.is_active !== false);
+  const navigation = baseNavigation
+    .filter(item => !item.trendyolOnly || hasTrendyol)
+    .filter(item => !item.hepsiburadaOnly || hasHepsiburada);
 
   return (
     <div className="overflow-hidden bg-gradient-to-br from-gray-100 via-gray-50 to-purple-50 flex flex-col lg:flex-row" style={{ height: '100dvh' }}>

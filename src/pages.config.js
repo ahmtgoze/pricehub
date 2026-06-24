@@ -54,6 +54,9 @@ import Commissions from './pages/Commissions';
 import CostSynchronization from './pages/CostSynchronization';
 import Dashboard from './pages/Dashboard';
 import FlashProducts from './pages/FlashProducts';
+import HBAdvantageOffers from './pages/HBAdvantageOffers';
+import HBBasketCampaigns from './pages/HBBasketCampaigns';
+import HBOwnCampaign from './pages/HBOwnCampaign';
 import Help from './pages/Help';
 import MarketplaceProducts from './pages/MarketplaceProducts';
 import PackageManagement from './pages/PackageManagement';
@@ -77,6 +80,9 @@ export const PAGES = {
     "CostSynchronization": CostSynchronization,
     "Dashboard": Dashboard,
     "FlashProducts": FlashProducts,
+    "HBAdvantageOffers": HBAdvantageOffers,
+    "HBBasketCampaigns": HBBasketCampaigns,
+    "HBOwnCampaign": HBOwnCampaign,
     "Help": Help,
     "MarketplaceProducts": MarketplaceProducts,
     "PackageManagement": PackageManagement,
