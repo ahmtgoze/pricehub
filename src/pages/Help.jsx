@@ -158,7 +158,7 @@ const WIZARD_STEPS = [
       '"Fiyatları Hesapla" butonuna tıkla.',
       'İşlem tamamlanana kadar bekle.',
       'Aktif platformlar için fiyatları gör (pasif platformların fiyatı hesaplanmaz).',
-      'Bir ürüne tıklayarak detaylı kâr dökümünü incele (maliyet, komisyon, KDV, stopaj, hizmet bedeli, kargo, paketleme).',
+      'Bir ürüne tıklayarak detaylı kâr dökümünü incele (maliyet, komisyon, KDV, stopaj, hizmet bedeli, kargo, paketleme, kurumlar(gelir) vergisi).',
     ],
     tip: 'Maliyet değiştirince "Fiyatları Hesapla" tekrar basılmalıdır. Fiyatlar otomatik güncellenmez.',
   },
