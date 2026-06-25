@@ -91,15 +91,15 @@ const WIZARD_STEPS = [
     title: 'Kargo Tarifelerini Gir',
     page: 'ShippingRates',
     icon: Truck,
-    desc: 'Her platform için barem ve desi bazlı kargo ücretlerini tanımla.',
+    desc: 'Barem sistemi kullanılıyorsa admin tarafından tanımlanır. Manuel kargo ücreti kullanılıyorsa bu adım gerekli değildir.',
     items: [
-      '"Kargo Tarifeleri" sayfasına git.',
+      'Barem sistemi kullanıyorsan "Kargo Tarifeleri" sayfasına git.',
       'Platform seç.',
       'Barem1 tarifesini gir (örn: 0–149,99 TL arası satışlar için kargo ücreti).',
       'Barem2 tarifesini gir (örn: 150–299,99 TL arası).',
       'Desi bazlı tarifeleri gir (her desi aralığı için ayrı ücret).',
     ],
-    tip: 'Barem ve desi tarifeleri birlikte tanımlanmalı. Ürün barem limitini aşarsa sistem otomatik desi tarifesine geçer.',
+    tip: 'Barem tanımlı değilse veya kullanılmıyorsa sistem Platformlar sayfasındaki manuel kargo ücretini kullanır; bu durumda barem hesaplaması yapılmaz. Bu adım genellikle admin tarafından yapılır.',
   },
   {
     id: 4,
@@ -302,7 +302,7 @@ const PAGES = [
   {
     id: 'kargo', title: 'Kargo Tarifeleri', page: 'ShippingRates', icon: Truck,
     short: 'Platform ve kargo firması bazlı barem ve desi tarifelerini tanımlar.',
-    detail: 'Her platform için barem1, barem2 ve desi bazlı tarifeler ayrı ayrı girilir. Barem: satış fiyatına göre sabit kargo ücreti. Desi: ürün ağırlığına/hacmine göre değişken kargo ücreti. Barem etkinse ve ürün fiyatı barem limitini karşılıyorsa barem ücreti uygulanır; aksi hâlde desi tarifesine geçilir.',
+    detail: 'Her platform için barem1, barem2 ve desi bazlı tarifeler ayrı ayrı girilir. Barem: satış fiyatına göre sabit kargo ücreti. Desi: ürün ağırlığına/hacmine göre değişken kargo ücreti. Barem etkinse ve ürün fiyatı barem limitini karşılıyorsa barem ücreti uygulanır; aksi hâlde desi tarifesine geçilir.\n\nBarem sistemi kullanılmıyorsa veya tarifelar tanımlı değilse sistem Platformlar sayfasındaki manuel kargo ücretini baz alır; bu durumda barem hesaplaması yapılmaz. Tarifeler genellikle admin tarafından tanımlanır.',
     faq: [
       { q: 'Barem ve desi tarifesini aynı anda mı tanımlamalıyım?', a: 'Evet. İkisi birlikte çalışır; biri eksikse sistem doğru hesaplama yapamaz.' },
     ],
