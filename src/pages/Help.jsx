@@ -143,7 +143,7 @@ const WIZARD_STEPS = [
       'Tekil ekleme: "+ Yeni Ürün" butonuyla SKU, maliyet, desi ve kategori gir.',
       'Toplu ekleme: "Excel İşlemleri → Şablon İndir" ile şablonu doldur, "Yükle" ile aktar.',
       'Ürün Zinciri (opsiyonel): Aynı ürünün farklı adetli varyantlarını birbirine bağla.',
-      'Referans Ürün (opsiyonel): Büyük paketin maliyetinden küçük paketin baz maliyetini otomatik hesaplat.',
+      'Referans Ürün (opsiyonel): Ucuz ürünün maliyetinden pahalı ürünün baz maliyetini otomatik hesaplat.',
     ],
     tip: 'Excel ile yüklemede mevcut SKU\'lar güncellenir, yeni SKU\'lar eklenir. Çift kayıt oluşmaz.',
   },
