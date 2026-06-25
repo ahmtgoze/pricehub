@@ -126,7 +126,7 @@ const WIZARD_STEPS = [
     items: [
       '"Paketleme" sayfasına git.',
       '"+ Yeni Paket" ile paket grubu oluştur (örn: Küçük Poşet).',
-      'Min ve Max desi aralığını gir — bu aralıktaki ürünlere otomatik atanır.',
+      'Min ve Max desi aralığını gir — bu aralıktaki ürünlere otomatik atanır. Eğer desi aralığı seçilmez ise manuel olarak ürünlere atama yapabilirsin',
       'Paket içine malzeme ekle (Poşet, Etiket, Bant…).',
       'Her malzemenin KDV dahil birim maliyetini gir.',
     ],
