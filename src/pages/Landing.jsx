@@ -1,5 +1,6 @@
 import { db } from '@/api/db';
 import { BarChart3, TrendingUp, ShoppingBag, Globe, ArrowRight, CheckCircle } from 'lucide-react';
+import { MARKA_ADI } from '@/config/marka';
 
 const features = [
   {
@@ -38,7 +39,7 @@ export default function Landing() {
     <div className="min-h-screen bg-gradient-to-br from-gray-100 via-gray-50 to-purple-50 text-gray-900">
       {/* Navbar */}
       <nav className="flex items-center justify-between px-6 md:px-16 py-5 border-b border-gray-100 bg-white/80 backdrop-blur-sm">
-        <span className="text-2xl font-bold tracking-tight text-gray-900">PriceHub</span>
+        <span className="text-2xl font-bold tracking-tight text-gray-900">{MARKA_ADI}</span>
         <button
           onClick={() => db.auth.redirectToLogin('/')}
           className="flex items-center gap-2 bg-gray-900 text-white font-semibold px-5 py-2.5 rounded-xl hover:bg-gray-700 transition-colors text-sm"
@@ -114,7 +115,7 @@ export default function Landing() {
 
       {/* Footer */}
       <footer className="border-t border-gray-100 px-6 py-6 text-center text-gray-400 text-xs bg-white/60">
-        © {new Date().getFullYear()} PriceHub. Tüm hakları saklıdır.
+        © {new Date().getFullYear()} {MARKA_ADI}. Tüm hakları saklıdır.
       </footer>
     </div>
   );

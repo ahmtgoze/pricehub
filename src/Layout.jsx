@@ -27,6 +27,7 @@ import BackgroundTaskWidget from '@/components/BackgroundTaskWidget';
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Toaster } from "@/components/ui/sonner";
+import { MARKA_ADI } from '@/config/marka';
 
 const baseNavigation = [
   { name: 'Dashboard', page: 'Dashboard', icon: LayoutDashboard },
@@ -90,7 +91,7 @@ export default function Layout({ children, currentPageName }) {
           {/* Logo */}
           <div className="h-20 flex items-center justify-between px-4 border-b border-gray-50">
             <Link to={createPageUrl('Dashboard')} className="flex-1 flex items-center justify-center">
-              <span className="font-bold text-lg text-gray-900">PriceHub</span>
+              <span className="font-bold text-lg text-gray-900">{MARKA_ADI}</span>
             </Link>
             <Button 
               variant="ghost" 
@@ -170,7 +171,7 @@ export default function Layout({ children, currentPageName }) {
           >
             <Menu className="h-6 w-6" />
           </Button>
-          <span className="font-semibold text-gray-800 flex-1 ml-3">PriceHub</span>
+          <span className="font-semibold text-gray-800 flex-1 ml-3">{MARKA_ADI}</span>
           <div className="flex items-center gap-2">
             <NotificationCenter />
             <Button 
