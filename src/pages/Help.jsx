@@ -111,7 +111,7 @@ const WIZARD_STEPS = [
       '"Komisyonlar" sayfasına git.',
       '"+ Yeni Komisyon" butonuna tıkla.',
       'Platform ve kategori seç.',
-      'Komisyon oranını KDV dahil gir. Örn: Trendyol komisyonu %18 + KDV ise %21,6 olarak gir. HepsiBurada için de aynı şekilde %20 KDV ekleyerek gir.',
+      'Komisyon oranını KDV dahil gir. Örn: Trendyol komisyonu KDV dahildir. HepsiBurada için %20 KDV ekleyerek gir.',
       'Hedef kâr oranını gir (örn: %80). Sistem bu orana göre satış fiyatı hesaplar.',
       'Tüm platform × kategori kombinasyonları için tekrarla.',
     ],
