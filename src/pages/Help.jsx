@@ -95,9 +95,7 @@ const WIZARD_STEPS = [
     desc: 'Platformun sunduğu anlaşmalı kargo firmaları ve tarifeleri admin tarafından tanımlanır. Kendi kargo anlaşmanı kullanacaksan, fiyatlarını sisteme manuel veya Excel ile yükleyebilirsin.',
     items: [
       'Kendi anlaşmalı kargo ücretlerini kullanacaksan Kargo Tarifeleri sayfasına git.',
-      'Tarife giriş yöntemini seç:
-        Manuel Tarife Ekle ile fiyatlarını tek tek ekle.
-        Excel ile Yükle seçeneğiyle toplu yükleme yap.',
+      'Tarife giriş yöntemini seç: Manuel Tarife Ekle ile fiyatlarını tek tek ekle ya da Excel ile Yükle seçeneğiyle toplu yükleme yap.',
       'Excel ile yükleme yapacaksan Dışa Aktar → Boş Şablon İndir adımlarını izleyerek şablonu indir.',
       'Şablonu doldurduktan sonra Excel ile Yükle seçeneğiyle sisteme aktar.',
     ],
