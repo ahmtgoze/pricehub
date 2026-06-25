@@ -69,7 +69,7 @@ const WIZARD_STEPS = [
       '"Barem Sistemi" aktifse aç.',
       'Satmadığın platformları pasif yap.',
     ],
-    tip: 'Stopaj, hizmet bedeli ve komisyon oranları admin tarafından platformlara bağlı olarak ayrıca tanımlanır.',
+    tip: 'Stopaj, hizmet bedeli ve barem aralıkları admin tarafından platformlara bağlı olarak ayrıca tanımlanır.',
   },
   {
     id: 2,
