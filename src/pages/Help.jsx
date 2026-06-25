@@ -92,15 +92,16 @@ const WIZARD_STEPS = [
     title: 'Kargo Tarifelerini Gir',
     page: 'ShippingRates',
     icon: Truck,
-    desc: 'Barem sistemi kullanılıyorsa admin tarafından tanımlanır. Manuel kargo ücreti kullanılıyorsa bu adım gerekli değildir.',
+    desc: 'Platformun sunduğu anlaşmalı kargo firmaları ve tarifeleri admin tarafından tanımlanır. Kendi kargo anlaşmanı kullanacaksan, fiyatlarını sisteme manuel veya Excel ile yükleyebilirsin.',
     items: [
-      'Barem sistemi kullanıyorsan "Kargo Tarifeleri" sayfasına git.',
-      'Platform seç.',
-      'Barem1 tarifesini gir (örn: 0–149,99 TL arası satışlar için kargo ücreti).',
-      'Barem2 tarifesini gir (örn: 150–299,99 TL arası).',
-      'Desi bazlı tarifeleri gir (her desi aralığı için ayrı ücret).',
+      'Kendi anlaşmalı kargo ücretlerini kullanacaksan Kargo Tarifeleri sayfasına git.',
+      'Tarife giriş yöntemini seç:
+        Manuel Tarife Ekle ile fiyatlarını tek tek ekle.
+        Excel ile Yükle seçeneğiyle toplu yükleme yap.',
+      'Excel ile yükleme yapacaksan Dışa Aktar → Boş Şablon İndir adımlarını izleyerek şablonu indir.',
+      'Şablonu doldurduktan sonra Excel ile Yükle seçeneğiyle sisteme aktar.',
     ],
-    tip: 'Barem tanımlı değilse veya kullanılmıyorsa sistem Platformlar sayfasındaki manuel kargo ücretini kullanır; bu durumda barem hesaplaması yapılmaz. Bu adım genellikle admin tarafından yapılır.',
+    tip: 'Manuel anlaşmalı tarifelerde barem sistemi kullanılmaz. Bu tarifelerin kullanılabilmesi için Platformlar sayfasından ilgili kargo firması seçilmelidir.',
   },
   {
     id: 4,
