@@ -65,9 +65,10 @@ const WIZARD_STEPS = [
     items: [
       '"Platformlar" sayfasına git.',
       'Her platform için "Tüm Ayarlar" butonuna tıkla.',
-      'Kargo firması adını gir.',
-      '"Barem Sistemi" aktifse aç.',
+      'Kargo firması adını seç',
+      '"Kurumlar (Gelir) Vergisi oranın farklı ise güncelle',
       'Satmadığın platformları pasif yap.',
+      'Aynı gün kargoya verdiğin ürünler var ise Bugün Kargoda özelliğini aktif et',
     ],
     tip: 'Stopaj, hizmet bedeli ve barem aralıkları admin tarafından platformlara bağlı olarak ayrıca tanımlanır.',
   },
