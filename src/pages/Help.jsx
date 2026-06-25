@@ -111,7 +111,7 @@ const WIZARD_STEPS = [
       '"Komisyonlar" sayfasına git.',
       '"+ Yeni Komisyon" butonuna tıkla.',
       'Platform ve kategori seç.',
-      'Komisyon oranını gir (örn: %18). Trendyol için KDV hariç, HepsiBurada için KDV hariç girilmeli.',
+      'Komisyon oranını KDV dahil gir. Örn: Trendyol komisyonu %18 + KDV ise %21,6 olarak gir. HepsiBurada için de aynı şekilde %20 KDV ekleyerek gir.',
       'Hedef kâr oranını gir (örn: %80). Sistem bu orana göre satış fiyatı hesaplar.',
       'Tüm platform × kategori kombinasyonları için tekrarla.',
     ],
@@ -286,7 +286,7 @@ const PAGES = [
     short: 'Platform + kategori kombinasyonuna göre komisyon oranı ve hedef kâr marjı tanımlar.',
     detail: 'Her platform × kategori çifti için ayrı satır oluşturulur. Komisyon oranı (%), hedef kâr oranı (%) ve isteğe bağlı olarak kampanya/indirimli hedef kâr oranı girilir. İndirimli hedef kâr; Avantajlı Ürün Etiketi, Flaş Ürünler, Avantajlı Teklifler gibi promosyon sayfalarında "Akıllı Seç" algoritması tarafından kullanılır.',
     faq: [
-      { q: 'Trendyol komisyonunu KDV dahil mi girmem gerekiyor?', a: 'KDV hariç gir. Sistem fiyat hesaplarken %20 KDV\'yi otomatik ekler.' },
+      { q: 'Komisyon oranını KDV dahil mi girmem gerekiyor?', a: 'Evet. Tüm platformlar için komisyon oranı KDV dahil girilmeli. Örn: %18 komisyon + %20 KDV = %21,6 olarak gir. HepsiBurada için de aynı kural geçerli.' },
       { q: 'İndirimli hedef kâr nedir?', a: 'Kampanya dönemlerinde kabul edebileceğin daha düşük kâr marjıdır. Promosyon sayfalarında akıllı seç bu değeri baz alır.' },
     ],
   },
