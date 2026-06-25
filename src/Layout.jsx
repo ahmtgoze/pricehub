@@ -20,7 +20,8 @@ import {
   Zap,
   HelpCircle,
   LogOut,
-  Calculator
+  Calculator,
+  Settings
 } from 'lucide-react';
 import NotificationCenter from '@/components/notifications/NotificationCenter';
 import BackgroundTaskWidget from '@/components/BackgroundTaskWidget';
@@ -52,6 +53,7 @@ const baseNavigation = [
   { name: 'HB Sepet Kampanyaları', page: 'HBBasketCampaigns', icon: BadgePercent, hepsiburadaOnly: true },
   { name: 'HB Kendi Kampanyan', page: 'HBOwnCampaign', icon: BadgePercent, hepsiburadaOnly: true },
   { name: 'Kullanım Kılavuzu', page: 'Help', icon: HelpCircle },
+  { name: 'Genel Ayarlar', page: 'Settings', icon: Settings },
 ];
 
 

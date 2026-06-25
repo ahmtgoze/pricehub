@@ -69,6 +69,7 @@ import TrendyolPriceRange from './pages/TrendyolPriceRange';
 import UpdateReports from './pages/UpdateReports';
 import UpdatedCosts from './pages/UpdatedCosts';
 import UpdatedPrices from './pages/UpdatedPrices';
+import Settings from './pages/Settings';
 import __Layout from './Layout.jsx';
 
 
@@ -95,6 +96,7 @@ export const PAGES = {
     "UpdateReports": UpdateReports,
     "UpdatedCosts": UpdatedCosts,
     "UpdatedPrices": UpdatedPrices,
+    "Settings": Settings,
 }
 
 export const pagesConfig = {
