@@ -1,30 +1,37 @@
-# Kullanım Kılavuzu
+# Yardım
 
 **Route:** `/Help`
+**Görünüm:** Tüm kullanıcılara açık. Sol menünün altında her zaman görünür.
 
 ## Ne yapar?
 
-Sistemin nasıl kurulacağını ve kullanılacağını adım adım açıklar. Yeni kullanıcıların sistemi doğru sırada kurması için 9 adımlı bir sihirbaz sunar.
+PriceHub'ın nasıl kullanılacağını açıklayan belgeler, sık sorulan sorular ve destek bilgilerini içerir. Herhangi bir konuda takılıp kalındığında ilk başvuru noktasıdır.
 
-## İçerik
+---
 
-- **9 adımlı kurulum sihirbazı** — her adım tamamlanınca işaretlenebilir, ilgili sayfaya hızlı erişim linki içerir
-- **Her sayfa için detaylı açıklama** — accordion (açılır/kapanır) yapısında
-- **İpuçları ve örnekler** — sık yapılan hatalar ve önerilen iş akışları
+## Sayfada Ne Var?
 
-## Kurulum sırası
+| Bölüm | İçerik |
+|---|---|
+| Belgeler | docs/ klasöründeki markdown belgelerine erişim (çalışma prensibi, tasarım, bilgilendirme) |
+| SSS | Sık sorulan sorular ve cevapları |
+| Versiyon bilgisi | Sistemin mevcut versiyonu |
+| Destek iletişimi | Teknik destek için e-posta veya iletişim bilgileri |
 
-1. Kategoriler tanımla
-2. Platformları yapılandır
-3. Kargo tarifelerini ekle
-4. Komisyonları tanımla
-5. Ürünleri yükle
-6. Fiyatları hesapla
-7. Pazaryeri ürünlerini eşleştir
-8. Düzenlenen fiyatları indir
-9. Platforma yükle
+---
 
-## Dikkat edilecekler
+## Butonlar
 
-- Bu sayfa salt görüntüleme amaçlıdır; hiçbir veri değiştirilemez.
-- Adım tamamlama sadece görsel işarettir; sistem bunu zorunlu tutmaz.
+| Buton | Ne yapar |
+|---|---|
+| Belge başlıklarına tıklama | İlgili dokümanı açar / genişletir |
+| SSS sorularına tıklama | Cevabı aşağı açar (accordion) |
+
+---
+
+## Bu Sayfayı Ne Zaman Kullanmalısın?
+
+- Bir sayfanın ne işe yaradığını anlamak istediğinde → `docs/bilgilendirme/` belgelerine bak
+- Fiyat hesaplama formülünü merak ediyorsan → `docs/calisma-prensibi/` belgelerine bak
+- Yeni bir sayfa eklemek veya tasarım tutarlılığını korumak istiyorsan → `docs/tasarim/` belgelerine bak
+- Sorun yaşıyorsan destek iletişim bilgilerine buradan ulaş

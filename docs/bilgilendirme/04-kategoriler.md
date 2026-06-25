@@ -4,24 +4,78 @@
 
 ## Ne yapar?
 
-Ürün gruplarını ve her grubun KDV oranını tanımlar. Kategori bilgisi, komisyon hesaplamalarının temel girdisidir — doğru kategori = doğru komisyon oranı.
+Ürün gruplarını ve her grubun KDV oranını tanımlar. Komisyon hesaplamasının temeli kategorilerdir; kategori yanlış veya eksikse o ürün için fiyat hesaplanamaz.
 
-## Neler yapılabilir?
+---
 
-- Tek tek kategori eklemek/düzenlemek/silmek
-- Excel ile toplu kategori yüklemek (yeni → ekle, mevcut → güncelle, çakışan → atla mantığıyla)
-- Her kategoride kaç ürün olduğunu görmek
-- Ürün içeren kategoriyi silmeye çalışınca uyarı almak
+## Butonlar
 
-## Excel yükleme formatı
-
-| Kategori Adı | KDV Oranı |
+| Buton | Ne yapar |
 |---|---|
-| Elektronik | 20 |
-| Giyim | 10 |
+| Yeni Kategori | CategoryModal'ı açar; ad ve KDV oranı girilerek yeni kategori oluşturulur |
+| Dışa Aktar | Tüm kategorileri Excel olarak indirir |
+| İçe Aktar | Dosya seçici açılır; Excel yükleyerek toplu kategori ekler/günceller |
+| Toplu Sil | Seçili kategorileri siler (seçim varsa görünür) |
+
+---
+
+## Tablo Sütunları
+
+| Sütun | Açıklama |
+|---|---|
+| ☐ | Seçim kutusu |
+| Kategori Adı | |
+| Varsayılan KDV (%) | Bu kategorideki ürünlerin satış KDV oranı |
+| Ürün Sayısı | Kategoride kaç ürün var; 0 ise soluk görünür |
+| Durum | Aktif / Pasif rozeti |
+| Düzenle | CategoryModal'ı düzenleme modunda açar |
+| Sil | Silme onayı ister; ürün içeren kategori silinmeye çalışılırsa uyarı gösterilir |
+
+---
+
+## Arama ve Sayfalama
+
+- Metin arama: kategori adına göre (Türkçe karakter desteğiyle)
+- Sayfalama: sayfa başına 20 kayıt
+
+---
+
+## Seçim ve Toplu İşlemler
+
+- Üst satır onay kutusu: tüm sayfayı seçer (kısmi seçimde belirsiz durum gösterilir)
+- Bireysel satır onay kutuları
+- Seçim sayısı ekranda gösterilir
+- **Toplu Sil:** seçili kategorileri siler; kaç ürünün etkileneceğini uyarıyla bildirir
+- Seçimi Temizle butonu
+
+---
+
+## Kategori Oluşturma/Düzenleme Modalı (CategoryModal)
+
+| Alan | Açıklama |
+|---|---|
+| Kategori Adı | Zorunlu |
+| Varsayılan KDV Oranı (%) | Zorunlu; genellikle %10 veya %20 |
+
+---
+
+## Excel İçe/Dışa Aktarma
+
+**Dışa aktarma sütunları:** `Kategori Adı | Varsayılan KDV (%)`
+
+**İçe aktarma sütunları:** `Kategori Adı | Varsayılan KDV (%)`
+
+**İçe aktarma mantığı:**
+- Aynı adda kategori yoksa → **yeni oluşturulur**
+- Aynı adda kategori varsa ve KDV farklıysa → **güncellenir**
+- Aynı adda kategori varsa ve KDV aynıysa → **atlanır**
+
+Yükleme sonucunda: oluşturulan / güncellenen / atlanan kayıt sayısı gösterilir.
+
+---
 
 ## Dikkat edilecekler
 
-- Kategori silmeden önce o kategorideki ürünleri başka bir kategoriye taşımak gerekir.
-- KDV oranı yanlış girilirse tüm fiyat hesaplamaları hatalı sonuç verir.
-- Komisyon sayfasında kategori seçimi bu listeden gelir; yeni kategori eklenince komisyon sayfasında da tanımlanmalıdır.
+- Kategori silinirse o kategorideki ürünlerin komisyon hesaplaması bozulur; önce ürünleri başka kategoriye taşı.
+- Yeni kategori eklenince Komisyonlar sayfasında bu kategori için her platform adına komisyon satırı **otomatik oluşturulur** (sıfır değerle). Oranlara gidip doldurman gerekir.
+- KDV oranı yanlış girilirse tüm fiyat hesaplamaları hatalı sonuç verir; değiştirmeden önce Fiyatlar sayfasında etki edilecek ürün sayısını kontrol et.
