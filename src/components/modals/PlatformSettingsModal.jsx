@@ -51,6 +51,7 @@ export default function PlatformSettingsModal({
       return db.entities.ShippingRate.filter({
         created_by: user.email,
         is_manual: true,
+        platform_id: platform.id,
       });
     },
     enabled: open && !!platform?.id,
@@ -187,7 +188,7 @@ export default function PlatformSettingsModal({
     const payload = {
       website_adapter: formData.website_adapter,
       shipping_company_id: formData.shipping_company_id || (shippingCompanies[0]?.id ?? ''),
-      shipping_company_name: formData.shipping_company_name || (shippingCompanies[0]?.name ?? ''),
+      shipping_company_name: formData.shipping_company_name || '',
       use_custom_shipping_price: formData.use_custom_shipping_price,
       custom_shipping_price: parseFloat(formData.custom_shipping_price) || 0,
       has_same_day_delivery: formData.has_same_day_delivery,

@@ -65,13 +65,41 @@ export default function Calculator() {
   const { data: platforms = [] } = useQuery({
     queryKey: ['platforms', userEmail],
     queryFn: async () => {
-      const userPlatforms = await Platform.filter({ created_by: userEmail });
-      const marketplacePlatforms = await db.entities.Platform.filter({ is_system_admin: true });
-      
-      const merged = [...userPlatforms];
-      for (const mp of marketplacePlatforms) {
-        if (!merged.find(p => p.platform_type === mp.platform_type)) {
-          merged.push(mp);
+      const [userPlatforms, adminPlatforms] = await Promise.all([
+        Platform.filter({ created_by: userEmail }),
+        db.entities.Platform.filter({ is_system_admin: true }),
+      ]);
+      const adminMap = {};
+      adminPlatforms.forEach(p => { adminMap[p.platform_type] = p; });
+      // Admin alanlarını (stopaj, hizmet bedeli, barem) user platformlara merge et
+      const merged = userPlatforms.map(p => {
+        const admin = adminMap[p.platform_type];
+        if (!admin) return p;
+        return {
+          ...p,
+          has_withholding: admin.has_withholding,
+          withholding_rate: admin.withholding_rate,
+          has_service_fee: admin.has_service_fee,
+          service_fee_type: admin.service_fee_type,
+          service_fee_amount: admin.service_fee_amount,
+          service_fee_vat_rate: admin.service_fee_vat_rate,
+          same_day_delivery_service_fee: admin.same_day_delivery_service_fee,
+          has_pos_service_fee: admin.has_pos_service_fee,
+          pos_service_fee_rate: admin.pos_service_fee_rate,
+          use_barem: admin.use_barem,
+          barem_max_desi: admin.barem_max_desi,
+          barem1_min: admin.barem1_min,
+          barem1_max: admin.barem1_max,
+          barem2_min: admin.barem2_min,
+          barem2_max: admin.barem2_max,
+          has_corporate_tax: admin.has_corporate_tax,
+          corporate_tax_rate: admin.corporate_tax_rate,
+        };
+      });
+      // Kullanıcıda yoksa admin platformunu ekle
+      for (const ap of adminPlatforms) {
+        if (!merged.find(p => p.platform_type === ap.platform_type)) {
+          merged.push(ap);
         }
       }
       return merged;
@@ -81,7 +109,19 @@ export default function Calculator() {
 
   const { data: shippingRates = [] } = useQuery({
     queryKey: ['shippingRates', userEmail],
-    queryFn: () => ShippingRate.filter({ created_by: userEmail }),
+    queryFn: async () => {
+      const [userRates, adminRates] = await Promise.all([
+        ShippingRate.filter({ created_by: userEmail }),
+        ShippingRate.list('-id', 10000),
+      ]);
+      // Tekrarsız birleştir (admin rates zaten is_admin_created=true, user rates ayrı)
+      const seen = new Set(userRates.map(r => r.id));
+      const merged = [...userRates];
+      for (const r of adminRates) {
+        if (!seen.has(r.id)) merged.push(r);
+      }
+      return merged;
+    },
     enabled: !!userEmail
   });
 
@@ -202,7 +242,7 @@ export default function Calculator() {
       desi: parseFloat(desi) || 1,
       vat_rate: parseFloat(vatRate) || 20,
       printing_cost: parseFloat(printingCost) || 0,
-      extra_cost: 0,
+      extra_cost: parseFloat(extraCost) || 0,
       multi_package: isMultiPackage,
       special_shipping: false,
       packages: isMultiPackage ? JSON.stringify(packages.map(p => ({ desi: parseFloat(p.desi) || 0, package_id: p.package_id }))) : null,
@@ -223,7 +263,7 @@ export default function Calculator() {
       commission: fakeCommission,
       packagingCost: getTotalPackagingCost(),
       printingCost: parseFloat(printingCost) || 0,
-      extraCost: 0,
+      extraCost: parseFloat(extraCost) || 0,
       isSameDayDelivery,
       settings,
       overrideShippingCost: shippingMode === 'manual' ? (parseFloat(manualShippingCost) || 0) : null,

@@ -194,7 +194,7 @@ export default function Platforms() {
     }
   };
 
-  if (isLoading) {
+  if (isLoading || !userEmail) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-indigo-50/30 flex items-center justify-center">
         <div className="w-8 h-8 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin" />
@@ -218,7 +218,7 @@ export default function Platforms() {
             const record = platforms.find(p => p.platform_type === def.platform_type);
             const isActive = record?.is_active !== false;
             const hasShipping = record?.shipping_company_name;
-            const canEdit = def.platform_type === 'website';
+            const canEdit = def.platform_type === 'website' || isAdmin;
 
             return (
               <div

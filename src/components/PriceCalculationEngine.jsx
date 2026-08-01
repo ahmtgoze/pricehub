@@ -350,10 +350,13 @@ export const calculateProductPrice = ({
   
   const hasOverrideShipping = overrideShippingCost !== null && overrideShippingCost !== undefined;
 
+  const useCustomShipping = platform.use_custom_shipping_price === true ||
+    (platform.platform_type === 'website' && platform.use_custom_shipping_price == null);
+
   const platformShippingRates = hasOverrideShipping ? [] : shippingRates.filter(r => {
     if (r.is_active === false) return false;
     if (overrideShippingCompany && r.shipping_company !== overrideShippingCompany) return false;
-    if (platform.use_custom_shipping_price) {
+    if (useCustomShipping) {
       if (r.is_manual !== true || r.is_admin_created === true) return false;
       if (r.platform_id !== platform.id) return false;
       if (!overrideShippingCompany && platform.shipping_company_name && platform.shipping_company_name.trim() !== '') {
