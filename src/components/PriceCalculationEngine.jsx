@@ -595,17 +595,14 @@ export const calculateProductPrice = ({
             minimumProfitAmount,
             isSameDayDelivery: effectiveSameDayDelivery
           });
-          
-          if (isPriceInBaremRange(barem1Result.salePriceInclVat, platform, 'barem1')) {
-            result = {
-              ...barem1Result,
-              shippingCost: barem1Cost,
-              shippingVatRate: barem1Rate.vat_rate || 20,
-              baremUsed: 'barem1'
-            };
-          }
+          result = {
+            ...barem1Result,
+            shippingCost: barem1Cost,
+            shippingVatRate: barem1Rate.vat_rate || 20,
+            baremUsed: 'barem1'
+          };
         }
-      } 
+      }
       else if (isPriceInBaremRange(desiPrice, platform, 'barem2')) {
         const barem2Rate = findBaremShippingRate(platformShippingRates, 'barem2', effectiveSameDayDelivery);
         const barem2Cost = barem2Rate ? barem2Rate.price * shippingMultiplier : null;
@@ -626,15 +623,12 @@ export const calculateProductPrice = ({
             minimumProfitAmount,
             isSameDayDelivery: effectiveSameDayDelivery
           });
-          
-          if (isPriceInBaremRange(barem2Result.salePriceInclVat, platform, 'barem2')) {
-            result = {
-              ...barem2Result,
-              shippingCost: barem2Cost,
-              shippingVatRate: barem2Rate.vat_rate || 20,
-              baremUsed: 'barem2'
-            };
-          }
+          result = {
+            ...barem2Result,
+            shippingCost: barem2Cost,
+            shippingVatRate: barem2Rate.vat_rate || 20,
+            baremUsed: 'barem2'
+          };
         }
       }
     }
