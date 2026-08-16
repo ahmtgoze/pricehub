@@ -19,12 +19,31 @@ const norm = (t) => (t || '').toLowerCase()
   .replace(/ş/g,'s').replace(/ç/g,'c').replace(/ğ/g,'g')
   .replace(/ı/g,'i').replace(/ö/g,'o').replace(/ü/g,'u');
 
+// Ürün adından ölçü (en x boy) tespit eder. Örn: "35x45+5" -> {w:35, h:45, area:1575}
+const parseSizeFromName = (name) => {
+  const m = (name || '').match(/(\d+)\s*[xX]\s*(\d+)/);
+  if (!m) return null;
+  const w = parseInt(m[1], 10);
+  const h = parseInt(m[2], 10);
+  if (!w || !h) return null;
+  return { w, h, area: w * h };
+};
+
+// Ürün adından adet tespit eder. Örn: "3.000 Adet" -> 3000
+const parseAdetFromName = (name) => {
+  const m = (name || '').match(/(\d{1,3}(?:\.\d{3})*)\s*Adet/i);
+  if (!m) return null;
+  const n = parseInt(m[1].replace(/\./g, ''), 10);
+  return n > 0 ? n : null;
+};
+
 const INIT_FORM = {
   name: '', sku: '', cost: '', printing_cost: '', extra_cost: '',
   desi: '', multi_package: false, packages: [], category_id: '',
   vat_rate: 20, same_day_delivery: false, is_active: true,
   double_shipping: false,
   ref_product_id: null, cost_addon: '', cost_addon_type: 'total_tl', ref_product_qty: '',
+  ref_comparison_type: 'feature',
   unit_quantity: '',
 };
 
@@ -68,6 +87,7 @@ export default function ProductModal({
         cost_addon: product.cost_addon || '',
         cost_addon_type: product.cost_addon_type || 'total_tl',
         ref_product_qty: product.ref_product_qty || '',
+        ref_comparison_type: product.ref_comparison_type || 'feature',
         unit_quantity: product.unit_quantity || '',
       });
       setShowPackages(product.multi_package || false);
@@ -109,6 +129,63 @@ export default function ProductModal({
     }
     return Math.max(baz, normalCost);
   }, [form.ref_product_id, form.cost_addon, form.cost_addon_type, form.ref_product_qty, form.cost, products]);
+
+  // "Ölçüye göre kıyas": aynı kategorideki diğer ürünlerin gerçek maliyet/alan
+  // oranına (medyan) bakarak, bu ürün için önerilen % ek maliyeti hesaplar.
+  // Tek bir referans ürünün fiyatına değil, ailenin genel eğilimine güvenir.
+  const sizeSuggestion = useMemo(() => {
+    const ref = products.find(p => p.id === form.ref_product_id);
+    if (!ref) return null;
+    const targetSize = parseSizeFromName(form.name);
+    const refSize = parseSizeFromName(ref.name);
+    if (!targetSize || !refSize) return null;
+
+    const targetAdet = parseAdetFromName(form.name) || parseFloat(form.unit_quantity) || 1;
+    const refAdet = parseAdetFromName(ref.name) || parseFloat(ref.unit_quantity) || 1;
+    const refCost = parseFloat(ref.cost) || 0;
+    if (!refCost || !refAdet) return null;
+
+    const familyRates = products
+      .filter(p => p.id !== product?.id && p.id !== ref.id && p.category_id === form.category_id && p.is_active !== false)
+      .map(p => {
+        const s = parseSizeFromName(p.name);
+        if (!s || !s.area) return null;
+        const adet = parseAdetFromName(p.name) || parseFloat(p.unit_quantity) || 1;
+        const cost = parseFloat(p.cost) || 0;
+        if (!cost || !adet) return null;
+        return cost / adet / s.area;
+      })
+      .filter(v => v !== null && v > 0 && isFinite(v));
+
+    let method, rate;
+    if (familyRates.length > 0) {
+      const sorted = [...familyRates].sort((a, b) => a - b);
+      const mid = Math.floor(sorted.length / 2);
+      rate = sorted.length % 2 !== 0 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+      method = 'family';
+    } else {
+      rate = refCost / refAdet / refSize.area;
+      method = 'geometric';
+    }
+
+    const suggestedBaseCost = rate * targetAdet * targetSize.area;
+    const pct = (suggestedBaseCost / refCost - 1) * 100;
+    if (!isFinite(pct)) return null;
+
+    return {
+      targetArea: targetSize.area, refArea: refSize.area,
+      targetAdet, refAdet, suggestedBaseCost, pct, method,
+      sampleSize: familyRates.length,
+    };
+  }, [form.ref_product_id, form.name, form.category_id, form.unit_quantity, products, product]);
+
+  // Ölçüye göre kıyas seçiliyken öneriyi otomatik uygula (kullanıcı sonradan elle değiştirebilir).
+  useEffect(() => {
+    if (form.ref_comparison_type === 'size' && sizeSuggestion) {
+      setForm(f => ({ ...f, cost_addon_type: 'total_pct', cost_addon: sizeSuggestion.pct.toFixed(2) }));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form.ref_comparison_type, form.ref_product_id, sizeSuggestion?.pct]);
 
   const availableRefProducts = useMemo(() => {
     const refsThis = new Set(products.filter(p => p.ref_product_id === product?.id).map(p => p.id));
@@ -173,6 +250,7 @@ export default function ProductModal({
       ref_product_id: form.ref_product_id || null,
       cost_addon: parseFloat(form.cost_addon) || 0,
       cost_addon_type: form.cost_addon_type,
+      ref_comparison_type: form.ref_comparison_type || 'feature',
       base_cost: finalBaseCost,
       ref_product_qty: parseFloat(form.ref_product_qty) || 0,
       unit_quantity: parseInt(form.unit_quantity) || 0,
@@ -320,6 +398,46 @@ export default function ProductModal({
 
                   {form.ref_product_id && (
                     <>
+                      <div className="space-y-2">
+                        <Label className="text-sm">Kıyas türü</Label>
+                        <div className="grid grid-cols-2 gap-2">
+                          {[
+                            { val: 'feature', label: 'Özelliğe Göre' },
+                            { val: 'size', label: 'Ölçüye Göre' },
+                          ].map(opt => (
+                            <button key={opt.val} type="button"
+                              onClick={() => upd('ref_comparison_type', opt.val)}
+                              className={`py-2 px-2 text-xs rounded-lg border transition-colors ${form.ref_comparison_type === opt.val
+                                ? 'bg-indigo-50 border-indigo-400 text-indigo-700 font-medium'
+                                : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'}`}>
+                              {opt.label}
+                            </button>
+                          ))}
+                        </div>
+                        <p className="text-xs text-gray-400">
+                          Özelliğe göre: aynı ölçüde farklı özellik (renk, cepli/cepsiz) kıyası — % elle girilir.
+                          Ölçüye göre: farklı ölçüdeki ürünler arası kıyas — % otomatik hesaplanır.
+                        </p>
+                      </div>
+
+                      {form.ref_comparison_type === 'size' && (
+                        sizeSuggestion ? (
+                          <div className="text-xs text-indigo-700 bg-indigo-50 border border-indigo-200 rounded-lg p-3 space-y-1">
+                            <p>Bu ürün: {sizeSuggestion.targetArea} cm² × {sizeSuggestion.targetAdet} adet</p>
+                            <p>Referans: {sizeSuggestion.refArea} cm² × {sizeSuggestion.refAdet} adet</p>
+                            <p className="font-medium">
+                              {sizeSuggestion.method === 'family'
+                                ? `Aynı kategorideki ${sizeSuggestion.sampleSize} ürünün maliyet/alan oranına göre önerilen ek: %${sizeSuggestion.pct.toFixed(2)}`
+                                : `Aile verisi bulunamadı, sadece bu iki ürünün ölçü oranına göre hesaplandı: %${sizeSuggestion.pct.toFixed(2)}`}
+                            </p>
+                          </div>
+                        ) : (
+                          <div className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-lg p-3">
+                            Ürün adlarından ölçü (en x boy) tespit edilemedi. Maliyet ekini elle girmen gerekiyor.
+                          </div>
+                        )
+                      )}
+
                       <div className="space-y-2">
                         <Label className="text-sm">Maliyet eki türü</Label>
                         <div className="grid grid-cols-3 gap-2">
