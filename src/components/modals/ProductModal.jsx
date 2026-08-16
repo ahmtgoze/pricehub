@@ -43,7 +43,10 @@ const INIT_FORM = {
   vat_rate: 20, same_day_delivery: false, is_active: true,
   double_shipping: false,
   ref_product_id: null, cost_addon: '', cost_addon_type: 'total_tl', ref_product_qty: '',
-  ref_comparison_type: 'feature',
+  // Kıyas türleri artık birlikte açık olabilir: özelliğe göre (elle % / ₺) ve
+  // ölçüye göre (otomatik %) aynı anda etkinleştirilebilir. Hangisi daha
+  // yüksek baz maliyet veriyorsa o esas alınır.
+  cmp_feature: true, cmp_size: false, size_cost_addon: '',
   unit_quantity: '',
 };
 
@@ -87,7 +90,9 @@ export default function ProductModal({
         cost_addon: product.cost_addon || '',
         cost_addon_type: product.cost_addon_type || 'total_tl',
         ref_product_qty: product.ref_product_qty || '',
-        ref_comparison_type: product.ref_comparison_type || 'feature',
+        cmp_feature: (product.ref_comparison_type || 'feature').split(',').includes('feature'),
+        cmp_size: (product.ref_comparison_type || '').split(',').includes('size'),
+        size_cost_addon: product.size_cost_addon || '',
         unit_quantity: product.unit_quantity || '',
       });
       setShowPackages(product.multi_package || false);
@@ -112,14 +117,14 @@ export default function ProductModal({
     setChainConflict(null);
   }, [product, open]);
 
-  const baseCost = useMemo(() => {
-    if (!form.ref_product_id) return null;
+  // "Özelliğe göre" adayı: elle girilen ek (₺ / % / birim ₺) ile hesaplanan baz maliyet.
+  const featureBaseCost = useMemo(() => {
+    if (!form.ref_product_id || !form.cmp_feature) return null;
     const ref = products.find(p => p.id === form.ref_product_id);
     if (!ref) return null;
     const refCost = (ref.ref_product_id && ref.base_cost > 0)
       ? ref.base_cost : (parseFloat(ref.cost) || 0);
     const addon = parseFloat(form.cost_addon) || 0;
-    const normalCost = parseFloat(form.cost) || 0;
     let baz = 0;
     if (form.cost_addon_type === 'total_tl') baz = refCost + addon;
     else if (form.cost_addon_type === 'total_pct') baz = refCost * (1 + addon / 100);
@@ -127,8 +132,34 @@ export default function ProductModal({
       const qty = parseFloat(form.ref_product_qty) || 1;
       baz = (refCost / qty + addon) * qty;
     }
-    return Math.max(baz, normalCost);
-  }, [form.ref_product_id, form.cost_addon, form.cost_addon_type, form.ref_product_qty, form.cost, products]);
+    return baz;
+  }, [form.ref_product_id, form.cmp_feature, form.cost_addon, form.cost_addon_type, form.ref_product_qty, products]);
+
+  // "Ölçüye göre" adayı: otomatik/elle düzenlenebilir % ile hesaplanan baz maliyet.
+  const sizeBaseCostValue = useMemo(() => {
+    if (!form.ref_product_id || !form.cmp_size) return null;
+    const ref = products.find(p => p.id === form.ref_product_id);
+    if (!ref) return null;
+    const refCost = (ref.ref_product_id && ref.base_cost > 0)
+      ? ref.base_cost : (parseFloat(ref.cost) || 0);
+    const addon = parseFloat(form.size_cost_addon) || 0;
+    if (!refCost) return null;
+    return refCost * (1 + addon / 100);
+  }, [form.ref_product_id, form.cmp_size, form.size_cost_addon, products]);
+
+  // İki aday da varsa (özelliğe göre + ölçüye göre birlikte açık), hangisi yüksekse o esas alınır.
+  const baseCostResult = useMemo(() => {
+    if (!form.ref_product_id) return null;
+    const candidates = [];
+    if (featureBaseCost !== null) candidates.push({ source: 'feature', val: featureBaseCost });
+    if (sizeBaseCostValue !== null) candidates.push({ source: 'size', val: sizeBaseCostValue });
+    if (candidates.length === 0) return null;
+    return candidates.reduce((max, c) => (c.val > max.val ? c : max));
+  }, [form.ref_product_id, featureBaseCost, sizeBaseCostValue]);
+
+  const baseCost = baseCostResult !== null
+    ? Math.max(baseCostResult.val, parseFloat(form.cost) || 0)
+    : null;
 
   // "Ölçüye göre kıyas": aynı kategorideki diğer ürünlerin gerçek maliyet/alan
   // oranına (medyan) bakarak, bu ürün için önerilen % ek maliyeti hesaplar.
@@ -179,13 +210,13 @@ export default function ProductModal({
     };
   }, [form.ref_product_id, form.name, form.category_id, form.unit_quantity, products, product]);
 
-  // Ölçüye göre kıyas seçiliyken öneriyi otomatik uygula (kullanıcı sonradan elle değiştirebilir).
+  // Ölçüye göre kıyas açıkken öneriyi otomatik uygula (kullanıcı sonradan elle değiştirebilir).
   useEffect(() => {
-    if (form.ref_comparison_type === 'size' && sizeSuggestion) {
-      setForm(f => ({ ...f, cost_addon_type: 'total_pct', cost_addon: sizeSuggestion.pct.toFixed(2) }));
+    if (form.cmp_size && sizeSuggestion) {
+      setForm(f => ({ ...f, size_cost_addon: sizeSuggestion.pct.toFixed(2) }));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [form.ref_comparison_type, form.ref_product_id, sizeSuggestion?.pct]);
+  }, [form.cmp_size, form.ref_product_id, sizeSuggestion?.pct]);
 
   const availableRefProducts = useMemo(() => {
     const refsThis = new Set(products.filter(p => p.ref_product_id === product?.id).map(p => p.id));
@@ -250,7 +281,8 @@ export default function ProductModal({
       ref_product_id: form.ref_product_id || null,
       cost_addon: parseFloat(form.cost_addon) || 0,
       cost_addon_type: form.cost_addon_type,
-      ref_comparison_type: form.ref_comparison_type || 'feature',
+      ref_comparison_type: [form.cmp_feature && 'feature', form.cmp_size && 'size'].filter(Boolean).join(',') || 'feature',
+      size_cost_addon: parseFloat(form.size_cost_addon) || 0,
       base_cost: finalBaseCost,
       ref_product_qty: parseFloat(form.ref_product_qty) || 0,
       unit_quantity: parseInt(form.unit_quantity) || 0,
@@ -368,7 +400,10 @@ export default function ProductModal({
                   </div>
                   {form.ref_product_id && (
                     <button type="button"
-                      onClick={() => { upd('ref_product_id', null); upd('cost_addon', ''); upd('ref_product_qty', ''); }}
+                      onClick={() => setForm(f => ({
+                        ...f, ref_product_id: null, cost_addon: '', ref_product_qty: '',
+                        cmp_feature: true, cmp_size: false, size_cost_addon: '',
+                      }))}
                       className="text-xs text-red-500 hover:text-red-700 shrink-0 ml-2">
                       Kaldır
                     </button>
@@ -399,89 +434,116 @@ export default function ProductModal({
                   {form.ref_product_id && (
                     <>
                       <div className="space-y-2">
-                        <Label className="text-sm">Kıyas türü</Label>
+                        <Label className="text-sm">Kıyas türü (ikisi birden açık olabilir)</Label>
                         <div className="grid grid-cols-2 gap-2">
-                          {[
-                            { val: 'feature', label: 'Özelliğe Göre' },
-                            { val: 'size', label: 'Ölçüye Göre' },
-                          ].map(opt => (
-                            <button key={opt.val} type="button"
-                              onClick={() => upd('ref_comparison_type', opt.val)}
-                              className={`py-2 px-2 text-xs rounded-lg border transition-colors ${form.ref_comparison_type === opt.val
-                                ? 'bg-indigo-50 border-indigo-400 text-indigo-700 font-medium'
-                                : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'}`}>
-                              {opt.label}
-                            </button>
-                          ))}
+                          <button type="button"
+                            onClick={() => upd('cmp_feature', !form.cmp_feature)}
+                            className={`py-2 px-2 text-xs rounded-lg border transition-colors ${form.cmp_feature
+                              ? 'bg-indigo-50 border-indigo-400 text-indigo-700 font-medium'
+                              : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'}`}>
+                            {form.cmp_feature ? '✓ ' : ''}Özelliğe Göre
+                          </button>
+                          <button type="button"
+                            onClick={() => upd('cmp_size', !form.cmp_size)}
+                            className={`py-2 px-2 text-xs rounded-lg border transition-colors ${form.cmp_size
+                              ? 'bg-indigo-50 border-indigo-400 text-indigo-700 font-medium'
+                              : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'}`}>
+                            {form.cmp_size ? '✓ ' : ''}Ölçüye Göre
+                          </button>
                         </div>
                         <p className="text-xs text-gray-400">
                           Özelliğe göre: aynı ölçüde farklı özellik (renk, cepli/cepsiz) kıyası — % elle girilir.
                           Ölçüye göre: farklı ölçüdeki ürünler arası kıyas — % otomatik hesaplanır.
+                          İkisi de açıksa, hangisinin baz maliyeti daha yüksekse o kullanılır.
                         </p>
-                      </div>
-
-                      {form.ref_comparison_type === 'size' && (
-                        sizeSuggestion ? (
-                          <div className="text-xs text-indigo-700 bg-indigo-50 border border-indigo-200 rounded-lg p-3 space-y-1">
-                            <p>Bu ürün: {sizeSuggestion.targetArea} cm² × {sizeSuggestion.targetAdet} adet</p>
-                            <p>Referans: {sizeSuggestion.refArea} cm² × {sizeSuggestion.refAdet} adet</p>
-                            <p className="font-medium">
-                              {sizeSuggestion.method === 'family'
-                                ? `Aynı kategorideki ${sizeSuggestion.sampleSize} ürünün maliyet/alan oranına göre önerilen ek: %${sizeSuggestion.pct.toFixed(2)}`
-                                : `Aile verisi bulunamadı, sadece bu iki ürünün ölçü oranına göre hesaplandı: %${sizeSuggestion.pct.toFixed(2)}`}
-                            </p>
-                          </div>
-                        ) : (
-                          <div className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-lg p-3">
-                            Ürün adlarından ölçü (en x boy) tespit edilemedi. Maliyet ekini elle girmen gerekiyor.
-                          </div>
-                        )
-                      )}
-
-                      <div className="space-y-2">
-                        <Label className="text-sm">Maliyet eki türü</Label>
-                        <div className="grid grid-cols-3 gap-2">
-                          {[
-                            { val: 'total_tl', label: 'Toplam ₺' },
-                            { val: 'total_pct', label: 'Toplam %' },
-                            { val: 'unit_tl', label: 'Birim ₺/adet' },
-                          ].map(opt => (
-                            <button key={opt.val} type="button"
-                              onClick={() => upd('cost_addon_type', opt.val)}
-                              className={`py-2 px-2 text-xs rounded-lg border transition-colors ${form.cost_addon_type === opt.val
-                                ? 'bg-indigo-50 border-indigo-400 text-indigo-700 font-medium'
-                                : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'}`}>
-                              {opt.label}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-3">
-                        <div className="space-y-2">
-                          <Label className="text-sm">
-                            {form.cost_addon_type === 'total_tl' ? 'Maliyet eki (₺)'
-                              : form.cost_addon_type === 'total_pct' ? 'Maliyet eki (%)'
-                              : 'Birim ek (₺/adet)'}
-                          </Label>
-                          <Input type="number" step="0.01" value={form.cost_addon} onChange={e => upd('cost_addon', e.target.value)} placeholder="0.00" />
-                        </div>
-                        {form.cost_addon_type === 'unit_tl' && (
-                          <div className="space-y-2">
-                            <Label className="text-sm">Referans ürünün adeti</Label>
-                            <Input type="number" step="1" min="1" value={form.ref_product_qty} onChange={e => upd('ref_product_qty', e.target.value)} placeholder="100" />
-                          </div>
+                        {!form.cmp_feature && !form.cmp_size && (
+                          <p className="text-xs text-amber-600">En az bir kıyas türü seçmelisin, yoksa baz maliyet hesaplanmaz.</p>
                         )}
                       </div>
+
+                      {form.cmp_feature && (
+                        <div className={`space-y-3 rounded-lg border p-3 ${baseCostResult?.source === 'feature' ? 'border-emerald-300 bg-emerald-50/40' : 'border-gray-200'}`}>
+                          <div className="flex items-center justify-between">
+                            <Label className="text-sm font-medium">Özelliğe Göre</Label>
+                            {featureBaseCost !== null && <span className="text-xs text-gray-500">₺{featureBaseCost.toFixed(2)}</span>}
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-sm">Maliyet eki türü</Label>
+                            <div className="grid grid-cols-3 gap-2">
+                              {[
+                                { val: 'total_tl', label: 'Toplam ₺' },
+                                { val: 'total_pct', label: 'Toplam %' },
+                                { val: 'unit_tl', label: 'Birim ₺/adet' },
+                              ].map(opt => (
+                                <button key={opt.val} type="button"
+                                  onClick={() => upd('cost_addon_type', opt.val)}
+                                  className={`py-2 px-2 text-xs rounded-lg border transition-colors ${form.cost_addon_type === opt.val
+                                    ? 'bg-indigo-50 border-indigo-400 text-indigo-700 font-medium'
+                                    : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'}`}>
+                                  {opt.label}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                          <div className="grid grid-cols-2 gap-3">
+                            <div className="space-y-2">
+                              <Label className="text-sm">
+                                {form.cost_addon_type === 'total_tl' ? 'Maliyet eki (₺)'
+                                  : form.cost_addon_type === 'total_pct' ? 'Maliyet eki (%)'
+                                  : 'Birim ek (₺/adet)'}
+                              </Label>
+                              <Input type="number" step="0.01" value={form.cost_addon} onChange={e => upd('cost_addon', e.target.value)} placeholder="0.00" />
+                            </div>
+                            {form.cost_addon_type === 'unit_tl' && (
+                              <div className="space-y-2">
+                                <Label className="text-sm">Referans ürünün adeti</Label>
+                                <Input type="number" step="1" min="1" value={form.ref_product_qty} onChange={e => upd('ref_product_qty', e.target.value)} placeholder="100" />
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {form.cmp_size && (
+                        <div className={`space-y-3 rounded-lg border p-3 ${baseCostResult?.source === 'size' ? 'border-emerald-300 bg-emerald-50/40' : 'border-gray-200'}`}>
+                          <div className="flex items-center justify-between">
+                            <Label className="text-sm font-medium">Ölçüye Göre</Label>
+                            {sizeBaseCostValue !== null && <span className="text-xs text-gray-500">₺{sizeBaseCostValue.toFixed(2)}</span>}
+                          </div>
+                          {sizeSuggestion ? (
+                            <div className="text-xs text-indigo-700 bg-indigo-50 border border-indigo-200 rounded-lg p-3 space-y-1">
+                              <p>Bu ürün: {sizeSuggestion.targetArea} cm² × {sizeSuggestion.targetAdet} adet</p>
+                              <p>Referans: {sizeSuggestion.refArea} cm² × {sizeSuggestion.refAdet} adet</p>
+                              <p className="font-medium">
+                                {sizeSuggestion.method === 'family'
+                                  ? `Aynı kategorideki ${sizeSuggestion.sampleSize} ürünün maliyet/alan oranına göre önerilen ek: %${sizeSuggestion.pct.toFixed(2)}`
+                                  : `Aile verisi bulunamadı, sadece bu iki ürünün ölçü oranına göre hesaplandı: %${sizeSuggestion.pct.toFixed(2)}`}
+                              </p>
+                            </div>
+                          ) : (
+                            <div className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-lg p-3">
+                              Ürün adlarından ölçü (en x boy) tespit edilemedi. Maliyet ekini elle girmen gerekiyor.
+                            </div>
+                          )}
+                          <div className="space-y-2">
+                            <Label className="text-sm">Maliyet eki (%) — otomatik önerilir, elle değiştirebilirsin</Label>
+                            <Input type="number" step="0.01" value={form.size_cost_addon} onChange={e => upd('size_cost_addon', e.target.value)} placeholder="0.00" />
+                          </div>
+                        </div>
+                      )}
 
                       <div className="space-y-2">
                         <Label className="text-sm">Baz maliyet (otomatik)</Label>
                         {baseCost !== null ? (
                           <div className="px-3 py-2.5 rounded-lg bg-emerald-50 border border-emerald-300 text-emerald-800 text-sm font-semibold flex items-center justify-between">
                             <span>₺{baseCost.toFixed(2)}</span>
-                            {baseCost <= (parseFloat(form.cost) || 0) && (
-                              <span className="text-xs text-amber-600 font-normal">Normal maliyet esas alınıyor</span>
-                            )}
+                            <span className="text-xs text-emerald-700 font-normal">
+                              {baseCost <= (parseFloat(form.cost) || 0)
+                                ? 'Normal maliyet esas alınıyor'
+                                : baseCostResult?.source === 'feature' ? 'Özelliğe göre değer esas alınıyor'
+                                : baseCostResult?.source === 'size' ? 'Ölçüye göre değer esas alınıyor'
+                                : ''}
+                            </span>
                           </div>
                         ) : (
                           <div className="px-3 py-2.5 rounded-lg bg-gray-50 border border-gray-200 text-gray-400 text-sm">
