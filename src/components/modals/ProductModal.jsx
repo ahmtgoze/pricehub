@@ -19,12 +19,34 @@ const norm = (t) => (t || '').toLowerCase()
   .replace(/ş/g,'s').replace(/ç/g,'c').replace(/ğ/g,'g')
   .replace(/ı/g,'i').replace(/ö/g,'o').replace(/ü/g,'u');
 
+// Ürün adından ölçü (en x boy) tespit eder. Örn: "35x45+5" -> {w:35, h:45, area:1575}
+const parseSizeFromName = (name) => {
+  const m = (name || '').match(/(\d+)\s*[xX]\s*(\d+)/);
+  if (!m) return null;
+  const w = parseInt(m[1], 10);
+  const h = parseInt(m[2], 10);
+  if (!w || !h) return null;
+  return { w, h, area: w * h };
+};
+
+// Ürün adından adet tespit eder. Örn: "3.000 Adet" -> 3000
+const parseAdetFromName = (name) => {
+  const m = (name || '').match(/(\d{1,3}(?:\.\d{3})*)\s*Adet/i);
+  if (!m) return null;
+  const n = parseInt(m[1].replace(/\./g, ''), 10);
+  return n > 0 ? n : null;
+};
+
 const INIT_FORM = {
   name: '', sku: '', cost: '', printing_cost: '', extra_cost: '',
   desi: '', multi_package: false, packages: [], category_id: '',
   vat_rate: 20, same_day_delivery: false, is_active: true,
   double_shipping: false,
+  // Özelliğe göre kıyas (aynı ölçüde farklı özellik) - kendi referans ürünü.
   ref_product_id: null, cost_addon: '', cost_addon_type: 'total_tl', ref_product_qty: '',
+  // Ölçüye göre kıyas (farklı ölçüdeki ürün) - AYRI bir referans ürünü.
+  // İkisi birden seçilebilir; hangisi daha yüksek baz maliyet veriyorsa o esas alınır.
+  ref_product_id_size: null, size_cost_addon: '',
   unit_quantity: '',
 };
 
@@ -39,9 +61,11 @@ export default function ProductModal({
   const [chainSearch, setChainSearch] = useState('');
   const [matchSearch, setMatchSearch] = useState('');
   const [refSearch, setRefSearch] = useState('');
+  const [refSearchSize, setRefSearchSize] = useState('');
   const [showChainSearch, setShowChainSearch] = useState(false);
   const [showMatchSearch, setShowMatchSearch] = useState(false);
   const [showRefSearch, setShowRefSearch] = useState(false);
+  const [showRefSearchSize, setShowRefSearchSize] = useState(false);
   const [chainConflict, setChainConflict] = useState(null);
 
   const upd = (key, val) => setForm(f => ({ ...f, [key]: val }));
@@ -68,6 +92,8 @@ export default function ProductModal({
         cost_addon: product.cost_addon || '',
         cost_addon_type: product.cost_addon_type || 'total_tl',
         ref_product_qty: product.ref_product_qty || '',
+        ref_product_id_size: product.ref_product_id_size || null,
+        size_cost_addon: product.size_cost_addon || '',
         unit_quantity: product.unit_quantity || '',
       });
       setShowPackages(product.multi_package || false);
@@ -87,19 +113,20 @@ export default function ProductModal({
       setChainMembers([]);
       setMatchMembers([]);
     }
-    setChainSearch(''); setMatchSearch(''); setRefSearch('');
-    setShowChainSearch(false); setShowMatchSearch(false); setShowRefSearch(false);
+    setChainSearch(''); setMatchSearch(''); setRefSearch(''); setRefSearchSize('');
+    setShowChainSearch(false); setShowMatchSearch(false); setShowRefSearch(false); setShowRefSearchSize(false);
     setChainConflict(null);
   }, [product, open]);
 
-  const baseCost = useMemo(() => {
+  // "Özelliğe göre" adayı: elle girilen ek (₺ / % / birim ₺) ile hesaplanan baz maliyet.
+  // Kendi referans ürünü (form.ref_product_id) üzerinden hesaplanır.
+  const featureBaseCost = useMemo(() => {
     if (!form.ref_product_id) return null;
     const ref = products.find(p => p.id === form.ref_product_id);
     if (!ref) return null;
     const refCost = (ref.ref_product_id && ref.base_cost > 0)
       ? ref.base_cost : (parseFloat(ref.cost) || 0);
     const addon = parseFloat(form.cost_addon) || 0;
-    const normalCost = parseFloat(form.cost) || 0;
     let baz = 0;
     if (form.cost_addon_type === 'total_tl') baz = refCost + addon;
     else if (form.cost_addon_type === 'total_pct') baz = refCost * (1 + addon / 100);
@@ -107,11 +134,98 @@ export default function ProductModal({
       const qty = parseFloat(form.ref_product_qty) || 1;
       baz = (refCost / qty + addon) * qty;
     }
-    return Math.max(baz, normalCost);
-  }, [form.ref_product_id, form.cost_addon, form.cost_addon_type, form.ref_product_qty, form.cost, products]);
+    return baz;
+  }, [form.ref_product_id, form.cost_addon, form.cost_addon_type, form.ref_product_qty, products]);
+
+  // "Ölçüye göre" adayı: otomatik/elle düzenlenebilir % ile hesaplanan baz maliyet.
+  // AYRI bir referans ürünü (form.ref_product_id_size) üzerinden hesaplanır.
+  const sizeBaseCostValue = useMemo(() => {
+    if (!form.ref_product_id_size) return null;
+    const ref = products.find(p => p.id === form.ref_product_id_size);
+    if (!ref) return null;
+    const refCost = (ref.ref_product_id && ref.base_cost > 0)
+      ? ref.base_cost : (parseFloat(ref.cost) || 0);
+    const addon = parseFloat(form.size_cost_addon) || 0;
+    if (!refCost) return null;
+    return refCost * (1 + addon / 100);
+  }, [form.ref_product_id_size, form.size_cost_addon, products]);
+
+  // İki aday da varsa (iki farklı referans ürünü, iki ayrı kıyas), hangisi yüksekse o esas alınır.
+  const baseCostResult = useMemo(() => {
+    const candidates = [];
+    if (featureBaseCost !== null) candidates.push({ source: 'feature', val: featureBaseCost });
+    if (sizeBaseCostValue !== null) candidates.push({ source: 'size', val: sizeBaseCostValue });
+    if (candidates.length === 0) return null;
+    return candidates.reduce((max, c) => (c.val > max.val ? c : max));
+  }, [featureBaseCost, sizeBaseCostValue]);
+
+  const baseCost = baseCostResult !== null
+    ? Math.max(baseCostResult.val, parseFloat(form.cost) || 0)
+    : null;
+
+  // "Ölçüye göre kıyas": aynı kategorideki diğer ürünlerin gerçek maliyet/alan
+  // oranına (medyan) bakarak, bu ürün için önerilen % ek maliyeti hesaplar.
+  // Tek bir referans ürünün fiyatına değil, ailenin genel eğilimine güvenir.
+  const sizeSuggestion = useMemo(() => {
+    const ref = products.find(p => p.id === form.ref_product_id_size);
+    if (!ref) return null;
+    const targetSize = parseSizeFromName(form.name);
+    const refSize = parseSizeFromName(ref.name);
+    if (!targetSize || !refSize) return null;
+
+    const targetAdet = parseAdetFromName(form.name) || parseFloat(form.unit_quantity) || 1;
+    const refAdet = parseAdetFromName(ref.name) || parseFloat(ref.unit_quantity) || 1;
+    const refCost = parseFloat(ref.cost) || 0;
+    if (!refCost || !refAdet) return null;
+
+    const familyRates = products
+      .filter(p => p.id !== product?.id && p.id !== ref.id && p.category_id === form.category_id && p.is_active !== false)
+      .map(p => {
+        const s = parseSizeFromName(p.name);
+        if (!s || !s.area) return null;
+        const adet = parseAdetFromName(p.name) || parseFloat(p.unit_quantity) || 1;
+        const cost = parseFloat(p.cost) || 0;
+        if (!cost || !adet) return null;
+        return cost / adet / s.area;
+      })
+      .filter(v => v !== null && v > 0 && isFinite(v));
+
+    let method, rate;
+    if (familyRates.length > 0) {
+      const sorted = [...familyRates].sort((a, b) => a - b);
+      const mid = Math.floor(sorted.length / 2);
+      rate = sorted.length % 2 !== 0 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+      method = 'family';
+    } else {
+      rate = refCost / refAdet / refSize.area;
+      method = 'geometric';
+    }
+
+    const suggestedBaseCost = rate * targetAdet * targetSize.area;
+    const pct = (suggestedBaseCost / refCost - 1) * 100;
+    if (!isFinite(pct)) return null;
+
+    return {
+      targetArea: targetSize.area, refArea: refSize.area,
+      targetAdet, refAdet, suggestedBaseCost, pct, method,
+      sampleSize: familyRates.length,
+    };
+  }, [form.ref_product_id_size, form.name, form.category_id, form.unit_quantity, products, product]);
+
+  // Ölçüye göre referans ürünü seçiliyken öneriyi otomatik uygula (kullanıcı sonradan elle değiştirebilir).
+  useEffect(() => {
+    if (form.ref_product_id_size && sizeSuggestion) {
+      setForm(f => ({ ...f, size_cost_addon: sizeSuggestion.pct.toFixed(2) }));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form.ref_product_id_size, sizeSuggestion?.pct]);
 
   const availableRefProducts = useMemo(() => {
-    const refsThis = new Set(products.filter(p => p.ref_product_id === product?.id).map(p => p.id));
+    const refsThis = new Set(
+      products
+        .filter(p => p.ref_product_id === product?.id || p.ref_product_id_size === product?.id)
+        .map(p => p.id)
+    );
     return products.filter(p => p.id !== product?.id && !refsThis.has(p.id));
   }, [products, product]);
 
@@ -127,10 +241,12 @@ export default function ProductModal({
   };
 
   const refResults = useMemo(() => filterProds(availableRefProducts, refSearch), [availableRefProducts, refSearch]);
+  const refResultsSize = useMemo(() => filterProds(availableRefProducts, refSearchSize), [availableRefProducts, refSearchSize]);
   const chainResults = useMemo(() => filterProds(products, chainSearch, chainMembers.map(p => p.id)), [products, chainSearch, chainMembers, product]);
   const matchResults = useMemo(() => filterProds(products, matchSearch, matchMembers.map(p => p.id)), [products, matchSearch, matchMembers, product]);
 
   const refProduct = products.find(p => p.id === form.ref_product_id);
+  const refProductSize = products.find(p => p.id === form.ref_product_id_size);
 
   const handleAddChain = (p) => {
     setChainMembers(prev => [...prev, p]);
@@ -173,6 +289,9 @@ export default function ProductModal({
       ref_product_id: form.ref_product_id || null,
       cost_addon: parseFloat(form.cost_addon) || 0,
       cost_addon_type: form.cost_addon_type,
+      ref_product_id_size: form.ref_product_id_size || null,
+      ref_comparison_type: [form.ref_product_id && 'feature', form.ref_product_id_size && 'size'].filter(Boolean).join(',') || 'feature',
+      size_cost_addon: parseFloat(form.size_cost_addon) || 0,
       base_cost: finalBaseCost,
       ref_product_qty: parseFloat(form.ref_product_qty) || 0,
       unit_quantity: parseInt(form.unit_quantity) || 0,
@@ -281,16 +400,16 @@ export default function ProductModal({
                 </div>
               )}
 
-              {/* REFERANS ÜRÜN */}
+              {/* REFERANS ÜRÜN — ÖZELLİĞE GÖRE (kendi referans ürünü) */}
               <div className="border border-gray-200 rounded-lg overflow-hidden">
                 <div className="flex items-center justify-between px-4 py-3 bg-gray-50 border-b border-gray-200">
                   <div>
-                    <Label className="font-medium text-sm">Referans Ürün</Label>
-                    <p className="text-xs text-gray-500 mt-0.5">Büyük/pahalı ürün, küçük/ucuz ürünü referans alır. Baz maliyet otomatik hesaplanır.</p>
+                    <Label className="font-medium text-sm">Referans Ürün — Özelliğe Göre</Label>
+                    <p className="text-xs text-gray-500 mt-0.5">Aynı ölçüde farklı özellik (renk, cepli/cepsiz) kıyası. Maliyet eki elle girilir.</p>
                   </div>
                   {form.ref_product_id && (
                     <button type="button"
-                      onClick={() => { upd('ref_product_id', null); upd('cost_addon', ''); upd('ref_product_qty', ''); }}
+                      onClick={() => setForm(f => ({ ...f, ref_product_id: null, cost_addon: '', ref_product_qty: '' }))}
                       className="text-xs text-red-500 hover:text-red-700 shrink-0 ml-2">
                       Kaldır
                     </button>
@@ -319,7 +438,11 @@ export default function ProductModal({
                   )}
 
                   {form.ref_product_id && (
-                    <>
+                    <div className={`space-y-3 rounded-lg border p-3 ${baseCostResult?.source === 'feature' ? 'border-emerald-300 bg-emerald-50/40' : 'border-gray-200'}`}>
+                      <div className="flex items-center justify-between">
+                        <Label className="text-sm font-medium">Hesaplanan baz maliyet</Label>
+                        {featureBaseCost !== null && <span className="text-xs text-gray-500">₺{featureBaseCost.toFixed(2)}</span>}
+                      </div>
                       <div className="space-y-2">
                         <Label className="text-sm">Maliyet eki türü</Label>
                         <div className="grid grid-cols-3 gap-2">
@@ -338,7 +461,6 @@ export default function ProductModal({
                           ))}
                         </div>
                       </div>
-
                       <div className="grid grid-cols-2 gap-3">
                         <div className="space-y-2">
                           <Label className="text-sm">
@@ -355,33 +477,106 @@ export default function ProductModal({
                           </div>
                         )}
                       </div>
-
-                      <div className="space-y-2">
-                        <Label className="text-sm">Baz maliyet (otomatik)</Label>
-                        {baseCost !== null ? (
-                          <div className="px-3 py-2.5 rounded-lg bg-emerald-50 border border-emerald-300 text-emerald-800 text-sm font-semibold flex items-center justify-between">
-                            <span>₺{baseCost.toFixed(2)}</span>
-                            {baseCost <= (parseFloat(form.cost) || 0) && (
-                              <span className="text-xs text-amber-600 font-normal">Normal maliyet esas alınıyor</span>
-                            )}
-                          </div>
-                        ) : (
-                          <div className="px-3 py-2.5 rounded-lg bg-gray-50 border border-gray-200 text-gray-400 text-sm">
-                            — maliyet eki girince hesaplanır
-                          </div>
-                        )}
-                      </div>
-
-                      {baseCost !== null && baseCost <= (parseFloat(form.cost) || 0) && (
-                        <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-lg p-3 text-xs text-amber-700">
-                          <span className="mt-0.5 shrink-0">⚠️</span>
-                          <span>Baz maliyet normal maliyetten düşük. Fiyat hesaplama normal maliyet (₺{parseFloat(form.cost || 0).toFixed(2)}) üzerinden yapılacak.</span>
-                        </div>
-                      )}
-                    </>
+                    </div>
                   )}
                 </div>
               </div>
+
+              {/* REFERANS ÜRÜN — ÖLÇÜYE GÖRE (ayrı referans ürünü) */}
+              <div className="border border-gray-200 rounded-lg overflow-hidden">
+                <div className="flex items-center justify-between px-4 py-3 bg-gray-50 border-b border-gray-200">
+                  <div>
+                    <Label className="font-medium text-sm">Referans Ürün — Ölçüye Göre</Label>
+                    <p className="text-xs text-gray-500 mt-0.5">Farklı ölçüdeki ürünler arası kıyas. Maliyet eki (%) otomatik hesaplanır.</p>
+                  </div>
+                  {form.ref_product_id_size && (
+                    <button type="button"
+                      onClick={() => setForm(f => ({ ...f, ref_product_id_size: null, size_cost_addon: '' }))}
+                      className="text-xs text-red-500 hover:text-red-700 shrink-0 ml-2">
+                      Kaldır
+                    </button>
+                  )}
+                </div>
+                <div className="p-4 space-y-4">
+                  {refProductSize ? (
+                    <div className="flex items-center gap-2 p-2.5 bg-indigo-50 border border-indigo-200 rounded-lg text-sm">
+                      <span className="font-medium text-indigo-800 flex-1 truncate">{refProductSize.name}</span>
+                      <span className="text-indigo-600 shrink-0">₺{parseFloat(refProductSize.cost).toFixed(2)}</span>
+                    </div>
+                  ) : (
+                    <div>
+                      <div className="flex items-center gap-2 border border-gray-200 rounded-lg px-3 py-2 bg-white focus-within:border-indigo-300">
+                        <Search className="h-4 w-4 text-gray-400 shrink-0" />
+                        <input
+                          value={refSearchSize}
+                          onChange={e => { setRefSearchSize(e.target.value); setShowRefSearchSize(true); }}
+                          onFocus={() => setShowRefSearchSize(true)}
+                          placeholder="Referans ürün ara (ölçü, renk, adet)..."
+                          className="flex-1 text-sm outline-none bg-transparent"
+                        />
+                      </div>
+                      {showRefSearchSize && <SearchList results={refResultsSize} onSelect={p => { upd('ref_product_id_size', p.id); setRefSearchSize(''); setShowRefSearchSize(false); }} />}
+                    </div>
+                  )}
+
+                  {form.ref_product_id_size && (
+                    <div className={`space-y-3 rounded-lg border p-3 ${baseCostResult?.source === 'size' ? 'border-emerald-300 bg-emerald-50/40' : 'border-gray-200'}`}>
+                      <div className="flex items-center justify-between">
+                        <Label className="text-sm font-medium">Hesaplanan baz maliyet</Label>
+                        {sizeBaseCostValue !== null && <span className="text-xs text-gray-500">₺{sizeBaseCostValue.toFixed(2)}</span>}
+                      </div>
+                      {sizeSuggestion ? (
+                        <div className="text-xs text-indigo-700 bg-indigo-50 border border-indigo-200 rounded-lg p-3 space-y-1">
+                          <p>Bu ürün: {sizeSuggestion.targetArea} cm² × {sizeSuggestion.targetAdet} adet</p>
+                          <p>Referans: {sizeSuggestion.refArea} cm² × {sizeSuggestion.refAdet} adet</p>
+                          <p className="font-medium">
+                            {sizeSuggestion.method === 'family'
+                              ? `Aynı kategorideki ${sizeSuggestion.sampleSize} ürünün maliyet/alan oranına göre önerilen ek: %${sizeSuggestion.pct.toFixed(2)}`
+                              : `Aile verisi bulunamadı, sadece bu iki ürünün ölçü oranına göre hesaplandı: %${sizeSuggestion.pct.toFixed(2)}`}
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-lg p-3">
+                          Ürün adlarından ölçü (en x boy) tespit edilemedi. Maliyet ekini elle girmen gerekiyor.
+                        </div>
+                      )}
+                      <div className="space-y-2">
+                        <Label className="text-sm">Maliyet eki (%) — otomatik önerilir, elle değiştirebilirsin</Label>
+                        <Input type="number" step="0.01" value={form.size_cost_addon} onChange={e => upd('size_cost_addon', e.target.value)} placeholder="0.00" />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* BAZ MALİYET ÖZETİ — iki kıyastan hangisi yüksekse o esas alınır */}
+              {(form.ref_product_id || form.ref_product_id_size) && (
+                <div className="space-y-2">
+                  <Label className="text-sm">Baz maliyet (otomatik)</Label>
+                  {baseCost !== null ? (
+                    <div className="px-3 py-2.5 rounded-lg bg-emerald-50 border border-emerald-300 text-emerald-800 text-sm font-semibold flex items-center justify-between">
+                      <span>₺{baseCost.toFixed(2)}</span>
+                      <span className="text-xs text-emerald-700 font-normal">
+                        {baseCost <= (parseFloat(form.cost) || 0)
+                          ? 'Normal maliyet esas alınıyor'
+                          : baseCostResult?.source === 'feature' ? 'Özelliğe göre değer esas alınıyor'
+                          : baseCostResult?.source === 'size' ? 'Ölçüye göre değer esas alınıyor'
+                          : ''}
+                      </span>
+                    </div>
+                  ) : (
+                    <div className="px-3 py-2.5 rounded-lg bg-gray-50 border border-gray-200 text-gray-400 text-sm">
+                      — maliyet eki girince hesaplanır
+                    </div>
+                  )}
+                  {baseCost !== null && baseCost <= (parseFloat(form.cost) || 0) && (
+                    <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-lg p-3 text-xs text-amber-700">
+                      <span className="mt-0.5 shrink-0">⚠️</span>
+                      <span>Baz maliyet normal maliyetten düşük. Fiyat hesaplama normal maliyet (₺{parseFloat(form.cost || 0).toFixed(2)}) üzerinden yapılacak.</span>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* ADET BAZLI ZİNCİR */}
               <div className="border border-gray-200 rounded-lg overflow-hidden">
