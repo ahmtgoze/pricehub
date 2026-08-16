@@ -770,7 +770,7 @@ export const calculateAllPlatformPrices = ({
   // karşılaştırmadan önce ikisini de sayıya çeviriyoruz.
   const rawCost = Number(product.cost) || 0;
   const rawBaseCost = Number(product.base_cost) || 0;
-  const effectiveCost = (product.ref_product_id && rawBaseCost > rawCost)
+  const effectiveCost = ((product.ref_product_id || product.ref_product_id_size) && rawBaseCost > rawCost)
     ? rawBaseCost
     : rawCost;
   const productForCalc = { ...product, cost: effectiveCost };
