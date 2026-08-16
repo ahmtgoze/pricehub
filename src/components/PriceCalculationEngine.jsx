@@ -4,7 +4,7 @@
  * Hiçbir UI sayfasında hesaplama kodu olmayacak.
  */
 
-// KDV dahil fiyattan KDV hariç fiyatı hesapla
+// KDV dahil fiyattan KDV hariçproduct.base_cost > product.cost fiyatı hesapla
 export const removeVat = (priceWithVat, vatRate) => {
   return priceWithVat / (1 + vatRate / 100);
 };
