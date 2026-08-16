@@ -28,3 +28,6 @@ dist-ssr
 *.sw?
 
 .env
+
+# Analiz ciktilari (gercek musteri maliyet verisi icerir)
+analysis/
