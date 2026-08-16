@@ -4,7 +4,7 @@
  * Hiçbir UI sayfasında hesaplama kodu olmayacak.
  */
 
-// KDV dahil fiyattan KDV hariçproduct.base_cost > product.cost fiyatı hesapla
+// KDV dahil fiyattan KDV hariç fiyatı hesapla
 export const removeVat = (priceWithVat, vatRate) => {
   return priceWithVat / (1 + vatRate / 100);
 };
@@ -765,9 +765,14 @@ export const calculateAllPlatformPrices = ({
   }
 
   // Baz maliyet varsa ve normal maliyetten yüksekse onu kullan
-  const effectiveCost = (product.ref_product_id && product.base_cost && product.base_cost > product.cost)
-    ? product.base_cost
-    : product.cost;
+  // NOT: cost / base_cost Supabase'den numeric alan olarak string gelebiliyor
+  // ("3420" > "640.42" gibi metin karşılaştırması yanlış sonuç verir), bu yüzden
+  // karşılaştırmadan önce ikisini de sayıya çeviriyoruz.
+  const rawCost = Number(product.cost) || 0;
+  const rawBaseCost = Number(product.base_cost) || 0;
+  const effectiveCost = (product.ref_product_id && rawBaseCost > rawCost)
+    ? rawBaseCost
+    : rawCost;
   const productForCalc = { ...product, cost: effectiveCost };
   
   for (const platform of platforms) {
