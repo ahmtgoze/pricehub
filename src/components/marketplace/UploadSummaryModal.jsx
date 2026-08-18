@@ -32,12 +32,12 @@ export default function UploadSummaryModal({ summary, onClose, onReviewZeroStock
 
           <div className="grid grid-cols-2 gap-3 mb-5">
             {/* Yeni eklenen */}
-            <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 text-center">
+            <div className="bg-gray-100 border border-gray-300 rounded-xl p-4 text-center">
               <div className="flex items-center justify-center mb-2">
-                <Plus className="w-5 h-5 text-blue-500" />
+                <Plus className="w-5 h-5 text-gray-500" />
               </div>
-              <p className="text-2xl font-bold text-blue-700">{newCount}</p>
-              <p className="text-xs text-blue-500 mt-1">Yeni Eklenen</p>
+              <p className="text-2xl font-bold text-gray-900">{newCount}</p>
+              <p className="text-xs text-gray-500 mt-1">Yeni Eklenen</p>
             </div>
 
             {/* Trendyol / Website stok güncelleme */}
@@ -74,12 +74,12 @@ export default function UploadSummaryModal({ summary, onClose, onReviewZeroStock
             )}
 
             {/* Stok değişimi */}
-            <div className={`border rounded-xl p-4 text-center ${stockChangedCount > 0 ? 'bg-indigo-50 border-indigo-200' : 'bg-gray-50 border-gray-100'}`}>
+            <div className={`border rounded-xl p-4 text-center ${stockChangedCount > 0 ? 'bg-gray-100 border-gray-300' : 'bg-gray-50 border-gray-100'}`}>
               <div className="flex items-center justify-center mb-2">
-                <TrendingDown className={`w-5 h-5 ${stockChangedCount > 0 ? 'text-indigo-500' : 'text-gray-400'}`} />
+                <TrendingDown className={`w-5 h-5 ${stockChangedCount > 0 ? 'text-gray-500' : 'text-gray-400'}`} />
               </div>
-              <p className={`text-2xl font-bold ${stockChangedCount > 0 ? 'text-indigo-700' : 'text-gray-400'}`}>{stockChangedCount}</p>
-              <p className={`text-xs mt-1 ${stockChangedCount > 0 ? 'text-indigo-500' : 'text-gray-400'}`}>Güncellenen Ürün</p>
+              <p className={`text-2xl font-bold ${stockChangedCount > 0 ? 'text-gray-900' : 'text-gray-400'}`}>{stockChangedCount}</p>
+              <p className={`text-xs mt-1 ${stockChangedCount > 0 ? 'text-gray-500' : 'text-gray-400'}`}>Güncellenen Ürün</p>
             </div>
 
             {/* Excel'de olmayan */}

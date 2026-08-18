@@ -126,25 +126,25 @@ export default function AnnouncementPanel({ user, isAdmin, onReplyToAnnouncement
   };
 
   const typeIcon = (type) => type === 'system_update'
-    ? <Zap className="h-3.5 w-3.5 text-blue-500" />
-    : <Megaphone className="h-3.5 w-3.5 text-indigo-500" />;
+    ? <Zap className="h-3.5 w-3.5 text-gray-400" />
+    : <Megaphone className="h-3.5 w-3.5 text-gray-400" />;
 
   return (
     <div className="flex flex-col h-full bg-white">
       {/* Tabs */}
-      <div className="flex items-center gap-2 px-4 py-4 border-b border-slate-100 bg-gradient-to-r from-slate-50 to-indigo-50 flex-shrink-0">
+      <div className="flex items-center gap-2 px-4 py-4 border-b border-slate-100 bg-gray-50 flex-shrink-0">
         <button
           onClick={() => setShowArchived(false)}
-          className={cn("text-xs font-semibold px-3 py-1.5 rounded-lg transition-all", !showArchived ? "bg-indigo-600 text-white" : "text-slate-500 hover:bg-slate-100")}
+          className={cn("text-xs font-semibold px-3 py-1.5 rounded-lg transition-all", !showArchived ? "bg-gray-900 text-white" : "text-slate-500 hover:bg-slate-100")}
         >
           Gelen Kutusu
           {activeAnnouncements.length > 0 && (
-            <span className="ml-1.5 bg-indigo-400 text-white text-[9px] px-2 py-0.5 rounded-full font-bold">{activeAnnouncements.length}</span>
+            <span className="ml-1.5 bg-gray-900 text-white text-[9px] px-2 py-0.5 rounded-full font-bold">{activeAnnouncements.length}</span>
           )}
         </button>
         <button
           onClick={() => setShowArchived(true)}
-          className={cn("text-xs font-semibold px-3 py-1.5 rounded-lg transition-all", showArchived ? "bg-indigo-600 text-white" : "text-slate-500 hover:bg-slate-100")}
+          className={cn("text-xs font-semibold px-3 py-1.5 rounded-lg transition-all", showArchived ? "bg-gray-900 text-white" : "text-slate-500 hover:bg-slate-100")}
         >
           Arşiv
           {archivedAnnouncements.length > 0 && (
@@ -155,7 +155,7 @@ export default function AnnouncementPanel({ user, isAdmin, onReplyToAnnouncement
         {!showArchived && !isAdmin && activeAnnouncements.length > 0 && (
           <button
             onClick={() => bulkArchiveMutation.mutate()}
-            className="ml-auto text-xs text-indigo-600 hover:text-indigo-700 flex items-center gap-1 font-medium"
+            className="ml-auto text-xs text-gray-900 hover:text-gray-700 flex items-center gap-1 font-medium"
           >
             <Archive className="h-3.5 w-3.5" /> Tümünü arşivle
           </button>
@@ -179,8 +179,8 @@ export default function AnnouncementPanel({ user, isAdmin, onReplyToAnnouncement
               return (
                 <div
                   key={announcement.id}
-                  className={cn("px-4 py-3.5 hover:bg-indigo-50/40 transition-colors border-l-4 cursor-pointer", 
-                    !isRead ? "bg-indigo-50/60 border-indigo-500" : "border-transparent"
+                  className={cn("px-4 py-3.5 hover:bg-gray-50 transition-colors border-l-4 cursor-pointer",
+                    !isRead ? "bg-gray-50 border-gray-900" : "border-transparent"
                   )}
                   onClick={() => !isRead && markReadMutation.mutate(announcement.id)}
                 >
@@ -189,7 +189,7 @@ export default function AnnouncementPanel({ user, isAdmin, onReplyToAnnouncement
                       <div className="flex items-center gap-2 mb-1.5">
                         {typeIcon(announcement.type)}
                         <span className="text-sm font-semibold text-slate-900 truncate">{announcement.title}</span>
-                        {!isRead && <span className="text-[10px] bg-indigo-200 text-indigo-700 px-2 py-0.5 rounded-full font-bold flex-shrink-0">YENİ</span>}
+                        {!isRead && <span className="text-[10px] bg-gray-900 text-white px-2 py-0.5 rounded-full font-bold flex-shrink-0">YENİ</span>}
                       </div>
                       <p className="text-sm text-slate-600 leading-relaxed mb-2">{announcement.content}</p>
                       <div className="flex items-center justify-between gap-2 text-xs text-slate-500 mb-2.5">
@@ -207,7 +207,7 @@ export default function AnnouncementPanel({ user, isAdmin, onReplyToAnnouncement
                           <>
                             <button
                               onClick={(e) => { e.stopPropagation(); onReplyToAnnouncement(announcement); }}
-                              className="flex items-center gap-1 text-xs text-indigo-600 hover:text-indigo-700 font-semibold hover:bg-indigo-50 px-2.5 py-1 rounded-lg transition-colors"
+                              className="flex items-center gap-1 text-xs text-gray-900 hover:text-gray-700 font-semibold hover:bg-gray-100 px-2.5 py-1 rounded-lg transition-colors"
                             >
                               <Reply className="h-3.5 w-3.5" /> Yanıtla
                             </button>

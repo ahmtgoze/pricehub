@@ -722,15 +722,15 @@ export default function Products() {
     {
       header: 'SKU',
       accessor: 'sku',
-      cell: (row) => <span className="font-mono text-sm text-slate-600">{row.sku || '-'}</span>
+      cell: (row) => <span className="font-mono text-sm text-gray-600">{row.sku || '-'}</span>
     },
     {
       header: 'Ürün Adı',
       accessor: 'name',
       cell: (row) => (
         <div>
-          <p className="font-medium text-slate-900">{row.name}</p>
-          <p className="text-xs text-slate-500">{row.category_name}</p>
+          <p className="font-medium text-gray-900">{row.name}</p>
+          <p className="text-xs text-gray-500">{row.category_name}</p>
         </div>
       )
     },
@@ -742,12 +742,12 @@ export default function Products() {
     {
       header: 'Baskı Maliyeti',
       accessor: 'printing_cost',
-      cell: (row) => row.printing_cost ? <span className="font-semibold">₺{row.printing_cost?.toFixed(2)}</span> : <span className="text-slate-400">-</span>
+      cell: (row) => row.printing_cost ? <span className="font-semibold">₺{row.printing_cost?.toFixed(2)}</span> : <span className="text-gray-400">-</span>
     },
     {
       header: 'Ek Maliyet',
       accessor: 'extra_cost',
-      cell: (row) => row.extra_cost ? <span className="font-semibold">₺{row.extra_cost?.toFixed(2)}</span> : <span className="text-slate-400">-</span>
+      cell: (row) => row.extra_cost ? <span className="font-semibold">₺{row.extra_cost?.toFixed(2)}</span> : <span className="text-gray-400">-</span>
     },
     {
       header: 'Desi',
@@ -758,7 +758,7 @@ export default function Products() {
             return (
               <div className="flex gap-1 flex-wrap">
                 {packages.map((pkg, idx) => (
-                  <span key={idx} className="text-xs px-2 py-1 bg-indigo-50 text-indigo-700 rounded">{pkg.desi}</span>
+                  <span key={idx} className="text-xs px-2 py-1 bg-gray-100 text-gray-700 rounded">{pkg.desi}</span>
                 ))}
               </div>
             );
@@ -785,7 +785,7 @@ export default function Products() {
       header: 'Çift Kargo',
       accessor: 'double_shipping',
       cell: (row) => (
-        <Badge variant={row.double_shipping === true ? 'default' : 'outline'} className={row.double_shipping === true ? 'bg-orange-600' : ''}>
+        <Badge variant={row.double_shipping === true ? 'default' : 'outline'} className={row.double_shipping === true ? 'bg-gray-900' : ''}>
           {row.double_shipping === true ? '✓ x2' : '-'}
         </Badge>
       )
@@ -820,7 +820,7 @@ export default function Products() {
             </Select>
             {selectedPackage && (
               <div className="flex items-center gap-1">
-                <p className="text-xs text-slate-500">{cost.toFixed(2)} TL</p>
+                <p className="text-xs text-gray-500">{cost.toFixed(2)} TL</p>
                 {autoPackageId === selectedPackageId && !row.package_id && (
                   <Badge variant="secondary" className="text-xs">Otomatik</Badge>
                 )}
@@ -847,7 +847,7 @@ export default function Products() {
             <Pencil className="h-4 w-4" />
           </Button>
           <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); setDeleteId(row.id); }}>
-            <Trash2 className="h-4 w-4 text-rose-500" />
+            <Trash2 className="h-4 w-4 text-red-500" />
           </Button>
         </div>
       )
@@ -914,7 +914,7 @@ export default function Products() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-indigo-50/30">
+    <div className="min-h-screen bg-gray-50">
       <div className="max-w-[1400px] mx-auto px-3 sm:px-6 py-5 sm:py-8">
         {deletedCategory && (
           <Alert variant="destructive" className="mb-6">
@@ -929,11 +929,11 @@ export default function Products() {
 
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 sm:mb-8">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight flex items-center gap-3">
-              <Package className="h-7 w-7 sm:h-8 sm:w-8 text-indigo-600" />
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight flex items-center gap-3">
+              <Package className="h-7 w-7 sm:h-8 sm:w-8 text-gray-900" />
               Ürünler
             </h1>
-            <p className="text-slate-500 mt-1">{filteredProducts.length} ürün listeleniyor</p>
+            <p className="text-gray-500 mt-1">{filteredProducts.length} ürün listeleniyor</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             {selectedIds.length > 0 && (
@@ -972,7 +972,7 @@ export default function Products() {
               filename="urunler"
               onImport={handleImport}
             />
-            <Button onClick={() => { setEditingProduct(null); setModalOpen(true); }} className="bg-indigo-600 hover:bg-indigo-700 gap-2" size="sm">
+            <Button onClick={() => { setEditingProduct(null); setModalOpen(true); }} className="bg-gray-900 hover:bg-gray-800 gap-2" size="sm">
               <Plus className="h-4 w-4" />
               <span className="hidden sm:inline">Yeni Ürün</span>
               <span className="sm:hidden">Ekle</span>
@@ -983,7 +983,7 @@ export default function Products() {
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 mb-6">
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 mb-6">
           <div className="flex flex-col sm:flex-row gap-4">
             <SearchInput value={search} onChange={setSearch} placeholder="Ürün adı veya SKU ara..." className="flex-1" />
             <Select value={categoryFilter} onValueChange={setCategoryFilter}>
@@ -1026,19 +1026,19 @@ export default function Products() {
         </div>
 
         {selectedIds.length > 0 && (
-          <div className="flex flex-wrap items-center justify-between gap-3 bg-indigo-50 border border-indigo-200 rounded-xl px-4 py-3 mb-4">
-            <span className="text-sm text-indigo-800 font-medium">
+          <div className="flex flex-wrap items-center justify-between gap-3 bg-gray-100 border border-gray-200 rounded-xl px-4 py-3 mb-4">
+            <span className="text-sm text-gray-900 font-medium">
               {selectedIds.length} ürün seçili
               {allCurrentPageSelected && !allFilteredSelected && filteredProducts.length > selectedIds.length && (
                 <button
                   onClick={selectAllFiltered}
-                  className="ml-2 underline text-indigo-700 hover:text-indigo-900"
+                  className="ml-2 underline text-gray-700 hover:text-gray-900"
                 >
                   Filtredeki tüm {filteredProducts.length} ürünü seç
                 </button>
               )}
               {allFilteredSelected && filteredProducts.length > pageSize && (
-                <span className="ml-2 text-indigo-600">(filtredeki tüm ürünler seçili)</span>
+                <span className="ml-2 text-gray-600">(filtredeki tüm ürünler seçili)</span>
               )}
             </span>
             <div className="flex gap-2">
@@ -1088,7 +1088,7 @@ export default function Products() {
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel>İptal</AlertDialogCancel>
-              <AlertDialogAction onClick={() => deleteMutation.mutate(deleteId)} className="bg-rose-600 hover:bg-rose-700">Sil</AlertDialogAction>
+              <AlertDialogAction onClick={() => deleteMutation.mutate(deleteId)} className="bg-red-600 hover:bg-red-700">Sil</AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
@@ -1109,19 +1109,19 @@ export default function Products() {
             </DialogHeader>
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <span className="text-sm text-slate-500">İlerleme</span>
-                <span className="text-sm font-bold text-indigo-600">{importProgress.current} / {importProgress.total}</span>
+                <span className="text-sm text-gray-500">İlerleme</span>
+                <span className="text-sm font-bold text-gray-900">{importProgress.current} / {importProgress.total}</span>
               </div>
-              <div className="w-full bg-slate-200 rounded-full h-4 overflow-hidden">
-                <div className="bg-indigo-600 h-4 rounded-full transition-all duration-300" style={{ width: `${(importProgress.current / (importProgress.total || 1)) * 100}%` }} />
+              <div className="w-full bg-gray-200 rounded-full h-4 overflow-hidden">
+                <div className="bg-gray-900 h-4 rounded-full transition-all duration-300" style={{ width: `${(importProgress.current / (importProgress.total || 1)) * 100}%` }} />
               </div>
               <div className="text-center">
-                <p className="text-3xl font-bold text-indigo-600">%{Math.round((importProgress.current / (importProgress.total || 1)) * 100)}</p>
+                <p className="text-3xl font-bold text-gray-900">%{Math.round((importProgress.current / (importProgress.total || 1)) * 100)}</p>
               </div>
               {importProgress.estimatedSecondsLeft !== null && importProgress.estimatedSecondsLeft > 0 && (
-                <div className="bg-indigo-50 rounded-lg px-4 py-2 text-center">
-                  <p className="text-xs text-indigo-500">Tahmini kalan süre</p>
-                  <p className="text-lg font-bold text-indigo-700">
+                <div className="bg-gray-100 rounded-lg px-4 py-2 text-center">
+                  <p className="text-xs text-gray-500">Tahmini kalan süre</p>
+                  <p className="text-lg font-bold text-gray-700">
                     {importProgress.estimatedSecondsLeft >= 60
                       ? `${Math.floor(importProgress.estimatedSecondsLeft / 60)} dk ${importProgress.estimatedSecondsLeft % 60} sn`
                       : `${importProgress.estimatedSecondsLeft} saniye`}
@@ -1150,7 +1150,7 @@ export default function Products() {
               <AlertDialogAction
                 onClick={() => bulkDeleteMutation.mutate(selectedIds)}
                 disabled={bulkDeleteMutation.isPending}
-                className="bg-rose-600 hover:bg-rose-700"
+                className="bg-red-600 hover:bg-red-700"
               >
                 {bulkDeleteMutation.isPending ? 'Siliniyor...' : `Sil (${selectedIds.length})`}
               </AlertDialogAction>

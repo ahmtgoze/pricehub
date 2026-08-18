@@ -265,7 +265,7 @@ export default function PriceSynchronization() {
 
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-100 via-gray-50 to-purple-50 p-6">
+    <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-7xl mx-auto">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Fiyat Senkronizasyonu</h1>
@@ -420,7 +420,7 @@ export default function PriceSynchronization() {
                 </TableHeader>
                 <TableBody>
                   {synchronizedProducts.map((row) => (
-                    <TableRow key={row.id} className={selectedRows.has(row.id) ? 'bg-blue-50' : ''}>
+                    <TableRow key={row.id} className={selectedRows.has(row.id) ? 'bg-gray-100' : ''}>
                       <TableCell>
                         <Checkbox
                           checked={selectedRows.has(row.id)}

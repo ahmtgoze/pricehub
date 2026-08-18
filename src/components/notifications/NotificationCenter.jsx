@@ -105,12 +105,12 @@ export default function NotificationCenter() {
           onClick={(e) => { e.stopPropagation(); setOpen(prev => prev === 'announcements' ? false : 'announcements'); }}
           className={cn(
             "relative flex items-center justify-center w-9 h-9 rounded-xl transition-all",
-            open === 'announcements' ? "bg-indigo-100 text-indigo-700" : "text-slate-500 hover:bg-slate-100"
+            open === 'announcements' ? "bg-gray-100 text-gray-900" : "text-slate-500 hover:bg-slate-100"
           )}
         >
           <Bell className="h-5 w-5" />
           {unreadAnnouncementsCount > 0 && (
-            <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] bg-indigo-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1 leading-none">
+            <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] bg-gray-900 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1 leading-none">
               {unreadAnnouncementsCount > 99 ? '99+' : unreadAnnouncementsCount}
             </span>
           )}
@@ -122,12 +122,12 @@ export default function NotificationCenter() {
           onClick={(e) => { e.stopPropagation(); setOpen(prev => prev === 'messages' ? false : 'messages'); }}
           className={cn(
             "relative flex items-center justify-center w-9 h-9 rounded-xl transition-all",
-            open === 'messages' ? "bg-indigo-100 text-indigo-700" : "text-slate-500 hover:bg-slate-100"
+            open === 'messages' ? "bg-gray-100 text-gray-900" : "text-slate-500 hover:bg-slate-100"
           )}
         >
           <MessageSquare className="h-5 w-5" />
           {unreadMessagesCount > 0 && (
-            <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] bg-indigo-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1 leading-none">
+            <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] bg-gray-900 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1 leading-none">
               {unreadMessagesCount > 99 ? '99+' : unreadMessagesCount}
             </span>
           )}
@@ -188,7 +188,7 @@ function PanelContent({ open, setOpen, isAdmin, user, unreadAnnouncementsCount, 
   return (
     <>
       {/* Panel header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100 flex-shrink-0 bg-gradient-to-r from-slate-50 to-white">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100 flex-shrink-0 bg-gray-50">
         <div className="flex items-center gap-1">
           <button
             onClick={() => setOpen('announcements')}
@@ -197,7 +197,7 @@ function PanelContent({ open, setOpen, isAdmin, user, unreadAnnouncementsCount, 
             <Bell className="h-4 w-4" />
             Duyurular
             {unreadAnnouncementsCount > 0 && (
-              <span className="bg-indigo-500 text-white text-[10px] px-1.5 py-0.5 rounded-full">{unreadAnnouncementsCount}</span>
+              <span className="bg-gray-900 text-white text-[10px] px-1.5 py-0.5 rounded-full">{unreadAnnouncementsCount}</span>
             )}
           </button>
           <button
@@ -207,7 +207,7 @@ function PanelContent({ open, setOpen, isAdmin, user, unreadAnnouncementsCount, 
             <MessageSquare className="h-4 w-4" />
             Mesajlar
             {unreadMessagesCount > 0 && (
-              <span className="bg-indigo-500 text-white text-[10px] px-1.5 py-0.5 rounded-full">{unreadMessagesCount}</span>
+              <span className="bg-gray-900 text-white text-[10px] px-1.5 py-0.5 rounded-full">{unreadMessagesCount}</span>
             )}
           </button>
         </div>

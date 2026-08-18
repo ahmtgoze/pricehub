@@ -47,6 +47,7 @@ export default function Prices() {
   const [minTargetAmount, setMinTargetAmount] = useState('');
   const [maxTargetAmount, setMaxTargetAmount] = useState('');
   const [visiblePlatforms, setVisiblePlatforms] = useState({});
+  const [showBeforeTax, setShowBeforeTax] = useState(false);
 
   // Seçim
   const [selectedIds, setSelectedIds] = useState(new Set());
@@ -484,14 +485,28 @@ export default function Prices() {
 
   const getProfitColor = (rate) => {
     if (rate >= 30) return 'text-emerald-600 bg-emerald-50';
-    if (rate >= 20) return 'text-blue-600 bg-blue-50';
+    if (rate >= 20) return 'text-gray-700 bg-gray-100';
     if (rate >= 10) return 'text-amber-600 bg-amber-50';
     return 'text-rose-600 bg-rose-50';
   };
 
+  // Vergi öncesi/sonrası kâr: PriceCalculationEngine zaten her ikisini de hesaplayıp
+  // product_prices.net_profit_before_tax / net_profit alanlarına kaydediyor, motora dokunmadan
+  // sadece hangisinin gösterileceğini seçiyoruz. Oran, motordaki "profitRate = netProfit / productCost * 100"
+  // formülüyle birebir aynı mantıkla, before-tax tutar üzerinden türetiliyor.
+  const getDisplayProfit = (price, product, commission) => {
+    if (!price) return { amount: 0, rate: 0 };
+    if (!showBeforeTax) {
+      return { amount: price.net_profit, rate: commission?.target_profit_rate ?? price.profit_rate };
+    }
+    const beforeTaxAmount = price.net_profit_before_tax ?? price.net_profit;
+    const beforeTaxRate = product?.cost > 0 ? (beforeTaxAmount / product.cost) * 100 : 0;
+    return { amount: beforeTaxAmount, rate: beforeTaxRate };
+  };
+
   const getBaremBadge = (barem) => {
     if (barem === 'barem1') return <Badge className="bg-red-100 text-red-700 text-xs">B1</Badge>;
-    if (barem === 'barem2') return <Badge className="bg-blue-100 text-blue-700 text-xs">B2</Badge>;
+    if (barem === 'barem2') return <Badge className="bg-gray-200 text-gray-700 text-xs">B2</Badge>;
     if (barem === 'desi') return <Badge variant="outline" className="text-xs">Desi</Badge>;
     return null;
   };
@@ -514,7 +529,7 @@ export default function Prices() {
     setVisiblePlatforms(prev => ({ ...prev, [platformId]: !prev[platformId] }));
   };
 
-  const platformColors = { trendyol: 'bg-orange-100 text-orange-700 border-orange-200', hepsiburada: 'bg-yellow-100 text-yellow-700 border-yellow-200', website: 'bg-indigo-100 text-indigo-700 border-indigo-200' };
+  const platformColors = { trendyol: 'bg-orange-100 text-orange-700 border-orange-200', hepsiburada: 'bg-purple-100 text-purple-700 border-purple-200', website: 'bg-gray-200 text-gray-700 border-gray-300' };
 
   return (
     <div className="min-h-screen">
@@ -548,13 +563,25 @@ export default function Prices() {
                 <span className="sm:hidden">İndir</span>
               </Button>
               {selectedIds.size > 0 && (
-                <Button onClick={handleExportSelected} variant="outline" className="gap-2 border-indigo-200 text-indigo-700 hover:bg-indigo-50" size="sm">
+                <Button onClick={handleExportSelected} variant="outline" className="gap-2 border-gray-300 text-gray-700 hover:bg-gray-50" size="sm">
                   <Download className="h-4 w-4" />
                   <span>Seçilileri İndir ({selectedIds.size})</span>
                 </Button>
               )}
 
-              <Button onClick={() => setShowFilters(!showFilters)} variant={showFilters ? 'default' : 'outline'} className="gap-2 ml-auto" size="sm">
+              <Button
+                onClick={() => setShowBeforeTax(v => !v)}
+                variant={showBeforeTax ? 'default' : 'outline'}
+                className="gap-2 ml-auto"
+                size="sm"
+                title="Kurumlar/gelir vergisi düşülmeden önceki kâr tutarı ve oranını göster"
+              >
+                {showBeforeTax ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                <span className="hidden sm:inline">{showBeforeTax ? 'Vergi Sonrası Kârı Göster' : 'Vergi Öncesi Kârı Göster'}</span>
+                <span className="sm:hidden">{showBeforeTax ? 'Vergi Sonrası' : 'Vergi Öncesi'}</span>
+              </Button>
+
+              <Button onClick={() => setShowFilters(!showFilters)} variant={showFilters ? 'default' : 'outline'} className="gap-2" size="sm">
                 <Filter className="h-4 w-4" />
                 <span>Filtrele</span>
                 {hasActiveFilters && <span className="bg-red-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">!</span>}
@@ -568,7 +595,7 @@ export default function Prices() {
             {showFilters && (
               <div className="border border-gray-200 rounded-xl p-4 bg-gray-50 space-y-4">
                 {profitRangeLabel && (
-                  <div className="flex items-center gap-2 text-sm text-indigo-700 bg-indigo-50 rounded-lg px-3 py-2">
+                  <div className="flex items-center gap-2 text-sm text-gray-700 bg-gray-100 rounded-lg px-3 py-2">
                     <span>Dashboard filtresi: <strong>{profitRangeLabel}</strong></span>
                   </div>
                 )}
@@ -634,8 +661,9 @@ export default function Prices() {
         <div className="mb-3 flex items-center justify-between text-sm text-gray-500">
           <div>
             <span className="font-semibold text-gray-700">{filteredProducts.length}</span> ürün listeleniyor
-            {hasActiveFilters && <span className="ml-2 text-indigo-600">(filtre aktif)</span>}
-            {selectedIds.size > 0 && <span className="ml-2 text-indigo-600 font-medium">{selectedIds.size} seçili</span>}
+            {hasActiveFilters && <span className="ml-2 text-gray-600">(filtre aktif)</span>}
+            {selectedIds.size > 0 && <span className="ml-2 text-gray-600 font-medium">{selectedIds.size} seçili</span>}
+            {showBeforeTax && <span className="ml-2 text-amber-700 font-medium">— vergi öncesi kâr gösteriliyor</span>}
           </div>
           {selectedIds.size > 0 && (
             <Button variant="ghost" size="sm" className="text-xs text-gray-400" onClick={() => setSelectedIds(new Set())}>
@@ -656,10 +684,10 @@ export default function Prices() {
             <div className="bg-white rounded-xl border border-gray-100 p-8 text-center text-gray-500">Ürün bulunamadı</div>
           ) : (
             filteredProducts.map(product => (
-              <div key={product.id} className={`bg-white rounded-xl border shadow-sm p-4 ${selectedIds.has(product.id) ? 'border-indigo-300 bg-indigo-50/30' : 'border-gray-100'}`}>
+              <div key={product.id} className={`bg-white rounded-xl border shadow-sm p-4 ${selectedIds.has(product.id) ? 'border-gray-400 bg-gray-100/50' : 'border-gray-100'}`}>
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex items-center gap-2">
-                    <input type="checkbox" checked={selectedIds.has(product.id)} onChange={() => toggleSelect(product.id)} className="rounded border-gray-300 text-indigo-600" />
+                    <input type="checkbox" checked={selectedIds.has(product.id)} onChange={() => toggleSelect(product.id)} className="rounded border-gray-300 text-gray-900" />
                     <div>
                       <p className="font-semibold text-gray-900 text-sm">{product.name}</p>
                       <p className="text-xs text-gray-500 font-mono">{product.sku} · {product.category_name}</p>
@@ -673,19 +701,20 @@ export default function Prices() {
                   {visiblePlatformList.map(platform => {
                     const price = product.prices[platform.id];
                     const commission = commissions.find(c => c.category_id === product.category_id && c.platform_id === platform.id && c.is_active !== false);
-                    const targetRate = commission?.target_profit_rate ?? price?.profit_rate;
                     if (!price) return <div key={platform.id} className="flex items-center justify-between bg-gray-50 rounded-lg px-3 py-2"><span className="text-xs font-medium text-gray-600">{platform.name}</span><span className="text-xs text-gray-400">—</span></div>;
+                    const { amount: profitAmount, rate: profitRateDisplay } = getDisplayProfit(price, product, commission);
                     return (
                       <div key={platform.id} className="flex flex-col gap-1 bg-gray-50 rounded-lg px-3 py-2">
                         <div className="flex items-center justify-between">
                           <span className="text-xs font-medium text-gray-700">{platform.name}</span>
-                          <button onClick={() => handleShowDetail(product, platform)} className="text-blue-500 hover:text-blue-700"><Info className="h-3.5 w-3.5" /></button>
+                          <button onClick={() => handleShowDetail(product, platform)} className="text-gray-400 hover:text-gray-700"><Info className="h-3.5 w-3.5" /></button>
                         </div>
                         <div className="flex items-center gap-2">
                           <span className="text-sm font-bold text-gray-900">₺{formatTurkishCurrency(price.sale_price)}</span>
-                          <span className={`text-xs font-medium px-1.5 py-0.5 rounded-full ${getProfitColor(targetRate)}`}>{formatTurkishPercent(targetRate)}</span>
+                          <span className={`text-xs font-medium px-1.5 py-0.5 rounded-full ${getProfitColor(profitRateDisplay)}`}>{formatTurkishPercent(profitRateDisplay)}</span>
                           {getBaremBadge(price.barem_used)}
                         </div>
+                        <p className="text-[11px] text-gray-500">Kâr: ₺{formatTurkishCurrency(profitAmount)}{showBeforeTax && <span className="text-gray-400"> (vergi öncesi)</span>}</p>
                       </div>
                     );
                   })}
@@ -702,7 +731,7 @@ export default function Prices() {
               <TableHeader>
                 <TableRow className="bg-gray-50 hover:bg-gray-50">
                   <TableHead className="w-10">
-                    <input type="checkbox" checked={isAllSelected} ref={el => { if (el) el.indeterminate = isPartialSelected; }} onChange={toggleSelectAll} className="rounded border-gray-300 text-indigo-600" />
+                    <input type="checkbox" checked={isAllSelected} ref={el => { if (el) el.indeterminate = isPartialSelected; }} onChange={toggleSelectAll} className="rounded border-gray-300 text-gray-900" />
                   </TableHead>
                   <TableHead className="font-semibold cursor-pointer hover:text-gray-900" onClick={() => handleSort('sku')}>SKU <SortIcon field="sku" /></TableHead>
                   <TableHead className="font-semibold cursor-pointer hover:text-gray-900" onClick={() => handleSort('name')}>Ürün Adı <SortIcon field="name" /></TableHead>
@@ -728,9 +757,9 @@ export default function Prices() {
                   <TableRow><TableCell colSpan={11 + visiblePlatformList.length} className="h-32 text-center text-slate-500">Ürün bulunamadı</TableCell></TableRow>
                 ) : (
                   filteredProducts.map(product => (
-                    <TableRow key={product.id} className={`hover:bg-slate-50/50 ${selectedIds.has(product.id) ? 'bg-indigo-50/40' : ''}`}>
+                    <TableRow key={product.id} className={`hover:bg-slate-50/50 ${selectedIds.has(product.id) ? 'bg-gray-100/60' : ''}`}>
                       <TableCell>
-                        <input type="checkbox" checked={selectedIds.has(product.id)} onChange={() => toggleSelect(product.id)} className="rounded border-gray-300 text-indigo-600" />
+                        <input type="checkbox" checked={selectedIds.has(product.id)} onChange={() => toggleSelect(product.id)} className="rounded border-gray-300 text-gray-900" />
                       </TableCell>
                       <TableCell className="font-mono text-sm text-slate-600">
                         <div className="flex items-center gap-2">
@@ -738,28 +767,28 @@ export default function Prices() {
                           <Button variant="ghost" size="sm" className="h-6 px-2 text-xs" onClick={() => handleCalculateSingleProduct(product)} disabled={calculating || calculatingSingle === product.id}>
                             <RefreshCw className={`h-3 w-3 ${calculatingSingle === product.id ? 'animate-spin' : ''}`} />
                           </Button>
-                          <Button variant="ghost" size="sm" className="h-6 px-2 text-xs text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50" onClick={() => setHistoryModal({ open: true, productId: product.id, productName: product.name })} title="Geçmiş Analizi">📈</Button>
+                          <Button variant="ghost" size="sm" className="h-6 px-2 text-xs text-gray-600 hover:text-gray-900 hover:bg-gray-100" onClick={() => setHistoryModal({ open: true, productId: product.id, productName: product.name })} title="Geçmiş Analizi">📈</Button>
                         </div>
                       </TableCell>
                       <TableCell><div><p className="font-medium text-slate-900">{product.name}</p><p className="text-xs text-slate-500">{product.category_name}</p></div></TableCell>
                       <TableCell className="font-semibold">₺{formatTurkishCurrency(product.cost)}</TableCell>
-                      <TableCell className="text-sm">{product.printing_cost > 0 ? <span className="text-purple-600 font-medium">₺{formatTurkishCurrency(product.printing_cost)}</span> : '-'}</TableCell>
+                      <TableCell className="text-sm">{product.printing_cost > 0 ? <span className="text-gray-700 font-medium">₺{formatTurkishCurrency(product.printing_cost)}</span> : '-'}</TableCell>
                       <TableCell className="text-sm">{product.extra_cost > 0 ? <span className="text-rose-600 font-medium">₺{formatTurkishCurrency(product.extra_cost)}</span> : '-'}</TableCell>
                       {[0, 1, 2, 3, 4].map(idx => <TableCell key={idx}>{getDesiValue(product, idx)}</TableCell>)}
                       {visiblePlatformList.map(platform => {
                         const price = product.prices[platform.id];
                         if (!price) return <TableCell key={platform.id} className="text-center text-slate-400">-</TableCell>;
                         const commission = commissions.find(c => c.category_id === product.category_id && c.platform_id === platform.id && c.is_active !== false);
-                        const targetRate = commission?.target_profit_rate ?? price.profit_rate;
+                        const { amount: profitAmount, rate: profitRateDisplay } = getDisplayProfit(price, product, commission);
                         return (
                           <TableCell key={platform.id} className="text-center">
                             <div className="space-y-1">
                               <p className="font-bold text-slate-900">₺{formatTurkishCurrency(price.sale_price)}</p>
                               <div className="flex items-center justify-center gap-1">
-                                <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${getProfitColor(targetRate)}`}>{formatTurkishPercent(targetRate)}</span>
+                                <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${getProfitColor(profitRateDisplay)}`}>{formatTurkishPercent(profitRateDisplay)}</span>
                                 {getBaremBadge(price.barem_used)}
                               </div>
-                              <p className="text-xs text-slate-500">Kâr: ₺{formatTurkishCurrency(price.net_profit)}</p>
+                              <p className="text-xs text-slate-500">Kâr: ₺{formatTurkishCurrency(profitAmount)}{showBeforeTax && <span className="text-slate-400"> (vergi öncesi)</span>}</p>
                               {price.packaging_cost > 0 && <p className="text-xs text-amber-600 font-medium">📦 Paket: ₺{formatTurkishCurrency(price.packaging_cost)}</p>}
                               <Button variant="ghost" size="sm" className="h-7 text-xs mt-1" onClick={() => handleShowDetail(product, platform)}>
                                 <Info className="h-3 w-3 mr-1" />Detay
@@ -797,10 +826,10 @@ export default function Prices() {
             <DialogHeader><DialogTitle>Fiyatlar Hesaplanıyor</DialogTitle></DialogHeader>
             <div className="space-y-4">
               <div className="w-full bg-slate-100 rounded-full h-4 overflow-hidden">
-                <div className="bg-indigo-600 h-4 rounded-full transition-all duration-300" style={{ width: `${fakeProgress}%` }} />
+                <div className="bg-gray-900 h-4 rounded-full transition-all duration-300" style={{ width: `${fakeProgress}%` }} />
               </div>
               <div className="text-center">
-                <p className="text-3xl font-bold text-indigo-600">%{fakeProgress}</p>
+                <p className="text-3xl font-bold text-gray-900">%{fakeProgress}</p>
                 <p className="text-sm text-slate-500 mt-1">Lütfen bekleyin...</p>
               </div>
             </div>

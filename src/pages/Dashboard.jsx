@@ -189,9 +189,9 @@ if (filteredByRange) {
   const profitColor = (rate) => {
     if (rate === null) return 'text-gray-400';
     if (rate < 0) return 'text-red-600';
-    if (rate < 10) return 'text-orange-500';
+    if (rate < 10) return 'text-amber-500';
     if (rate < 20) return 'text-yellow-600';
-    return 'text-emerald-600';
+    return 'text-green-600';
   };
 
   const barColor = (item) => {
@@ -211,9 +211,9 @@ if (filteredByRange) {
     return '#14532d';
   };
 
-  const platformColors = { trendyol: 'border-orange-200 bg-orange-50', hepsiburada: 'border-yellow-200 bg-yellow-50', website: 'border-indigo-200 bg-indigo-50' };
-  const platformTextColors = { trendyol: 'text-orange-700', hepsiburada: 'text-yellow-700', website: 'text-indigo-700' };
-  const platformBadgeColors = { trendyol: 'bg-orange-100 text-orange-800', hepsiburada: 'bg-yellow-100 text-yellow-800', website: 'bg-indigo-100 text-indigo-800' };
+  const platformColors = { trendyol: 'border-orange-200 bg-orange-50', hepsiburada: 'border-purple-200 bg-purple-50', website: 'border-gray-200 bg-gray-50' };
+  const platformTextColors = { trendyol: 'text-orange-700', hepsiburada: 'text-purple-700', website: 'text-gray-900' };
+  const platformBadgeColors = { trendyol: 'bg-orange-100 text-orange-800', hepsiburada: 'bg-purple-100 text-purple-800', website: 'bg-gray-100 text-gray-500' };
 
   return (
     <div className="min-h-screen">
@@ -244,7 +244,7 @@ if (filteredByRange) {
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-sm text-gray-500">Negatif Kârlı</span>
-                <span className={`font-semibold ${negativeProfitTotal > 0 ? 'text-red-600' : 'text-emerald-600'}`}>
+                <span className={`font-semibold ${negativeProfitTotal > 0 ? 'text-red-600' : 'text-green-600'}`}>
                   {negativeProfitTotal}
                   {negativeProfitTotal > 0 && <AlertCircle className="inline ml-1 h-3.5 w-3.5" />}
                 </span>
@@ -325,7 +325,7 @@ if (filteredByRange) {
                       <td className={`py-2.5 pr-4 text-center text-xs ${profitColor(minProfit)}`}>{minProfit !== null ? formatTurkishPercent(minProfit) : '—'}</td>
                       <td className={`py-2.5 pr-4 text-center text-xs ${profitColor(maxProfit)}`}>{maxProfit !== null ? formatTurkishPercent(maxProfit) : '—'}</td>
                       <td className="py-2.5 text-center">
-                        {negativeProfitCount > 0 ? <Badge variant="destructive" className="text-xs">{negativeProfitCount}</Badge> : <CheckCircle2 className="h-4 w-4 text-emerald-500 mx-auto" />}
+                        {negativeProfitCount > 0 ? <Badge variant="destructive" className="text-xs">{negativeProfitCount}</Badge> : <CheckCircle2 className="h-4 w-4 text-green-500 mx-auto" />}
                       </td>
                     </tr>
                   ))}
@@ -377,7 +377,7 @@ if (filteredByRange) {
                       <span className={`font-semibold text-sm ${platformTextColors[platformType]}`}>{name}</span>
                       <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${platformBadgeColors[platformType]}`}>{listedCount} listelendi</span>
                       {unlistedCount > 0 && <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-red-100 text-red-700">{unlistedCount} listelenmemiş</span>}
-                      {unlistedCount === 0 && <CheckCircle2 className="h-4 w-4 text-emerald-500" />}
+                      {unlistedCount === 0 && <CheckCircle2 className="h-4 w-4 text-green-500" />}
                     </div>
                     {unlistedCount > 0 && (expandedPlatform === platformType ? <ChevronUp className="h-4 w-4 text-gray-500 shrink-0" /> : <ChevronDown className="h-4 w-4 text-gray-500 shrink-0" />)}
                   </button>
@@ -405,9 +405,9 @@ if (filteredByRange) {
 
 function StatCard({ icon: Icon, label, value, color, onClick }) {
   const colors = {
-    blue: 'bg-blue-50 text-blue-600',
-    purple: 'bg-purple-50 text-purple-600',
-    green: 'bg-emerald-50 text-emerald-600',
+    blue: 'bg-gray-100 text-gray-900',
+    purple: 'bg-gray-100 text-gray-900',
+    green: 'bg-green-50 text-green-600',
     red: 'bg-red-50 text-red-600',
   };
   return (

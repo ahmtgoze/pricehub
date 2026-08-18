@@ -57,7 +57,7 @@ export default function PriceDetailModal({ open, onClose, product, platform, pri
       <DialogContent className="w-full max-w-2xl flex flex-col p-0 gap-0" style={{maxHeight: '90dvh'}}>
         <DialogHeader className="px-4 pt-4 pb-3 sm:px-6 sm:pt-6 border-b border-slate-100 flex-shrink-0">
           <DialogTitle className="flex items-center gap-2 text-lg sm:text-xl">
-            <Calculator className="h-5 w-5 text-indigo-600 flex-shrink-0" />
+            <Calculator className="h-5 w-5 text-gray-900 flex-shrink-0" />
             Fiyat Hesaplama Detayları
           </DialogTitle>
         </DialogHeader>
@@ -94,9 +94,9 @@ export default function PriceDetailModal({ open, onClose, product, platform, pri
 
               <Separator />
 
-              <div className="bg-gradient-to-br from-indigo-50 to-indigo-100/50 rounded-xl p-4 sm:p-6">
-                <p className="text-sm text-indigo-600 font-medium mb-2 text-center">Satış Fiyatı</p>
-                <p className="text-3xl sm:text-4xl font-bold text-indigo-700 text-center">
+              <div className="bg-gray-50 rounded-xl p-4 sm:p-6">
+                <p className="text-sm text-gray-500 font-medium mb-2 text-center">Satış Fiyatı</p>
+                <p className="text-3xl sm:text-4xl font-bold text-gray-900 text-center">
                   ₺{priceData.sale_price?.toFixed(2)}
                 </p>
                 <div className="flex items-center justify-center gap-3 mt-4 flex-wrap">
@@ -105,7 +105,7 @@ export default function PriceDetailModal({ open, onClose, product, platform, pri
                   </Badge>
                   <Badge className={`${
                     (priceData.profit_rate || 0) >= 30 ? 'bg-emerald-100 text-emerald-700' :
-                    (priceData.profit_rate || 0) >= 20 ? 'bg-blue-100 text-blue-700' :
+                    (priceData.profit_rate || 0) >= 20 ? 'bg-gray-100 text-gray-700' :
                     'bg-amber-100 text-amber-700'
                   }`}>
                     %{(priceData.profit_rate || 0)?.toFixed(1)}
@@ -116,31 +116,31 @@ export default function PriceDetailModal({ open, onClose, product, platform, pri
               <div>
                 <h4 className="font-semibold text-slate-700 mb-3">Detaylı Hesaplama</h4>
                 <div className="space-y-1 text-sm">
-                  <div className="flex justify-between py-2 border-b-2 border-indigo-100 bg-indigo-50/30 px-3 rounded-t-lg">
-                    <span className="font-semibold text-indigo-700">Satış Fiyatı (KDV Dahil)</span>
-                    <span className="font-bold text-indigo-700 ml-2 shrink-0">₺{priceData.sale_price?.toFixed(2)}</span>
+                  <div className="flex justify-between py-2 border-b-2 border-gray-200 bg-gray-50 px-3 rounded-t-lg">
+                    <span className="font-semibold text-gray-900">Satış Fiyatı (KDV Dahil)</span>
+                    <span className="font-bold text-gray-900 ml-2 shrink-0">₺{priceData.sale_price?.toFixed(2)}</span>
                   </div>
 
                   <div className="flex justify-between py-2 pl-3 sm:pl-6 border-b border-slate-100">
                     <span className="text-slate-600">- Ürün Maliyeti (KDV Dahil)</span>
-                    <span className="font-medium text-rose-600 ml-2 shrink-0">-₺{Number(productCost).toFixed(2)}</span>
+                    <span className="font-medium text-red-600 ml-2 shrink-0">-₺{Number(productCost).toFixed(2)}</span>
                   </div>
 
                   <div className="flex justify-between py-2 pl-3 sm:pl-6 border-b border-slate-100">
                     <span className="text-slate-600">- Baskı Maliyeti (KDV Dahil)</span>
-                    <span className="font-medium text-rose-600 ml-2 shrink-0">-₺{Number(printingCost).toFixed(2)}</span>
+                    <span className="font-medium text-red-600 ml-2 shrink-0">-₺{Number(printingCost).toFixed(2)}</span>
                   </div>
 
                   <div className="flex justify-between py-2 pl-3 sm:pl-6 border-b border-slate-100">
                     <span className="text-slate-600">- Ek Maliyet (KDV Dahil)</span>
-                    <span className="font-medium text-rose-600 ml-2 shrink-0">-₺{Number(extraCost).toFixed(2)}</span>
+                    <span className="font-medium text-red-600 ml-2 shrink-0">-₺{Number(extraCost).toFixed(2)}</span>
                   </div>
 
                   <div className="flex justify-between py-2 pl-3 sm:pl-6 border-b border-slate-100">
                     <span className="text-slate-600">
                       {isDoubleShipping ? '- Çift Kargo Ücreti (KDV Dahil)' : '- Kargo Ücreti (KDV Dahil)'}
                     </span>
-                    <span className="font-medium text-rose-600 ml-2 shrink-0">-₺{Number(shippingCost).toFixed(2)}</span>
+                    <span className="font-medium text-red-600 ml-2 shrink-0">-₺{Number(shippingCost).toFixed(2)}</span>
                   </div>
 
                   {priceData.service_fee != null && (
@@ -150,35 +150,35 @@ export default function PriceDetailModal({ open, onClose, product, platform, pri
                           ? '- Bugün Kargoda Hizmet Bedeli (İndirimli, KDV Dahil)'
                           : '- Hizmet Bedeli (KDV Dahil)'}
                       </span>
-                      <span className="font-medium text-rose-600 ml-2 shrink-0">-₺{(priceData.service_fee ?? 0).toFixed(2)}</span>
+                      <span className="font-medium text-red-600 ml-2 shrink-0">-₺{(priceData.service_fee ?? 0).toFixed(2)}</span>
                     </div>
                   )}
 
                   {(calculationDetails.posServiceFee > 0) && (
                     <div className="flex justify-between py-2 pl-3 sm:pl-6 border-b border-slate-100">
                       <span className="text-slate-600">- POS Hizmet Bedeli (KDV Dahil)</span>
-                      <span className="font-medium text-rose-600 ml-2 shrink-0">-₺{Number(calculationDetails.posServiceFee).toFixed(2)}</span>
+                      <span className="font-medium text-red-600 ml-2 shrink-0">-₺{Number(calculationDetails.posServiceFee).toFixed(2)}</span>
                     </div>
                   )}
 
                   <div className="flex justify-between py-2 pl-3 sm:pl-6 border-b border-slate-100">
                     <span className="text-slate-600">- Paketleme Maliyeti (KDV Dahil)</span>
-                    <span className="font-medium text-rose-600 ml-2 shrink-0">-₺{Number(packagingCost).toFixed(2)}</span>
+                    <span className="font-medium text-red-600 ml-2 shrink-0">-₺{Number(packagingCost).toFixed(2)}</span>
                   </div>
 
                   <div className="flex justify-between py-2 pl-3 sm:pl-6 border-b border-slate-100">
                     <span className="text-slate-600">- Komisyon Tutarı (KDV Dahil)</span>
-                    <span className="font-medium text-rose-600 ml-2 shrink-0">-₺{(priceData.commission_amount || 0)?.toFixed(2)}</span>
+                    <span className="font-medium text-red-600 ml-2 shrink-0">-₺{(priceData.commission_amount || 0)?.toFixed(2)}</span>
                   </div>
 
                   <div className="flex justify-between py-2 pl-3 sm:pl-6 border-b border-slate-100">
                     <span className="text-slate-600">- Stopaj Tutarı</span>
-                    <span className="font-medium text-rose-600 ml-2 shrink-0">-₺{(priceData.withholding_amount || 0)?.toFixed(2)}</span>
+                    <span className="font-medium text-red-600 ml-2 shrink-0">-₺{(priceData.withholding_amount || 0)?.toFixed(2)}</span>
                   </div>
 
                   <div className="flex justify-between py-2 pl-3 sm:pl-6 border-b border-slate-200">
                     <span className="text-slate-600">- Net KDV</span>
-                    <span className="font-medium text-rose-600 ml-2 shrink-0">-₺{(priceData.net_vat || 0)?.toFixed(2)}</span>
+                    <span className="font-medium text-red-600 ml-2 shrink-0">-₺{(priceData.net_vat || 0)?.toFixed(2)}</span>
                   </div>
 
                   {/* Vergi Öncesi Net Kâr */}
@@ -195,7 +195,7 @@ export default function PriceDetailModal({ open, onClose, product, platform, pri
                   {((priceData.corporate_tax_amount ?? 0) > 0) && (
                     <div className="flex justify-between py-2 pl-3 sm:pl-6 border-b-2 border-slate-200">
                       <span className="text-slate-600">- Kurumlar (Gelir) Vergisi (%{calculationDetails.corporateTaxRate ?? 25})</span>
-                      <span className="font-medium text-rose-600 ml-2 shrink-0">-₺{(priceData.corporate_tax_amount ?? 0).toFixed(2)}</span>
+                      <span className="font-medium text-red-600 ml-2 shrink-0">-₺{(priceData.corporate_tax_amount ?? 0).toFixed(2)}</span>
                     </div>
                   )}
 

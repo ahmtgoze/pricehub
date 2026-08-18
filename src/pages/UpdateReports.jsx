@@ -140,21 +140,21 @@ export default function UpdateReports() {
     const percent = oldPrice > 0 ? (diff / oldPrice) * 100 : 0;
     if (diff > 0) {
       return (
-        <div className="flex items-center gap-1 text-emerald-600">
+        <div className="flex items-center gap-1 text-green-600">
           <ArrowUp className="h-4 w-4" />
           <span>+₺{diff.toFixed(2)} ({percent.toFixed(1)}%)</span>
         </div>
       );
     } else if (diff < 0) {
       return (
-        <div className="flex items-center gap-1 text-rose-600">
+        <div className="flex items-center gap-1 text-red-600">
           <ArrowDown className="h-4 w-4" />
           <span>₺{diff.toFixed(2)} ({percent.toFixed(1)}%)</span>
         </div>
       );
     }
     return (
-      <div className="flex items-center gap-1 text-slate-400">
+      <div className="flex items-center gap-1 text-gray-400">
         <Minus className="h-4 w-4" />
         <span>Değişim yok</span>
       </div>
@@ -163,11 +163,11 @@ export default function UpdateReports() {
 
   const getChangeTypeBadge = (type) => {
     const types = {
-      cost_update: { label: 'Maliyet', color: 'bg-blue-100 text-blue-700' },
-      shipping_update: { label: 'Kargo', color: 'bg-purple-100 text-purple-700' },
+      cost_update: { label: 'Maliyet', color: 'bg-gray-100 text-gray-700' },
+      shipping_update: { label: 'Kargo', color: 'bg-gray-100 text-gray-700' },
       commission_update: { label: 'Komisyon', color: 'bg-amber-100 text-amber-700' },
-      platform_update: { label: 'Platform', color: 'bg-indigo-100 text-indigo-700' },
-      manual: { label: 'Manuel', color: 'bg-slate-100 text-slate-700' }
+      platform_update: { label: 'Platform', color: 'bg-gray-100 text-gray-700' },
+      manual: { label: 'Manuel', color: 'bg-gray-100 text-gray-700' }
     };
     const config = types[type] || types.manual;
     return <Badge className={config.color}>{config.label}</Badge>;
@@ -196,7 +196,7 @@ export default function UpdateReports() {
       header: 'Tarih',
       accessor: 'created_date',
       cell: (row) => (
-        <span className="text-sm text-slate-600">
+        <span className="text-sm text-gray-600">
           {row.created_date ? format(new Date(row.created_date), 'dd MMM yyyy HH:mm', { locale: tr }) : '-'}
         </span>
       )
@@ -206,12 +206,12 @@ export default function UpdateReports() {
       cell: (row) => (
         <div>
           <button
-            className="font-medium text-indigo-700 hover:text-indigo-900 hover:underline text-left"
+            className="font-medium text-gray-900 hover:text-gray-600 hover:underline text-left"
             onClick={() => setHistoryModal({ open: true, productId: row.product_id, productName: row.product_name })}
           >
             {row.product_name}
           </button>
-          <p className="text-xs text-slate-500 font-mono">{row.product_sku}</p>
+          <p className="text-xs text-gray-500 font-mono">{row.product_sku}</p>
         </div>
       )
     },
@@ -240,7 +240,7 @@ export default function UpdateReports() {
       accessor: 'new_profit_rate',
       cell: (row) => (
         <span className={`font-semibold ${
-          (row.new_profit_rate || 0) >= (row.old_profit_rate || 0) ? 'text-emerald-600' : 'text-rose-600'
+          (row.new_profit_rate || 0) >= (row.old_profit_rate || 0) ? 'text-green-600' : 'text-red-600'
         }`}>
           %{row.new_profit_rate?.toFixed(1)}
         </span>
@@ -267,15 +267,15 @@ export default function UpdateReports() {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-indigo-50/30">
+    <div className="min-h-screen bg-gray-50">
       <div className="max-w-[1600px] mx-auto px-6 py-8">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
           <div>
-            <h1 className="text-3xl font-bold text-slate-900 tracking-tight flex items-center gap-3">
-              <FileText className="h-8 w-8 text-indigo-600" />
+            <h1 className="text-3xl font-bold text-gray-900 tracking-tight flex items-center gap-3">
+              <FileText className="h-8 w-8 text-gray-900" />
               Güncelleme Raporları
             </h1>
-            <p className="text-slate-500 mt-1">{filteredReports.length} değişiklik kaydı</p>
+            <p className="text-gray-500 mt-1">{filteredReports.length} değişiklik kaydı</p>
           </div>
           <div className="flex items-center gap-3">
             {selectedIds.length > 0 && (
@@ -309,11 +309,11 @@ export default function UpdateReports() {
           </div>
         </div>
 
-        <div className="mb-4 flex gap-2 border-b border-slate-200">
+        <div className="mb-4 flex gap-2 border-b border-gray-200">
           <button
             onClick={() => { setTab('aktif'); setSelectedIds([]); setPage(1); }}
             className={`px-4 py-2 font-medium border-b-2 transition-colors ${
-              tab === 'aktif' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-600 hover:text-slate-900'
+              tab === 'aktif' ? 'border-gray-900 text-gray-900' : 'border-transparent text-gray-600 hover:text-gray-900'
             }`}
           >
             Aktif Raporlar
@@ -321,14 +321,14 @@ export default function UpdateReports() {
           <button
             onClick={() => { setTab('arsiv'); setSelectedIds([]); setPage(1); }}
             className={`px-4 py-2 font-medium border-b-2 transition-colors ${
-              tab === 'arsiv' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-600 hover:text-slate-900'
+              tab === 'arsiv' ? 'border-gray-900 text-gray-900' : 'border-transparent text-gray-600 hover:text-gray-900'
             }`}
           >
             Arşiv
           </button>
         </div>
 
-        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 mb-6">
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 mb-6">
           <div className="flex flex-col sm:flex-row gap-4">
             <SearchInput value={search} onChange={setSearch} placeholder="Ürün adı veya SKU ara..." className="flex-1" />
             <Select value={platformFilter} onValueChange={setPlatformFilter}>
@@ -354,14 +354,14 @@ export default function UpdateReports() {
 
         {/* Toplu seçim bilgi bandı */}
         {selectedIds.length > 0 && (
-          <div className="mb-4 flex items-center gap-3 bg-indigo-50 border border-indigo-200 rounded-xl px-4 py-3 text-sm text-indigo-700">
+          <div className="mb-4 flex items-center gap-3 bg-gray-100 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900">
             <span className="font-medium">{selectedIds.length} rapor seçili</span>
             {!isAllSelected && (
-              <button onClick={selectAll} className="underline hover:text-indigo-900 font-medium">
+              <button onClick={selectAll} className="underline hover:text-gray-600 font-medium">
                 Tüm {filteredReports.length} raporu seç
               </button>
             )}
-            <button onClick={clearSelection} className="underline hover:text-indigo-900 ml-auto">
+            <button onClick={clearSelection} className="underline hover:text-gray-600 ml-auto">
               Seçimi temizle
             </button>
           </div>
@@ -397,7 +397,7 @@ export default function UpdateReports() {
               <AlertDialogCancel>İptal</AlertDialogCancel>
               <AlertDialogAction
                 onClick={() => deleteMutation.mutate(selectedIds)}
-                className="bg-rose-600 hover:bg-rose-700"
+                className="bg-red-600 hover:bg-red-700"
               >
                 Sil
               </AlertDialogAction>

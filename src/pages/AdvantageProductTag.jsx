@@ -683,7 +683,7 @@ export default function AdvantageProductTag() {
     const isSelected = item.selected_range === rangeType;
 
     return (
-      <div className={`border rounded-lg p-2 ${isSelected ? 'border-indigo-500 bg-indigo-50' : 'border-slate-200'}`}>
+      <div className={`border rounded-lg p-2 ${isSelected ? 'border-gray-900 bg-gray-50' : 'border-slate-200'}`}>
         <div className="text-xs font-semibold text-slate-700 mb-1">{label}</div>
         {maxPrice > 0 && (
           <div className="text-xs text-slate-500 text-center">
@@ -693,7 +693,7 @@ export default function AdvantageProductTag() {
         )}
         <div className="text-xs text-slate-500">Kom: %{dynamicCommission}</div>
         <div className="flex items-center justify-between mt-1">
-          <div className={`text-xs font-semibold ${isProfitable ? 'text-emerald-600' : 'text-rose-600'}`}>
+          <div className={`text-xs font-semibold ${isProfitable ? 'text-green-600' : 'text-red-600'}`}>
             {isProfitable ? '+' : ''}₺{profit.toFixed(2)} (%{profitRate.toFixed(1)})
           </div>
           <Button size="sm" variant="ghost" className="h-5 w-5 p-0" onClick={() => {
@@ -751,7 +751,7 @@ export default function AdvantageProductTag() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-indigo-50/30">
+    <div className="min-h-screen bg-gray-50">
       <div className="max-w-[1600px] mx-auto px-6 py-8">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Avantajlı Ürün Etiketi</h1>
@@ -817,21 +817,21 @@ export default function AdvantageProductTag() {
                       defaultMonth={new Date()}
                       numberOfMonths={2}
                       locale={tr}
-                      classNames={{ day_today: "bg-blue-500 font-bold text-white" }}
+                      classNames={{ day_today: "bg-gray-900 font-bold text-white" }}
                     />
                   </PopoverContent>
                 </Popover>
               </div>
             </div>
             <div className="flex flex-wrap gap-3">
-              <Button onClick={() => document.getElementById('advantageExcelUpload').click()} disabled={!selectedPlatform || !dateRangeValue?.from || !dateRangeValue?.to} className="bg-indigo-600 hover:bg-indigo-700">
+              <Button onClick={() => document.getElementById('advantageExcelUpload').click()} disabled={!selectedPlatform || !dateRangeValue?.from || !dateRangeValue?.to} className="bg-gray-900 hover:bg-gray-800">
                 <Upload className="mr-2 h-4 w-4" />
                 {uploadProgress.total > 0 ? `Yükleniyor... ${uploadProgress.current}/${uploadProgress.total}` : uploadedData.length > 0 ? 'Yeni Excel Yükle' : 'Excel Yükle'}
               </Button>
               <input id="advantageExcelUpload" type="file" accept=".xlsx,.xls" onChange={handleFileUpload} className="hidden" />
               {uploadedData.length > 0 && (
                 <>
-                  <Button onClick={handleSmartAutoSelect} className="bg-orange-500 hover:bg-orange-600 text-white gap-2">
+                  <Button onClick={handleSmartAutoSelect} className="bg-gray-900 hover:bg-gray-800 text-white gap-2">
                     <Sparkles className="h-4 w-4" />
                     Akıllı Otomatik Seç
                   </Button>
@@ -851,7 +851,7 @@ export default function AdvantageProductTag() {
                       }
                       queryClient.invalidateQueries(['advantageProductTags']);
                     } catch (error) { toast.error('Silme hatası (arka plan): ' + error.message); }
-                  }} className="text-rose-600 hover:text-rose-700 hover:bg-rose-50">
+                  }} className="text-red-600 hover:text-red-700 hover:bg-red-50">
                     <Trash2 className="mr-2 h-4 w-4" />Excel'i Sil
                   </Button>
                   <Button variant="outline" onClick={handleSave}>
@@ -962,7 +962,7 @@ export default function AdvantageProductTag() {
                             <td className="p-3">
                               <div className="font-medium text-slate-900">{item.product_name}</div>
                               <div className="text-xs text-slate-500">{item.model_code}</div>
-                              {!matchedProduct && <Badge variant="outline" className="mt-1 text-xs text-rose-600 border-rose-300">Master eşleşmedi</Badge>}
+                              {!matchedProduct && <Badge variant="outline" className="mt-1 text-xs text-red-600 border-red-300">Master eşleşmedi</Badge>}
                             </td>
                             <td className="p-3 text-center">{item.stock}</td>
                             <td className="p-3 text-center">
@@ -973,7 +973,7 @@ export default function AdvantageProductTag() {
                                 <div className="text-center">
                                   <div className="font-semibold">₺{systemPrice.sale_price?.toFixed(2)}</div>
                                   <div className="text-xs text-slate-500">Kom: %{systemPrice.commission_rate || 0}</div>
-                                  <div className={`text-xs font-medium ${(systemPrice.profit_rate || 0) > 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                                  <div className={`text-xs font-medium ${(systemPrice.profit_rate || 0) > 0 ? 'text-green-600' : 'text-red-600'}`}>
                                     ₺{(systemPrice.net_profit || 0).toFixed(2)} (%{(systemPrice.profit_rate || 0).toFixed(1)})
                                   </div>
                                 </div>
@@ -983,12 +983,12 @@ export default function AdvantageProductTag() {
                             <td className="p-3">{renderRangeCell(item, index, 'super_advantage', item.super_advantage_min, item.super_advantage_max, item.super_advantage_commission, 'Çok Avantaj')}</td>
                             <td className="p-3">{renderRangeCell(item, index, 'mega_advantage', item.mega_advantage_min, item.mega_advantage_max, item.mega_advantage_commission, 'Süper Avantaj')}</td>
                             <td className="p-3">
-                              <div className={`border rounded-lg p-2 ${item.selected_range === 'manual' ? 'border-indigo-500 bg-indigo-50' : 'border-slate-200'}`}>
+                              <div className={`border rounded-lg p-2 ${item.selected_range === 'manual' ? 'border-gray-900 bg-gray-50' : 'border-slate-200'}`}>
                                 <div className="text-xs font-semibold text-slate-700 mb-2">Manuel Fiyat</div>
                                 <Input type="number" step="0.01" value={item.manual_price || ''} onChange={(e) => handleManualPriceChange(uploadedData.indexOf(item), e.target.value)} placeholder="Fiyat girin" className="h-8 text-xs mb-2" />
                                 {item.manual_price > 0 && (
                                   <div className="flex items-center justify-between mb-2">
-                                    <div className={`text-xs font-semibold ${(item.manual_profit || 0) > 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                                    <div className={`text-xs font-semibold ${(item.manual_profit || 0) > 0 ? 'text-green-600' : 'text-red-600'}`}>
                                       {(item.manual_profit || 0) > 0 ? '+' : ''}₺{(item.manual_profit || 0).toFixed(2)} (%{(item.manual_profit_rate || 0).toFixed(1)})
                                     </div>
                                   </div>

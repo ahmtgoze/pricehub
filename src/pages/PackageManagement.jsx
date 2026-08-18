@@ -172,7 +172,7 @@ export default function PackageManagement() {
             setEditingPackage(null);
             setPackageModalOpen(true);
           }}
-          className="bg-indigo-600 hover:bg-indigo-700"
+          className="bg-gray-900 hover:bg-gray-800"
         >
           <Plus className="h-5 w-5 mr-2" />
           Yeni Paket
@@ -359,7 +359,7 @@ function PackageModal({ open, onOpenChange, package: pkg, onSave, isSaving }) {
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               İptal
             </Button>
-            <Button type="submit" disabled={isSaving} className="bg-indigo-600 hover:bg-indigo-700">
+            <Button type="submit" disabled={isSaving} className="bg-gray-900 hover:bg-gray-800">
               {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {pkg ? 'Güncelle' : 'Ekle'}
             </Button>
@@ -459,7 +459,7 @@ function PackageItemModal({ open, onOpenChange, item, packageId, onSave, isSavin
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               İptal
             </Button>
-            <Button type="submit" disabled={isSaving} className="bg-indigo-600 hover:bg-indigo-700">
+            <Button type="submit" disabled={isSaving} className="bg-gray-900 hover:bg-gray-800">
               {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {item ? 'Güncelle' : 'Ekle'}
             </Button>

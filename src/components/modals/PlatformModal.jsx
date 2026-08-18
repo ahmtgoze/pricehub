@@ -431,7 +431,7 @@ export default function PlatformModal({
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className="w-full sm:w-auto">
               İptal
             </Button>
-            <Button type="submit" disabled={isSaving} className="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700">
+            <Button type="submit" disabled={isSaving} className="w-full sm:w-auto bg-gray-900 hover:bg-gray-800">
               {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {platform ? 'Güncelle' : 'Ekle'}
             </Button>

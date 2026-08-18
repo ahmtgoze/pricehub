@@ -22,7 +22,7 @@ export default function AdminAnnouncementCompose({ onClose }) {
     return (
       <button
         onClick={() => setOpen(true)}
-        className="flex items-center gap-2 text-xs text-indigo-600 hover:text-indigo-700 font-semibold px-4 py-3 border-b border-slate-100 w-full hover:bg-indigo-50/50 transition-colors"
+        className="flex items-center gap-2 text-xs text-gray-900 hover:text-gray-700 font-semibold px-4 py-3 border-b border-slate-100 w-full hover:bg-gray-50 transition-colors"
       >
         <Plus className="h-4 w-4" /> Yeni Duyuru Yayınla
       </button>
@@ -30,7 +30,7 @@ export default function AdminAnnouncementCompose({ onClose }) {
   }
 
   return (
-    <div className="px-4 py-4 border-b border-slate-100 bg-gradient-to-r from-indigo-50 to-white space-y-3.5">
+    <div className="px-4 py-4 border-b border-slate-100 bg-white space-y-3.5">
       <div className="flex items-center justify-between">
         <p className="text-sm font-bold text-slate-900">Yeni Duyuru Oluştur</p>
         <button onClick={() => setOpen(false)} className="text-slate-400 hover:text-slate-600 transition-colors">
@@ -42,14 +42,14 @@ export default function AdminAnnouncementCompose({ onClose }) {
         <button
           type="button"
           onClick={() => setForm(f => ({ ...f, type: 'announcement' }))}
-          className={`flex items-center justify-center gap-1.5 text-xs px-3 py-2.5 rounded-xl border-2 font-semibold transition-all ${form.type === 'announcement' ? 'bg-indigo-600 text-white border-indigo-600 shadow-md' : 'border-slate-200 text-slate-600 hover:border-indigo-300 hover:bg-indigo-50'}`}
+          className={`flex items-center justify-center gap-1.5 text-xs px-3 py-2.5 rounded-xl border-2 font-semibold transition-all ${form.type === 'announcement' ? 'bg-gray-900 text-white border-gray-900 shadow-md' : 'border-slate-200 text-slate-600 hover:border-gray-400 hover:bg-gray-50'}`}
         >
           <Megaphone className="h-4 w-4" /> Duyuru
         </button>
         <button
           type="button"
           onClick={() => setForm(f => ({ ...f, type: 'system_update' }))}
-          className={`flex items-center justify-center gap-1.5 text-xs px-3 py-2.5 rounded-xl border-2 font-semibold transition-all ${form.type === 'system_update' ? 'bg-blue-600 text-white border-blue-600 shadow-md' : 'border-slate-200 text-slate-600 hover:border-blue-300 hover:bg-blue-50'}`}
+          className={`flex items-center justify-center gap-1.5 text-xs px-3 py-2.5 rounded-xl border-2 font-semibold transition-all ${form.type === 'system_update' ? 'bg-gray-900 text-white border-gray-900 shadow-md' : 'border-slate-200 text-slate-600 hover:border-gray-400 hover:bg-gray-50'}`}
         >
           <Zap className="h-4 w-4" /> Güncellemesi
         </button>
@@ -60,14 +60,14 @@ export default function AdminAnnouncementCompose({ onClose }) {
         placeholder="Başlık yazın..."
         value={form.title}
         onChange={e => setForm(f => ({ ...f, title: e.target.value }))}
-        className="w-full text-sm border border-slate-200 rounded-xl px-3.5 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-transparent bg-white font-medium"
+        className="w-full text-sm border border-slate-200 rounded-xl px-3.5 py-2.5 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:border-transparent bg-white font-medium"
       />
       <textarea
         placeholder="Duyuru içeriğini yazın..."
         value={form.content}
         onChange={e => setForm(f => ({ ...f, content: e.target.value }))}
         rows={3}
-        className="w-full text-sm border border-slate-200 rounded-xl px-3.5 py-2.5 resize-none focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-transparent bg-white"
+        className="w-full text-sm border border-slate-200 rounded-xl px-3.5 py-2.5 resize-none focus:outline-none focus:ring-2 focus:ring-gray-400 focus:border-transparent bg-white"
       />
       <div className="flex justify-between items-center pt-2">
         <Button
@@ -82,7 +82,7 @@ export default function AdminAnnouncementCompose({ onClose }) {
           size="sm"
           onClick={() => createMutation.mutate()}
           disabled={!form.title.trim() || !form.content.trim() || createMutation.isPending}
-          className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold gap-2"
+          className="bg-gray-900 hover:bg-gray-800 text-white font-semibold gap-2"
         >
           <Megaphone className="h-4 w-4" /> Yayınla
         </Button>

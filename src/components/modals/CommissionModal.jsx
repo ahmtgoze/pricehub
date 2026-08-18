@@ -224,10 +224,10 @@ export default function CommissionModal({
             </div>
 
             {isWebsite && (
-              <div className="space-y-2 border border-blue-100 bg-blue-50/50 rounded-lg p-3">
+              <div className="space-y-2 border border-gray-200 bg-gray-50 rounded-lg p-3">
                 <Label>İşlem Bedeli (₺, KDV dahil)</Label>
                 <Input type="number" step="0.01" min="0" value={formData.transaction_fee} onChange={(e) => setFormData({ ...formData, transaction_fee: e.target.value })} placeholder="0.00" />
-                <p className="text-xs text-blue-600">Sadece Web Sitesi platformuna özel ek işlem ücreti</p>
+                <p className="text-xs text-gray-500">Sadece Web Sitesi platformuna özel ek işlem ücreti</p>
               </div>
             )}
 
@@ -240,7 +240,7 @@ export default function CommissionModal({
 
           <div className="flex justify-end gap-3 px-6 py-4 border-t border-slate-100 flex-shrink-0">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>İptal</Button>
-            <Button type="submit" disabled={isSaving} className="bg-indigo-600 hover:bg-indigo-700">
+            <Button type="submit" disabled={isSaving} className="bg-gray-900 hover:bg-gray-800">
               {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {commission ? 'Güncelle' : 'Ekle'}
             </Button>

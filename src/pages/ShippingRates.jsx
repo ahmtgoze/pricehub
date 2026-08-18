@@ -222,8 +222,8 @@ export default function ShippingRates() {
 
   const getRateTypeBadge = (type) => {
     switch (type) {
-      case 'barem1': return <Badge className="bg-emerald-100 text-emerald-700">Barem 1</Badge>;
-      case 'barem2': return <Badge className="bg-blue-100 text-blue-700">Barem 2</Badge>;
+      case 'barem1': return <Badge className="bg-gray-100 text-gray-700">Barem 1</Badge>;
+      case 'barem2': return <Badge className="bg-gray-200 text-gray-900">Barem 2</Badge>;
       default: return <Badge variant="outline">Desi</Badge>;
     }
   };
@@ -272,7 +272,7 @@ export default function ShippingRates() {
             </Button>
             {canDelete && (
               <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); setDeleteId(row.id); }}>
-                <Trash2 className="h-4 w-4 text-rose-500" />
+                <Trash2 className="h-4 w-4 text-red-500" />
               </Button>
             )}
           </div>
@@ -319,14 +319,14 @@ export default function ShippingRates() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-indigo-50/30">
+    <div className="min-h-screen bg-gray-50">
       <div className="max-w-[1400px] mx-auto px-3 sm:px-6 py-5 sm:py-8">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
           <div>
-            <h1 className="text-3xl font-bold text-slate-900 tracking-tight flex items-center gap-3">
-              <Truck className="h-8 w-8 text-indigo-600" />Kargo Tarifeleri
+            <h1 className="text-3xl font-bold text-gray-900 tracking-tight flex items-center gap-3">
+              <Truck className="h-8 w-8 text-gray-900" />Kargo Tarifeleri
             </h1>
-            <p className="text-slate-500 mt-1">
+            <p className="text-gray-500 mt-1">
               {filteredRates.length} tarife
               {userRole === 'admin' && <span className="ml-4 text-xs font-medium">👨‍💼 Sistem Yöneticisi Paneli</span>}
             </p>
@@ -339,24 +339,24 @@ export default function ShippingRates() {
             )}
             <ImportExport data={filteredRates} columns={exportColumns} templateColumns={templateColumns} templateInfoData={templateInfoData} filename="kargo_tarifeleri" onImport={handleImport} />
             {userRole === 'admin' && (
-              <Button onClick={() => { setEditingRate(null); setIsSystemRate(true); setModalOpen(true); }} variant="outline" className="gap-2 border-orange-300 text-orange-700 hover:bg-orange-50">
+              <Button onClick={() => { setEditingRate(null); setIsSystemRate(true); setModalOpen(true); }} variant="outline" className="gap-2 border-gray-300 text-gray-700 hover:bg-gray-50">
                 <Plus className="h-4 w-4" />Sistem Tarifesi Ekle
               </Button>
             )}
-            <Button onClick={() => { setEditingRate(null); setIsSystemRate(false); setModalOpen(true); }} className="bg-indigo-600 hover:bg-indigo-700 gap-2">
+            <Button onClick={() => { setEditingRate(null); setIsSystemRate(false); setModalOpen(true); }} className="bg-gray-900 hover:bg-gray-800 gap-2">
               <Plus className="h-4 w-4" />Manuel Tarife Ekle
             </Button>
           </div>
         </div>
 
         {userRole === 'admin' && (
-          <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 mb-6">
-            <h3 className="font-semibold text-slate-900 text-sm mb-2">⚙️ Sistem Yöneticisi</h3>
-            <p className="text-sm text-slate-600">Trendyol ve HepsiBurada kargo tarifelerini Excel'den yükleyebilirsiniz. Yüklenen tarifeler kullanıcılar tarafından görüntülenebilir ancak düzenlenemez.</p>
+          <div className="bg-gray-50 border border-gray-200 rounded-2xl p-4 mb-6">
+            <h3 className="font-semibold text-gray-900 text-sm mb-2">⚙️ Sistem Yöneticisi</h3>
+            <p className="text-sm text-gray-600">Trendyol ve HepsiBurada kargo tarifelerini Excel'den yükleyebilirsiniz. Yüklenen tarifeler kullanıcılar tarafından görüntülenebilir ancak düzenlenemez.</p>
           </div>
         )}
 
-        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 mb-6">
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 mb-6">
           <div className="flex flex-col sm:flex-row gap-4">
             <SearchInput value={search} onChange={setSearch} placeholder="Platform, firma veya desi ara (örn: 4, 4 desi)..." className="flex-1" />
             <Select value={platformFilter} onValueChange={setPlatformFilter}>
@@ -396,7 +396,7 @@ export default function ShippingRates() {
           </div>
         </div>
 
-        <DataTable columns={columns} data={paginatedRates} isLoading={isLoading} page={page} pageSize={pageSize} totalItems={filteredRates.length} onPageChange={setPage} emptyMessage="Kargo tarifesi bulunamadı" rowClassName={(row) => row.is_manual ? "bg-amber-50 hover:bg-amber-100/70" : "hover:bg-slate-50/50"} />
+        <DataTable columns={columns} data={paginatedRates} isLoading={isLoading} page={page} pageSize={pageSize} totalItems={filteredRates.length} onPageChange={setPage} emptyMessage="Kargo tarifesi bulunamadı" rowClassName={(row) => row.is_manual ? "bg-amber-50 hover:bg-amber-100/70" : "hover:bg-gray-50/50"} />
 
         <ShippingRateModal open={modalOpen} onOpenChange={(open) => { setModalOpen(open); if (!open) setIsSystemRate(false); }} shippingRate={editingRate} platforms={platforms} onSave={(data) => saveMutation.mutate({ ...data, is_admin_created: isSystemRate, is_manual: !isSystemRate })} isSaving={saveMutation.isPending} isAdmin={userRole === 'admin'} isSystemRate={isSystemRate} />
 
@@ -405,7 +405,7 @@ export default function ShippingRates() {
             <AlertDialogHeader><AlertDialogTitle>Tarifeyi Sil</AlertDialogTitle><AlertDialogDescription>Bu kargo tarifesini silmek istediğinizden emin misiniz?</AlertDialogDescription></AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel>İptal</AlertDialogCancel>
-              <AlertDialogAction onClick={() => deleteMutation.mutate(deleteId)} className="bg-rose-600 hover:bg-rose-700">Sil</AlertDialogAction>
+              <AlertDialogAction onClick={() => deleteMutation.mutate(deleteId)} className="bg-red-600 hover:bg-red-700">Sil</AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
@@ -415,7 +415,7 @@ export default function ShippingRates() {
             <AlertDialogHeader><AlertDialogTitle>Toplu Tarife Silme</AlertDialogTitle><AlertDialogDescription>{selectedIds.length} tarifeyi silmek istediğinizden emin misiniz?</AlertDialogDescription></AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel>İptal</AlertDialogCancel>
-              <AlertDialogAction onClick={() => bulkDeleteMutation.mutate(selectedIds)} className="bg-rose-600 hover:bg-rose-700">Sil</AlertDialogAction>
+              <AlertDialogAction onClick={() => bulkDeleteMutation.mutate(selectedIds)} className="bg-red-600 hover:bg-red-700">Sil</AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
@@ -425,14 +425,14 @@ export default function ShippingRates() {
             <DialogHeader><DialogTitle>Excel İçe Aktarma İşleniyor...</DialogTitle></DialogHeader>
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <span className="text-sm text-slate-500">İlerleme</span>
-                <span className="text-sm font-bold text-indigo-600">{importProgress.current} / {importProgress.total}</span>
+                <span className="text-sm text-gray-500">İlerleme</span>
+                <span className="text-sm font-bold text-gray-900">{importProgress.current} / {importProgress.total}</span>
               </div>
-              <div className="w-full bg-slate-200 rounded-full h-4 overflow-hidden">
-                <div className="bg-indigo-600 h-4 rounded-full transition-all duration-300" style={{ width: `${(importProgress.current / (importProgress.total || 1)) * 100}%` }} />
+              <div className="w-full bg-gray-200 rounded-full h-4 overflow-hidden">
+                <div className="bg-gray-900 h-4 rounded-full transition-all duration-300" style={{ width: `${(importProgress.current / (importProgress.total || 1)) * 100}%` }} />
               </div>
               <div className="text-center">
-                <p className="text-3xl font-bold text-indigo-600">%{Math.round((importProgress.current / (importProgress.total || 1)) * 100)}</p>
+                <p className="text-3xl font-bold text-gray-900">%{Math.round((importProgress.current / (importProgress.total || 1)) * 100)}</p>
               </div>
             </div>
           </DialogContent>

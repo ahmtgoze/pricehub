@@ -640,11 +640,11 @@ export default function PlusProductCommissionTariff() {
   const selectedCount = uploadedData.filter(i => i.selected_type !== 'none').length;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-indigo-50/30">
+    <div className="min-h-screen bg-gray-50">
       <div className="max-w-[1600px] mx-auto px-6 py-8">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Plus Ürün Komisyon Tarifesi</h1>
-          <p className="text-slate-500 mt-1">Trendyol Plus tekliflerini yükleyip kârlılık analizi yapın</p>
+          <h1 className="text-3xl font-bold text-gray-900 tracking-tight">Plus Ürün Komisyon Tarifesi</h1>
+          <p className="text-gray-500 mt-1">Trendyol Plus tekliflerini yükleyip kârlılık analizi yapın</p>
         </div>
 
         {!hasTrendyol && (
@@ -684,21 +684,21 @@ export default function PlusProductCommissionTariff() {
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar mode="range" selected={dateRangeValue} onSelect={(range) => { setDateRangeValue(range || { from: undefined, to: undefined }); if (range?.from && range?.to && range.from.getTime() !== range.to.getTime()) setCalendarOpen(false); }} defaultMonth={new Date()} numberOfMonths={2} locale={tr} classNames={{ day_today: "bg-blue-500 font-bold text-white" }} />
+                    <Calendar mode="range" selected={dateRangeValue} onSelect={(range) => { setDateRangeValue(range || { from: undefined, to: undefined }); if (range?.from && range?.to && range.from.getTime() !== range.to.getTime()) setCalendarOpen(false); }} defaultMonth={new Date()} numberOfMonths={2} locale={tr} classNames={{ day_today: "bg-gray-900 font-bold text-white" }} />
                   </PopoverContent>
                 </Popover>
               </div>
             </div>
             <div className="flex flex-wrap gap-3">
-              <Button onClick={() => document.getElementById('plusExcelUpload').click()} disabled={!selectedPlatform || !dateRangeValue?.from || !dateRangeValue?.to} className="bg-indigo-600 hover:bg-indigo-700">
+              <Button onClick={() => document.getElementById('plusExcelUpload').click()} disabled={!selectedPlatform || !dateRangeValue?.from || !dateRangeValue?.to} className="bg-gray-900 hover:bg-gray-800">
                 <Upload className="mr-2 h-4 w-4" />{uploadedData.length > 0 ? 'Yeni Excel Yükle' : 'Excel Yükle'}
               </Button>
               <input id="plusExcelUpload" type="file" accept=".xlsx,.xls" onChange={handleFileUpload} className="hidden" />
-              {uploadProgress.total > 0 && (<div className="flex items-center text-sm text-slate-500">{uploadProgress.current}/{uploadProgress.total} kaydediliyor...</div>)}
+              {uploadProgress.total > 0 && (<div className="flex items-center text-sm text-gray-500">{uploadProgress.current}/{uploadProgress.total} kaydediliyor...</div>)}
               {uploadedData.length > 0 && (
                 <>
-                  <Button onClick={handleSmartAutoSelect} className="bg-orange-500 hover:bg-orange-600 text-white gap-2"><Sparkles className="h-4 w-4" />Akıllı Otomatik Seç</Button>
-                  <Button variant="outline" onClick={handleDeleteExcel} className="text-rose-600 hover:text-rose-700 hover:bg-rose-50"><Trash2 className="mr-2 h-4 w-4" />Excel'i Sil</Button>
+                  <Button onClick={handleSmartAutoSelect} className="bg-gray-900 hover:bg-gray-800 text-white gap-2"><Sparkles className="h-4 w-4" />Akıllı Otomatik Seç</Button>
+                  <Button variant="outline" onClick={handleDeleteExcel} className="text-red-600 hover:text-red-700 hover:bg-red-50"><Trash2 className="mr-2 h-4 w-4" />Excel'i Sil</Button>
                   <Button variant="outline" onClick={handleSave}><Check className="mr-2 h-4 w-4" />Seçimleri Kaydet ({selectedCount})</Button>
                   <Button variant="outline" onClick={() => { setUploadedData(uploadedData.map(item => ({ ...item, selected_type: 'none', selected_price: 0 }))); toast.success('Tüm seçimler kaldırıldı'); }}>Seçimleri Kaldır</Button>
                   <Button variant="outline" onClick={handleExport}><Download className="mr-2 h-4 w-4" />Excel İndir</Button>
@@ -758,7 +758,7 @@ export default function PlusProductCommissionTariff() {
               <CardContent>
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
-                    <thead className="bg-slate-50 border-b">
+                    <thead className="bg-gray-50 border-b">
                       <tr>
                         <th className="p-3 text-left font-semibold min-w-[180px]">Ürün</th>
                         <th className="p-3 text-center font-semibold">Stok</th>
@@ -780,47 +780,47 @@ export default function PlusProductCommissionTariff() {
                         const isPlusSelected = item.selected_type === 'plus';
 
                         return (
-                          <tr key={index} className="border-b hover:bg-slate-50">
+                          <tr key={index} className="border-b hover:bg-gray-50">
                             <td className="p-3">
-                              <div className="font-medium text-slate-900">{item.product_name}</div>
-                              <div className="text-xs text-slate-500">{item.model_code}</div>
+                              <div className="font-medium text-gray-900">{item.product_name}</div>
+                              <div className="text-xs text-gray-500">{item.model_code}</div>
                             </td>
                             <td className="p-3 text-center">{item.stock}</td>
                             <td className="p-3">
                               {(matchedProduct?.category_name || item.category) ? (
-                                <div className="text-center text-xs"><div className="font-medium text-slate-700">{matchedProduct?.category_name || item.category}</div></div>
-                              ) : <div className="text-center text-slate-400 text-xs">-</div>}
+                                <div className="text-center text-xs"><div className="font-medium text-gray-700">{matchedProduct?.category_name || item.category}</div></div>
+                              ) : <div className="text-center text-gray-400 text-xs">-</div>}
                             </td>
                             <td className="p-3">
                               {systemPrice ? (
                                 <div className="text-center">
-                                  <div className="font-semibold text-slate-900">₺{systemPrice.sale_price?.toFixed(2)}</div>
-                                  {matchedProduct && <div className="text-xs text-slate-500 mb-1">{matchedProduct.desi} desi • {systemPrice.barem_used === 'barem1' ? 'Barem 1' : systemPrice.barem_used === 'barem2' ? 'Barem 2' : 'Desi'}</div>}
-                                  <div className="text-xs text-slate-500 mb-1">Kom: %{systemPrice.commission_rate || 0}</div>
-                                  <div className={`text-xs font-medium ${(systemPrice.profit_rate || 0) > 0 ? 'text-emerald-600' : 'text-rose-600'}`}>₺{(systemPrice.net_profit || 0).toFixed(2)} (%{(systemPrice.profit_rate || 0).toFixed(1)})</div>
+                                  <div className="font-semibold text-gray-900">₺{systemPrice.sale_price?.toFixed(2)}</div>
+                                  {matchedProduct && <div className="text-xs text-gray-500 mb-1">{matchedProduct.desi} desi • {systemPrice.barem_used === 'barem1' ? 'Barem 1' : systemPrice.barem_used === 'barem2' ? 'Barem 2' : 'Desi'}</div>}
+                                  <div className="text-xs text-gray-500 mb-1">Kom: %{systemPrice.commission_rate || 0}</div>
+                                  <div className={`text-xs font-medium ${(systemPrice.profit_rate || 0) > 0 ? 'text-green-600' : 'text-red-600'}`}>₺{(systemPrice.net_profit || 0).toFixed(2)} (%{(systemPrice.profit_rate || 0).toFixed(1)})</div>
                                 </div>
-                              ) : <div className="text-center text-slate-400 text-xs">-</div>}
+                              ) : <div className="text-center text-gray-400 text-xs">-</div>}
                             </td>
                             <td className="p-3">
                               {plusPrice > 0 ? (
-                                <div className={`border rounded-lg p-2 ${isPlusSelected ? 'border-indigo-500 bg-indigo-50' : 'border-slate-200'}`}>
-                                  <div className="text-xs font-semibold text-slate-700 mb-1">₺{plusPrice.toFixed(2)} ve altı</div>
-                                  <div className="text-xs text-slate-500">Plus Kom: %{plusComm}</div>
+                                <div className={`border rounded-lg p-2 ${isPlusSelected ? 'border-gray-900 bg-gray-50' : 'border-gray-200'}`}>
+                                  <div className="text-xs font-semibold text-gray-700 mb-1">₺{plusPrice.toFixed(2)} ve altı</div>
+                                  <div className="text-xs text-gray-500">Plus Kom: %{plusComm}</div>
                                   <div className="flex items-center justify-between mt-1">
-                                    <div className={`text-xs font-semibold ${plusCalc.profit > 0 ? 'text-emerald-600' : 'text-rose-600'}`}>{plusCalc.profit > 0 ? '+' : ''}₺{plusCalc.profit.toFixed(2)} (%{plusCalc.profitRate.toFixed(1)})</div>
+                                    <div className={`text-xs font-semibold ${plusCalc.profit > 0 ? 'text-green-600' : 'text-red-600'}`}>{plusCalc.profit > 0 ? '+' : ''}₺{plusCalc.profit.toFixed(2)} (%{plusCalc.profitRate.toFixed(1)})</div>
                                     <Button size="sm" variant="ghost" className="h-5 w-5 p-0" onClick={() => openDetailModal(plusPrice, plusComm, item)}><Info className="h-3 w-3" /></Button>
                                   </div>
                                   <Button size="sm" variant={isPlusSelected ? 'default' : 'outline'} onClick={() => handleSelect(index, 'plus', plusPrice)} className="w-full mt-2 h-7 text-xs">{isPlusSelected ? 'Seçili' : 'Seç'}</Button>
                                 </div>
-                              ) : <div className="text-center text-slate-400 text-xs">-</div>}
+                              ) : <div className="text-center text-gray-400 text-xs">-</div>}
                             </td>
                             <td className="p-3">
                               {(() => {
                                 const selectedPrice = item.selected_price || 0;
-                                if (selectedPrice === 0 || item.selected_type === 'none') return <div className="text-center text-slate-400 text-xs">-</div>;
+                                if (selectedPrice === 0 || item.selected_type === 'none') return <div className="text-center text-gray-400 text-xs">-</div>;
                                 const currentCommission = item.selected_type === 'manual' ? (item.manual_commission || plusComm) : plusComm;
                                 const currentCalc = calculateProfit(selectedPrice, currentCommission, item);
-                                if (currentCalc.baremUsed === 'barem1' || currentCalc.baremUsed === 'barem2') return <div className="text-center text-slate-400 text-xs">-</div>;
+                                if (currentCalc.baremUsed === 'barem1' || currentCalc.baremUsed === 'barem2') return <div className="text-center text-gray-400 text-xs">-</div>;
                                 let best = null;
                                 if (selectedPrice > 299.99) {
                                   const c = calculateProfit(299.99, currentCommission, item);
@@ -830,13 +830,13 @@ export default function PlusProductCommissionTariff() {
                                   const c = calculateProfit(149.99, currentCommission, item);
                                   if (c.baremUsed === 'barem1' && c.profitRate > currentCalc.profitRate && (!best || c.profitRate > best.profitRate)) best = { price: 149.99, ...c, baremType: 'Barem 1' };
                                 }
-                                if (!best) return <div className="text-center text-slate-400 text-xs">-</div>;
+                                if (!best) return <div className="text-center text-gray-400 text-xs">-</div>;
                                 return (
                                   <div className="border rounded-lg p-2 border-amber-300 bg-amber-50">
                                     <div className="text-xs font-semibold text-amber-800 mb-1">{best.baremType} Önerisi</div>
-                                    <div className="text-xs text-slate-600">Fiyat: ₺{best.price.toFixed(2)}</div>
+                                    <div className="text-xs text-gray-600">Fiyat: ₺{best.price.toFixed(2)}</div>
                                     <div className="flex items-center justify-between mt-1">
-                                      <div className="text-xs font-semibold text-emerald-600">+₺{best.profit.toFixed(2)} (%{best.profitRate.toFixed(1)})</div>
+                                      <div className="text-xs font-semibold text-green-600">+₺{best.profit.toFixed(2)} (%{best.profitRate.toFixed(1)})</div>
                                       <Button size="sm" variant="ghost" className="h-5 w-5 p-0" onClick={() => openDetailModal(best.price, currentCommission, item, best.baremType === 'Barem 1' ? 'barem1' : 'barem2')}><Info className="h-3 w-3" /></Button>
                                     </div>
                                     <Button size="sm" variant="outline" onClick={() => handleSelect(index, item.selected_type, best.price)} className="w-full mt-2 h-7 text-xs border-amber-400 hover:bg-amber-100">Uygula</Button>
@@ -845,12 +845,12 @@ export default function PlusProductCommissionTariff() {
                               })()}
                             </td>
                             <td className="p-3">
-                              <div className={`border rounded-lg p-2 ${item.selected_type === 'manual' ? 'border-indigo-500 bg-indigo-50' : 'border-slate-200'}`}>
-                                <div className="text-xs font-semibold text-slate-700 mb-2">Manuel Fiyat</div>
+                              <div className={`border rounded-lg p-2 ${item.selected_type === 'manual' ? 'border-gray-900 bg-gray-50' : 'border-gray-200'}`}>
+                                <div className="text-xs font-semibold text-gray-700 mb-2">Manuel Fiyat</div>
                                 <Input type="number" step="0.01" value={item.manual_price || ''} onChange={(e) => handleManualPriceChange(index, e.target.value)} placeholder="Fiyat girin" className="h-8 text-xs mb-2" />
                                 {item.manual_price > 0 && (
                                   <div className="flex items-center justify-between mb-2">
-                                    <div className={`text-xs font-semibold ${(item.manual_profit || 0) > 0 ? 'text-emerald-600' : 'text-rose-600'}`}>{(item.manual_profit || 0) > 0 ? '+' : ''}₺{(item.manual_profit || 0).toFixed(2)} (%{(item.manual_profit_rate || 0).toFixed(1)})</div>
+                                    <div className={`text-xs font-semibold ${(item.manual_profit || 0) > 0 ? 'text-green-600' : 'text-red-600'}`}>{(item.manual_profit || 0) > 0 ? '+' : ''}₺{(item.manual_profit || 0).toFixed(2)} (%{(item.manual_profit_rate || 0).toFixed(1)})</div>
                                     <Button size="sm" variant="ghost" className="h-5 w-5 p-0" onClick={() => openDetailModal(item.manual_price, item.manual_commission || plusComm, item)}><Info className="h-3 w-3" /></Button>
                                   </div>
                                 )}
@@ -871,9 +871,9 @@ export default function PlusProductCommissionTariff() {
         {uploadedData.length === 0 && (
           <Card>
             <CardContent className="p-12 text-center">
-              <Upload className="h-16 w-16 text-slate-300 mx-auto mb-4" />
-              <p className="text-slate-500 mb-2">Henüz dosya yüklenmedi</p>
-              <p className="text-sm text-slate-400">Platform seçip tarih aralığı belirledikten sonra Plus Excel dosyasını yükleyin</p>
+              <Upload className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+              <p className="text-gray-500 mb-2">Henüz dosya yüklenmedi</p>
+              <p className="text-sm text-gray-400">Platform seçip tarih aralığı belirledikten sonra Plus Excel dosyasını yükleyin</p>
             </CardContent>
           </Card>
         )}

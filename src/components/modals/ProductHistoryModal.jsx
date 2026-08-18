@@ -10,10 +10,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
 
 const changeTypeLabels = {
-  cost_update: { label: 'Maliyet', color: 'bg-blue-100 text-blue-700' },
-  shipping_update: { label: 'Kargo', color: 'bg-purple-100 text-purple-700' },
+  cost_update: { label: 'Maliyet', color: 'bg-gray-100 text-gray-700' },
+  shipping_update: { label: 'Kargo', color: 'bg-gray-100 text-gray-700' },
   commission_update: { label: 'Komisyon', color: 'bg-amber-100 text-amber-700' },
-  platform_update: { label: 'Platform', color: 'bg-indigo-100 text-indigo-700' },
+  platform_update: { label: 'Platform', color: 'bg-gray-100 text-gray-700' },
   manual: { label: 'Manuel', color: 'bg-slate-100 text-slate-700' },
 };
 
@@ -78,7 +78,7 @@ export default function ProductHistoryModal({ open, onClose, productId, productN
 
         {isLoading ? (
           <div className="flex items-center justify-center py-16">
-            <div className="w-8 h-8 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin" />
+            <div className="w-8 h-8 border-4 border-gray-200 border-t-gray-800 rounded-full animate-spin" />
           </div>
         ) : reports.length === 0 ? (
           <div className="text-center py-16 text-slate-400">

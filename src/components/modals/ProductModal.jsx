@@ -314,7 +314,7 @@ export default function ProductModal({
           <button key={p.id} type="button" onClick={() => onSelect(p)}
             className="w-full text-left px-3 py-2.5 text-sm hover:bg-gray-50 border-b border-gray-100 last:border-0 flex items-center justify-between gap-2">
             <span className="text-gray-800 truncate">{p.name}</span>
-            <span className="text-xs text-indigo-500 shrink-0 font-medium">Ekle</span>
+            <span className="text-xs text-gray-900 shrink-0 font-medium">Ekle</span>
           </button>
         ))
       }
@@ -322,9 +322,9 @@ export default function ProductModal({
   );
 
   const Tag = ({ label, onRemove }) => (
-    <div className="inline-flex items-center gap-1.5 bg-indigo-50 border border-indigo-200 rounded-md px-2 py-1 text-xs text-indigo-700 max-w-full">
+    <div className="inline-flex items-center gap-1.5 bg-gray-100 border border-gray-200 rounded-md px-2 py-1 text-xs text-gray-700 max-w-full">
       <span className="truncate max-w-[200px]">{label}</span>
-      <button type="button" onClick={onRemove} className="text-indigo-400 hover:text-indigo-700 shrink-0 text-base leading-none">×</button>
+      <button type="button" onClick={onRemove} className="text-gray-400 hover:text-gray-700 shrink-0 text-base leading-none">×</button>
     </div>
   );
 
@@ -417,13 +417,13 @@ export default function ProductModal({
                 </div>
                 <div className="p-4 space-y-4">
                   {refProduct ? (
-                    <div className="flex items-center gap-2 p-2.5 bg-indigo-50 border border-indigo-200 rounded-lg text-sm">
-                      <span className="font-medium text-indigo-800 flex-1 truncate">{refProduct.name}</span>
-                      <span className="text-indigo-600 shrink-0">₺{parseFloat(refProduct.cost).toFixed(2)}</span>
+                    <div className="flex items-center gap-2 p-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm">
+                      <span className="font-medium text-gray-800 flex-1 truncate">{refProduct.name}</span>
+                      <span className="text-gray-600 shrink-0">₺{parseFloat(refProduct.cost).toFixed(2)}</span>
                     </div>
                   ) : (
                     <div>
-                      <div className="flex items-center gap-2 border border-gray-200 rounded-lg px-3 py-2 bg-white focus-within:border-indigo-300">
+                      <div className="flex items-center gap-2 border border-gray-200 rounded-lg px-3 py-2 bg-white focus-within:border-gray-400">
                         <Search className="h-4 w-4 text-gray-400 shrink-0" />
                         <input
                           value={refSearch}
@@ -454,7 +454,7 @@ export default function ProductModal({
                             <button key={opt.val} type="button"
                               onClick={() => upd('cost_addon_type', opt.val)}
                               className={`py-2 px-2 text-xs rounded-lg border transition-colors ${form.cost_addon_type === opt.val
-                                ? 'bg-indigo-50 border-indigo-400 text-indigo-700 font-medium'
+                                ? 'bg-gray-900 border-gray-900 text-white font-medium'
                                 : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'}`}>
                               {opt.label}
                             </button>
@@ -499,13 +499,13 @@ export default function ProductModal({
                 </div>
                 <div className="p-4 space-y-4">
                   {refProductSize ? (
-                    <div className="flex items-center gap-2 p-2.5 bg-indigo-50 border border-indigo-200 rounded-lg text-sm">
-                      <span className="font-medium text-indigo-800 flex-1 truncate">{refProductSize.name}</span>
-                      <span className="text-indigo-600 shrink-0">₺{parseFloat(refProductSize.cost).toFixed(2)}</span>
+                    <div className="flex items-center gap-2 p-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm">
+                      <span className="font-medium text-gray-800 flex-1 truncate">{refProductSize.name}</span>
+                      <span className="text-gray-600 shrink-0">₺{parseFloat(refProductSize.cost).toFixed(2)}</span>
                     </div>
                   ) : (
                     <div>
-                      <div className="flex items-center gap-2 border border-gray-200 rounded-lg px-3 py-2 bg-white focus-within:border-indigo-300">
+                      <div className="flex items-center gap-2 border border-gray-200 rounded-lg px-3 py-2 bg-white focus-within:border-gray-400">
                         <Search className="h-4 w-4 text-gray-400 shrink-0" />
                         <input
                           value={refSearchSize}
@@ -526,7 +526,7 @@ export default function ProductModal({
                         {sizeBaseCostValue !== null && <span className="text-xs text-gray-500">₺{sizeBaseCostValue.toFixed(2)}</span>}
                       </div>
                       {sizeSuggestion ? (
-                        <div className="text-xs text-indigo-700 bg-indigo-50 border border-indigo-200 rounded-lg p-3 space-y-1">
+                        <div className="text-xs text-gray-700 bg-gray-50 border border-gray-200 rounded-lg p-3 space-y-1">
                           <p>Bu ürün: {sizeSuggestion.targetArea} cm² × {sizeSuggestion.targetAdet} adet</p>
                           <p>Referans: {sizeSuggestion.refArea} cm² × {sizeSuggestion.refAdet} adet</p>
                           <p className="font-medium">
@@ -612,7 +612,7 @@ export default function ProductModal({
                   )}
                   {showChainSearch && (
                     <div>
-                      <div className="flex items-center gap-2 border border-gray-200 rounded-lg px-3 py-2 bg-white focus-within:border-indigo-300">
+                      <div className="flex items-center gap-2 border border-gray-200 rounded-lg px-3 py-2 bg-white focus-within:border-gray-400">
                         <Search className="h-4 w-4 text-gray-400 shrink-0" />
                         <input autoFocus value={chainSearch} onChange={e => setChainSearch(e.target.value)}
                           placeholder="Ürün adı, ölçü, adet ile ara..."
@@ -648,7 +648,7 @@ export default function ProductModal({
                   )}
                   {showMatchSearch && (
                     <div>
-                      <div className="flex items-center gap-2 border border-gray-200 rounded-lg px-3 py-2 bg-white focus-within:border-indigo-300">
+                      <div className="flex items-center gap-2 border border-gray-200 rounded-lg px-3 py-2 bg-white focus-within:border-gray-400">
                         <Search className="h-4 w-4 text-gray-400 shrink-0" />
                         <input autoFocus value={matchSearch} onChange={e => setMatchSearch(e.target.value)}
                           placeholder="Ürün adı, renk veya ölçü ile ara..."
@@ -743,7 +743,7 @@ export default function ProductModal({
 
             <div className="flex justify-end gap-3 px-6 py-4 border-t border-slate-100 flex-shrink-0">
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>İptal</Button>
-              <Button type="submit" disabled={isSaving} className="bg-indigo-600 hover:bg-indigo-700">
+              <Button type="submit" disabled={isSaving} className="bg-gray-900 hover:bg-gray-800">
                 {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 {product ? 'Güncelle' : 'Ekle'}
               </Button>

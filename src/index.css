@@ -84,5 +84,12 @@
 
   body {
     @apply bg-background text-foreground;
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', Inter, sans-serif;
+  }
+}
+
+@layer utilities {
+  .font-mono-numeric {
+    font-family: 'SF Mono', 'Fira Code', monospace;
   }
 }

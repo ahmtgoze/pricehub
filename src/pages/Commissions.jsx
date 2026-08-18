@@ -406,7 +406,7 @@ export default function Commissions() {
               setSortDir('asc');
             }
           }}
-          className="flex items-center gap-1 hover:text-blue-700"
+          className="flex items-center gap-1 hover:text-gray-900"
         >
           Kâr Hedefleri
           {sortField === 'target_profit_amount' && (sortDir === 'asc' ? ' ↑' : ' ↓')}
@@ -414,10 +414,10 @@ export default function Commissions() {
       ),
       cell: (row) => (
         <div className="text-sm space-y-1">
-          {row.minimum_profit_amount != null && row.minimum_profit_amount !== '' && <div className="text-slate-600">Min: ₺{Number(row.minimum_profit_amount).toFixed(2)}</div>}
-          {row.target_profit_rate != null && row.target_profit_rate !== '' && <div className="font-medium text-emerald-600">Oran: %{Number(row.target_profit_rate).toFixed(1)}</div>}
-          {row.target_profit_amount != null && row.target_profit_amount !== '' && <div className="font-medium text-blue-600">Tutar: ₺{Number(row.target_profit_amount).toFixed(2)}</div>}
-          {(row.minimum_profit_amount == null || row.minimum_profit_amount === '') && (row.target_profit_rate == null || row.target_profit_rate === '') && (row.target_profit_amount == null || row.target_profit_amount === '') && <div className="text-slate-300 text-xs">-</div>}
+          {row.minimum_profit_amount != null && row.minimum_profit_amount !== '' && <div className="text-gray-600">Min: ₺{Number(row.minimum_profit_amount).toFixed(2)}</div>}
+          {row.target_profit_rate != null && row.target_profit_rate !== '' && <div className="font-medium text-green-600">Oran: %{Number(row.target_profit_rate).toFixed(1)}</div>}
+          {row.target_profit_amount != null && row.target_profit_amount !== '' && <div className="font-medium text-gray-900">Tutar: ₺{Number(row.target_profit_amount).toFixed(2)}</div>}
+          {(row.minimum_profit_amount == null || row.minimum_profit_amount === '') && (row.target_profit_rate == null || row.target_profit_rate === '') && (row.target_profit_amount == null || row.target_profit_amount === '') && <div className="text-gray-300 text-xs">-</div>}
         </div>
       )
     },
@@ -432,7 +432,7 @@ export default function Commissions() {
               setSortDir('asc');
             }
           }}
-          className="flex items-center gap-1 hover:text-orange-700"
+          className="flex items-center gap-1 hover:text-gray-900"
         >
           İndirimli Kâr Hedefleri
           {sortField === 'discounted_target_profit_amount' && (sortDir === 'asc' ? ' ↑' : ' ↓')}
@@ -440,10 +440,10 @@ export default function Commissions() {
       ),
       cell: (row) => (
         <div className="text-sm space-y-1">
-          {row.discounted_minimum_profit_amount != null && row.discounted_minimum_profit_amount !== '' && <div className="text-slate-600">Min: ₺{Number(row.discounted_minimum_profit_amount).toFixed(2)}</div>}
-          {row.discounted_target_profit_rate != null && row.discounted_target_profit_rate !== '' && <div className="font-medium text-orange-600">Oran: %{Number(row.discounted_target_profit_rate).toFixed(1)}</div>}
-          {row.discounted_target_profit_amount != null && row.discounted_target_profit_amount !== '' && <div className="font-medium text-orange-500">Tutar: ₺{Number(row.discounted_target_profit_amount).toFixed(2)}</div>}
-          {(row.discounted_minimum_profit_amount == null || row.discounted_minimum_profit_amount === '') && (row.discounted_target_profit_rate == null || row.discounted_target_profit_rate === '') && (row.discounted_target_profit_amount == null || row.discounted_target_profit_amount === '') && <div className="text-slate-300 text-xs">-</div>}
+          {row.discounted_minimum_profit_amount != null && row.discounted_minimum_profit_amount !== '' && <div className="text-gray-600">Min: ₺{Number(row.discounted_minimum_profit_amount).toFixed(2)}</div>}
+          {row.discounted_target_profit_rate != null && row.discounted_target_profit_rate !== '' && <div className="font-medium text-gray-900">Oran: %{Number(row.discounted_target_profit_rate).toFixed(1)}</div>}
+          {row.discounted_target_profit_amount != null && row.discounted_target_profit_amount !== '' && <div className="font-medium text-gray-700">Tutar: ₺{Number(row.discounted_target_profit_amount).toFixed(2)}</div>}
+          {(row.discounted_minimum_profit_amount == null || row.discounted_minimum_profit_amount === '') && (row.discounted_target_profit_rate == null || row.discounted_target_profit_rate === '') && (row.discounted_target_profit_amount == null || row.discounted_target_profit_amount === '') && <div className="text-gray-300 text-xs">-</div>}
         </div>
       )
     },
@@ -463,7 +463,7 @@ export default function Commissions() {
             <Pencil className="h-4 w-4" />
           </Button>
           <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); setDeleteId(row.id); }}>
-            <Trash2 className="h-4 w-4 text-rose-500" />
+            <Trash2 className="h-4 w-4 text-red-500" />
           </Button>
         </div>
       )
@@ -527,15 +527,15 @@ export default function Commissions() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-indigo-50/30">
+    <div className="min-h-screen bg-gray-50">
       <div className="max-w-[1400px] mx-auto px-3 sm:px-6 py-5 sm:py-8">
         <div className="flex flex-col gap-4 mb-8">
           <div>
-            <h1 className="text-3xl font-bold text-slate-900 tracking-tight flex items-center gap-3">
-              <Percent className="h-8 w-8 text-indigo-600" />
+            <h1 className="text-3xl font-bold text-gray-900 tracking-tight flex items-center gap-3">
+              <Percent className="h-8 w-8 text-gray-900" />
               Komisyon & Hedef Kâr
             </h1>
-            <p className="text-slate-500 mt-1">Platform ve kategori bazlı komisyon oranları</p>
+            <p className="text-gray-500 mt-1">Platform ve kategori bazlı komisyon oranları</p>
           </div>
           <div className="flex flex-col sm:flex-row gap-3">
             {selectedIds.length > 0 && (
@@ -552,14 +552,14 @@ export default function Commissions() {
               filename="komisyonlar"
               onImport={handleImport}
             />
-            <Button onClick={() => { setEditingCommission(null); setModalOpen(true); }} className="bg-indigo-600 hover:bg-indigo-700 gap-2 w-full sm:w-auto">
+            <Button onClick={() => { setEditingCommission(null); setModalOpen(true); }} className="bg-gray-900 hover:bg-gray-800 gap-2 w-full sm:w-auto">
               <Plus className="h-4 w-4" />
               Yeni Komisyon
             </Button>
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 sm:p-5 mb-6">
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 sm:p-5 mb-6">
           <div className="grid grid-cols-1 gap-3">
             <SearchInput value={search} onChange={setSearch} placeholder="Platform veya kategori ara..." />
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -600,7 +600,7 @@ export default function Commissions() {
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
             <DataTable
               columns={columns}
@@ -633,7 +633,7 @@ export default function Commissions() {
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel>İptal</AlertDialogCancel>
-              <AlertDialogAction onClick={() => deleteMutation.mutate(deleteId)} className="bg-rose-600 hover:bg-rose-700">Sil</AlertDialogAction>
+              <AlertDialogAction onClick={() => deleteMutation.mutate(deleteId)} className="bg-red-600 hover:bg-red-700">Sil</AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
@@ -645,13 +645,13 @@ export default function Commissions() {
             </DialogHeader>
             <div className="space-y-4">
               <div className="text-center py-4">
-                <p className="text-sm font-semibold text-slate-700 mb-2">{importProgress.current} / {importProgress.total} kayıt</p>
-                <p className="text-2xl font-bold text-indigo-600">%{Math.round((importProgress.current / (importProgress.total || 1)) * 100)}</p>
+                <p className="text-sm font-semibold text-gray-700 mb-2">{importProgress.current} / {importProgress.total} kayıt</p>
+                <p className="text-2xl font-bold text-gray-900">%{Math.round((importProgress.current / (importProgress.total || 1)) * 100)}</p>
               </div>
-              <div className="w-full bg-slate-200 rounded-full h-3 overflow-hidden">
-                <div className="bg-indigo-600 h-3 rounded-full transition-all duration-300" style={{ width: `${(importProgress.current / (importProgress.total || 1)) * 100}%` }} />
+              <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
+                <div className="bg-gray-900 h-3 rounded-full transition-all duration-300" style={{ width: `${(importProgress.current / (importProgress.total || 1)) * 100}%` }} />
               </div>
-              <p className="text-xs text-slate-500 text-center">Lütfen bekleyin, veriler işleniyor...</p>
+              <p className="text-xs text-gray-500 text-center">Lütfen bekleyin, veriler işleniyor...</p>
             </div>
           </DialogContent>
         </Dialog>
@@ -664,7 +664,7 @@ export default function Commissions() {
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel>İptal</AlertDialogCancel>
-              <AlertDialogAction onClick={() => bulkDeleteMutation.mutate(selectedIds)} className="bg-rose-600 hover:bg-rose-700">Sil</AlertDialogAction>
+              <AlertDialogAction onClick={() => bulkDeleteMutation.mutate(selectedIds)} className="bg-red-600 hover:bg-red-700">Sil</AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>

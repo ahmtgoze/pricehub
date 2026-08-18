@@ -198,14 +198,14 @@ ${topProducts || 'Veri yok'}
           style={{ width: '360px', maxWidth: 'calc(100vw - 24px)', height: '500px' }}
         >
           {/* Header */}
-          <div className="flex items-center justify-between px-4 py-3 bg-indigo-600 flex-shrink-0">
+          <div className="flex items-center justify-between px-4 py-3 bg-gray-900 flex-shrink-0">
             <div className="flex items-center gap-2.5">
               <div className="w-7 h-7 rounded-full bg-white/20 flex items-center justify-center">
                 <Bot className="h-4 w-4 text-white" />
               </div>
               <div>
                 <p className="text-sm font-semibold text-white leading-none">PriceHub Asistan</p>
-                <p className="text-xs text-indigo-200 mt-0.5">Sistem hakkında soru sor</p>
+                <p className="text-xs text-gray-300 mt-0.5">Sistem hakkında soru sor</p>
               </div>
             </div>
             <button
@@ -221,14 +221,14 @@ ${topProducts || 'Veri yok'}
             {messages.map((msg, idx) => (
               <div key={idx} className={`flex gap-2 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                 {msg.role === 'assistant' && (
-                  <div className="w-6 h-6 rounded-full bg-indigo-100 flex items-center justify-center flex-shrink-0 mt-0.5">
-                    <Bot className="h-3.5 w-3.5 text-indigo-600" />
+                  <div className="w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <Bot className="h-3.5 w-3.5 text-gray-500" />
                   </div>
                 )}
                 <div
                   className={`max-w-[80%] rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed whitespace-pre-wrap ${
                     msg.role === 'user'
-                      ? 'bg-indigo-600 text-white rounded-tr-sm'
+                      ? 'bg-gray-900 text-white rounded-tr-sm'
                       : 'bg-white text-slate-800 rounded-tl-sm border border-slate-200 shadow-sm'
                   }`}
                 >
@@ -240,8 +240,8 @@ ${topProducts || 'Veri yok'}
             {/* Yazıyor animasyonu */}
             {isLoading && (
               <div className="flex gap-2 justify-start">
-                <div className="w-6 h-6 rounded-full bg-indigo-100 flex items-center justify-center flex-shrink-0 mt-0.5">
-                  <Bot className="h-3.5 w-3.5 text-indigo-600" />
+                <div className="w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <Bot className="h-3.5 w-3.5 text-gray-500" />
                 </div>
                 <div className="bg-white rounded-2xl rounded-tl-sm border border-slate-200 shadow-sm px-4 py-3">
                   <div className="flex gap-1 items-center">
@@ -264,7 +264,7 @@ ${topProducts || 'Veri yok'}
                   <button
                     key={q}
                     onClick={() => handleQuickQuestion(q)}
-                    className="text-xs px-2.5 py-1 rounded-full bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition-colors border border-indigo-100"
+                    className="text-xs px-2.5 py-1 rounded-full bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors border border-gray-200"
                   >
                     {q}
                   </button>
@@ -287,13 +287,13 @@ ${topProducts || 'Veri yok'}
                 onKeyDown={handleKeyDown}
                 placeholder="Bir şey sor..."
                 rows={1}
-                className="flex-1 resize-none text-sm border border-slate-200 rounded-xl px-3 py-2 outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-slate-50 transition-all"
+                className="flex-1 resize-none text-sm border border-slate-200 rounded-xl px-3 py-2 outline-none focus:ring-2 focus:ring-gray-400 focus:border-transparent bg-slate-50 transition-all"
                 style={{ maxHeight: '100px' }}
               />
               <button
                 onClick={sendMessage}
                 disabled={!input.trim() || isLoading}
-                className="w-9 h-9 rounded-xl bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center transition-colors flex-shrink-0"
+                className="w-9 h-9 rounded-xl bg-gray-900 hover:bg-gray-800 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center transition-colors flex-shrink-0"
               >
                 {isLoading
                   ? <Loader2 className="h-4 w-4 text-white animate-spin" />
@@ -309,7 +309,7 @@ ${topProducts || 'Veri yok'}
       {/* ── Yüzen Buton ── */}
       <button
         onClick={() => setIsOpen(prev => !prev)}
-        className="fixed bottom-5 right-5 z-50 rounded-full bg-indigo-600 hover:bg-indigo-700 shadow-lg hover:shadow-xl transition-all flex items-center justify-center"
+        className="fixed bottom-5 right-5 z-50 rounded-full bg-gray-900 hover:bg-gray-800 shadow-lg hover:shadow-xl transition-all flex items-center justify-center"
         style={{ width: '52px', height: '52px' }}
         title="PriceHub Asistan"
       >

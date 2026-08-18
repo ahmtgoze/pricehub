@@ -304,7 +304,7 @@ export default function UpdatedPrices() {
   );
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-100 via-gray-50 to-purple-50 p-6">
+    <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-7xl mx-auto">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Düzenlenen Fiyatlar</h1>
@@ -312,17 +312,17 @@ export default function UpdatedPrices() {
         </div>
 
         {/* HepsiBurada Kılavuz */}
-        <div className="mb-4 rounded-xl border border-orange-200 bg-orange-50 overflow-hidden">
+        <div className="mb-4 rounded-xl border border-purple-200 bg-purple-50 overflow-hidden">
           <button onClick={() => setShowHepsiGuide(!showHepsiGuide)} className="w-full flex items-center justify-between px-5 py-3 text-left">
-            <span className="font-semibold text-orange-800 text-sm">📦 HepsiBurada — Fiyat Güncelleme Nasıl Yapılır?</span>
-            {showHepsiGuide ? <ChevronUp className="w-4 h-4 text-orange-600" /> : <ChevronDown className="w-4 h-4 text-orange-600" />}
+            <span className="font-semibold text-purple-800 text-sm">📦 HepsiBurada — Fiyat Güncelleme Nasıl Yapılır?</span>
+            {showHepsiGuide ? <ChevronUp className="w-4 h-4 text-purple-600" /> : <ChevronDown className="w-4 h-4 text-purple-600" />}
           </button>
           {showHepsiGuide && (
-            <div className="px-5 pb-4 border-t border-orange-200">
+            <div className="px-5 pb-4 border-t border-purple-200">
               <ol className="mt-3 space-y-1.5">
                 {HEPSIBURADA_FIYAT_ADIMLARI.map((adim, i) => (
-                  <li key={i} className="text-sm flex gap-2 text-orange-900">
-                    <span className="font-bold text-orange-600 shrink-0">{i + 1}.</span>
+                  <li key={i} className="text-sm flex gap-2 text-purple-900">
+                    <span className="font-bold text-purple-600 shrink-0">{i + 1}.</span>
                     <span>{adim}</span>
                   </li>
                 ))}
@@ -352,17 +352,17 @@ export default function UpdatedPrices() {
         </div>
 
         {/* ✅ Web Sitesi Kılavuz */}
-        <div className="mb-6 rounded-xl border border-indigo-200 bg-indigo-50 overflow-hidden">
+        <div className="mb-6 rounded-xl border border-gray-200 bg-gray-50 overflow-hidden">
           <button onClick={() => setShowWebsiteGuide(!showWebsiteGuide)} className="w-full flex items-center justify-between px-5 py-3 text-left">
-            <span className="font-semibold text-indigo-800 text-sm">🌐 Web Sitesi — Fiyat Güncelleme Nasıl Yapılır?</span>
-            {showWebsiteGuide ? <ChevronUp className="w-4 h-4 text-indigo-600" /> : <ChevronDown className="w-4 h-4 text-indigo-600" />}
+            <span className="font-semibold text-gray-900 text-sm">🌐 Web Sitesi — Fiyat Güncelleme Nasıl Yapılır?</span>
+            {showWebsiteGuide ? <ChevronUp className="w-4 h-4 text-gray-600" /> : <ChevronDown className="w-4 h-4 text-gray-600" />}
           </button>
           {showWebsiteGuide && (
-            <div className="px-5 pb-4 border-t border-indigo-200">
+            <div className="px-5 pb-4 border-t border-gray-200">
               <ol className="mt-3 space-y-1.5">
                 {WEBSITE_FIYAT_ADIMLARI.map((adim, i) => (
-                  <li key={i} className={`text-sm flex gap-2 ${adim.startsWith('⚠️') ? 'text-red-700 font-medium' : 'text-indigo-900'}`}>
-                    {!adim.startsWith('⚠️') && <span className="font-bold text-indigo-600 shrink-0">{i + 1}.</span>}
+                  <li key={i} className={`text-sm flex gap-2 ${adim.startsWith('⚠️') ? 'text-red-700 font-medium' : 'text-gray-900'}`}>
+                    {!adim.startsWith('⚠️') && <span className="font-bold text-gray-600 shrink-0">{i + 1}.</span>}
                     <span>{adim}</span>
                   </li>
                 ))}
@@ -473,7 +473,7 @@ export default function UpdatedPrices() {
                 </TableHeader>
                 <TableBody>
                   {updatedPrices.map((row) => (
-                    <TableRow key={row.id} className={selectedRows.has(row.id) ? 'bg-blue-50' : ''}>
+                    <TableRow key={row.id} className={selectedRows.has(row.id) ? 'bg-gray-100' : ''}>
                       <TableCell>
                         <Checkbox checked={selectedRows.has(row.id)} onCheckedChange={() => handleSelectRow(row.id)} />
                       </TableCell>
@@ -528,7 +528,7 @@ export default function UpdatedPrices() {
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
             <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md mx-4">
               <h3 className="text-lg font-bold text-gray-900 mb-1">Veriler Güncelleniyor</h3>
-              <p className="text-sm text-blue-600 font-medium mb-1">{refreshProgress.step}</p>
+              <p className="text-sm text-gray-900 font-medium mb-1">{refreshProgress.step}</p>
               {refreshProgress.detail && <p className="text-xs text-gray-500 mb-4">{refreshProgress.detail}</p>}
               {!refreshProgress.detail && <p className="text-xs text-gray-400 mb-4">Lütfen bekleyin...</p>}
               <div className="mb-3">
@@ -538,7 +538,7 @@ export default function UpdatedPrices() {
                 </div>
                 <div className="w-full bg-gray-100 rounded-full h-3 overflow-hidden">
                   <div
-                    className="bg-blue-500 h-3 rounded-full transition-all duration-500"
+                    className="bg-gray-900 h-3 rounded-full transition-all duration-500"
                     style={{ width: `${(refreshProgress.stepNum / refreshProgress.totalSteps) * 100}%` }}
                   />
                 </div>

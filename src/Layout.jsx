@@ -189,7 +189,7 @@ export default function Layout({ children, currentPageName }) {
     .filter(i => !i.hepsiburadaOnly || hasHepsiburada);
 
   return (
-    <div className="overflow-hidden bg-gradient-to-br from-gray-100 via-gray-50 to-purple-50 flex flex-col lg:flex-row" style={{ height: '100dvh' }}>
+    <div className="overflow-hidden bg-gray-50 flex flex-col lg:flex-row" style={{ height: '100dvh' }}>
       <Toaster position="top-right" richColors />
 
       {/* Mobile sidebar backdrop */}

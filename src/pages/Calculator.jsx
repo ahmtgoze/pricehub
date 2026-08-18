@@ -320,11 +320,11 @@ export default function Calculator() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-indigo-50/30">
+    <div className="min-h-screen bg-gray-50">
       <div className="max-w-[1200px] mx-auto px-6 py-8">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-slate-900 tracking-tight flex items-center gap-3">
-            <CalcIcon className="h-8 w-8 text-indigo-600" />
+            <CalcIcon className="h-8 w-8 text-gray-900" />
             Fiyat Hesaplayıcı
           </h1>
           <p className="text-slate-500 mt-1">Ürün fiyatını ve kârını hesaplayın (kaydetmez)</p>
@@ -520,7 +520,7 @@ export default function Calculator() {
 
               <div className="space-y-4">
                <div className={`border rounded-xl p-4 transition-all ${
-                 isMultiPackage ? 'border-indigo-200 bg-indigo-50/30' : 'border-slate-200 bg-slate-50/50'
+                 isMultiPackage ? 'border-gray-900 bg-gray-100' : 'border-slate-200 bg-slate-50/50'
                }`}>
                  <div className="flex items-center space-x-3">
                    <input
@@ -528,7 +528,7 @@ export default function Calculator() {
                      id="multiPackage"
                      checked={isMultiPackage}
                      onChange={(e) => setIsMultiPackage(e.target.checked)}
-                     className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                     className="h-4 w-4 rounded border-slate-300 text-gray-900 focus:ring-gray-400"
                    />
                    <div className="flex-1">
                      <Label htmlFor="multiPackage" className="cursor-pointer font-medium text-slate-700">
@@ -554,7 +554,7 @@ export default function Calculator() {
                        </Button>
                      </div>
                      {packages.map((pkg, index) => (
-                       <div key={index} className="flex gap-2 items-start bg-white rounded-lg p-3 border border-indigo-100">
+                       <div key={index} className="flex gap-2 items-start bg-white rounded-lg p-3 border border-gray-200">
                          <div className="flex-1 space-y-2">
                            <div className="flex gap-2">
                              <div className="flex-1">
@@ -594,7 +594,7 @@ export default function Calculator() {
                              size="icon"
                              variant="ghost"
                              onClick={() => removePackage(index)}
-                             className="h-8 w-8 text-rose-500 hover:text-rose-700 hover:bg-rose-50 mt-5"
+                             className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50 mt-5"
                            >
                              <X className="h-4 w-4" />
                            </Button>
@@ -698,7 +698,7 @@ export default function Calculator() {
               <div className="flex gap-3 pt-4">
                 <Button 
                   onClick={handleCalculate}
-                  className="flex-1 bg-indigo-600 hover:bg-indigo-700"
+                  className="flex-1 bg-gray-900 hover:bg-gray-800"
                   disabled={!selectedPlatform || (shippingMode === 'company' && !selectedShippingCompany) || (shippingMode === 'manual' && !manualShippingCost) || !cost || (!isMultiPackage && !desi) || (isMultiPackage && packages.some(p => !p.desi))}
                 >
                   <CalcIcon className="mr-2 h-4 w-4" />
@@ -715,7 +715,7 @@ export default function Calculator() {
           <Card className={`border-slate-200 shadow-sm transition-all ${result ? 'bg-white' : 'bg-slate-50'}`}>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <ArrowRight className="h-5 w-5 text-indigo-600" />
+                <ArrowRight className="h-5 w-5 text-gray-900" />
                 Hesaplama Sonucu
               </CardTitle>
             </CardHeader>
@@ -727,15 +727,15 @@ export default function Calculator() {
               ) : (
                 <div className="space-y-6">
                   {/* Main Result */}
-                  <div className="bg-gradient-to-br from-indigo-50 to-indigo-100/50 rounded-xl p-6 text-center">
-                    <p className="text-sm text-indigo-600 font-medium mb-1">Önerilen Satış Fiyatı</p>
-                    <p className="text-4xl font-bold text-indigo-700">
+                  <div className="bg-gray-50 rounded-xl p-6 text-center">
+                    <p className="text-sm text-gray-500 font-medium mb-1">Önerilen Satış Fiyatı</p>
+                    <p className="text-4xl font-bold text-gray-900">
                       ₺{result.sale_price?.toFixed(2)}
                     </p>
                     <div className="flex items-center justify-center gap-2 mt-3">
                       <Badge className={`${
-                        result.profit_rate >= 30 ? 'bg-emerald-100 text-emerald-700' :
-                        result.profit_rate >= 20 ? 'bg-blue-100 text-blue-700' :
+                        result.profit_rate >= 30 ? 'bg-green-100 text-green-700' :
+                        result.profit_rate >= 20 ? 'bg-gray-100 text-gray-700' :
                         'bg-amber-100 text-amber-700'
                       }`}>
                         Kâr: %{result.profit_rate?.toFixed(1)}
@@ -751,57 +751,57 @@ export default function Calculator() {
                     <h4 className="font-semibold text-slate-700">Detaylı Hesaplama</h4>
                     
                     <div className="space-y-2 text-sm">
-                      <div className="flex justify-between py-2 border-b-2 border-indigo-100 bg-indigo-50/30 px-3 rounded-t-lg">
-                        <span className="font-semibold text-indigo-700">Satış Fiyatı (KDV Dahil)</span>
-                        <span className="font-bold text-indigo-700">₺{result.sale_price?.toFixed(2)}</span>
+                      <div className="flex justify-between py-2 border-b-2 border-gray-200 bg-gray-50 px-3 rounded-t-lg">
+                        <span className="font-semibold text-gray-900">Satış Fiyatı (KDV Dahil)</span>
+                        <span className="font-bold text-gray-900">₺{result.sale_price?.toFixed(2)}</span>
                       </div>
-                      
+
                       <div className="flex justify-between py-2 pl-6 border-b border-slate-100">
                         <span className="text-slate-600">- Ürün Maliyeti (KDV Dahil)</span>
-                        <span className="font-medium text-rose-600">-₺{parseFloat(cost || 0).toFixed(2)}</span>
+                        <span className="font-medium text-red-600">-₺{parseFloat(cost || 0).toFixed(2)}</span>
                       </div>
                       {printingCost && parseFloat(printingCost) > 0 && (
                         <div className="flex justify-between py-2 pl-6 border-b border-slate-100">
                           <span className="text-slate-600">- Baskı Maliyeti (KDV Dahil)</span>
-                          <span className="font-medium text-rose-600">-₺{parseFloat(printingCost).toFixed(2)}</span>
+                          <span className="font-medium text-red-600">-₺{parseFloat(printingCost).toFixed(2)}</span>
                         </div>
                       )}
                       <div className="flex justify-between py-2 pl-6 border-b border-slate-100">
                         <span className="text-slate-600">- Kargo Ücreti (KDV Dahil)</span>
-                        <span className="font-medium text-rose-600">-₺{result.shipping_cost?.toFixed(2)}</span>
+                        <span className="font-medium text-red-600">-₺{result.shipping_cost?.toFixed(2)}</span>
                       </div>
                       <div className="flex justify-between py-2 pl-6 border-b border-slate-100">
                         <span className="text-slate-600">- Paketleme Maliyeti (KDV Dahil)</span>
-                        <span className="font-medium text-rose-600">-₺{result.packaging_cost?.toFixed(2)}</span>
+                        <span className="font-medium text-red-600">-₺{result.packaging_cost?.toFixed(2)}</span>
                       </div>
                       {extraCost && parseFloat(extraCost) > 0 && (
                         <div className="flex justify-between py-2 pl-6 border-b border-slate-100">
                           <span className="text-slate-600">- Ek Maliyet (KDV Dahil)</span>
-                          <span className="font-medium text-rose-600">-₺{parseFloat(extraCost).toFixed(2)}</span>
+                          <span className="font-medium text-red-600">-₺{parseFloat(extraCost).toFixed(2)}</span>
                         </div>
                       )}
                       <div className="flex justify-between py-2 pl-6 border-b border-slate-100">
                         <span className="text-slate-600">- Komisyon Tutarı (KDV Dahil)</span>
-                        <span className="font-medium text-rose-600">-₺{result.commission_amount?.toFixed(2)}</span>
+                        <span className="font-medium text-red-600">-₺{result.commission_amount?.toFixed(2)}</span>
                       </div>
                       <div className="flex justify-between py-2 pl-6 border-b border-slate-100">
                         <span className="text-slate-600">- Stopaj Tutarı</span>
-                        <span className="font-medium text-rose-600">-₺{result.withholding_amount?.toFixed(2)}</span>
+                        <span className="font-medium text-red-600">-₺{result.withholding_amount?.toFixed(2)}</span>
                       </div>
                       {isAdmin && (
                       <div className="flex justify-between py-2 pl-6 border-b border-slate-100">
                         <span className="text-slate-600">- Hizmet Bedeli (KDV Dahil)</span>
-                        <span className="font-medium text-rose-600">-₺{(result.service_fee || 0)?.toFixed(2)}</span>
+                        <span className="font-medium text-red-600">-₺{(result.service_fee || 0)?.toFixed(2)}</span>
                       </div>
                       )}
                       <div className="flex justify-between py-2 pl-6 border-b-2 border-slate-200">
                         <span className="text-slate-600">- Net KDV</span>
-                        <span className="font-medium text-rose-600">-₺{result.net_vat?.toFixed(2)}</span>
+                        <span className="font-medium text-red-600">-₺{result.net_vat?.toFixed(2)}</span>
                       </div>
-                      
-                      <div className="flex justify-between py-3 bg-emerald-50 rounded-lg px-3 mt-3 border-2 border-emerald-200">
-                        <span className="font-semibold text-emerald-700 text-base">= NET KÂR</span>
-                        <span className="font-bold text-emerald-700 text-lg">₺{result.net_profit?.toFixed(2)}</span>
+
+                      <div className="flex justify-between py-3 bg-green-50 rounded-lg px-3 mt-3 border-2 border-green-200">
+                        <span className="font-semibold text-green-700 text-base">= NET KÂR</span>
+                        <span className="font-bold text-green-700 text-lg">₺{result.net_profit?.toFixed(2)}</span>
                       </div>
                     </div>
                   </div>

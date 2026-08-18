@@ -225,7 +225,7 @@ export default function PlatformSettingsModal({
       ? 'from-orange-500 to-orange-600'
       : platform?.platform_type === 'hepsiburada'
       ? 'from-yellow-500 to-orange-500'
-      : 'from-indigo-500 to-purple-600';
+      : 'from-gray-300 to-gray-400';
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -307,7 +307,7 @@ export default function PlatformSettingsModal({
                     <label className="flex items-start gap-3 cursor-pointer">
                       <input type="radio" name="shipping_mode" checked={!formData.use_custom_shipping_price}
                         onChange={() => setFormData((prev) => ({ ...prev, use_custom_shipping_price: false, shipping_company_id: '', shipping_company_name: '' }))}
-                        className="mt-0.5 accent-indigo-600" />
+                        className="mt-0.5 accent-gray-900" />
                       <div className="flex-1">
                         <p className="text-sm font-medium text-slate-700">Sistem Tarifesi</p>
                         <p className="text-xs text-slate-400">Yüklenen kargo tarifeleri üzerinden otomatik hesaplanır</p>
@@ -334,7 +334,7 @@ export default function PlatformSettingsModal({
                     <label className="flex items-start gap-3 cursor-pointer">
                       <input type="radio" name="shipping_mode" checked={formData.use_custom_shipping_price}
                         onChange={() => setFormData((prev) => ({ ...prev, use_custom_shipping_price: true, shipping_company_id: '', shipping_company_name: '' }))}
-                        className="mt-0.5 accent-indigo-600" />
+                        className="mt-0.5 accent-gray-900" />
                       <div className="flex-1">
                         <p className="text-sm font-medium text-slate-700">Manuel Anlaşmalı Fiyat</p>
                         <p className="text-xs text-slate-400">Kargo Tarifeleri sayfasında tanımladığınız manuel tarifeler kullanılır</p>
@@ -633,7 +633,7 @@ export default function PlatformSettingsModal({
                   />
                 </div>
                 {!formData.has_same_day_delivery && (
-                  <div className="flex items-start gap-2 bg-blue-50 border border-blue-200 rounded-lg px-3 py-2 text-xs text-blue-800 mt-1">
+                  <div className="flex items-start gap-2 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-xs text-gray-600 mt-1">
                     <Info className="h-3.5 w-3.5 mt-0.5 flex-shrink-0" />
                     <span>Bu seçenek aktif olduğunda aynı gün kargoya verilen siparişler için indirimli hizmet bedeli otomatik uygulanır.</span>
                   </div>
@@ -699,7 +699,7 @@ export default function PlatformSettingsModal({
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className="w-full sm:w-auto">
               İptal
             </Button>
-            <Button type="submit" disabled={isSaving} className="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700">
+            <Button type="submit" disabled={isSaving} className="w-full sm:w-auto bg-gray-900 hover:bg-gray-800">
               {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Kaydet
             </Button>

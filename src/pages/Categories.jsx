@@ -219,7 +219,7 @@ export default function Categories() {
           type="checkbox"
           checked={allSelected}
           onChange={toggleAll}
-          className="h-4 w-4 cursor-pointer accent-indigo-600"
+          className="h-4 w-4 cursor-pointer accent-gray-900"
           title="Tümünü seç"
         />
       ),
@@ -230,7 +230,7 @@ export default function Categories() {
           checked={selectedIds.includes(row.id)}
           onChange={() => toggleOne(row.id)}
           onClick={(e) => e.stopPropagation()}
-          className="h-4 w-4 cursor-pointer accent-indigo-600"
+          className="h-4 w-4 cursor-pointer accent-gray-900"
         />
       )
     },
@@ -286,7 +286,7 @@ export default function Categories() {
               setDeleteId(row.id);
             }}
           >
-            <Trash2 className="h-4 w-4 text-rose-500" />
+            <Trash2 className="h-4 w-4 text-red-500" />
           </Button>
         </div>
       )
@@ -294,12 +294,12 @@ export default function Categories() {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-indigo-50/30">
+    <div className="min-h-screen bg-gray-50">
       <div className="max-w-[1200px] mx-auto px-3 sm:px-6 py-5 sm:py-8">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight flex items-center gap-3">
-              <FolderTree className="h-8 w-8 text-indigo-600" />
+              <FolderTree className="h-8 w-8 text-gray-900" />
               Kategoriler
             </h1>
             <p className="text-slate-500 mt-1">{filteredCategories.length} kategori</p>
@@ -316,7 +316,7 @@ export default function Categories() {
             </Button>
             <Button 
               onClick={() => { setEditingCategory(null); setModalOpen(true); }}
-              className="bg-indigo-600 hover:bg-indigo-700 gap-2"
+              className="bg-gray-900 hover:bg-gray-800 gap-2"
             >
               <Plus className="h-4 w-4" />
               Yeni Kategori
@@ -334,8 +334,8 @@ export default function Categories() {
         </div>
 
         {validSelectedIds.length > 0 && (
-          <div className="flex items-center justify-between gap-3 bg-rose-50 border border-rose-200 rounded-xl px-4 py-3 mb-4">
-            <span className="text-sm text-rose-700 font-medium">
+          <div className="flex items-center justify-between gap-3 bg-red-50 border border-red-200 rounded-xl px-4 py-3 mb-4">
+            <span className="text-sm text-red-700 font-medium">
               {validSelectedIds.length} kategori seçildi
             </span>
             <div className="flex gap-2">
@@ -344,7 +344,7 @@ export default function Categories() {
               </Button>
               <Button
                 size="sm"
-                className="bg-rose-600 hover:bg-rose-700 gap-2"
+                className="bg-red-600 hover:bg-red-700 gap-2"
                 onClick={() => setBulkDeleteOpen(true)}
               >
                 <Trash2 className="h-4 w-4" />
@@ -381,7 +381,7 @@ export default function Categories() {
               <AlertDialogDescription>
                 Bu kategoriyi silmek istediğinizden emin misiniz?
                 {singleAffected > 0 && (
-                  <span className="block mt-2 text-rose-600 font-medium">
+                  <span className="block mt-2 text-red-600 font-medium">
                     ⚠️ Bu kategoride {singleAffected} ürün var. Silersen bu ürünler kategorisiz kalır
                     ve fiyat/komisyon hesapları bozulabilir.
                   </span>
@@ -392,7 +392,7 @@ export default function Categories() {
               <AlertDialogCancel>İptal</AlertDialogCancel>
               <AlertDialogAction
                 onClick={() => deleteMutation.mutate(deleteId)}
-                className="bg-rose-600 hover:bg-rose-700"
+                className="bg-red-600 hover:bg-red-700"
               >
                 Sil
               </AlertDialogAction>
@@ -408,7 +408,7 @@ export default function Categories() {
               <AlertDialogDescription>
                 {validSelectedIds.length} kategoriyi silmek istediğinizden emin misiniz?
                 {bulkAffected > 0 && (
-                  <span className="block mt-2 text-rose-600 font-medium">
+                  <span className="block mt-2 text-red-600 font-medium">
                     ⚠️ Seçili kategorilerde toplam {bulkAffected} ürün var. Silersen bu ürünler
                     kategorisiz kalır ve fiyat/komisyon hesapları bozulabilir.
                   </span>
@@ -420,7 +420,7 @@ export default function Categories() {
               <AlertDialogAction
                 onClick={() => bulkDeleteMutation.mutate(validSelectedIds)}
                 disabled={bulkDeleteMutation.isPending}
-                className="bg-rose-600 hover:bg-rose-700"
+                className="bg-red-600 hover:bg-red-700"
               >
                 {bulkDeleteMutation.isPending ? 'Siliniyor...' : `Sil (${validSelectedIds.length})`}
               </AlertDialogAction>

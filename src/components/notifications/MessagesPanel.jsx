@@ -255,11 +255,11 @@ export default function MessagesPanel({ user, isAdmin, replyRef, onReplyRefConsu
     return (
       <div className="flex flex-col h-full">
         {/* Header */}
-        <div className="flex items-center gap-3 px-4 py-4 border-b border-slate-100 flex-shrink-0 bg-gradient-to-r from-slate-50 to-indigo-50">
+        <div className="flex items-center gap-3 px-4 py-4 border-b border-slate-100 flex-shrink-0 bg-gray-50">
           <button onClick={() => setSelectedContact(null)} className="text-slate-400 hover:text-slate-700 transition-colors">
             <ChevronLeft className="h-5 w-5" />
           </button>
-          <div className="w-9 h-9 rounded-full bg-indigo-600 flex items-center justify-center flex-shrink-0">
+          <div className="w-9 h-9 rounded-full bg-gray-900 flex items-center justify-center flex-shrink-0">
             <User className="h-4 w-4 text-white" />
           </div>
           <div className="flex-1">
@@ -302,9 +302,9 @@ export default function MessagesPanel({ user, isAdmin, replyRef, onReplyRefConsu
             return (
               <div key={m.id} className={cn("flex group", isMine ? "justify-end" : "justify-start")}>
                 <div className="flex items-end gap-1.5 max-w-[80%]" style={{ flexDirection: isMine ? 'row-reverse' : 'row' }}>
-                  <div className={cn("rounded-2xl px-4 py-3 text-sm", isMine ? "bg-indigo-600 text-white rounded-br-none shadow-sm" : "bg-slate-100 text-slate-900 rounded-bl-none shadow-sm")}>
+                  <div className={cn("rounded-2xl px-4 py-3 text-sm", isMine ? "bg-gray-900 text-white rounded-br-none shadow-sm" : "bg-slate-100 text-slate-900 rounded-bl-none shadow-sm")}>
                     {m.announcement_ref_title && (
-                      <div className={cn("text-xs mb-2 px-3 py-2 rounded-lg border-l-2 font-medium", isMine ? "border-indigo-300 bg-indigo-500/20 text-indigo-100" : "border-indigo-400 bg-indigo-50 text-indigo-700")}>
+                      <div className={cn("text-xs mb-2 px-3 py-2 rounded-lg border-l-2 font-medium", isMine ? "border-white/30 bg-white/10 text-white/80" : "border-gray-400 bg-gray-200 text-gray-700")}>
                         ↩️ Duyuru: {m.announcement_ref_title}
                       </div>
                     )}
@@ -326,7 +326,7 @@ export default function MessagesPanel({ user, isAdmin, replyRef, onReplyRefConsu
                     ) : (
                       <p className="whitespace-pre-wrap leading-relaxed">{m.content.replace(/\[Duyuru yanıtı: ".+?"\]\n\n/, '')}</p>
                     )}
-                    <p className={cn("text-xs mt-2 text-right", isMine ? "text-indigo-100" : "text-slate-500")}>
+                    <p className={cn("text-xs mt-2 text-right", isMine ? "text-gray-300" : "text-slate-500")}>
                       {format(new Date(m.created_date), 'HH:mm', { locale: tr })}
                     </p>
                   </div>
@@ -335,7 +335,7 @@ export default function MessagesPanel({ user, isAdmin, replyRef, onReplyRefConsu
                     {editable && !isEditing && (
                       <button
                         onClick={(e) => { e.stopPropagation(); setEditingMessage({ id: m.id, content: m.content.replace(/\[Duyuru yanıtı: ".+?"\]\n\n/, '') }); }}
-                        className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-lg text-slate-400 hover:text-indigo-500 hover:bg-indigo-50"
+                        className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-lg text-slate-400 hover:text-gray-900 hover:bg-gray-100"
                       >
                         <Pencil className="h-3.5 w-3.5" />
                       </button>
@@ -377,16 +377,16 @@ export default function MessagesPanel({ user, isAdmin, replyRef, onReplyRefConsu
 
         {/* Input */}
         {!showArchived && (
-          <div className="flex items-end gap-2 px-4 py-3 border-t border-slate-100 flex-shrink-0 bg-gradient-to-r from-white to-indigo-50">
+          <div className="flex items-end gap-2 px-4 py-3 border-t border-slate-100 flex-shrink-0 bg-white">
             <textarea
               value={newMessage}
               onChange={(e) => setNewMessage(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
               placeholder="Mesaj yazın..."
               rows={2}
-              className="flex-1 text-sm border border-slate-200 rounded-xl px-3 py-2 resize-none focus:outline-none focus:ring-1 focus:ring-indigo-300 bg-white"
+              className="flex-1 text-sm border border-slate-200 rounded-xl px-3 py-2 resize-none focus:outline-none focus:ring-1 focus:ring-gray-400 bg-white"
             />
-            <Button size="icon" onClick={handleSend} disabled={!newMessage.trim()} className="flex-shrink-0 h-10 w-10 bg-indigo-600 hover:bg-indigo-700">
+            <Button size="icon" onClick={handleSend} disabled={!newMessage.trim()} className="flex-shrink-0 h-10 w-10 bg-gray-900 hover:bg-gray-800">
               <Send className="h-4 w-4" />
             </Button>
           </div>
@@ -398,17 +398,17 @@ export default function MessagesPanel({ user, isAdmin, replyRef, onReplyRefConsu
   return (
     <div className="flex flex-col h-full bg-white">
       {/* Header */}
-      <div className="flex items-center gap-2 px-4 py-4 border-b border-slate-100 flex-shrink-0 bg-gradient-to-r from-slate-50 to-indigo-50">
+      <div className="flex items-center gap-2 px-4 py-4 border-b border-slate-100 flex-shrink-0 bg-gray-50">
         <button
           onClick={() => setShowArchived(false)}
-          className={cn("text-xs font-semibold px-3 py-1.5 rounded-lg transition-all", !showArchived ? "bg-indigo-600 text-white" : "text-slate-500 hover:bg-slate-100")}
+          className={cn("text-xs font-semibold px-3 py-1.5 rounded-lg transition-all", !showArchived ? "bg-gray-900 text-white" : "text-slate-500 hover:bg-slate-100")}
         >
           Mesajlar
         </button>
         {isAdmin && (
           <button
             onClick={() => setShowArchived(true)}
-            className={cn("text-xs font-semibold px-3 py-1.5 rounded-lg transition-all", showArchived ? "bg-indigo-600 text-white" : "text-slate-500 hover:bg-slate-100")}
+            className={cn("text-xs font-semibold px-3 py-1.5 rounded-lg transition-all", showArchived ? "bg-gray-900 text-white" : "text-slate-500 hover:bg-slate-100")}
           >
             <Archive className="h-3.5 w-3.5 inline mr-1" />Arşiv
           </button>
@@ -416,7 +416,7 @@ export default function MessagesPanel({ user, isAdmin, replyRef, onReplyRefConsu
         {!showArchived && (
           <button
             onClick={() => { setShowNewConv(true); setSelectedContact(null); }}
-            className="ml-auto text-xs text-indigo-600 hover:text-indigo-700 font-semibold"
+            className="ml-auto text-xs text-gray-900 hover:text-gray-700 font-semibold"
           >
             + Yeni
           </button>
@@ -424,7 +424,7 @@ export default function MessagesPanel({ user, isAdmin, replyRef, onReplyRefConsu
       </div>
 
       {showNewConv && !showArchived && (
-        <div className="px-4 py-3 border-b border-slate-100 bg-gradient-to-br from-indigo-50 to-white space-y-3">
+        <div className="px-4 py-3 border-b border-slate-100 bg-white space-y-3">
           {isAdmin ? (
             <>
               <p className="text-xs font-medium text-slate-600">Müşteri seçin ve mesaj gönderin</p>
@@ -432,7 +432,7 @@ export default function MessagesPanel({ user, isAdmin, replyRef, onReplyRefConsu
               <div className="relative">
                 <button
                   onClick={() => setShowUserDropdown(p => !p)}
-                  className="w-full flex items-center justify-between text-sm border border-slate-200 rounded-xl px-3 py-2 bg-white hover:border-indigo-300 transition-colors"
+                  className="w-full flex items-center justify-between text-sm border border-slate-200 rounded-xl px-3 py-2 bg-white hover:border-gray-400 transition-colors"
                 >
                   <span className={newConversationEmail ? 'text-slate-900' : 'text-slate-400'}>
                     {newConversationEmail || 'Kullanıcı seçin...'}
@@ -448,7 +448,7 @@ export default function MessagesPanel({ user, isAdmin, replyRef, onReplyRefConsu
                         <button
                           key={u.id}
                           onClick={() => { setNewConversationEmail(u.email); setShowUserDropdown(false); }}
-                          className="w-full text-left px-3 py-2 text-sm hover:bg-indigo-50 transition-colors"
+                          className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 transition-colors"
                         >
                           <span className="font-medium">{u.full_name || u.email}</span>
                           {u.full_name && <span className="text-slate-400 text-xs ml-2">{u.email}</span>}
@@ -467,7 +467,7 @@ export default function MessagesPanel({ user, isAdmin, replyRef, onReplyRefConsu
             onChange={e => setNewMessage(e.target.value)}
             placeholder="Mesajınızı yazın..."
             rows={2}
-            className="w-full text-sm border border-slate-200 rounded-xl px-3 py-2 resize-none focus:outline-none focus:ring-1 focus:ring-indigo-300 bg-white"
+            className="w-full text-sm border border-slate-200 rounded-xl px-3 py-2 resize-none focus:outline-none focus:ring-1 focus:ring-gray-400 bg-white"
           />
           <div className="flex gap-2 justify-end">
             <Button size="sm" variant="outline" onClick={() => { setShowNewConv(false); setNewMessage(''); setNewConversationEmail(''); }}>İptal</Button>
@@ -497,7 +497,7 @@ export default function MessagesPanel({ user, isAdmin, replyRef, onReplyRefConsu
              setShowNewConv(false);
              setNewMessage('');
              setNewConversationEmail('');
-            }} disabled={isAdmin ? (!newConversationEmail || !newMessage.trim()) : (!newMessage.trim() || adminLoading)} className="bg-indigo-600 hover:bg-indigo-700">
+            }} disabled={isAdmin ? (!newConversationEmail || !newMessage.trim()) : (!newMessage.trim() || adminLoading)} className="bg-gray-900 hover:bg-gray-800">
               <Send className="h-3.5 w-3.5 mr-1" /> Gönder
             </Button>
           </div>
@@ -517,9 +517,9 @@ export default function MessagesPanel({ user, isAdmin, replyRef, onReplyRefConsu
               <button
                 key={conv.email}
                 onClick={() => handleSelectContact(conv)}
-                className="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-indigo-50/50 text-left transition-colors border-l-4 border-transparent hover:border-indigo-400"
+                className="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-gray-50 text-left transition-colors border-l-4 border-transparent hover:border-gray-400"
               >
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-400 to-indigo-600 flex items-center justify-center flex-shrink-0 text-white font-semibold">
+                <div className="w-10 h-10 rounded-full bg-gray-900 flex items-center justify-center flex-shrink-0 text-white font-semibold">
                   {conv.email.charAt(0).toUpperCase()}
                 </div>
                 <div className="flex-1 min-w-0">
@@ -532,7 +532,7 @@ export default function MessagesPanel({ user, isAdmin, replyRef, onReplyRefConsu
                   <p className="text-xs text-slate-500 truncate mt-0.5">{conv.lastMessage.content.replace(/\[Duyuru yanıtı: ".+?"\]\n\n/, '')}</p>
                 </div>
                 {conv.unread > 0 && (
-                  <span className="w-6 h-6 rounded-full bg-indigo-600 text-white text-xs font-semibold flex items-center justify-center flex-shrink-0">
+                  <span className="w-6 h-6 rounded-full bg-gray-900 text-white text-xs font-semibold flex items-center justify-center flex-shrink-0">
                     {conv.unread}
                   </span>
                 )}

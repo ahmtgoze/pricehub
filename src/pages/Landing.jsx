@@ -36,7 +36,7 @@ const benefits = [
 
 export default function Landing() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-100 via-gray-50 to-purple-50 text-gray-900">
+    <div className="min-h-screen bg-gray-50 text-gray-900">
       {/* Navbar */}
       <nav className="flex items-center justify-between px-6 md:px-16 py-5 border-b border-gray-100 bg-white/80 backdrop-blur-sm">
         <span className="text-2xl font-bold tracking-tight text-gray-900">{MARKA_ADI}</span>
@@ -50,12 +50,12 @@ export default function Landing() {
 
       {/* Hero */}
       <section className="flex flex-col items-center text-center px-6 pt-24 pb-20">
-        <span className="text-xs font-semibold tracking-widest uppercase text-purple-700 bg-purple-100 border border-purple-200 px-4 py-1.5 rounded-full mb-6">
+        <span className="text-xs font-semibold tracking-widest uppercase text-gray-500 bg-gray-100 border border-gray-200 px-4 py-1.5 rounded-full mb-6">
           E-Ticaret Fiyat Yönetimi
         </span>
         <h1 className="text-4xl md:text-6xl font-extrabold leading-tight mb-6 max-w-3xl text-gray-900">
           Tüm Platformlarınız İçin{' '}
-          <span className="bg-gradient-to-r from-purple-600 to-pink-500 bg-clip-text text-transparent">
+          <span className="text-gray-900">
             Merkezi Fiyat Kontrolü
           </span>
         </h1>
@@ -76,8 +76,8 @@ export default function Landing() {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
           {features.map((f) => (
             <div key={f.title} className="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm hover:shadow-md transition-shadow">
-              <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center mb-4">
-                <f.icon className="w-6 h-6 text-purple-600" />
+              <div className="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center mb-4">
+                <f.icon className="w-6 h-6 text-gray-900" />
               </div>
               <h3 className="font-bold text-lg mb-2 text-gray-900">{f.title}</h3>
               <p className="text-gray-500 text-sm leading-relaxed">{f.desc}</p>
