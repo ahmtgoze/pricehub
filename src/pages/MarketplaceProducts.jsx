@@ -711,13 +711,13 @@ export default function MarketplaceProducts() {
           )}
         </div>
 
-        <div className="mb-4 rounded-xl border border-orange-300 bg-amber-50 overflow-hidden">
+        <div className="mb-4 rounded-xl border border-border bg-secondary overflow-hidden">
           <button onClick={() => setShowTrendyolGuide(!showTrendyolGuide)} className="w-full flex items-center justify-between px-5 py-3 text-left">
-            <span className="font-semibold text-amber-800 text-sm">🛒 Trendyol — Ürün Listesi Nasıl Yüklenir?</span>
-            {showTrendyolGuide ? <ChevronUp className="w-4 h-4 text-amber-600" /> : <ChevronDown className="w-4 h-4 text-amber-600" />}
+            <span className="font-semibold text-foreground text-sm">🛒 Trendyol — Ürün Listesi Nasıl Yüklenir?</span>
+            {showTrendyolGuide ? <ChevronUp className="w-4 h-4 text-muted-foreground/70" /> : <ChevronDown className="w-4 h-4 text-muted-foreground/70" />}
           </button>
           {showTrendyolGuide && (
-            <div className="px-5 pb-4 border-t border-amber-200">
+            <div className="px-5 pb-4 border-t border-border">
               <ol className="mt-3 space-y-1.5">
                 {TRENDYOL_YUKLE_ADIMLARI.map((adim, i) => (
                   <li key={i} className={`text-sm flex gap-2 ${adim.startsWith('⚠️') ? 'text-red-700 font-medium' : 'text-amber-900'}`}>
