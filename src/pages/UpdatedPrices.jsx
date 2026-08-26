@@ -307,7 +307,7 @@ export default function UpdatedPrices() {
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-7xl mx-auto">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Düzenlenen Fiyatlar</h1>
+          <h1 className="ph-title">Düzenlenen Fiyatlar</h1>
           <p className="text-gray-600">Sistemde güncellenen fiyatları görüntüleyin ve indirin</p>
         </div>
 
@@ -372,7 +372,7 @@ export default function UpdatedPrices() {
         </div>
 
         {/* Platform & Kontroller */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-6">
+        <div className="rounded-[18px] border border-border bg-card p-6 mb-6">
           <div className="flex flex-col gap-4 md:flex-row md:gap-2 md:items-end">
             <div className="flex-1">
               <Label className="text-sm mb-2 block font-semibold">Platform</Label>
@@ -402,14 +402,14 @@ export default function UpdatedPrices() {
         </div>
 
         {!selectedPlatform && (
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-12 text-center">
+          <div className="rounded-[18px] border border-border bg-card p-12 text-center">
             <p className="text-gray-500">Ürünleri görüntülemek için lütfen platform seçin</p>
           </div>
         )}
 
         {selectedPlatform && updatedPrices.length > 0 && (
           <>
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 mb-4 flex items-center justify-between flex-wrap gap-3">
+            <div className="rounded-[18px] border border-border bg-card p-4 mb-4 flex items-center justify-between flex-wrap gap-3">
               <div className="flex items-center gap-4">
                 <span className="text-sm font-semibold text-gray-900">Toplam: {updatedPrices.length} ürün</span>
                 {selectedRows.size > 0 && <span className="text-sm text-gray-600">{selectedRows.size} seçildi</span>}
@@ -436,7 +436,7 @@ export default function UpdatedPrices() {
               )}
             </div>
 
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-x-auto">
+            <div className="rounded-[18px] border border-border bg-card overflow-x-auto">
               <Table>
                 <TableHeader className="bg-gray-50">
                   <TableRow>
@@ -517,7 +517,7 @@ export default function UpdatedPrices() {
         )}
 
         {selectedPlatform && updatedPrices.length === 0 && (
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-12 text-center">
+          <div className="rounded-[18px] border border-border bg-card p-12 text-center">
             <p className="text-gray-500">Bu platform için eşleştirilmiş ürün bulunamadı</p>
             <p className="text-xs text-gray-400 mt-2">Pazaryeri Ürünleri sayfasında ürünleri eşleştirin, sonra "Ürünleri Güncelle" butonuna basın</p>
           </div>

@@ -166,7 +166,7 @@ export default function PackageManagement() {
   return (
     <div className="p-6 space-y-8">
       <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold text-gray-900">Paketleme Yönetimi</h1>
+        <h1 className="ph-title">Paketleme Yönetimi</h1>
         <Button
           onClick={() => {
             setEditingPackage(null);
@@ -179,7 +179,7 @@ export default function PackageManagement() {
         </Button>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200">
+      <div className="rounded-[18px] border border-border bg-card">
         <div className="p-6 border-b border-gray-200">
           <h2 className="text-lg font-semibold text-gray-900">Paketler</h2>
         </div>
@@ -191,7 +191,7 @@ export default function PackageManagement() {
       </div>
 
       {selectedPackageId && (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200">
+        <div className="rounded-[18px] border border-border bg-card">
           <div className="p-6 border-b border-gray-200">
             <h2 className="text-lg font-semibold text-gray-900">
               {packages.find(p => p.id === selectedPackageId)?.name} - Paket İçeriği

@@ -204,12 +204,12 @@ export default function CostSynchronization() {
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-7xl mx-auto">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Maliyet Senkronizasyonu</h1>
+          <h1 className="ph-title">Maliyet Senkronizasyonu</h1>
           <p className="text-gray-600">Ana ürün maliyetlerini pazaryeri ürünlerine senkronize edin</p>
         </div>
 
         {/* Kontrol Paneli */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-6">
+        <div className="rounded-[18px] border border-border bg-card p-6 mb-6">
           <div className="flex gap-4 items-center mb-4">
             <div className="flex-1">
               <Label className="text-sm mb-2 block font-semibold">Platform</Label>
@@ -294,7 +294,7 @@ export default function CostSynchronization() {
         {/* Senkronize Edilmiş Ürünler */}
         {synchronizedProducts.length > 0 ? (
           <>
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 mb-4 flex items-center justify-between">
+            <div className="rounded-[18px] border border-border bg-card p-4 mb-4 flex items-center justify-between">
               <div className="flex items-center gap-4">
                 <span className="text-sm font-semibold text-gray-900">Toplam: {synchronizedProducts.length} ürün</span>
                 {selectedRows.size > 0 && (
@@ -333,7 +333,7 @@ export default function CostSynchronization() {
               )}
             </div>
 
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+            <div className="rounded-[18px] border border-border bg-card overflow-hidden">
               <Table>
                 <TableHeader className="bg-gray-50">
                   <TableRow>
@@ -392,7 +392,7 @@ export default function CostSynchronization() {
             </div>
           </>
         ) : (
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-12 text-center">
+          <div className="rounded-[18px] border border-border bg-card p-12 text-center">
             <p className="text-gray-500">Henüz eşleştirilmiş ürün yok</p>
           </div>
         )}

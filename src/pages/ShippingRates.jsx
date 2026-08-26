@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { db } from '@/api/db';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Pencil, Trash2, Truck, Package } from 'lucide-react';
+import { Plus, Pencil, Trash2, Package } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -323,10 +323,8 @@ export default function ShippingRates() {
       <div className="max-w-[1400px] mx-auto px-3 sm:px-6 py-5 sm:py-8">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 tracking-tight flex items-center gap-3">
-              <Truck className="h-8 w-8 text-gray-900" />Kargo Tarifeleri
-            </h1>
-            <p className="text-gray-500 mt-1">
+            <h1 className="ph-title">Kargo Tarifeleri</h1>
+            <p className="ph-subtitle">
               {filteredRates.length} tarife
               {userRole === 'admin' && <span className="ml-4 text-xs font-medium">👨‍💼 Sistem Yöneticisi Paneli</span>}
             </p>
@@ -356,7 +354,7 @@ export default function ShippingRates() {
           </div>
         )}
 
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 mb-6">
+        <div className="rounded-[18px] border border-border bg-card p-5 mb-6">
           <div className="flex flex-col sm:flex-row gap-4">
             <SearchInput value={search} onChange={setSearch} placeholder="Platform, firma veya desi ara (örn: 4, 4 desi)..." className="flex-1" />
             <Select value={platformFilter} onValueChange={setPlatformFilter}>

@@ -690,10 +690,10 @@ export default function Campaigns() {
   if (managingCampaign) {
     return (
       <div className="min-h-screen bg-gray-50">
-        <div className="max-w-[1600px] mx-auto px-6 py-8">
+        <div className="ph-page mx-auto">
           <Button variant="outline" onClick={closeManager} className="mb-4">← Kampanyalara Dön</Button>
           <div className="mb-6">
-            <h1 className="text-2xl font-bold text-slate-900">Ürün Ekle — {getTypeLabel(managingCampaign.campaign_type)}</h1>
+            <h1 className="ph-title">Ürün Ekle — {getTypeLabel(managingCampaign.campaign_type)}</h1>
             <p className="text-slate-500 mt-1">{campaignTitle(managingCampaign)} · {safeDate(managingCampaign.start_date)} - {safeDate(managingCampaign.end_date)}</p>
           </div>
 
@@ -822,7 +822,7 @@ export default function Campaigns() {
       <div className="max-w-[1200px] mx-auto px-6 py-8">
         <div className="mb-8 flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-slate-900">Kampanyalar</h1>
+            <h1 className="ph-title">Kampanyalar</h1>
             <p className="text-slate-500 mt-1">Kampanya oluşturun ve yönetin</p>
           </div>
           <Button onClick={() => (showForm ? (resetForm(), setShowForm(false)) : openNew())} className="bg-gray-900 hover:bg-gray-800">

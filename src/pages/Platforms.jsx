@@ -206,10 +206,7 @@ export default function Platforms() {
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-[1400px] mx-auto px-6 py-8">
         <div className="mb-10">
-          <h1 className="text-3xl font-bold text-slate-900 tracking-tight flex items-center gap-3">
-            <Store className="h-8 w-8 text-gray-900" />
-            Platformlar
-          </h1>
+          <h1 className="ph-title">Platformlar</h1>
           <p className="text-slate-500 mt-1">Satış kanallarını aktif veya pasif yapın, kargo firması seçin</p>
         </div>
 

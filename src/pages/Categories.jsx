@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { db } from '@/api/db';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Pencil, Trash2, FolderTree, Download, Upload } from 'lucide-react';
+import { Plus, Pencil, Trash2, Download, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import * as XLSX from 'xlsx';
@@ -298,10 +298,7 @@ export default function Categories() {
       <div className="max-w-[1200px] mx-auto px-3 sm:px-6 py-5 sm:py-8">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight flex items-center gap-3">
-              <FolderTree className="h-8 w-8 text-gray-900" />
-              Kategoriler
-            </h1>
+            <h1 className="ph-title">Kategoriler</h1>
             <p className="text-slate-500 mt-1">{filteredCategories.length} kategori</p>
           </div>
           <div className="flex gap-2 flex-wrap">
@@ -324,7 +321,7 @@ export default function Categories() {
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 mb-6">
+        <div className="rounded-[18px] border border-border bg-card p-5 mb-6">
           <SearchInput
             value={search}
             onChange={setSearch}

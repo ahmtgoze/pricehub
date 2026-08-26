@@ -4,8 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { 
   Plus, 
   Pencil, 
-  Trash2,
-  Package
+  Trash2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -929,11 +928,8 @@ export default function Products() {
 
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 sm:mb-8">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight flex items-center gap-3">
-              <Package className="h-7 w-7 sm:h-8 sm:w-8 text-gray-900" />
-              Ürünler
-            </h1>
-            <p className="text-gray-500 mt-1">{filteredProducts.length} ürün listeleniyor</p>
+            <h1 className="ph-title">Ürünler</h1>
+            <p className="ph-subtitle">{filteredProducts.length} ürün listeleniyor</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             {selectedIds.length > 0 && (
@@ -983,7 +979,7 @@ export default function Products() {
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 mb-6">
+        <div className="rounded-[18px] border border-border bg-card p-5 mb-6">
           <div className="flex flex-col sm:flex-row gap-4">
             <SearchInput value={search} onChange={setSearch} placeholder="Ürün adı veya SKU ara..." className="flex-1" />
             <Select value={categoryFilter} onValueChange={setCategoryFilter}>

@@ -336,9 +336,9 @@ export default function HBBasketCampaigns() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="max-w-[1600px] mx-auto px-6 py-8">
+      <div className="ph-page mx-auto">
         <div className="mb-8">
-          <h1 className="text-3xl font-semibold tracking-tight">Sepet Kampanyaları</h1>
+          <h1 className="ph-title">Sepet Kampanyaları</h1>
           <p className="text-muted-foreground mt-1">Hepsiburada sepet kampanyası Excel'ini yükleyin; indirimli komisyonla kârı görüp kampanya fiyatını belirleyin</p>
         </div>
 

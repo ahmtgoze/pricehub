@@ -30,7 +30,7 @@ export default function Settings() {
   return (
     <div className="max-w-4xl mx-auto px-4 lg:px-8 py-8">
       <div className="mb-8">
-        <h1 className="text-2xl font-semibold text-gray-900">Genel Ayarlar</h1>
+        <h1 className="ph-title">Genel Ayarlar</h1>
         <p className="text-sm text-gray-500 mt-1">Hesap ve uygulama tercihlerinizi yönetin.</p>
       </div>
 
@@ -308,7 +308,7 @@ function UsersSection() {
 /* ─── Yardımcı bileşenler ─── */
 function Card({ title, icon, children }) {
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+    <div className="rounded-[18px] border border-border bg-card p-6">
       <div className="flex items-center gap-2 mb-6">
         {icon}
         <h2 className="text-base font-semibold text-gray-900">{title}</h2>

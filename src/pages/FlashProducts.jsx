@@ -1160,9 +1160,9 @@ export default function FlashProducts() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="max-w-[1600px] mx-auto px-6 py-8">
+      <div className="ph-page mx-auto">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-slate-900">Flaş Ürünler</h1>
+          <h1 className="ph-title">Flaş Ürünler</h1>
           <p className="text-slate-500 mt-1">Flaş ürün fiyatlarını yükleyip kârlılık analizi yapın</p>
         </div>
 

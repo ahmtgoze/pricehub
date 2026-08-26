@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { createPageUrl } from '../utils';
 import {
   LayoutDashboard, Package, FolderTree, Store, Truck, Percent,
-  Calculator, FileText, BadgeDollarSign, Tag, HelpCircle,
+  Calculator, FileText, BadgeDollarSign, Tag,
   ChevronDown, ChevronRight, ExternalLink, ArrowRight,
   BookOpen, Map, CheckCheck, BadgePercent, Sparkles, Zap,
   Settings, Layers
@@ -436,8 +436,8 @@ export default function Help() {
 
         {/* Başlık */}
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Kullanım Kılavuzu</h1>
-          <p className="text-gray-500 text-sm mt-1">Adım adım kurulum rehberi ve tüm sayfa açıklamaları.</p>
+          <h1 className="ph-title">Kullanım Kılavuzu</h1>
+          <p className="ph-subtitle">Adım adım kurulum rehberi ve tüm sayfa açıklamaları.</p>
         </div>
 
         {/* Tab geçişi */}
@@ -465,7 +465,7 @@ export default function Help() {
           <div className="space-y-4">
 
             {/* İlerleme */}
-            <div className="bg-white rounded-2xl border border-gray-200 p-5">
+            <div className="rounded-[18px] border border-border bg-card p-5">
               <div className="flex items-center justify-between mb-3">
                 <div>
                   <p className="font-semibold text-gray-900">Kurulum İlerlemesi</p>
@@ -513,7 +513,7 @@ export default function Help() {
               const Icon = p.icon;
               const isOpen = openId === p.id;
               return (
-                <div key={p.id} className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+                <div key={p.id} className="rounded-[18px] border border-border bg-card overflow-hidden">
                   <button
                     className="w-full flex items-center gap-4 p-4 text-left hover:bg-gray-50 transition-colors"
                     onClick={() => setOpenId(isOpen ? null : p.id)}

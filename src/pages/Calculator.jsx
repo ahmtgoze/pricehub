@@ -323,10 +323,7 @@ export default function Calculator() {
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-[1200px] mx-auto px-6 py-8">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-slate-900 tracking-tight flex items-center gap-3">
-            <CalcIcon className="h-8 w-8 text-gray-900" />
-            Fiyat Hesaplayıcı
-          </h1>
+          <h1 className="ph-title">Fiyat Hesaplayıcı</h1>
           <p className="text-slate-500 mt-1">Ürün fiyatını ve kârını hesaplayın (kaydetmez)</p>
         </div>
 

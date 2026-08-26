@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { db } from '@/api/db';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { FileText, ArrowUp, ArrowDown, Minus, Archive, Trash2 } from 'lucide-react';
+import { ArrowUp, ArrowDown, Minus, Archive, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -268,14 +268,11 @@ export default function UpdateReports() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="max-w-[1600px] mx-auto px-6 py-8">
+      <div className="ph-page mx-auto">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 tracking-tight flex items-center gap-3">
-              <FileText className="h-8 w-8 text-gray-900" />
-              Güncelleme Raporları
-            </h1>
-            <p className="text-gray-500 mt-1">{filteredReports.length} değişiklik kaydı</p>
+            <h1 className="ph-title">Güncelleme Raporları</h1>
+            <p className="ph-subtitle">{filteredReports.length} değişiklik kaydı</p>
           </div>
           <div className="flex items-center gap-3">
             {selectedIds.length > 0 && (
@@ -328,7 +325,7 @@ export default function UpdateReports() {
           </button>
         </div>
 
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 mb-6">
+        <div className="rounded-[18px] border border-border bg-card p-5 mb-6">
           <div className="flex flex-col sm:flex-row gap-4">
             <SearchInput value={search} onChange={setSearch} placeholder="Ürün adı veya SKU ara..." className="flex-1" />
             <Select value={platformFilter} onValueChange={setPlatformFilter}>

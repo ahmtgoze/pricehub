@@ -208,12 +208,12 @@ export default function UpdatedCosts() {
 
         {/* Başlık */}
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Ürün Maliyetleri</h1>
-          <p className="text-gray-500 text-sm mt-1">Eşleşmiş pazaryeri ürünlerinin maliyet verilerini görüntüleyin ve dışa aktarın</p>
+          <h1 className="ph-title">Ürün Maliyetleri</h1>
+          <p className="ph-subtitle">Eşleşmiş pazaryeri ürünlerinin maliyet verilerini görüntüleyin ve dışa aktarın</p>
         </div>
 
         {/* Filtre / Kontrol Kartı */}
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 mb-6">
+        <div className="rounded-[18px] border border-border bg-card p-5 mb-6">
           <div className="flex flex-wrap gap-3 items-end">
             <div>
               <p className="text-xs font-medium text-gray-500 mb-1.5">Platform</p>
@@ -298,7 +298,7 @@ export default function UpdatedCosts() {
 
         {/* Tablo */}
         {updatedCosts.length > 0 ? (
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-x-auto">
+          <div className="rounded-[18px] border border-border bg-card overflow-x-auto">
             <Table>
               <TableHeader className="bg-gray-50">
                 <TableRow>
@@ -371,7 +371,7 @@ export default function UpdatedCosts() {
             </Table>
           </div>
         ) : (
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-16 text-center">
+          <div className="rounded-[18px] border border-border bg-card p-16 text-center">
             <PackageOpen className="h-12 w-12 text-gray-300 mx-auto mb-3" />
             <p className="text-gray-500 font-medium">
               {selectedPlatform ? 'Bu platform için gösterilecek ürün yok' : 'Başlamak için bir platform seçin'}

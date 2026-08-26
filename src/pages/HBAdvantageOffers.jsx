@@ -402,9 +402,9 @@ export default function HBAdvantageOffers() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="max-w-[1600px] mx-auto px-6 py-8">
+      <div className="ph-page mx-auto">
         <div className="mb-8">
-          <h1 className="text-3xl font-semibold tracking-tight">Avantajlı Teklifler</h1>
+          <h1 className="ph-title">Avantajlı Teklifler</h1>
           <p className="text-muted-foreground mt-1">Hepsiburada avantajlı teklif Excel'ini yükleyip kademe bazlı kârlılık analizi yapın</p>
         </div>
 

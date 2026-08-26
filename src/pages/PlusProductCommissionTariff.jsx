@@ -641,10 +641,10 @@ export default function PlusProductCommissionTariff() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="max-w-[1600px] mx-auto px-6 py-8">
+      <div className="ph-page mx-auto">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 tracking-tight">Plus Ürün Komisyon Tarifesi</h1>
-          <p className="text-gray-500 mt-1">Trendyol Plus tekliflerini yükleyip kârlılık analizi yapın</p>
+          <h1 className="ph-title">Plus Ürün Komisyon Tarifesi</h1>
+          <p className="ph-subtitle">Trendyol Plus tekliflerini yükleyip kârlılık analizi yapın</p>
         </div>
 
         {!hasTrendyol && (

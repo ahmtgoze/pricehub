@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { db } from '@/api/db';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Pencil, Trash2, Percent, Trash, AlertCircle } from 'lucide-react';
+import { Plus, Pencil, Trash2, Trash, AlertCircle } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -531,11 +531,8 @@ export default function Commissions() {
       <div className="max-w-[1400px] mx-auto px-3 sm:px-6 py-5 sm:py-8">
         <div className="flex flex-col gap-4 mb-8">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 tracking-tight flex items-center gap-3">
-              <Percent className="h-8 w-8 text-gray-900" />
-              Komisyon & Hedef Kâr
-            </h1>
-            <p className="text-gray-500 mt-1">Platform ve kategori bazlı komisyon oranları</p>
+            <h1 className="ph-title">Komisyon & Hedef Kâr</h1>
+            <p className="ph-subtitle">Platform ve kategori bazlı komisyon oranları</p>
           </div>
           <div className="flex flex-col sm:flex-row gap-3">
             {selectedIds.length > 0 && (
@@ -559,7 +556,7 @@ export default function Commissions() {
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 sm:p-5 mb-6">
+        <div className="rounded-[18px] border border-border bg-card p-4 sm:p-5 mb-6">
           <div className="grid grid-cols-1 gap-3">
             <SearchInput value={search} onChange={setSearch} placeholder="Platform veya kategori ara..." />
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -600,7 +597,7 @@ export default function Commissions() {
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+        <div className="rounded-[18px] border border-border bg-card overflow-hidden">
           <div className="overflow-x-auto">
             <DataTable
               columns={columns}

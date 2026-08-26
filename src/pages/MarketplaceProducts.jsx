@@ -688,7 +688,7 @@ export default function MarketplaceProducts() {
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-7xl mx-auto">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Pazaryeri Ürünleri</h1>
+          <h1 className="ph-title">Pazaryeri Ürünleri</h1>
           <p className="text-gray-600">Pazaryeri ürünlerini sisteme yükleyin ve ana ürünlere bağlayın</p>
         </div>
 
@@ -749,7 +749,7 @@ export default function MarketplaceProducts() {
           )}
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-6">
+        <div className="rounded-[18px] border border-border bg-card p-6 mb-6">
           <Label className="text-sm mb-3 block font-semibold">Platform Seçiniz</Label>
           <div className="flex gap-4 items-end flex-wrap">
             <Select value={selectedPlatform} onValueChange={setSelectedPlatform}>
@@ -781,7 +781,7 @@ export default function MarketplaceProducts() {
 
         {selectedPlatform && (
           <>
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 mb-4 flex flex-wrap items-center gap-4">
+            <div className="rounded-[18px] border border-border bg-card p-4 mb-4 flex flex-wrap items-center gap-4">
               <div className="flex items-center gap-4">
                 <span className="text-sm font-semibold text-gray-900">Toplam: {filtered.length} ürün</span>
                 {selectedRows.size > 0 && <span className="text-sm text-gray-600">{selectedRows.size} seçildi</span>}
@@ -827,7 +827,7 @@ export default function MarketplaceProducts() {
               <Button size="sm" variant="outline" onClick={() => queryClient.invalidateQueries({ queryKey: ['marketplaceProducts', userEmail] })}>Güncelle</Button>
             </div>
 
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-visible">
+            <div className="rounded-[18px] border border-border bg-card overflow-visible">
               <div className="overflow-x-auto overflow-y-visible">
                 <Table className="relative">
                   <TableHeader className="bg-gray-50">
@@ -936,7 +936,7 @@ export default function MarketplaceProducts() {
         )}
 
         {!selectedPlatform && (
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-12 text-center">
+          <div className="rounded-[18px] border border-border bg-card p-12 text-center">
             <p className="text-gray-500">Platform seçerek başlayın</p>
           </div>
         )}

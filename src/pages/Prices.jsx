@@ -533,13 +533,13 @@ export default function Prices() {
 
   return (
     <div className="min-h-screen">
-      <div className="max-w-[1600px] mx-auto px-4 sm:px-6 py-6 sm:py-8">
+      <div className="ph-page mx-auto">
         <div className="mb-6 sm:mb-8">
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Fiyatlar</h1>
-          <p className="text-gray-500 mt-1 text-sm">Tüm ürünlerin platform bazlı fiyat ve kâr tablosu</p>
+          <h1 className="ph-title">Fiyatlar</h1>
+          <p className="ph-subtitle">Tüm ürünlerin platform bazlı fiyat ve kâr tablosu</p>
         </div>
 
-        <div className="bg-white rounded-2xl border border-gray-100 card-shadow p-4 sm:p-6 mb-6">
+        <div className="rounded-[18px] border border-border bg-card p-4 sm:p-6 mb-6">
           <div className="flex flex-col gap-4">
             <div className="flex flex-wrap items-center gap-2">
               <Button onClick={handleCalculatePrices} disabled={calculating || products.length === 0} size="sm">
@@ -676,12 +676,12 @@ export default function Prices() {
         <div className="block sm:hidden space-y-4">
           {isLoading ? (
             [...Array(3)].map((_, i) => (
-              <div key={i} className="bg-white rounded-xl border border-gray-100 p-4 space-y-2">
+              <div key={i} className="rounded-[18px] border border-border bg-card p-4 space-y-2">
                 <Skeleton className="h-5 w-40" /><Skeleton className="h-4 w-28" /><Skeleton className="h-10 w-full" />
               </div>
             ))
           ) : filteredProducts.length === 0 ? (
-            <div className="bg-white rounded-xl border border-gray-100 p-8 text-center text-gray-500">Ürün bulunamadı</div>
+            <div className="rounded-[18px] border border-border bg-card p-8 text-center text-gray-500">Ürün bulunamadı</div>
           ) : (
             filteredProducts.map(product => (
               <div key={product.id} className={`bg-white rounded-xl border shadow-sm p-4 ${selectedIds.has(product.id) ? 'border-gray-400 bg-gray-100/50' : 'border-gray-100'}`}>
@@ -725,7 +725,7 @@ export default function Prices() {
         </div>
 
         {/* Desktop Table */}
-        <div className="hidden sm:block bg-white rounded-2xl border border-gray-100 card-shadow overflow-hidden">
+        <div className="hidden sm:block rounded-[18px] border border-border bg-card overflow-hidden">
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
