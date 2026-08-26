@@ -55,7 +55,54 @@ drop schema yedek_20260826 cascade;
 
 ## 2. Kodda ne değişti?
 
-Sadece **2 dosya**:
+Toplam **58 dosya**, 1.441 ekleme / 1.380 silme — hepsi görünüm.
+
+### Adım adım ne yapıldı
+
+| Adım | Kapsam |
+|---|---|
+| 1. Tema token'ları + kabuk | `src/index.css`, `src/Layout.jsx` |
+| 2. Ortak bileşenler | `ui/button`, `ui/card`, `ui/input`, `ui/table`, `ui/badge`, `ui/select`, `ui/textarea`, `ui/SearchInput`, `ui/StatCard`, `ui/DataTable` |
+| 3. Dashboard | Prototipteki ikonsuz istatistik kutuları, 38px iri sayılar |
+| 4. 24 sayfa mekanik geçiş | Sayfa kabuğu, başlık, kart iskeletleri |
+| 5. Palet geçişi | 1.237 nötr gri sınıfı → tasarım token'ı |
+| 6. Son temizlik | 77 ham siyah zemin, 35 `text-white`, sayfa içi gölgeler |
+| 7. Giriş ekranı | `Login.jsx` yeni palete alındı |
+
+### Prototipten alınan ölçüler
+
+- Yan menü 272px, üst bar 52px, sayfa zemini `#f5f5f7`
+- Kart: 18px köşe, 22px iç boşluk, gölge yok, `#ececee` kenar
+- Buton/girdi: 38px yükseklik, 11px köşe, 13.5px yazı
+- Tablo başlığı: 11px, büyük harf, 0.06em harf aralığı, `#a1a1a6`
+- Sayfa başlığı: 30px/600, alt metin 14px `#86868b`
+
+### Renk kararı
+
+Prototip monokrom. Renk **yalnızca uyarı için** kullanılıyor: negatif kâr
+kırmızı (`#d70015`), düşük kâr amber, sağlıklı kâr nötr siyah. Eski temadaki
+yeşil tonları kaldırıldı. Trendyol turuncusu (`#F27A1B`) ve HepsiBurada moru
+(`#7B2D9B`) marka rengi olarak korundu.
+
+Kâr dağılımı grafiğinde bilgi kaybı olmasın diye monokrom palet **kademeli**
+kullanıldı: kâr arttıkça sütun koyulaşıyor (açık gri → siyah), negatif kırmızı.
+
+### Yan kazanç
+
+Tüm renkler artık token üzerinden geldiği için sayfalar **koyu temayla da
+uyumlu**. `.dark` token'ları `index.css`'te hazır; ileride bir anahtar eklenirse
+sayfalara tekrar dokunmak gerekmez.
+
+### DEĞİŞMEYEN dosyalar (doğrulandı)
+
+`src/api/db.js` · `src/api/supabaseClient.js` · `PriceCalculationEngine.jsx` ·
+`ImportExport.jsx` · `lib/AuthContext.jsx` · `lib/matchingEngine.js` ·
+`lib/platformAdapters.js` · `src/pages.config.js` — hepsi bit bazında aynı.
+
+Hiçbir veri sorgusu, react-query anahtarı, hesap formülü veya RLS kuralı
+değişmedi.
+
+### İlk aşamada (Faz 1) değişen 2 dosya:
 
 | Dosya | Ne oldu |
 |---|---|
