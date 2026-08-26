@@ -13,8 +13,8 @@
 
 @layer base {
   :root {
-    /* zemin: #fbfbfc · metin: #1d1d1f */
-    --background: 240 10% 98.6%;
+    /* zemin: #f5f5f7 · metin: #1d1d1f (prototiple birebir) */
+    --background: 240 11% 96.5%;
     --foreground: 240 3% 11.8%;
     --card: 0 0% 100%;
     --card-foreground: 240 3% 11.8%;
@@ -116,6 +116,69 @@
   /* Sayfalarda halihazırda kullanılan yardımcı sınıf — yeni temada yumuşak gölge */
   .card-shadow {
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  }
+
+  /* ------------------------------------------------------------------
+     PriceHub sayfa kalıpları — ölçüler tasarım prototipinden birebir.
+     Sayfalarda uzun className zincirleri yerine bunlar kullanılır;
+     bir ölçü değişirse tek yerden değişir.
+     ------------------------------------------------------------------ */
+
+  /* Sayfa gövdesi: dikey 22px boşluk, kenar 40px, alt 60px nefes payı */
+  .ph-page {
+    @apply flex flex-col gap-[22px] px-5 pt-6 pb-14 sm:px-10 sm:pt-[30px] sm:pb-[60px];
+    max-width: 1600px;
+  }
+
+  /* Başlık satırı: solda başlık+alt metin, sağda aksiyon butonları */
+  .ph-head {
+    @apply flex flex-wrap items-end justify-between gap-5;
+  }
+
+  .ph-title {
+    @apply text-[24px] sm:text-[30px] font-semibold tracking-[-0.037em] text-foreground;
+  }
+
+  .ph-subtitle {
+    @apply mt-[5px] text-sm text-muted-foreground;
+  }
+
+  .ph-actions {
+    @apply flex flex-wrap gap-2;
+  }
+
+  /* Dolgulu kart */
+  .ph-card {
+    @apply rounded-[18px] border border-border bg-card p-[22px];
+  }
+
+  /* Tablo/liste paneli — kendi iç boşluğu yok, kenarları kırpar */
+  .ph-panel {
+    @apply overflow-hidden rounded-[18px] border border-border bg-card;
+  }
+
+  /* Panel içi bölüm başlığı */
+  .ph-panel-head {
+    @apply flex flex-wrap items-center justify-between gap-3 border-b border-border px-5 py-[13px];
+  }
+
+  /* Arama kutusu sarmalayıcısı */
+  .ph-search {
+    @apply flex h-[38px] w-full max-w-[420px] items-center gap-[9px] rounded-[11px] bg-secondary px-[13px];
+  }
+
+  .ph-search input {
+    @apply w-full border-0 bg-transparent text-[13.5px] outline-none placeholder:text-muted-foreground;
+  }
+
+  /* Boş durum metni */
+  .ph-empty {
+    @apply px-5 py-[34px] text-center text-[13.5px] text-muted-foreground;
+  }
+
+  /* Tablo başlık hücresi (ham <th> kullanan sayfalar için) */
+  .ph-th {
+    @apply text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-foreground;
   }
 }
 

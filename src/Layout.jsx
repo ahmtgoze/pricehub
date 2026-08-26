@@ -110,10 +110,10 @@ function NavLink({ item, isActive, color, onClick }) {
       className={cn(
         "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors",
         isActive
-          ? "bg-[#1d1d1f] text-white"
+          ? "bg-primary text-primary-foreground"
           : color
           ? "hover:opacity-80"
-          : "text-[#6e6e73] hover:bg-[#f5f5f7] hover:text-[#1d1d1f]"
+          : "text-muted-foreground hover:bg-secondary hover:text-foreground"
       )}
       style={isActive ? {} : { ...bgStyle, ...colorStyle }}
     >
@@ -128,8 +128,8 @@ function GroupHeader({ label, isOpen, onToggle, hasActive }) {
     <button
       onClick={onToggle}
       className={cn(
-        "w-full flex items-center justify-between px-3 py-2 rounded-lg text-[11px] font-semibold uppercase tracking-[0.08em] transition-colors",
-        hasActive ? "text-[#1d1d1f]" : "text-[#a1a1a6] hover:text-[#6e6e73]"
+        "w-full flex items-center justify-between px-3 py-2 rounded-lg text-[11.5px] font-semibold uppercase tracking-[0.07em] transition-colors",
+        hasActive ? "text-foreground" : "text-muted-foreground/70 hover:text-muted-foreground"
       )}
     >
       <span>{label}</span>
@@ -180,7 +180,7 @@ export default function Layout({ children, currentPageName }) {
     .filter(i => !i.hepsiburadaOnly || hasHepsiburada);
 
   return (
-    <div className="overflow-hidden bg-[#fbfbfc] flex flex-col lg:flex-row" style={{ height: '100dvh' }}>
+    <div className="overflow-hidden bg-background flex flex-col lg:flex-row" style={{ height: '100dvh' }}>
       <Toaster position="top-right" richColors />
 
       {sidebarOpen && (
@@ -192,17 +192,14 @@ export default function Layout({ children, currentPageName }) {
 
       {/* Yan menü */}
       <aside className={cn(
-        "fixed top-0 left-0 z-50 h-full w-72 bg-white border-r border-[#ececee] transition-transform duration-300 lg:translate-x-0",
+        "fixed top-0 left-0 z-50 h-full w-[272px] bg-card border-r border-border transition-transform duration-300 lg:translate-x-0",
         sidebarOpen ? "translate-x-0" : "-translate-x-full"
       )}>
         <div className="flex flex-col h-full">
           {/* Marka */}
-          <div className="h-16 flex items-center justify-between px-5 border-b border-[#f2f2f4]">
-            <Link to={createPageUrl('Dashboard')} className="flex items-center gap-2.5">
-              <span className="w-8 h-8 rounded-[10px] bg-[#1d1d1f] text-white grid place-items-center text-[13px] font-semibold">
-                {MARKA_ADI.slice(0, 1)}
-              </span>
-              <span className="font-semibold text-[17px] tracking-tight text-[#1d1d1f]">{MARKA_ADI}</span>
+          <div className="h-16 flex items-center justify-between px-4 border-b border-border">
+            <Link to={createPageUrl('Dashboard')} className="flex-1 flex items-center justify-center">
+              <span className="font-semibold text-[18px] tracking-[-0.4px] text-foreground">{MARKA_ADI}</span>
             </Link>
             <Button variant="ghost" size="icon" className="lg:hidden shrink-0" onClick={closeSidebar}>
               <X className="h-5 w-5" />
@@ -317,7 +314,7 @@ export default function Layout({ children, currentPageName }) {
               return null;
             })}
 
-            <div className="pt-4 border-t border-[#f2f2f4] mt-2 space-y-0.5">
+            <div className="pt-4 border-t border-border mt-2 space-y-0.5">
               {BOTTOM_ITEMS.map(item => (
                 <NavLink
                   key={item.page}
@@ -330,29 +327,29 @@ export default function Layout({ children, currentPageName }) {
           </nav>
 
           {/* Alt bilgi */}
-          <div className="p-3 border-t border-[#f2f2f4]">
-            <div className="px-3.5 py-3 rounded-[14px] bg-[#f5f5f7]">
-              <p className="text-xs font-semibold text-[#1d1d1f]">Merkezi Fiyat Yönetimi</p>
-              <p className="text-xs text-[#86868b] mt-0.5">Trendyol · Hepsiburada · Web</p>
+          <div className="p-3 border-t border-border">
+            <div className="px-[14px] py-[11px] rounded-[14px] bg-secondary">
+              <p className="text-[12.5px] font-semibold text-foreground">Merkezi Fiyat Yönetimi</p>
+              <p className="text-xs text-muted-foreground mt-[3px]">Trendyol · Hepsiburada · Web</p>
             </div>
           </div>
         </div>
       </aside>
 
       {/* Ana içerik */}
-      <div className="flex-1 flex flex-col min-w-0 lg:pl-72 overflow-hidden" style={{ height: '100dvh' }}>
+      <div className="flex-1 flex flex-col min-w-0 lg:pl-[272px] overflow-hidden" style={{ height: '100dvh' }}>
         {/* Mobil üst bar */}
-        <header className="lg:hidden flex-shrink-0 z-30 h-16 bg-white/85 backdrop-blur-md border-b border-[#ececee] flex items-center px-4 justify-between">
+        <header className="lg:hidden flex-shrink-0 z-30 h-16 bg-card/85 backdrop-blur-xl backdrop-saturate-150 border-b border-border flex items-center px-4 justify-between">
           <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(true)}>
             <Menu className="h-6 w-6" />
           </Button>
-          <span className="font-semibold text-[#1d1d1f] flex-1 ml-3">{MARKA_ADI}</span>
+          <span className="font-semibold text-foreground flex-1 ml-3">{MARKA_ADI}</span>
           <div className="flex items-center gap-2">
             <NotificationCenter />
             <Button
               variant="ghost"
               size="icon"
-              className="text-[#d70015] hover:text-[#d70015] hover:bg-red-50"
+              className="text-destructive hover:text-destructive hover:bg-destructive/10"
               onClick={async () => { await db.auth.logout(); window.location.href = '/login'; }}
             >
               <LogOut className="h-5 w-5" />
@@ -361,11 +358,11 @@ export default function Layout({ children, currentPageName }) {
         </header>
 
         {/* Masaüstü üst bar */}
-        <div className="hidden lg:flex items-center justify-end gap-2 px-6 py-2 border-b border-[#ececee] bg-white/70 backdrop-blur-sm flex-shrink-0">
+        <div className="hidden lg:flex items-center justify-end gap-2 h-[52px] px-6 border-b border-border bg-card/70 backdrop-blur-xl backdrop-saturate-150 flex-shrink-0">
           <NotificationCenter />
           <button
             onClick={async () => { await db.auth.logout(); window.location.href = '/login'; }}
-            className="flex items-center justify-center w-9 h-9 rounded-xl text-[#d70015] hover:bg-red-50 transition-colors"
+            className="flex items-center justify-center w-9 h-9 rounded-xl text-destructive hover:bg-destructive/10 transition-colors"
             title="Çıkış Yap"
           >
             <LogOut className="h-5 w-5" />
