@@ -31,7 +31,7 @@ export default function Settings() {
     <div className="max-w-4xl mx-auto px-4 lg:px-8 py-8">
       <div className="mb-8">
         <h1 className="ph-title">Genel Ayarlar</h1>
-        <p className="text-sm text-gray-500 mt-1">Hesap ve uygulama tercihlerinizi yönetin.</p>
+        <p className="text-sm text-muted-foreground mt-1">Hesap ve uygulama tercihlerinizi yönetin.</p>
       </div>
 
       <div className="flex flex-col lg:flex-row gap-6">
@@ -49,10 +49,10 @@ export default function Settings() {
                       'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all text-left',
                       active
                         ? 'bg-gray-900 text-white'
-                        : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                        : 'text-muted-foreground hover:bg-secondary hover:text-foreground'
                     )}
                   >
-                    <Icon className={cn('h-4 w-4', active ? 'text-white' : 'text-gray-400')} />
+                    <Icon className={cn('h-4 w-4', active ? 'text-white' : 'text-muted-foreground/70')} />
                     {s.label}
                     {active && <ChevronRight className="ml-auto h-4 w-4 opacity-50" />}
                   </button>
@@ -102,8 +102,8 @@ function AccountSection({ user }) {
           <Input value={fullName} onChange={e => setFullName(e.target.value)} placeholder="Adınızı girin" />
         </Field>
         <Field label="E-posta">
-          <Input value={user?.email || ''} disabled className="bg-gray-50 text-gray-500" />
-          <p className="text-xs text-gray-400 mt-1">E-posta adresi değiştirilemez.</p>
+          <Input value={user?.email || ''} disabled className="bg-secondary text-muted-foreground" />
+          <p className="text-xs text-muted-foreground/70 mt-1">E-posta adresi değiştirilemez.</p>
         </Field>
         <Field label="Rol">
           <div className="flex items-center gap-2 h-9">
@@ -150,12 +150,12 @@ function SecuritySection() {
   };
 
   return (
-    <Card title="Şifre Değiştir" icon={<Shield className="h-4 w-4 text-gray-400" />}>
+    <Card title="Şifre Değiştir" icon={<Shield className="h-4 w-4 text-muted-foreground/70" />}>
       <div className="space-y-5">
         <Field label="Mevcut Şifre">
           <div className="relative">
             <Input type={showPw ? 'text' : 'password'} value={currentPw} onChange={e => setCurrentPw(e.target.value)} placeholder="••••••••" />
-            <button type="button" onClick={() => setShowPw(v => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+            <button type="button" onClick={() => setShowPw(v => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground/70 hover:text-muted-foreground">
               {showPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
             </button>
           </div>
@@ -207,16 +207,16 @@ function BrandSection() {
   });
 
   return (
-    <Card title="Marka Ayarları" icon={<Palette className="h-4 w-4 text-gray-400" />}>
+    <Card title="Marka Ayarları" icon={<Palette className="h-4 w-4 text-muted-foreground/70" />}>
       {isLoading ? (
         <div className="flex justify-center py-6">
-          <div className="w-6 h-6 border-2 border-gray-200 border-t-gray-800 rounded-full animate-spin" />
+          <div className="w-6 h-6 border-2 border-border border-t-gray-800 rounded-full animate-spin" />
         </div>
       ) : (
         <div className="space-y-5">
           <Field label="Uygulama Adı">
             <Input value={markaAdi} onChange={e => setMarkaAdi(e.target.value)} placeholder="PriceHub" />
-            <p className="text-xs text-gray-400 mt-1">Sidebar ve giriş ekranında görünen isim.</p>
+            <p className="text-xs text-muted-foreground/70 mt-1">Sidebar ve giriş ekranında görünen isim.</p>
           </Field>
           <div className="pt-2">
             <Button onClick={() => save.mutate()} disabled={save.isPending || !markaAdi.trim()} className="bg-gray-900 hover:bg-gray-800">
@@ -267,21 +267,21 @@ function UsersSection() {
     <Card title="Kullanıcı Yönetimi">
       {isLoading ? (
         <div className="flex justify-center py-8">
-          <div className="w-6 h-6 border-2 border-gray-200 border-t-gray-800 rounded-full animate-spin" />
+          <div className="w-6 h-6 border-2 border-border border-t-gray-800 rounded-full animate-spin" />
         </div>
       ) : (
         <div className="space-y-2">
           {users.map(u => (
-            <div key={u.id} className="flex items-center justify-between py-3 px-4 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors gap-3">
+            <div key={u.id} className="flex items-center justify-between py-3 px-4 rounded-xl bg-secondary hover:bg-secondary transition-colors gap-3">
               <div className="min-w-0">
-                <p className="text-sm font-medium text-gray-900 truncate">{u.full_name || '—'}</p>
-                <p className="text-xs text-gray-400 mt-0.5">{u.id.slice(0, 8)}…</p>
+                <p className="text-sm font-medium text-foreground truncate">{u.full_name || '—'}</p>
+                <p className="text-xs text-muted-foreground/70 mt-0.5">{u.id.slice(0, 8)}…</p>
               </div>
               <div className="flex items-center gap-2 flex-shrink-0">
                 <select
                   value={u.role || 'user'}
                   onChange={e => setRole.mutate({ id: u.id, role: e.target.value })}
-                  className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 bg-white text-gray-700 focus:outline-none focus:ring-1 focus:ring-gray-400"
+                  className="text-xs border border-border rounded-lg px-2 py-1.5 bg-card text-muted-foreground focus:outline-none focus:ring-1 focus:ring-gray-400"
                 >
                   <option value="user">Kullanıcı</option>
                   <option value="admin">Yönetici</option>
@@ -298,7 +298,7 @@ function UsersSection() {
               </div>
             </div>
           ))}
-          {users.length === 0 && <p className="text-sm text-gray-400 text-center py-6">Kayıtlı kullanıcı bulunamadı.</p>}
+          {users.length === 0 && <p className="text-sm text-muted-foreground/70 text-center py-6">Kayıtlı kullanıcı bulunamadı.</p>}
         </div>
       )}
     </Card>
@@ -311,7 +311,7 @@ function Card({ title, icon, children }) {
     <div className="rounded-[18px] border border-border bg-card p-6">
       <div className="flex items-center gap-2 mb-6">
         {icon}
-        <h2 className="text-base font-semibold text-gray-900">{title}</h2>
+        <h2 className="text-base font-semibold text-foreground">{title}</h2>
       </div>
       {children}
     </div>
@@ -321,7 +321,7 @@ function Card({ title, icon, children }) {
 function Field({ label, children }) {
   return (
     <div className="space-y-1.5">
-      <Label className="text-xs font-medium text-gray-500 uppercase tracking-wide">{label}</Label>
+      <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">{label}</Label>
       {children}
     </div>
   );

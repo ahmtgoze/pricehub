@@ -689,12 +689,12 @@ export default function Campaigns() {
   // ===================== RENDER: ÜRÜN YÖNETİMİ =====================
   if (managingCampaign) {
     return (
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-secondary">
         <div className="ph-page mx-auto">
           <Button variant="outline" onClick={closeManager} className="mb-4">← Kampanyalara Dön</Button>
           <div className="mb-6">
             <h1 className="ph-title">Ürün Ekle — {getTypeLabel(managingCampaign.campaign_type)}</h1>
-            <p className="text-slate-500 mt-1">{campaignTitle(managingCampaign)} · {safeDate(managingCampaign.start_date)} - {safeDate(managingCampaign.end_date)}</p>
+            <p className="text-muted-foreground mt-1">{campaignTitle(managingCampaign)} · {safeDate(managingCampaign.start_date)} - {safeDate(managingCampaign.end_date)}</p>
           </div>
 
           <Card className="mb-6">
@@ -703,7 +703,7 @@ export default function Campaigns() {
                 <div className="space-y-2">
                   <Label>Platform</Label>
                   {trendyolPlatforms.length === 1 ? (
-                    <div className="flex items-center h-10 px-3 border border-gray-200 rounded-xl bg-gray-50 text-sm font-medium">{trendyolPlatforms[0]?.name}</div>
+                    <div className="flex items-center h-10 px-3 border border-border rounded-xl bg-secondary text-sm font-medium">{trendyolPlatforms[0]?.name}</div>
                   ) : (
                     <Select value={selectedPlatform} onValueChange={setSelectedPlatform}>
                       <SelectTrigger><SelectValue placeholder="Platform" /></SelectTrigger>
@@ -714,10 +714,10 @@ export default function Campaigns() {
                 <div className="space-y-2 md:col-span-2">
                   <Label>Kampanya Excel'i (Trendyol'dan "Ürün Ekle" ile indirdiğin dosya)</Label>
                   <input type="file" accept=".xlsx,.xls" onChange={handleFileUpload}
-                    className="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-gray-100 file:text-gray-900 hover:file:bg-gray-200" />
+                    className="block w-full text-sm text-muted-foreground file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-secondary file:text-foreground hover:file:bg-gray-200" />
                 </div>
               </div>
-              {uploadProgress.total > 0 && (<p className="text-sm text-gray-500">Yükleniyor: {uploadProgress.current}/{uploadProgress.total}</p>)}
+              {uploadProgress.total > 0 && (<p className="text-sm text-muted-foreground">Yükleniyor: {uploadProgress.current}/{uploadProgress.total}</p>)}
             </CardContent>
           </Card>
 
@@ -748,8 +748,8 @@ export default function Campaigns() {
               <Card>
                 <CardContent className="p-0 overflow-x-auto">
                   <table className="w-full text-sm">
-                    <thead className="bg-slate-50 border-b">
-                      <tr className="text-left text-slate-600">
+                    <thead className="bg-secondary border-b">
+                      <tr className="text-left text-muted-foreground">
                         <th className="p-3 w-10"></th>
                         <th className="p-3">Ürün</th>
                         <th className="p-3 text-right">Stok</th>
@@ -770,11 +770,11 @@ export default function Campaigns() {
                         const overMax = item.max_price > 0 && parseFloat(item.campaign_price) > item.max_price;
                         const isSelected = item.selected_type === 'campaign';
                         return (
-                          <tr key={item.id || realIndex} className={`border-b hover:bg-slate-50 ${isSelected ? 'bg-gray-100' : ''}`}>
+                          <tr key={item.id || realIndex} className={`border-b hover:bg-secondary ${isSelected ? 'bg-secondary' : ''}`}>
                             <td className="p-3"><input type="checkbox" checked={isSelected} onChange={() => handleSelect(realIndex)} className="h-4 w-4" /></td>
                             <td className="p-3">
-                              <div className="font-medium text-slate-800">{item.product_name || '-'}</div>
-                              <div className="text-xs text-slate-400">{item.barcode}{matched ? '' : ' · ⚠️ eşleşmedi'}</div>
+                              <div className="font-medium text-foreground">{item.product_name || '-'}</div>
+                              <div className="text-xs text-muted-foreground/70">{item.barcode}{matched ? '' : ' · ⚠️ eşleşmedi'}</div>
                             </td>
                             <td className="p-3 text-right">{item.current_stock}</td>
                             <td className="p-3 text-right">{Number(item.current_sale_price).toFixed(2)} ₺</td>
@@ -801,7 +801,7 @@ export default function Campaigns() {
           )}
 
           {uploadedData.length === 0 && (
-            <Card><CardContent className="p-12 text-center text-slate-500">Bu kampanya için Excel yükleyin.</CardContent></Card>
+            <Card><CardContent className="p-12 text-center text-muted-foreground">Bu kampanya için Excel yükleyin.</CardContent></Card>
           )}
         </div>
 
@@ -818,12 +818,12 @@ export default function Campaigns() {
 
   // ===================== RENDER: KAMPANYA LİSTESİ + FORM =====================
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-secondary">
       <div className="max-w-[1200px] mx-auto px-6 py-8">
         <div className="mb-8 flex items-center justify-between">
           <div>
             <h1 className="ph-title">Kampanyalar</h1>
-            <p className="text-slate-500 mt-1">Kampanya oluşturun ve yönetin</p>
+            <p className="text-muted-foreground mt-1">Kampanya oluşturun ve yönetin</p>
           </div>
           <Button onClick={() => (showForm ? (resetForm(), setShowForm(false)) : openNew())} className="bg-gray-900 hover:bg-gray-800">
             <Plus className="mr-2 h-4 w-4" />Yeni Kampanya
@@ -878,7 +878,7 @@ export default function Campaigns() {
                         </Select>
                       </div>
                     </div>
-                    <p className="text-xs text-slate-500 -mt-2">Sepet şartı yoksa (örn. düz %20 indirim) boş bırakın.</p>
+                    <p className="text-xs text-muted-foreground -mt-2">Sepet şartı yoksa (örn. düz %20 indirim) boş bırakın.</p>
                   </>
                 )}
 
@@ -905,9 +905,9 @@ export default function Campaigns() {
                     <div className="relative">
                       <Input type="number" placeholder="Opsiyonel — örn. 40" value={formData.trendyol_coverage_rate}
                         onChange={(e) => setFormData({ ...formData, trendyol_coverage_rate: e.target.value === '' ? '' : parseFloat(e.target.value) })} />
-                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 font-medium">%</span>
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground font-medium">%</span>
                     </div>
-                    <p className="text-xs text-slate-500">Boş bırakılırsa karşılama yok sayılır. Örn: %40 → indirimin %40'ını Trendyol karşılar, kalanı satıcı.</p>
+                    <p className="text-xs text-muted-foreground">Boş bırakılırsa karşılama yok sayılır. Örn: %40 → indirimin %40'ını Trendyol karşılar, kalanı satıcı.</p>
                   </div>
                 )}
 
@@ -926,17 +926,17 @@ export default function Campaigns() {
               <CardContent className="pt-6">
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1">
-                    <h3 className="text-lg font-semibold text-slate-900">{campaignTitle(campaign)}</h3>
+                    <h3 className="text-lg font-semibold text-foreground">{campaignTitle(campaign)}</h3>
                     <div className="flex gap-2 mt-2 flex-wrap">
-                      <Badge className="bg-gray-100 text-gray-700">{getTypeLabel(campaign.campaign_type)}</Badge>
+                      <Badge className="bg-secondary text-muted-foreground">{getTypeLabel(campaign.campaign_type)}</Badge>
                       {campaign.discount_type === 'percent'
                         ? <Badge variant="outline">%{campaign.discount_amount} indirim</Badge>
                         : <Badge variant="outline">{campaign.discount_amount} TL indirim</Badge>}
                       {campaign.cart_amount ? <Badge variant="outline">{campaign.cart_amount} TL {campaign.cart_condition === 'under' ? 'altı' : 'üzeri'}</Badge> : null}
                       {Number(campaign.trendyol_coverage_rate) > 0 ? <Badge className="bg-amber-100 text-amber-700">%{campaign.trendyol_coverage_rate} karşılama</Badge> : null}
-                      {campaign.is_active ? <Badge className="bg-green-100 text-green-700">Aktif</Badge> : <Badge className="bg-slate-200 text-slate-700">İnaktif</Badge>}
+                      {campaign.is_active ? <Badge className="bg-green-100 text-green-700">Aktif</Badge> : <Badge className="bg-slate-200 text-muted-foreground">İnaktif</Badge>}
                     </div>
-                    <p className="text-sm text-slate-500 mt-3">{safeDate(campaign.start_date)} - {safeDate(campaign.end_date)}</p>
+                    <p className="text-sm text-muted-foreground mt-3">{safeDate(campaign.start_date)} - {safeDate(campaign.end_date)}</p>
                   </div>
                   <div className="flex gap-2 shrink-0">
                     <Button size="sm" className="bg-gray-900 hover:bg-gray-800" onClick={() => openManager(campaign)}><Plus className="h-4 w-4 mr-1" />Ürün Ekle</Button>
@@ -950,7 +950,7 @@ export default function Campaigns() {
         </div>
 
         {campaigns.length === 0 && !showForm && (
-          <Card><CardContent className="p-12 text-center"><p className="text-slate-500">Henüz kampanya oluşturulmadı</p></CardContent></Card>
+          <Card><CardContent className="p-12 text-center"><p className="text-muted-foreground">Henüz kampanya oluşturulmadı</p></CardContent></Card>
         )}
       </div>
     </div>

@@ -11,12 +11,12 @@ export default function SearchInput({
 }) {
   return (
     <div className={`relative ${className}`}>
-      <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+      <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/70" />
       <Input
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className="pl-11 pr-10 h-11 bg-white border-gray-200 rounded-xl focus:border-gray-300 focus:ring-1 focus:ring-gray-200 shadow-sm hover:border-gray-300 transition-all"
+        className="pl-11 pr-10 h-11 bg-card border-border rounded-xl focus:border-input focus:ring-1 focus:ring-ring/20 shadow-sm hover:border-input transition-all"
       />
       {value && (
         <Button
@@ -25,7 +25,7 @@ export default function SearchInput({
           className="absolute right-2 top-1/2 -translate-y-1/2 h-7 w-7 rounded-lg"
           onClick={() => onChange('')}
         >
-          <X className="h-4 w-4 text-gray-400" />
+          <X className="h-4 w-4 text-muted-foreground/70" />
         </Button>
       )}
     </div>

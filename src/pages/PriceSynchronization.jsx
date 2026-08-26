@@ -265,11 +265,11 @@ export default function PriceSynchronization() {
 
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
+    <div className="min-h-screen bg-secondary p-6">
       <div className="max-w-7xl mx-auto">
         <div className="mb-8">
           <h1 className="ph-title">Fiyat Senkronizasyonu</h1>
-          <p className="text-gray-600">Ana ürün fiyatlarını pazaryeri ürünlerine senkronize edin</p>
+          <p className="text-muted-foreground">Ana ürün fiyatlarını pazaryeri ürünlerine senkronize edin</p>
         </div>
 
         {/* Kontrol Paneli */}
@@ -360,9 +360,9 @@ export default function PriceSynchronization() {
           <>
             <div className="rounded-[18px] border border-border bg-card p-4 mb-4 flex items-center justify-between">
               <div className="flex items-center gap-4">
-                <span className="text-sm font-semibold text-gray-900">Toplam: {synchronizedProducts.length} ürün</span>
+                <span className="text-sm font-semibold text-foreground">Toplam: {synchronizedProducts.length} ürün</span>
                 {selectedRows.size > 0 && (
-                  <span className="text-sm text-gray-600">{selectedRows.size} seçildi</span>
+                  <span className="text-sm text-muted-foreground">{selectedRows.size} seçildi</span>
                 )}
               </div>
               <div className="flex items-center gap-2">
@@ -399,7 +399,7 @@ export default function PriceSynchronization() {
 
             <div className="rounded-[18px] border border-border bg-card overflow-hidden">
               <Table>
-                <TableHeader className="bg-gray-50">
+                <TableHeader className="bg-secondary">
                   <TableRow>
                     <TableHead className="w-12">
                       <Checkbox
@@ -420,7 +420,7 @@ export default function PriceSynchronization() {
                 </TableHeader>
                 <TableBody>
                   {synchronizedProducts.map((row) => (
-                    <TableRow key={row.id} className={selectedRows.has(row.id) ? 'bg-gray-100' : ''}>
+                    <TableRow key={row.id} className={selectedRows.has(row.id) ? 'bg-secondary' : ''}>
                       <TableCell>
                         <Checkbox
                           checked={selectedRows.has(row.id)}
@@ -436,10 +436,10 @@ export default function PriceSynchronization() {
                       <TableCell className="text-sm font-medium">₺{row.marketplace_sale_price?.toFixed(2)}</TableCell>
                       <TableCell className="text-sm">
                         <div>
-                          <span className={`font-medium ${row.price_change_percent > 0 ? 'text-green-600' : row.price_change_percent < 0 ? 'text-red-600' : 'text-gray-600'}`}>
+                          <span className={`font-medium ${row.price_change_percent > 0 ? 'text-green-600' : row.price_change_percent < 0 ? 'text-red-600' : 'text-muted-foreground'}`}>
                             {row.price_change_percent > 0 ? '+' : ''}{row.price_change_percent?.toFixed(2)}%
                           </span>
-                          <div className="text-xs text-gray-500">
+                          <div className="text-xs text-muted-foreground">
                             ({row.price_diff > 0 ? '+' : ''}₺{row.price_diff?.toFixed(2)})
                           </div>
                         </div>
@@ -457,7 +457,7 @@ export default function PriceSynchronization() {
             </>
             ) : (
             <div className="rounded-[18px] border border-border bg-card p-12 text-center">
-            <p className="text-gray-500">Henüz eşleştirilmiş ürün yok</p>
+            <p className="text-muted-foreground">Henüz eşleştirilmiş ürün yok</p>
             </div>
             )}
 

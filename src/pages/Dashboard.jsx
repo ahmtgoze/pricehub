@@ -215,9 +215,9 @@ if (filteredByRange) {
     return '#1d1d1f';
   };
 
-  const platformColors = { trendyol: 'border-orange-200 bg-orange-50', hepsiburada: 'border-purple-200 bg-purple-50', website: 'border-gray-200 bg-gray-50' };
-  const platformTextColors = { trendyol: 'text-orange-700', hepsiburada: 'text-purple-700', website: 'text-gray-900' };
-  const platformBadgeColors = { trendyol: 'bg-orange-100 text-orange-800', hepsiburada: 'bg-purple-100 text-purple-800', website: 'bg-gray-100 text-gray-500' };
+  const platformColors = { trendyol: 'border-orange-200 bg-orange-50', hepsiburada: 'border-purple-200 bg-purple-50', website: 'border-border bg-secondary' };
+  const platformTextColors = { trendyol: 'text-orange-700', hepsiburada: 'text-purple-700', website: 'text-foreground' };
+  const platformBadgeColors = { trendyol: 'bg-orange-100 text-orange-800', hepsiburada: 'bg-purple-100 text-purple-800', website: 'bg-secondary text-muted-foreground' };
 
   return (
     <div className="ph-page mx-auto">

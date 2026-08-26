@@ -850,7 +850,7 @@ export default function TrendyolPriceRange() {
   const uniqueBrands = [...new Set(uploadedData.map(item => item.brand).filter(Boolean))];
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-secondary">
       <div className="ph-page mx-auto">
         <div className="mb-8">
           <h1 className="ph-title">Ürün Komisyon Tarifesi</h1>
@@ -879,7 +879,7 @@ export default function TrendyolPriceRange() {
               <div className="space-y-2">
                 <Label>Platform *</Label>
                 {trendyolPlatforms.length === 1 ? (
-                  <div className="flex items-center h-10 px-3 border border-gray-200 rounded-xl bg-gray-50 text-sm font-medium">{trendyolPlatforms[0].name}</div>
+                  <div className="flex items-center h-10 px-3 border border-border rounded-xl bg-secondary text-sm font-medium">{trendyolPlatforms[0].name}</div>
                 ) : (
                   <Select value={selectedPlatform} onValueChange={setSelectedPlatform}>
                     <SelectTrigger><SelectValue placeholder="Platform seçin" /></SelectTrigger>
@@ -1028,7 +1028,7 @@ export default function TrendyolPriceRange() {
               <CardContent>
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
-                    <thead className="bg-gray-50 border-b">
+                    <thead className="bg-secondary border-b">
                       <tr>
                         <th className="p-3 text-left font-semibold min-w-[180px]">Ürün</th>
                         <th className="p-3 text-center font-semibold">Stok</th>
@@ -1047,28 +1047,28 @@ export default function TrendyolPriceRange() {
                         const systemPrice = getSystemPrice(item);
                         const matchedProduct = getMatchedProduct(item);
                         return (
-                          <tr key={index} className="border-b hover:bg-gray-50">
+                          <tr key={index} className="border-b hover:bg-secondary">
                             <td className="p-3">
-                              <div className="font-medium text-gray-900">{item.product_name}</div>
-                              <div className="text-xs text-gray-500">{item.model_code}</div>
+                              <div className="font-medium text-foreground">{item.product_name}</div>
+                              <div className="text-xs text-muted-foreground">{item.model_code}</div>
                             </td>
                             <td className="p-3 text-center">{item.stock}</td>
                             <td className="p-3">
                               {matchedProduct ? (
-                                <div className="text-center text-xs"><div className="font-medium text-gray-700">{matchedProduct.category_name}</div></div>
-                              ) : <div className="text-center text-gray-400 text-xs">-</div>}
+                                <div className="text-center text-xs"><div className="font-medium text-muted-foreground">{matchedProduct.category_name}</div></div>
+                              ) : <div className="text-center text-muted-foreground/70 text-xs">-</div>}
                             </td>
                             <td className="p-3">
                               {systemPrice ? (
                                 <div className="text-center">
-                                  <div className="font-semibold text-gray-900">₺{systemPrice.sale_price?.toFixed(2)}</div>
-                                  {matchedProduct && <div className="text-xs text-gray-500 mb-1">{matchedProduct.desi} desi • {systemPrice.barem_used === 'barem1' ? 'Barem 1' : systemPrice.barem_used === 'barem2' ? 'Barem 2' : 'Desi'}</div>}
-                                  <div className="text-xs text-gray-500 mb-1">Kom: %{systemPrice.commission_rate || 0}</div>
+                                  <div className="font-semibold text-foreground">₺{systemPrice.sale_price?.toFixed(2)}</div>
+                                  {matchedProduct && <div className="text-xs text-muted-foreground mb-1">{matchedProduct.desi} desi • {systemPrice.barem_used === 'barem1' ? 'Barem 1' : systemPrice.barem_used === 'barem2' ? 'Barem 2' : 'Desi'}</div>}
+                                  <div className="text-xs text-muted-foreground mb-1">Kom: %{systemPrice.commission_rate || 0}</div>
                                   <div className={`text-xs font-medium ${(systemPrice.profit_rate || 0) > 0 ? 'text-green-600' : 'text-red-600'}`}>
                                     ₺{(systemPrice.net_profit || 0).toFixed(2)} (%{(systemPrice.profit_rate || 0).toFixed(1)})
                                   </div>
                                 </div>
-                              ) : <div className="text-center text-gray-400 text-xs">-</div>}
+                              ) : <div className="text-center text-muted-foreground/70 text-xs">-</div>}
                             </td>
 
                             {[1, 2, 3, 4].map(rangeNum => {
@@ -1093,12 +1093,12 @@ export default function TrendyolPriceRange() {
                               return (
                                 <td key={rangeNum} className="p-3">
                                   {priceToUse > 0 ? (
-                                    <div className={`border rounded-lg p-2 ${isSelected ? 'border-gray-900 bg-gray-50' : 'border-gray-200'}`}>
-                                      <div className="text-xs font-semibold text-gray-700 mb-1">{headerLabel}</div>
-                                      <div className="text-xs text-gray-500">
+                                    <div className={`border rounded-lg p-2 ${isSelected ? 'border-gray-900 bg-secondary' : 'border-border'}`}>
+                                      <div className="text-xs font-semibold text-muted-foreground mb-1">{headerLabel}</div>
+                                      <div className="text-xs text-muted-foreground">
                                         Fiyat: ₺{rangeNum === 1 && systemPrice ? systemPrice.sale_price?.toFixed(2) : priceToUse.toFixed(2)}
                                       </div>
-                                      <div className="text-xs text-gray-500">Kom: %{commission}</div>
+                                      <div className="text-xs text-muted-foreground">Kom: %{commission}</div>
                                       <div className="flex items-center justify-between mt-1">
                                         <div className={`text-xs font-semibold ${isProfitable ? 'text-green-600' : 'text-red-600'}`}>
                                           {isProfitable ? '+' : ''}₺{profit.toFixed(2)} (%{profitRate.toFixed(1)})
@@ -1111,7 +1111,7 @@ export default function TrendyolPriceRange() {
                                         {isSelected ? 'Seçili' : 'Seç'}
                                       </Button>
                                     </div>
-                                  ) : <div className="text-center text-gray-400 text-xs">-</div>}
+                                  ) : <div className="text-center text-muted-foreground/70 text-xs">-</div>}
                                 </td>
                               );
                             })}
@@ -1119,7 +1119,7 @@ export default function TrendyolPriceRange() {
                             <td className="p-3">
                               {(() => {
                                 const selectedPrice = item.selected_price || 0;
-                                if (selectedPrice === 0 || item.selected_range === 'none') return <div className="text-center text-gray-400 text-xs">-</div>;
+                                if (selectedPrice === 0 || item.selected_range === 'none') return <div className="text-center text-muted-foreground/70 text-xs">-</div>;
 
                                 // Excel'de "KOMİSYON TARİFESİ" = "Var" ise, seçilen aralığın Excel komisyonunu kullan
                                 // Yoksa sistem fiyatından gelen komisyonu kullan
@@ -1139,7 +1139,7 @@ export default function TrendyolPriceRange() {
                                 const currentProfitRate = currentCalc.profitRate;
                                 const currentBaremUsed = currentCalc.baremUsed;
 
-                                if (currentBaremUsed === 'barem1' || currentBaremUsed === 'barem2') return <div className="text-center text-gray-400 text-xs">-</div>;
+                                if (currentBaremUsed === 'barem1' || currentBaremUsed === 'barem2') return <div className="text-center text-muted-foreground/70 text-xs">-</div>;
 
                                 let bestBaremSuggestion = null;
                                 if (selectedPrice > 299.99) {
@@ -1157,14 +1157,14 @@ export default function TrendyolPriceRange() {
                                   }
                                 }
 
-                                if (!bestBaremSuggestion) return <div className="text-center text-gray-400 text-xs">-</div>;
+                                if (!bestBaremSuggestion) return <div className="text-center text-muted-foreground/70 text-xs">-</div>;
                                 const profitIncrease = bestBaremSuggestion.profitRate - currentProfitRate;
 
                                 return (
                                   <div className="border rounded-lg p-2 border-amber-300 bg-amber-50">
                                     <div className="text-xs font-semibold text-amber-800 mb-1">{bestBaremSuggestion.baremType} Önerisi</div>
-                                    <div className="text-xs text-gray-600">Fiyat: ₺{bestBaremSuggestion.price.toFixed(2)}</div>
-                                    <div className="text-xs text-gray-600">Kom: %{bestBaremSuggestion.commission}</div>
+                                    <div className="text-xs text-muted-foreground">Fiyat: ₺{bestBaremSuggestion.price.toFixed(2)}</div>
+                                    <div className="text-xs text-muted-foreground">Kom: %{bestBaremSuggestion.commission}</div>
                                     <div className="flex items-center justify-between mt-1">
                                       <div className="text-xs font-semibold text-green-600">+₺{bestBaremSuggestion.profit.toFixed(2)} (%{bestBaremSuggestion.profitRate.toFixed(1)})</div>
                                       <Button size="sm" variant="ghost" className="h-5 w-5 p-0" onClick={() => openDetailModal(bestBaremSuggestion.price, bestBaremSuggestion.commission, item, bestBaremSuggestion.baremType === 'Barem 1' ? 'barem1' : 'barem2')}>
@@ -1181,8 +1181,8 @@ export default function TrendyolPriceRange() {
                             </td>
 
                             <td className="p-3">
-                              <div className={`border rounded-lg p-2 ${item.selected_range === 'manual' ? 'border-gray-900 bg-gray-50' : 'border-gray-200'}`}>
-                                <div className="text-xs font-semibold text-gray-700 mb-2">Manuel Fiyat</div>
+                              <div className={`border rounded-lg p-2 ${item.selected_range === 'manual' ? 'border-gray-900 bg-secondary' : 'border-border'}`}>
+                                <div className="text-xs font-semibold text-muted-foreground mb-2">Manuel Fiyat</div>
                                 <Input type="number" step="0.01" value={item.manual_price || ''} onChange={(e) => handleManualPriceChange(uploadedData.indexOf(item), e.target.value)} placeholder="Fiyat girin" className="h-8 text-xs mb-2" />
                                 {item.manual_price > 0 && (
                                   <>
@@ -1220,9 +1220,9 @@ export default function TrendyolPriceRange() {
         {uploadedData.length === 0 && (
           <Card>
             <CardContent className="p-12 text-center">
-              <Upload className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-              <p className="text-gray-500 mb-2">Henüz dosya yüklenmedi</p>
-              <p className="text-sm text-gray-400">Platform seçip tarih aralığı belirledikten sonra Excel dosyasını yükleyin</p>
+              <Upload className="h-16 w-16 text-muted-foreground/50 mx-auto mb-4" />
+              <p className="text-muted-foreground mb-2">Henüz dosya yüklenmedi</p>
+              <p className="text-sm text-muted-foreground/70">Platform seçip tarih aralığı belirledikten sonra Excel dosyasını yükleyin</p>
             </CardContent>
           </Card>
         )}

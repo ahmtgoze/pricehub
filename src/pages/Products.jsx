@@ -706,7 +706,7 @@ export default function Products() {
           type="checkbox"
           checked={allCurrentPageSelected}
           onChange={toggleSelectAll}
-          className="rounded border-gray-300"
+          className="rounded border-input"
         />
       ),
       cell: (row) => (
@@ -714,22 +714,22 @@ export default function Products() {
           type="checkbox"
           checked={selectedIds.includes(row.id)}
           onChange={() => toggleSelect(row.id)}
-          className="rounded border-gray-300"
+          className="rounded border-input"
         />
       )
     },
     {
       header: 'SKU',
       accessor: 'sku',
-      cell: (row) => <span className="font-mono text-sm text-gray-600">{row.sku || '-'}</span>
+      cell: (row) => <span className="font-mono text-sm text-muted-foreground">{row.sku || '-'}</span>
     },
     {
       header: 'Ürün Adı',
       accessor: 'name',
       cell: (row) => (
         <div>
-          <p className="font-medium text-gray-900">{row.name}</p>
-          <p className="text-xs text-gray-500">{row.category_name}</p>
+          <p className="font-medium text-foreground">{row.name}</p>
+          <p className="text-xs text-muted-foreground">{row.category_name}</p>
         </div>
       )
     },
@@ -741,12 +741,12 @@ export default function Products() {
     {
       header: 'Baskı Maliyeti',
       accessor: 'printing_cost',
-      cell: (row) => row.printing_cost ? <span className="font-semibold">₺{row.printing_cost?.toFixed(2)}</span> : <span className="text-gray-400">-</span>
+      cell: (row) => row.printing_cost ? <span className="font-semibold">₺{row.printing_cost?.toFixed(2)}</span> : <span className="text-muted-foreground/70">-</span>
     },
     {
       header: 'Ek Maliyet',
       accessor: 'extra_cost',
-      cell: (row) => row.extra_cost ? <span className="font-semibold">₺{row.extra_cost?.toFixed(2)}</span> : <span className="text-gray-400">-</span>
+      cell: (row) => row.extra_cost ? <span className="font-semibold">₺{row.extra_cost?.toFixed(2)}</span> : <span className="text-muted-foreground/70">-</span>
     },
     {
       header: 'Desi',
@@ -757,7 +757,7 @@ export default function Products() {
             return (
               <div className="flex gap-1 flex-wrap">
                 {packages.map((pkg, idx) => (
-                  <span key={idx} className="text-xs px-2 py-1 bg-gray-100 text-gray-700 rounded">{pkg.desi}</span>
+                  <span key={idx} className="text-xs px-2 py-1 bg-secondary text-muted-foreground rounded">{pkg.desi}</span>
                 ))}
               </div>
             );
@@ -819,7 +819,7 @@ export default function Products() {
             </Select>
             {selectedPackage && (
               <div className="flex items-center gap-1">
-                <p className="text-xs text-gray-500">{cost.toFixed(2)} TL</p>
+                <p className="text-xs text-muted-foreground">{cost.toFixed(2)} TL</p>
                 {autoPackageId === selectedPackageId && !row.package_id && (
                   <Badge variant="secondary" className="text-xs">Otomatik</Badge>
                 )}
@@ -913,7 +913,7 @@ export default function Products() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-secondary">
       <div className="max-w-[1400px] mx-auto px-3 sm:px-6 py-5 sm:py-8">
         {deletedCategory && (
           <Alert variant="destructive" className="mb-6">
@@ -1022,19 +1022,19 @@ export default function Products() {
         </div>
 
         {selectedIds.length > 0 && (
-          <div className="flex flex-wrap items-center justify-between gap-3 bg-gray-100 border border-gray-200 rounded-xl px-4 py-3 mb-4">
-            <span className="text-sm text-gray-900 font-medium">
+          <div className="flex flex-wrap items-center justify-between gap-3 bg-secondary border border-border rounded-xl px-4 py-3 mb-4">
+            <span className="text-sm text-foreground font-medium">
               {selectedIds.length} ürün seçili
               {allCurrentPageSelected && !allFilteredSelected && filteredProducts.length > selectedIds.length && (
                 <button
                   onClick={selectAllFiltered}
-                  className="ml-2 underline text-gray-700 hover:text-gray-900"
+                  className="ml-2 underline text-muted-foreground hover:text-foreground"
                 >
                   Filtredeki tüm {filteredProducts.length} ürünü seç
                 </button>
               )}
               {allFilteredSelected && filteredProducts.length > pageSize && (
-                <span className="ml-2 text-gray-600">(filtredeki tüm ürünler seçili)</span>
+                <span className="ml-2 text-muted-foreground">(filtredeki tüm ürünler seçili)</span>
               )}
             </span>
             <div className="flex gap-2">
@@ -1105,19 +1105,19 @@ export default function Products() {
             </DialogHeader>
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-500">İlerleme</span>
-                <span className="text-sm font-bold text-gray-900">{importProgress.current} / {importProgress.total}</span>
+                <span className="text-sm text-muted-foreground">İlerleme</span>
+                <span className="text-sm font-bold text-foreground">{importProgress.current} / {importProgress.total}</span>
               </div>
               <div className="w-full bg-gray-200 rounded-full h-4 overflow-hidden">
                 <div className="bg-gray-900 h-4 rounded-full transition-all duration-300" style={{ width: `${(importProgress.current / (importProgress.total || 1)) * 100}%` }} />
               </div>
               <div className="text-center">
-                <p className="text-3xl font-bold text-gray-900">%{Math.round((importProgress.current / (importProgress.total || 1)) * 100)}</p>
+                <p className="text-3xl font-bold text-foreground">%{Math.round((importProgress.current / (importProgress.total || 1)) * 100)}</p>
               </div>
               {importProgress.estimatedSecondsLeft !== null && importProgress.estimatedSecondsLeft > 0 && (
-                <div className="bg-gray-100 rounded-lg px-4 py-2 text-center">
-                  <p className="text-xs text-gray-500">Tahmini kalan süre</p>
-                  <p className="text-lg font-bold text-gray-700">
+                <div className="bg-secondary rounded-lg px-4 py-2 text-center">
+                  <p className="text-xs text-muted-foreground">Tahmini kalan süre</p>
+                  <p className="text-lg font-bold text-muted-foreground">
                     {importProgress.estimatedSecondsLeft >= 60
                       ? `${Math.floor(importProgress.estimatedSecondsLeft / 60)} dk ${importProgress.estimatedSecondsLeft % 60} sn`
                       : `${importProgress.estimatedSecondsLeft} saniye`}

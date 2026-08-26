@@ -32,9 +32,9 @@ const PLATFORM_DEFAULTS = [
     name: 'Web Sitesi',
     code: 'website',
     color: 'bg-gray-200',
-    bgColor: 'bg-gray-100',
-    borderColor: 'border-gray-200',
-    badgeColor: 'bg-gray-100 text-gray-900',
+    bgColor: 'bg-secondary',
+    borderColor: 'border-border',
+    badgeColor: 'bg-secondary text-foreground',
   }
 ];
 
@@ -196,18 +196,18 @@ export default function Platforms() {
 
   if (isLoading || !userEmail) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="w-8 h-8 border-4 border-gray-200 border-t-gray-900 rounded-full animate-spin" />
+      <div className="min-h-screen bg-secondary flex items-center justify-center">
+        <div className="w-8 h-8 border-4 border-border border-t-gray-900 rounded-full animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-secondary">
       <div className="max-w-[1400px] mx-auto px-6 py-8">
         <div className="mb-10">
           <h1 className="ph-title">Platformlar</h1>
-          <p className="text-slate-500 mt-1">Satış kanallarını aktif veya pasif yapın, kargo firması seçin</p>
+          <p className="text-muted-foreground mt-1">Satış kanallarını aktif veya pasif yapın, kargo firması seçin</p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -220,8 +220,8 @@ export default function Platforms() {
             return (
               <div
                 key={def.platform_type}
-                className={`relative bg-white rounded-2xl border shadow-sm overflow-hidden transition-all duration-200 ${
-                  isActive ? 'border-slate-200 shadow-md' : 'border-slate-100 opacity-70'
+                className={`relative bg-card rounded-2xl border shadow-sm overflow-hidden transition-all duration-200 ${
+                  isActive ? 'border-border shadow-md' : 'border-border opacity-70'
                 }`}
               >
                 <div className={`h-1.5 w-full bg-gradient-to-r ${def.color}`} />
@@ -229,10 +229,10 @@ export default function Platforms() {
                   <div className="flex items-start justify-between mb-5">
                     <div className="flex items-center gap-3">
                       <div className={`w-12 h-12 rounded-xl ${def.bgColor} flex items-center justify-center`}>
-                        <Store className={`h-6 w-6 ${def.platform_type === 'trendyol' ? 'text-orange-600' : def.platform_type === 'hepsiburada' ? 'text-purple-600' : 'text-gray-900'}`} />
+                        <Store className={`h-6 w-6 ${def.platform_type === 'trendyol' ? 'text-orange-600' : def.platform_type === 'hepsiburada' ? 'text-purple-600' : 'text-foreground'}`} />
                       </div>
                       <div>
-                        <h3 className="text-lg font-bold text-slate-900">{def.name}</h3>
+                        <h3 className="text-lg font-bold text-foreground">{def.name}</h3>
                         <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${def.badgeColor}`}>
                           {def.platform_type === 'website' ? 'E-Ticaret' : 'Pazaryeri'}
                         </span>
@@ -246,26 +246,26 @@ export default function Platforms() {
                         }}
                         disabled={!record || !userEmail}
                       />
-                      <span className="text-xs text-slate-400">{isActive ? 'Aktif' : 'Pasif'}</span>
+                      <span className="text-xs text-muted-foreground/70">{isActive ? 'Aktif' : 'Pasif'}</span>
                     </div>
                   </div>
 
                   <div className="space-y-3 mb-5">
                     <div className="flex items-center gap-2 text-sm">
-                      <Truck className="h-4 w-4 text-slate-400 flex-shrink-0" />
+                      <Truck className="h-4 w-4 text-muted-foreground/70 flex-shrink-0" />
                       {hasShipping ? (
-                        <span className="text-slate-700 font-medium">{record.shipping_company_name}</span>
+                        <span className="text-muted-foreground font-medium">{record.shipping_company_name}</span>
                       ) : (
-                        <span className="text-slate-400 italic">Kargo firması seçilmedi</span>
+                        <span className="text-muted-foreground/70 italic">Kargo firması seçilmedi</span>
                       )}
                     </div>
 
                     {def.platform_type !== 'website' && (
                       <div className="flex items-center gap-2 text-sm">
                         {record?.use_barem && !record?.use_custom_shipping_price ? (
-                          <><Check className="h-4 w-4 text-green-500 flex-shrink-0" /><span className="text-slate-600">Barem aktif</span></>
+                          <><Check className="h-4 w-4 text-green-500 flex-shrink-0" /><span className="text-muted-foreground">Barem aktif</span></>
                         ) : (
-                          <><X className="h-4 w-4 text-slate-300 flex-shrink-0" /><span className="text-slate-400">Barem aktif değil</span></>
+                          <><X className="h-4 w-4 text-muted-foreground/50 flex-shrink-0" /><span className="text-muted-foreground/70">Barem aktif değil</span></>
                         )}
                       </div>
                     )}
@@ -273,16 +273,16 @@ export default function Platforms() {
                     {def.platform_type !== 'website' && (
                       <div className="flex items-center gap-2 text-sm">
                         {record?.has_same_day_delivery ? (
-                          <><Check className="h-4 w-4 text-green-500 flex-shrink-0" /><span className="text-slate-600">Bugün Kargoda aktif</span></>
+                          <><Check className="h-4 w-4 text-green-500 flex-shrink-0" /><span className="text-muted-foreground">Bugün Kargoda aktif</span></>
                         ) : (
-                          <><X className="h-4 w-4 text-slate-300 flex-shrink-0" /><span className="text-slate-400">Bugün Kargoda kapalı</span></>
+                          <><X className="h-4 w-4 text-muted-foreground/50 flex-shrink-0" /><span className="text-muted-foreground/70">Bugün Kargoda kapalı</span></>
                         )}
                       </div>
                     )}
                   </div>
 
                   {!canEdit && (
-                    <div className="bg-slate-50 border border-slate-100 rounded-xl px-3 py-2 mb-4 text-xs text-slate-500 flex items-center gap-2">
+                    <div className="bg-secondary border border-border rounded-xl px-3 py-2 mb-4 text-xs text-muted-foreground flex items-center gap-2">
                       <Settings2 className="h-3.5 w-3.5 flex-shrink-0" />
                       <span>Barem ücretleri, stopaj oranı ve hizmet bedelleri sistem yöneticisi tarafından belirlenir.</span>
                     </div>
@@ -295,7 +295,7 @@ export default function Platforms() {
                       className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all ${
                         canEdit
                           ? 'bg-gray-900 hover:bg-gray-800 text-white shadow-sm'
-                          : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                          : 'bg-secondary hover:bg-slate-200 text-muted-foreground'
                       }`}
                     >
                       <Settings2 className="h-4 w-4" />

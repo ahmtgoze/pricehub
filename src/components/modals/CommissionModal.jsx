@@ -131,7 +131,7 @@ export default function CommissionModal({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg flex flex-col p-0 gap-0" style={{maxHeight: '90dvh'}}>
-        <DialogHeader className="px-6 pt-6 pb-4 border-b border-slate-100 flex-shrink-0">
+        <DialogHeader className="px-6 pt-6 pb-4 border-b border-border flex-shrink-0">
           <DialogTitle className="text-xl font-semibold">
             {commission ? 'Komisyon & Kâr Düzenle' : 'Yeni Komisyon & Kâr Ekle'}
           </DialogTitle>
@@ -176,23 +176,23 @@ export default function CommissionModal({
               </div>
             </div>
 
-            <div className="space-y-3 border border-slate-200 rounded-xl p-4 bg-slate-50/50">
-              <p className="text-sm font-semibold text-slate-700">Normal Kâr Hedefleri</p>
+            <div className="space-y-3 border border-border rounded-xl p-4 bg-secondary/50">
+              <p className="text-sm font-semibold text-muted-foreground">Normal Kâr Hedefleri</p>
               <div className="space-y-2">
                 <Label>Minimum Kâr Tutarı (₺)</Label>
                 <Input type="number" step="0.01" min="0" value={formData.minimum_profit_amount} onChange={(e) => setFormData({ ...formData, minimum_profit_amount: e.target.value })} placeholder="0" />
-                <p className="text-xs text-slate-500">Satış fiyatı hesaplanırken dikkate alınır</p>
+                <p className="text-xs text-muted-foreground">Satış fiyatı hesaplanırken dikkate alınır</p>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Hedef Kâr Oranı (%)</Label>
                   <Input type="number" step="0.01" min="0" value={formData.target_profit_rate} onChange={(e) => setFormData({ ...formData, target_profit_rate: e.target.value })} placeholder="30" />
-                  <p className="text-xs text-slate-500">Net Kâr / Maliyet × 100</p>
+                  <p className="text-xs text-muted-foreground">Net Kâr / Maliyet × 100</p>
                 </div>
                 <div className="space-y-2">
                   <Label>Hedef Kâr Tutarı (₺)</Label>
                   <Input type="number" step="0.01" min="0" value={formData.target_profit_amount} onChange={(e) => setFormData({ ...formData, target_profit_amount: e.target.value })} placeholder="50" />
-                  <p className="text-xs text-slate-500">Sabit kâr tutarı</p>
+                  <p className="text-xs text-muted-foreground">Sabit kâr tutarı</p>
                 </div>
               </div>
               <p className="text-xs text-amber-600 bg-amber-50 p-2 rounded border border-amber-100">
@@ -224,10 +224,10 @@ export default function CommissionModal({
             </div>
 
             {isWebsite && (
-              <div className="space-y-2 border border-gray-200 bg-gray-50 rounded-lg p-3">
+              <div className="space-y-2 border border-border bg-secondary rounded-lg p-3">
                 <Label>İşlem Bedeli (₺, KDV dahil)</Label>
                 <Input type="number" step="0.01" min="0" value={formData.transaction_fee} onChange={(e) => setFormData({ ...formData, transaction_fee: e.target.value })} placeholder="0.00" />
-                <p className="text-xs text-gray-500">Sadece Web Sitesi platformuna özel ek işlem ücreti</p>
+                <p className="text-xs text-muted-foreground">Sadece Web Sitesi platformuna özel ek işlem ücreti</p>
               </div>
             )}
 
@@ -238,7 +238,7 @@ export default function CommissionModal({
 
           </div>
 
-          <div className="flex justify-end gap-3 px-6 py-4 border-t border-slate-100 flex-shrink-0">
+          <div className="flex justify-end gap-3 px-6 py-4 border-t border-border flex-shrink-0">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>İptal</Button>
             <Button type="submit" disabled={isSaving} className="bg-gray-900 hover:bg-gray-800">
               {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}

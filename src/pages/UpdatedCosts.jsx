@@ -203,7 +203,7 @@ export default function UpdatedCosts() {
   const isHB = activePlatforms.find(p => p.name === selectedPlatform)?.platform_type === 'hepsiburada';
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-secondary">
       <div className="max-w-[1400px] mx-auto px-3 sm:px-6 py-5 sm:py-8">
 
         {/* Başlık */}
@@ -216,7 +216,7 @@ export default function UpdatedCosts() {
         <div className="rounded-[18px] border border-border bg-card p-5 mb-6">
           <div className="flex flex-wrap gap-3 items-end">
             <div>
-              <p className="text-xs font-medium text-gray-500 mb-1.5">Platform</p>
+              <p className="text-xs font-medium text-muted-foreground mb-1.5">Platform</p>
               <Select value={selectedPlatform} onValueChange={setSelectedPlatform}>
                 <SelectTrigger className="w-56">
                   <SelectValue placeholder="Platform seçin" />
@@ -230,9 +230,9 @@ export default function UpdatedCosts() {
             </div>
 
             <div className="flex-1 min-w-[200px] max-w-xs">
-              <p className="text-xs font-medium text-gray-500 mb-1.5">Arama</p>
+              <p className="text-xs font-medium text-muted-foreground mb-1.5">Arama</p>
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/70" />
                 <Input
                   placeholder="Ürün, barkod veya SKU..."
                   value={searchQuery}
@@ -243,7 +243,7 @@ export default function UpdatedCosts() {
             </div>
 
             <div>
-              <p className="text-xs font-medium text-gray-500 mb-1.5">Sırala</p>
+              <p className="text-xs font-medium text-muted-foreground mb-1.5">Sırala</p>
               <Select value={sortBy} onValueChange={setSortBy}>
                 <SelectTrigger className="w-48">
                   <SelectValue />
@@ -287,11 +287,11 @@ export default function UpdatedCosts() {
         {/* Özet satırı */}
         {updatedCosts.length > 0 && (
           <div className="flex items-center gap-3 mb-3 px-1">
-            <span className="text-sm text-gray-500">
-              Toplam <span className="font-semibold text-gray-900">{updatedCosts.length}</span> ürün
+            <span className="text-sm text-muted-foreground">
+              Toplam <span className="font-semibold text-foreground">{updatedCosts.length}</span> ürün
             </span>
             {selectedRows.size > 0 && (
-              <span className="text-sm text-gray-900 font-medium">· {selectedRows.size} seçili</span>
+              <span className="text-sm text-foreground font-medium">· {selectedRows.size} seçili</span>
             )}
           </div>
         )}
@@ -300,7 +300,7 @@ export default function UpdatedCosts() {
         {updatedCosts.length > 0 ? (
           <div className="rounded-[18px] border border-border bg-card overflow-x-auto">
             <Table>
-              <TableHeader className="bg-gray-50">
+              <TableHeader className="bg-secondary">
                 <TableRow>
                   <TableHead className="w-12">
                     <Checkbox
@@ -335,7 +335,7 @@ export default function UpdatedCosts() {
               </TableHeader>
               <TableBody>
                 {updatedCosts.map((row) => (
-                  <TableRow key={row.id} className={selectedRows.has(row.id) ? 'bg-gray-100' : ''}>
+                  <TableRow key={row.id} className={selectedRows.has(row.id) ? 'bg-secondary' : ''}>
                     <TableCell>
                       <Checkbox
                         checked={selectedRows.has(row.id)}
@@ -372,8 +372,8 @@ export default function UpdatedCosts() {
           </div>
         ) : (
           <div className="rounded-[18px] border border-border bg-card p-16 text-center">
-            <PackageOpen className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-            <p className="text-gray-500 font-medium">
+            <PackageOpen className="h-12 w-12 text-muted-foreground/50 mx-auto mb-3" />
+            <p className="text-muted-foreground font-medium">
               {selectedPlatform ? 'Bu platform için gösterilecek ürün yok' : 'Başlamak için bir platform seçin'}
             </p>
           </div>

@@ -222,8 +222,8 @@ export default function ShippingRates() {
 
   const getRateTypeBadge = (type) => {
     switch (type) {
-      case 'barem1': return <Badge className="bg-gray-100 text-gray-700">Barem 1</Badge>;
-      case 'barem2': return <Badge className="bg-gray-200 text-gray-900">Barem 2</Badge>;
+      case 'barem1': return <Badge className="bg-secondary text-muted-foreground">Barem 1</Badge>;
+      case 'barem2': return <Badge className="bg-gray-200 text-foreground">Barem 2</Badge>;
       default: return <Badge variant="outline">Desi</Badge>;
     }
   };
@@ -237,8 +237,8 @@ export default function ShippingRates() {
 
   const columns = [
     {
-      header: <input type="checkbox" checked={selectedIds.length === paginatedRates.length && paginatedRates.length > 0} onChange={toggleSelectAll} className="rounded border-gray-300" />,
-      cell: (row) => <input type="checkbox" checked={selectedIds.includes(row.id)} onChange={() => toggleSelect(row.id)} className="rounded border-gray-300" />
+      header: <input type="checkbox" checked={selectedIds.length === paginatedRates.length && paginatedRates.length > 0} onChange={toggleSelectAll} className="rounded border-input" />,
+      cell: (row) => <input type="checkbox" checked={selectedIds.includes(row.id)} onChange={() => toggleSelect(row.id)} className="rounded border-input" />
     },
     { header: 'Platform', accessor: 'platform_name', cell: (row) => <span className="font-medium">{row.platform_name}</span> },
     { header: 'Kargo Firması', accessor: 'shipping_company' },
@@ -319,7 +319,7 @@ export default function ShippingRates() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-secondary">
       <div className="max-w-[1400px] mx-auto px-3 sm:px-6 py-5 sm:py-8">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
           <div>
@@ -337,7 +337,7 @@ export default function ShippingRates() {
             )}
             <ImportExport data={filteredRates} columns={exportColumns} templateColumns={templateColumns} templateInfoData={templateInfoData} filename="kargo_tarifeleri" onImport={handleImport} />
             {userRole === 'admin' && (
-              <Button onClick={() => { setEditingRate(null); setIsSystemRate(true); setModalOpen(true); }} variant="outline" className="gap-2 border-gray-300 text-gray-700 hover:bg-gray-50">
+              <Button onClick={() => { setEditingRate(null); setIsSystemRate(true); setModalOpen(true); }} variant="outline" className="gap-2 border-input text-muted-foreground hover:bg-secondary">
                 <Plus className="h-4 w-4" />Sistem Tarifesi Ekle
               </Button>
             )}
@@ -348,9 +348,9 @@ export default function ShippingRates() {
         </div>
 
         {userRole === 'admin' && (
-          <div className="bg-gray-50 border border-gray-200 rounded-2xl p-4 mb-6">
-            <h3 className="font-semibold text-gray-900 text-sm mb-2">⚙️ Sistem Yöneticisi</h3>
-            <p className="text-sm text-gray-600">Trendyol ve HepsiBurada kargo tarifelerini Excel'den yükleyebilirsiniz. Yüklenen tarifeler kullanıcılar tarafından görüntülenebilir ancak düzenlenemez.</p>
+          <div className="bg-secondary border border-border rounded-2xl p-4 mb-6">
+            <h3 className="font-semibold text-foreground text-sm mb-2">⚙️ Sistem Yöneticisi</h3>
+            <p className="text-sm text-muted-foreground">Trendyol ve HepsiBurada kargo tarifelerini Excel'den yükleyebilirsiniz. Yüklenen tarifeler kullanıcılar tarafından görüntülenebilir ancak düzenlenemez.</p>
           </div>
         )}
 
@@ -394,7 +394,7 @@ export default function ShippingRates() {
           </div>
         </div>
 
-        <DataTable columns={columns} data={paginatedRates} isLoading={isLoading} page={page} pageSize={pageSize} totalItems={filteredRates.length} onPageChange={setPage} emptyMessage="Kargo tarifesi bulunamadı" rowClassName={(row) => row.is_manual ? "bg-amber-50 hover:bg-amber-100/70" : "hover:bg-gray-50/50"} />
+        <DataTable columns={columns} data={paginatedRates} isLoading={isLoading} page={page} pageSize={pageSize} totalItems={filteredRates.length} onPageChange={setPage} emptyMessage="Kargo tarifesi bulunamadı" rowClassName={(row) => row.is_manual ? "bg-amber-50 hover:bg-amber-100/70" : "hover:bg-secondary/50"} />
 
         <ShippingRateModal open={modalOpen} onOpenChange={(open) => { setModalOpen(open); if (!open) setIsSystemRate(false); }} shippingRate={editingRate} platforms={platforms} onSave={(data) => saveMutation.mutate({ ...data, is_admin_created: isSystemRate, is_manual: !isSystemRate })} isSaving={saveMutation.isPending} isAdmin={userRole === 'admin'} isSystemRate={isSystemRate} />
 
@@ -423,14 +423,14 @@ export default function ShippingRates() {
             <DialogHeader><DialogTitle>Excel İçe Aktarma İşleniyor...</DialogTitle></DialogHeader>
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-500">İlerleme</span>
-                <span className="text-sm font-bold text-gray-900">{importProgress.current} / {importProgress.total}</span>
+                <span className="text-sm text-muted-foreground">İlerleme</span>
+                <span className="text-sm font-bold text-foreground">{importProgress.current} / {importProgress.total}</span>
               </div>
               <div className="w-full bg-gray-200 rounded-full h-4 overflow-hidden">
                 <div className="bg-gray-900 h-4 rounded-full transition-all duration-300" style={{ width: `${(importProgress.current / (importProgress.total || 1)) * 100}%` }} />
               </div>
               <div className="text-center">
-                <p className="text-3xl font-bold text-gray-900">%{Math.round((importProgress.current / (importProgress.total || 1)) * 100)}</p>
+                <p className="text-3xl font-bold text-foreground">%{Math.round((importProgress.current / (importProgress.total || 1)) * 100)}</p>
               </div>
             </div>
           </DialogContent>

@@ -359,7 +359,7 @@ export default function HBBasketCampaigns() {
               <div className="space-y-2">
                 <Label>Platform *</Label>
                 {hbPlatforms.length === 1 ? (
-                  <div className="flex items-center h-10 px-3 border border-gray-200 rounded-xl bg-gray-50 text-sm font-medium">{hbPlatforms[0].name}</div>
+                  <div className="flex items-center h-10 px-3 border border-border rounded-xl bg-secondary text-sm font-medium">{hbPlatforms[0].name}</div>
                 ) : (
                   <Select value={selectedPlatform} onValueChange={setSelectedPlatform}>
                     <SelectTrigger><SelectValue placeholder="Platform seçin" /></SelectTrigger>
@@ -417,7 +417,7 @@ export default function HBBasketCampaigns() {
               <CardContent>
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
-                    <thead className="bg-slate-50 border-b">
+                    <thead className="bg-secondary border-b">
                       <tr>
                         <th className="p-3 text-center font-semibold w-10">Seç</th>
                         <th className="p-3 text-left font-semibold min-w-[200px]">Ürün</th>
@@ -434,31 +434,31 @@ export default function HBBasketCampaigns() {
                         const overMax = item.max_price > 0 && item.campaign_price > item.max_price;
                         const campCalc = item.campaign_price ? calculateProfit(item.campaign_price, item.discounted_commission, item) : { profit: 0, profitRate: 0 };
                         return (
-                          <tr key={index} className={`border-b hover:bg-slate-50 ${item.selected ? 'bg-gray-50' : ''}`}>
+                          <tr key={index} className={`border-b hover:bg-secondary ${item.selected ? 'bg-secondary' : ''}`}>
                             <td className="p-3 text-center">
                               <input type="checkbox" checked={item.selected} onChange={() => toggleSelect(item)} className="h-4 w-4 cursor-pointer accent-gray-900" disabled={!matchedProduct} />
                             </td>
                             <td className="p-3">
-                              <div className="font-medium text-slate-900">{item.product_name}</div>
-                              <div className="text-xs text-slate-500 font-mono">{item.seller_stock_code}</div>
+                              <div className="font-medium text-foreground">{item.product_name}</div>
+                              <div className="text-xs text-muted-foreground font-mono">{item.seller_stock_code}</div>
                               {matchedProduct ? <div className="text-xs text-emerald-600">{matchedProduct.category_name || matchedProduct.name}</div> : <div className="text-xs text-rose-500">eşleşmedi</div>}
                             </td>
                             <td className="p-3 text-center">{item.stock}</td>
                             <td className="p-3">
                               <div className="text-center">
-                                <div className="font-semibold text-slate-900">₺{(item.current_price || 0).toFixed(2)}</div>
-                                <div className="text-[11px] text-slate-500 mb-1">Kom: {commLabel(item.current_commission)}</div>
+                                <div className="font-semibold text-foreground">₺{(item.current_price || 0).toFixed(2)}</div>
+                                <div className="text-[11px] text-muted-foreground mb-1">Kom: {commLabel(item.current_commission)}</div>
                                 {matchedProduct && <div className={`text-xs font-medium ${currentCalc.profit > 0 ? 'text-emerald-600' : 'text-rose-600'}`}>₺{currentCalc.profit.toFixed(2)} (%{currentCalc.profitRate.toFixed(1)})</div>}
                               </div>
                             </td>
-                            <td className="p-3 text-center font-semibold text-slate-700">₺{(item.max_price || 0).toFixed(2)}</td>
+                            <td className="p-3 text-center font-semibold text-muted-foreground">₺{(item.max_price || 0).toFixed(2)}</td>
                             <td className="p-3">
-                              <div className={`border rounded-lg p-2 ${item.selected ? 'border-gray-900 bg-white' : 'border-slate-200'}`}>
+                              <div className={`border rounded-lg p-2 ${item.selected ? 'border-gray-900 bg-card' : 'border-border'}`}>
                                 <div className="flex items-center gap-1 mb-1">
                                   <Input type="number" step="0.01" value={item.campaign_price || ''} onChange={(e) => handleCampaignPriceChange(item, e.target.value)} placeholder="Fiyat" className="h-8 text-xs" />
                                   <Button size="sm" variant="ghost" className="h-5 w-5 p-0 shrink-0" onClick={() => openDetailModal(item.campaign_price, item.discounted_commission, item)}><Info className="h-3 w-3" /></Button>
                                 </div>
-                                <div className="text-[11px] text-slate-500">Kom: {commLabel(item.discounted_commission)}</div>
+                                <div className="text-[11px] text-muted-foreground">Kom: {commLabel(item.discounted_commission)}</div>
                                 {item.campaign_price > 0 && (
                                   <div className={`text-xs font-semibold ${campCalc.profit > 0 ? 'text-emerald-600' : 'text-rose-600'}`}>{campCalc.profit > 0 ? '+' : ''}₺{campCalc.profit.toFixed(2)} (%{campCalc.profitRate.toFixed(1)})</div>
                                 )}
@@ -479,9 +479,9 @@ export default function HBBasketCampaigns() {
         {uploadedData.length === 0 && (
           <Card>
             <CardContent className="p-12 text-center">
-              <Upload className="h-16 w-16 text-slate-300 mx-auto mb-4" />
-              <p className="text-slate-500 mb-2">Henüz dosya yüklenmedi</p>
-              <p className="text-sm text-slate-400">Hepsiburada "Sepet Kampanyaları" Excel dosyasını yükleyin</p>
+              <Upload className="h-16 w-16 text-muted-foreground/50 mx-auto mb-4" />
+              <p className="text-muted-foreground mb-2">Henüz dosya yüklenmedi</p>
+              <p className="text-sm text-muted-foreground/70">Hepsiburada "Sepet Kampanyaları" Excel dosyasını yükleyin</p>
             </CardContent>
           </Card>
         )}

@@ -320,16 +320,16 @@ export default function Calculator() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-secondary">
       <div className="max-w-[1200px] mx-auto px-6 py-8">
         <div className="mb-8">
           <h1 className="ph-title">Fiyat Hesaplayıcı</h1>
-          <p className="text-slate-500 mt-1">Ürün fiyatını ve kârını hesaplayın (kaydetmez)</p>
+          <p className="text-muted-foreground mt-1">Ürün fiyatını ve kârını hesaplayın (kaydetmez)</p>
         </div>
 
         <div className="grid lg:grid-cols-2 gap-8">
           {/* Input Section */}
-          <Card className="border-slate-200 shadow-sm">
+          <Card className="border-border shadow-sm">
             <CardHeader className="pb-4">
               <div className="flex items-center gap-4">
                 <Button
@@ -495,20 +495,20 @@ export default function Calculator() {
                 const isMarketplace = selectedPlatformObj?.platform_type === 'trendyol' || selectedPlatformObj?.platform_type === 'hepsiburada';
                 if (!isMarketplace) return null;
                 return (
-                  <div className={`border rounded-xl p-4 transition-all ${isSameDayDelivery ? 'border-amber-300 bg-amber-50/50' : 'border-slate-200 bg-slate-50/50'}`}>
+                  <div className={`border rounded-xl p-4 transition-all ${isSameDayDelivery ? 'border-amber-300 bg-amber-50/50' : 'border-border bg-secondary/50'}`}>
                     <div className="flex items-center space-x-3">
                       <input
                         type="checkbox"
                         id="sameDayDelivery"
                         checked={isSameDayDelivery}
                         onChange={(e) => setIsSameDayDelivery(e.target.checked)}
-                        className="h-4 w-4 rounded border-slate-300 text-amber-600 focus:ring-amber-500"
+                        className="h-4 w-4 rounded border-input text-amber-600 focus:ring-amber-500"
                       />
                       <div className="flex-1">
-                        <Label htmlFor="sameDayDelivery" className="cursor-pointer font-medium text-slate-700">
+                        <Label htmlFor="sameDayDelivery" className="cursor-pointer font-medium text-muted-foreground">
                           Bugün Kapında
                         </Label>
-                        <p className="text-xs text-slate-500 mt-0.5">İndirimli hizmet bedeli ve Bugün Kapında barem/desi tarifeleri kullanılır</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">İndirimli hizmet bedeli ve Bugün Kapında barem/desi tarifeleri kullanılır</p>
                       </div>
                     </div>
                   </div>
@@ -517,7 +517,7 @@ export default function Calculator() {
 
               <div className="space-y-4">
                <div className={`border rounded-xl p-4 transition-all ${
-                 isMultiPackage ? 'border-gray-900 bg-gray-100' : 'border-slate-200 bg-slate-50/50'
+                 isMultiPackage ? 'border-gray-900 bg-secondary' : 'border-border bg-secondary/50'
                }`}>
                  <div className="flex items-center space-x-3">
                    <input
@@ -525,13 +525,13 @@ export default function Calculator() {
                      id="multiPackage"
                      checked={isMultiPackage}
                      onChange={(e) => setIsMultiPackage(e.target.checked)}
-                     className="h-4 w-4 rounded border-slate-300 text-gray-900 focus:ring-gray-400"
+                     className="h-4 w-4 rounded border-input text-foreground focus:ring-gray-400"
                    />
                    <div className="flex-1">
-                     <Label htmlFor="multiPackage" className="cursor-pointer font-medium text-slate-700">
+                     <Label htmlFor="multiPackage" className="cursor-pointer font-medium text-muted-foreground">
                        Çoklu Gönderim
                      </Label>
-                     <p className="text-xs text-slate-500 mt-0.5">Bu ürün birden fazla paket halinde gönderilir</p>
+                     <p className="text-xs text-muted-foreground mt-0.5">Bu ürün birden fazla paket halinde gönderilir</p>
                    </div>
                  </div>
 
@@ -551,11 +551,11 @@ export default function Calculator() {
                        </Button>
                      </div>
                      {packages.map((pkg, index) => (
-                       <div key={index} className="flex gap-2 items-start bg-white rounded-lg p-3 border border-gray-200">
+                       <div key={index} className="flex gap-2 items-start bg-card rounded-lg p-3 border border-border">
                          <div className="flex-1 space-y-2">
                            <div className="flex gap-2">
                              <div className="flex-1">
-                               <Label className="text-xs text-slate-600">Desi</Label>
+                               <Label className="text-xs text-muted-foreground">Desi</Label>
                                <Input
                                  type="number"
                                  step="0.1"
@@ -566,7 +566,7 @@ export default function Calculator() {
                                />
                              </div>
                              <div className="flex-1">
-                               <Label className="text-xs text-slate-600">Paket</Label>
+                               <Label className="text-xs text-muted-foreground">Paket</Label>
                                <Select 
                                  value={pkg.package_id} 
                                  onValueChange={(val) => updatePackage(index, 'package_id', val)}
@@ -635,7 +635,7 @@ export default function Calculator() {
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger>
-                        <Info className="h-4 w-4 text-slate-400" />
+                        <Info className="h-4 w-4 text-muted-foreground/70" />
                       </TooltipTrigger>
                       <TooltipContent>
                         <p>Kâr Oranı = Net Kâr / Maliyet × 100</p>
@@ -709,30 +709,30 @@ export default function Calculator() {
           </Card>
 
           {/* Result Section */}
-          <Card className={`border-slate-200 shadow-sm transition-all ${result ? 'bg-white' : 'bg-slate-50'}`}>
+          <Card className={`border-border shadow-sm transition-all ${result ? 'bg-card' : 'bg-secondary'}`}>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <ArrowRight className="h-5 w-5 text-gray-900" />
+                <ArrowRight className="h-5 w-5 text-foreground" />
                 Hesaplama Sonucu
               </CardTitle>
             </CardHeader>
             <CardContent>
               {!result ? (
-                <div className="h-64 flex items-center justify-center text-slate-400">
+                <div className="h-64 flex items-center justify-center text-muted-foreground/70">
                   <p>Hesaplama sonucu burada görünecek</p>
                 </div>
               ) : (
                 <div className="space-y-6">
                   {/* Main Result */}
-                  <div className="bg-gray-50 rounded-xl p-6 text-center">
-                    <p className="text-sm text-gray-500 font-medium mb-1">Önerilen Satış Fiyatı</p>
-                    <p className="text-4xl font-bold text-gray-900">
+                  <div className="bg-secondary rounded-xl p-6 text-center">
+                    <p className="text-sm text-muted-foreground font-medium mb-1">Önerilen Satış Fiyatı</p>
+                    <p className="text-4xl font-bold text-foreground">
                       ₺{result.sale_price?.toFixed(2)}
                     </p>
                     <div className="flex items-center justify-center gap-2 mt-3">
                       <Badge className={`${
                         result.profit_rate >= 30 ? 'bg-green-100 text-green-700' :
-                        result.profit_rate >= 20 ? 'bg-gray-100 text-gray-700' :
+                        result.profit_rate >= 20 ? 'bg-secondary text-muted-foreground' :
                         'bg-amber-100 text-amber-700'
                       }`}>
                         Kâr: %{result.profit_rate?.toFixed(1)}
@@ -745,54 +745,54 @@ export default function Calculator() {
 
                   {/* Breakdown */}
                   <div className="space-y-3">
-                    <h4 className="font-semibold text-slate-700">Detaylı Hesaplama</h4>
+                    <h4 className="font-semibold text-muted-foreground">Detaylı Hesaplama</h4>
                     
                     <div className="space-y-2 text-sm">
-                      <div className="flex justify-between py-2 border-b-2 border-gray-200 bg-gray-50 px-3 rounded-t-lg">
-                        <span className="font-semibold text-gray-900">Satış Fiyatı (KDV Dahil)</span>
-                        <span className="font-bold text-gray-900">₺{result.sale_price?.toFixed(2)}</span>
+                      <div className="flex justify-between py-2 border-b-2 border-border bg-secondary px-3 rounded-t-lg">
+                        <span className="font-semibold text-foreground">Satış Fiyatı (KDV Dahil)</span>
+                        <span className="font-bold text-foreground">₺{result.sale_price?.toFixed(2)}</span>
                       </div>
 
-                      <div className="flex justify-between py-2 pl-6 border-b border-slate-100">
-                        <span className="text-slate-600">- Ürün Maliyeti (KDV Dahil)</span>
+                      <div className="flex justify-between py-2 pl-6 border-b border-border">
+                        <span className="text-muted-foreground">- Ürün Maliyeti (KDV Dahil)</span>
                         <span className="font-medium text-red-600">-₺{parseFloat(cost || 0).toFixed(2)}</span>
                       </div>
                       {printingCost && parseFloat(printingCost) > 0 && (
-                        <div className="flex justify-between py-2 pl-6 border-b border-slate-100">
-                          <span className="text-slate-600">- Baskı Maliyeti (KDV Dahil)</span>
+                        <div className="flex justify-between py-2 pl-6 border-b border-border">
+                          <span className="text-muted-foreground">- Baskı Maliyeti (KDV Dahil)</span>
                           <span className="font-medium text-red-600">-₺{parseFloat(printingCost).toFixed(2)}</span>
                         </div>
                       )}
-                      <div className="flex justify-between py-2 pl-6 border-b border-slate-100">
-                        <span className="text-slate-600">- Kargo Ücreti (KDV Dahil)</span>
+                      <div className="flex justify-between py-2 pl-6 border-b border-border">
+                        <span className="text-muted-foreground">- Kargo Ücreti (KDV Dahil)</span>
                         <span className="font-medium text-red-600">-₺{result.shipping_cost?.toFixed(2)}</span>
                       </div>
-                      <div className="flex justify-between py-2 pl-6 border-b border-slate-100">
-                        <span className="text-slate-600">- Paketleme Maliyeti (KDV Dahil)</span>
+                      <div className="flex justify-between py-2 pl-6 border-b border-border">
+                        <span className="text-muted-foreground">- Paketleme Maliyeti (KDV Dahil)</span>
                         <span className="font-medium text-red-600">-₺{result.packaging_cost?.toFixed(2)}</span>
                       </div>
                       {extraCost && parseFloat(extraCost) > 0 && (
-                        <div className="flex justify-between py-2 pl-6 border-b border-slate-100">
-                          <span className="text-slate-600">- Ek Maliyet (KDV Dahil)</span>
+                        <div className="flex justify-between py-2 pl-6 border-b border-border">
+                          <span className="text-muted-foreground">- Ek Maliyet (KDV Dahil)</span>
                           <span className="font-medium text-red-600">-₺{parseFloat(extraCost).toFixed(2)}</span>
                         </div>
                       )}
-                      <div className="flex justify-between py-2 pl-6 border-b border-slate-100">
-                        <span className="text-slate-600">- Komisyon Tutarı (KDV Dahil)</span>
+                      <div className="flex justify-between py-2 pl-6 border-b border-border">
+                        <span className="text-muted-foreground">- Komisyon Tutarı (KDV Dahil)</span>
                         <span className="font-medium text-red-600">-₺{result.commission_amount?.toFixed(2)}</span>
                       </div>
-                      <div className="flex justify-between py-2 pl-6 border-b border-slate-100">
-                        <span className="text-slate-600">- Stopaj Tutarı</span>
+                      <div className="flex justify-between py-2 pl-6 border-b border-border">
+                        <span className="text-muted-foreground">- Stopaj Tutarı</span>
                         <span className="font-medium text-red-600">-₺{result.withholding_amount?.toFixed(2)}</span>
                       </div>
                       {isAdmin && (
-                      <div className="flex justify-between py-2 pl-6 border-b border-slate-100">
-                        <span className="text-slate-600">- Hizmet Bedeli (KDV Dahil)</span>
+                      <div className="flex justify-between py-2 pl-6 border-b border-border">
+                        <span className="text-muted-foreground">- Hizmet Bedeli (KDV Dahil)</span>
                         <span className="font-medium text-red-600">-₺{(result.service_fee || 0)?.toFixed(2)}</span>
                       </div>
                       )}
-                      <div className="flex justify-between py-2 pl-6 border-b-2 border-slate-200">
-                        <span className="text-slate-600">- Net KDV</span>
+                      <div className="flex justify-between py-2 pl-6 border-b-2 border-border">
+                        <span className="text-muted-foreground">- Net KDV</span>
                         <span className="font-medium text-red-600">-₺{result.net_vat?.toFixed(2)}</span>
                       </div>
 
@@ -804,13 +804,13 @@ export default function Calculator() {
                   </div>
 
                   {/* Additional Info */}
-                  <div className="bg-slate-50 rounded-lg p-4 space-y-2 text-sm border border-slate-200">
+                  <div className="bg-secondary rounded-lg p-4 space-y-2 text-sm border border-border">
                    <div className="flex justify-between">
-                     <span className="text-slate-600">Ürün Desisi:</span>
+                     <span className="text-muted-foreground">Ürün Desisi:</span>
                      <span className="font-medium">{isMultiPackage ? packages.map(p => p.desi).join(', ') : desi}</span>
                    </div>
                    <div className="flex justify-between">
-                     <span className="text-slate-600">Kargo:</span>
+                     <span className="text-muted-foreground">Kargo:</span>
                      <span className="font-medium">
                        {shippingMode === 'manual'
                          ? `Manuel (₺${parseFloat(manualShippingCost).toFixed(2)})`
@@ -818,7 +818,7 @@ export default function Calculator() {
                      </span>
                    </div>
                    <div className="flex justify-between">
-                     <span className="text-slate-600">Çoklu Gönderim:</span>
+                     <span className="text-muted-foreground">Çoklu Gönderim:</span>
                      <span className="font-medium">{isMultiPackage ? 'Evet' : 'Hayır'}</span>
                    </div>
                    {(() => {
@@ -827,26 +827,26 @@ export default function Calculator() {
                      if (!isMarketplace) return null;
                      return (
                        <div className="flex justify-between">
-                         <span className="text-slate-600">Bugün Kapında:</span>
+                         <span className="text-muted-foreground">Bugün Kapında:</span>
                          <span className={`font-medium ${isSameDayDelivery ? 'text-amber-600' : ''}`}>{isSameDayDelivery ? 'Evet ✓' : 'Hayır'}</span>
                        </div>
                      );
                    })()}
                    <div className="flex justify-between">
-                     <span className="text-slate-600">Komisyon Oranı:</span>
+                     <span className="text-muted-foreground">Komisyon Oranı:</span>
                      <span className="font-medium">%{commissionRate || '-'}</span>
                    </div>
                    <div className="flex justify-between">
-                     <span className="text-slate-600">Ürün KDV Oranı:</span>
+                     <span className="text-muted-foreground">Ürün KDV Oranı:</span>
                      <span className="font-medium">%{vatRate}</span>
                    </div>
                    <div className="flex justify-between">
-                     <span className="text-slate-600">Hedef Kâr Oranı:</span>
+                     <span className="text-muted-foreground">Hedef Kâr Oranı:</span>
                      <span className="font-medium">%{targetProfit || '-'}</span>
                    </div>
                   </div>
 
-                  <p className="text-xs text-slate-400 text-center">
+                  <p className="text-xs text-muted-foreground/70 text-center">
                     * Bu hesaplama kaydedilmez. Sadece simülasyon amaçlıdır.
                   </p>
                 </div>

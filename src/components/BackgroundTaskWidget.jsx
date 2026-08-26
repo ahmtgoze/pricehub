@@ -17,18 +17,18 @@ export default function BackgroundTaskWidget() {
   const pct = task.total > 0 ? Math.round((task.current / task.total) * 100) : 0;
 
   return (
-    <div className="fixed bottom-6 right-6 z-50 w-72 bg-white border border-slate-200 rounded-2xl shadow-xl p-4 flex flex-col gap-3">
+    <div className="fixed bottom-6 right-6 z-50 w-72 bg-card border border-border rounded-2xl shadow-xl p-4 flex flex-col gap-3">
       <div className="flex items-start justify-between gap-2">
         <div className="flex items-center gap-2 min-w-0">
-          <Loader2 className="h-4 w-4 text-gray-900 animate-spin shrink-0" />
+          <Loader2 className="h-4 w-4 text-foreground animate-spin shrink-0" />
           <div className="min-w-0">
-            <p className="text-sm font-semibold text-slate-900 truncate">{task.name}</p>
-            <p className="text-xs text-slate-500 truncate">{task.pageName} Sayfası</p>
+            <p className="text-sm font-semibold text-foreground truncate">{task.name}</p>
+            <p className="text-xs text-muted-foreground truncate">{task.pageName} Sayfası</p>
           </div>
         </div>
         <button
           onClick={finishTask}
-          className="text-slate-400 hover:text-slate-600 transition-colors shrink-0"
+          className="text-muted-foreground/70 hover:text-muted-foreground transition-colors shrink-0"
           title="Kapat"
         >
           <X className="h-4 w-4" />
@@ -37,12 +37,12 @@ export default function BackgroundTaskWidget() {
 
       <div>
         <div className="flex items-center justify-between mb-1.5">
-          <span className="text-xs text-slate-600">
+          <span className="text-xs text-muted-foreground">
             {task.current} / {task.total} kayıt
           </span>
-          <span className="text-xs font-bold text-gray-900">%{pct}</span>
+          <span className="text-xs font-bold text-foreground">%{pct}</span>
         </div>
-        <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
+        <div className="w-full bg-secondary rounded-full h-2 overflow-hidden">
           <div
             className="bg-gray-900 h-2 rounded-full transition-all duration-300"
             style={{ width: `${pct}%` }}

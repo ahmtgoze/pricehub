@@ -425,7 +425,7 @@ export default function HBAdvantageOffers() {
               <div className="space-y-2">
                 <Label>Platform *</Label>
                 {hbPlatforms.length === 1 ? (
-                  <div className="flex items-center h-10 px-3 border border-gray-200 rounded-xl bg-gray-50 text-sm font-medium">{hbPlatforms[0].name}</div>
+                  <div className="flex items-center h-10 px-3 border border-border rounded-xl bg-secondary text-sm font-medium">{hbPlatforms[0].name}</div>
                 ) : (
                   <Select value={selectedPlatform} onValueChange={setSelectedPlatform}>
                     <SelectTrigger><SelectValue placeholder="Platform seçin" /></SelectTrigger>
@@ -483,7 +483,7 @@ export default function HBAdvantageOffers() {
               <CardContent>
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
-                    <thead className="bg-slate-50 border-b">
+                    <thead className="bg-secondary border-b">
                       <tr>
                         <th className="p-3 text-left font-semibold min-w-[200px]">Ürün</th>
                         <th className="p-3 text-center font-semibold">Stok</th>
@@ -500,17 +500,17 @@ export default function HBAdvantageOffers() {
                         const currentComm = getCurrentCommission(item);
                         const currentCalc = item.current_price ? calculateProfit(item.current_price, currentComm, item) : { profit: 0, profitRate: 0 };
                         return (
-                          <tr key={index} className="border-b hover:bg-slate-50">
+                          <tr key={index} className="border-b hover:bg-secondary">
                             <td className="p-3">
-                              <div className="font-medium text-slate-900">{item.product_name}</div>
-                              <div className="text-xs text-slate-500 font-mono">{item.sku}</div>
+                              <div className="font-medium text-foreground">{item.product_name}</div>
+                              <div className="text-xs text-muted-foreground font-mono">{item.sku}</div>
                               {matchedProduct ? <div className="text-xs text-emerald-600">{matchedProduct.category_name || matchedProduct.name}</div> : <div className="text-xs text-rose-500">eşleşmedi</div>}
                             </td>
                             <td className="p-3 text-center">{item.stock}</td>
                             <td className="p-3">
                               <div className="text-center">
-                                <div className="font-semibold text-slate-900">₺{(item.current_price || 0).toFixed(2)}</div>
-                                <div className="text-xs text-slate-500 mb-1">Kom: {commLabel(currentComm)}</div>
+                                <div className="font-semibold text-foreground">₺{(item.current_price || 0).toFixed(2)}</div>
+                                <div className="text-xs text-muted-foreground mb-1">Kom: {commLabel(currentComm)}</div>
                                 {matchedProduct && (
                                   <div className={`text-xs font-medium ${currentCalc.profit > 0 ? 'text-emerald-600' : 'text-rose-600'}`}>₺{currentCalc.profit.toFixed(2)} (%{currentCalc.profitRate.toFixed(1)})</div>
                                 )}
@@ -523,22 +523,22 @@ export default function HBAdvantageOffers() {
                               return (
                                 <td key={n} className="p-3">
                                   {price > 0 ? (
-                                    <div className={`border rounded-lg p-2 ${isSelected ? 'border-gray-900 bg-gray-50' : 'border-slate-200'}`}>
-                                      <div className="text-xs font-semibold text-slate-700 mb-1">₺{price.toFixed(2)} ve altı</div>
-                                      <div className="text-xs text-slate-500">Kom: {commLabel(commission)}</div>
+                                    <div className={`border rounded-lg p-2 ${isSelected ? 'border-gray-900 bg-secondary' : 'border-border'}`}>
+                                      <div className="text-xs font-semibold text-muted-foreground mb-1">₺{price.toFixed(2)} ve altı</div>
+                                      <div className="text-xs text-muted-foreground">Kom: {commLabel(commission)}</div>
                                       <div className="flex items-center justify-between mt-1">
                                         <div className={`text-xs font-semibold ${profit > 0 ? 'text-emerald-600' : 'text-rose-600'}`}>{profit > 0 ? '+' : ''}₺{profit.toFixed(2)} (%{profitRate.toFixed(1)})</div>
                                         <Button size="sm" variant="ghost" className="h-5 w-5 p-0" onClick={() => openDetailModal(price, commission, item)}><Info className="h-3 w-3" /></Button>
                                       </div>
                                       <Button size="sm" variant={isSelected ? 'default' : 'outline'} onClick={() => handleTierSelect(item, `tier${n}`, price)} className="w-full mt-2 h-7 text-xs">{isSelected ? 'Seçili' : 'Seç'}</Button>
                                     </div>
-                                  ) : <div className="text-center text-slate-400 text-xs">-</div>}
+                                  ) : <div className="text-center text-muted-foreground/70 text-xs">-</div>}
                                 </td>
                               );
                             })}
                             <td className="p-3">
-                              <div className={`border rounded-lg p-2 ${item.selected_tier === 'manual' ? 'border-gray-900 bg-gray-50' : 'border-slate-200'}`}>
-                                <div className="text-xs font-semibold text-slate-700 mb-2">Manuel Fiyat</div>
+                              <div className={`border rounded-lg p-2 ${item.selected_tier === 'manual' ? 'border-gray-900 bg-secondary' : 'border-border'}`}>
+                                <div className="text-xs font-semibold text-muted-foreground mb-2">Manuel Fiyat</div>
                                 <Input type="number" step="0.01" value={item.manual_price || ''} onChange={(e) => handleManualPriceChange(item, e.target.value)} placeholder="Fiyat girin" className="h-8 text-xs mb-2" />
                                 {item.manual_price > 0 && (() => {
                                   const comm = manualCommissionFor(item, item.manual_price);
@@ -569,9 +569,9 @@ export default function HBAdvantageOffers() {
         {uploadedData.length === 0 && (
           <Card>
             <CardContent className="p-12 text-center">
-              <Upload className="h-16 w-16 text-slate-300 mx-auto mb-4" />
-              <p className="text-slate-500 mb-2">Henüz dosya yüklenmedi</p>
-              <p className="text-sm text-slate-400">Hepsiburada "Avantajlı Teklifler" Excel dosyasını yükleyin</p>
+              <Upload className="h-16 w-16 text-muted-foreground/50 mx-auto mb-4" />
+              <p className="text-muted-foreground mb-2">Henüz dosya yüklenmedi</p>
+              <p className="text-sm text-muted-foreground/70">Hepsiburada "Avantajlı Teklifler" Excel dosyasını yükleyin</p>
             </CardContent>
           </Card>
         )}

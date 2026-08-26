@@ -180,8 +180,8 @@ export default function PackageManagement() {
       </div>
 
       <div className="rounded-[18px] border border-border bg-card">
-        <div className="p-6 border-b border-gray-200">
-          <h2 className="text-lg font-semibold text-gray-900">Paketler</h2>
+        <div className="p-6 border-b border-border">
+          <h2 className="text-lg font-semibold text-foreground">Paketler</h2>
         </div>
         <DataTable 
           columns={packageColumns} 
@@ -192,18 +192,18 @@ export default function PackageManagement() {
 
       {selectedPackageId && (
         <div className="rounded-[18px] border border-border bg-card">
-          <div className="p-6 border-b border-gray-200">
-            <h2 className="text-lg font-semibold text-gray-900">
+          <div className="p-6 border-b border-border">
+            <h2 className="text-lg font-semibold text-foreground">
               {packages.find(p => p.id === selectedPackageId)?.name} - Paket İçeriği
             </h2>
           </div>
           <div className="p-6">
             <div className="space-y-4 mb-4">
               {getPackageItems(selectedPackageId).map(item => (
-                <div key={item.id} className="flex justify-between items-center p-4 border border-gray-200 rounded-lg">
+                <div key={item.id} className="flex justify-between items-center p-4 border border-border rounded-lg">
                   <div>
-                    <p className="font-medium text-gray-900">{item.name}</p>
-                    <p className="text-sm text-gray-500">{item.size} - {item.cost?.toFixed(2) ?? 0} TL</p>
+                    <p className="font-medium text-foreground">{item.name}</p>
+                    <p className="text-sm text-muted-foreground">{item.size} - {item.cost?.toFixed(2) ?? 0} TL</p>
                   </div>
                   <div className="flex gap-2">
                     <Button
@@ -419,7 +419,7 @@ function PackageItemModal({ open, onOpenChange, item, packageId, onSave, isSavin
             <select
               value={formData.item_type}
               onChange={(e) => setFormData({ ...formData, item_type: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-gray-900/20"
+              className="w-full px-3 py-2 border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-gray-900/20"
             >
               <option value="poşet">Poşet</option>
               <option value="kutu">Kutu</option>

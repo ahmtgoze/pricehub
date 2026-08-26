@@ -685,24 +685,24 @@ export default function MarketplaceProducts() {
   const isSelectedWebsite = selectedPlatformObj?.platform_type === 'website';
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
+    <div className="min-h-screen bg-secondary p-6">
       <div className="max-w-7xl mx-auto">
         <div className="mb-8">
           <h1 className="ph-title">Pazaryeri Ürünleri</h1>
-          <p className="text-gray-600">Pazaryeri ürünlerini sisteme yükleyin ve ana ürünlere bağlayın</p>
+          <p className="text-muted-foreground">Pazaryeri ürünlerini sisteme yükleyin ve ana ürünlere bağlayın</p>
         </div>
 
-        <div className="mb-4 rounded-xl border border-gray-200 bg-gray-50 overflow-hidden">
+        <div className="mb-4 rounded-xl border border-border bg-secondary overflow-hidden">
           <button onClick={() => setShowHepsiGuide(!showHepsiGuide)} className="w-full flex items-center justify-between px-5 py-3 text-left">
-            <span className="font-semibold text-gray-900 text-sm">📦 HepsiBurada — Ürün Listesi Nasıl Yüklenir?</span>
-            {showHepsiGuide ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
+            <span className="font-semibold text-foreground text-sm">📦 HepsiBurada — Ürün Listesi Nasıl Yüklenir?</span>
+            {showHepsiGuide ? <ChevronUp className="w-4 h-4 text-muted-foreground/70" /> : <ChevronDown className="w-4 h-4 text-muted-foreground/70" />}
           </button>
           {showHepsiGuide && (
-            <div className="px-5 pb-4 border-t border-gray-200">
+            <div className="px-5 pb-4 border-t border-border">
               <ol className="mt-3 space-y-1.5">
                 {HEPSIBURADA_YUKLE_ADIMLARI.map((adim, i) => (
-                  <li key={i} className={`text-sm flex gap-2 ${adim.startsWith('⚠️') ? 'text-red-700 font-medium' : 'text-gray-700'}`}>
-                    {!adim.startsWith('⚠️') && <span className="font-bold text-gray-500 shrink-0">{i + 1}.</span>}
+                  <li key={i} className={`text-sm flex gap-2 ${adim.startsWith('⚠️') ? 'text-red-700 font-medium' : 'text-muted-foreground'}`}>
+                    {!adim.startsWith('⚠️') && <span className="font-bold text-muted-foreground shrink-0">{i + 1}.</span>}
                     <span>{adim}</span>
                   </li>
                 ))}
@@ -730,17 +730,17 @@ export default function MarketplaceProducts() {
           )}
         </div>
 
-        <div className="mb-6 rounded-xl border border-gray-200 bg-gray-50 overflow-hidden">
+        <div className="mb-6 rounded-xl border border-border bg-secondary overflow-hidden">
           <button onClick={() => setShowWebsiteGuide(!showWebsiteGuide)} className="w-full flex items-center justify-between px-5 py-3 text-left">
-            <span className="font-semibold text-gray-900 text-sm">🌐 Web Sitesi (Shopify) — Ürün Listesi Nasıl Yüklenir?</span>
-            {showWebsiteGuide ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
+            <span className="font-semibold text-foreground text-sm">🌐 Web Sitesi (Shopify) — Ürün Listesi Nasıl Yüklenir?</span>
+            {showWebsiteGuide ? <ChevronUp className="w-4 h-4 text-muted-foreground/70" /> : <ChevronDown className="w-4 h-4 text-muted-foreground/70" />}
           </button>
           {showWebsiteGuide && (
-            <div className="px-5 pb-4 border-t border-gray-200">
+            <div className="px-5 pb-4 border-t border-border">
               <ol className="mt-3 space-y-1.5">
                 {WEBSITE_YUKLE_ADIMLARI.map((adim, i) => (
-                  <li key={i} className={`text-sm flex gap-2 ${adim.startsWith('⚠️') ? 'text-red-700 font-medium' : 'text-gray-700'}`}>
-                    {!adim.startsWith('⚠️') && <span className="font-bold text-gray-500 shrink-0">{i + 1}.</span>}
+                  <li key={i} className={`text-sm flex gap-2 ${adim.startsWith('⚠️') ? 'text-red-700 font-medium' : 'text-muted-foreground'}`}>
+                    {!adim.startsWith('⚠️') && <span className="font-bold text-muted-foreground shrink-0">{i + 1}.</span>}
                     <span>{adim}</span>
                   </li>
                 ))}
@@ -772,7 +772,7 @@ export default function MarketplaceProducts() {
               </Button>
             </label>
             {isSelectedWebsite && (
-              <div className="text-xs text-gray-600 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2">
+              <div className="text-xs text-muted-foreground bg-secondary border border-border rounded-lg px-3 py-2">
                 📋 Shopify Admin'den standart ürün export CSV'sini yükleyin. <strong>Title + Option Values</strong> birleştirilerek gösterilir. Eşleştirme <strong>Variant SKU</strong> üzerinden yapılır.
               </div>
             )}
@@ -783,8 +783,8 @@ export default function MarketplaceProducts() {
           <>
             <div className="rounded-[18px] border border-border bg-card p-4 mb-4 flex flex-wrap items-center gap-4">
               <div className="flex items-center gap-4">
-                <span className="text-sm font-semibold text-gray-900">Toplam: {filtered.length} ürün</span>
-                {selectedRows.size > 0 && <span className="text-sm text-gray-600">{selectedRows.size} seçildi</span>}
+                <span className="text-sm font-semibold text-foreground">Toplam: {filtered.length} ürün</span>
+                {selectedRows.size > 0 && <span className="text-sm text-muted-foreground">{selectedRows.size} seçildi</span>}
               </div>
               <div className="flex-1 max-w-md">
                 <Input placeholder="Ürün adı ara..." value={tableSearchQuery} onChange={(e) => setTableSearchQuery(e.target.value)} className="w-full" />
@@ -830,7 +830,7 @@ export default function MarketplaceProducts() {
             <div className="rounded-[18px] border border-border bg-card overflow-visible">
               <div className="overflow-x-auto overflow-y-visible">
                 <Table className="relative">
-                  <TableHeader className="bg-gray-50">
+                  <TableHeader className="bg-secondary">
                     <TableRow>
                       <TableHead className="w-12">
                         <Checkbox checked={selectedRows.size === filtered.length && filtered.length > 0} onCheckedChange={handleSelectAll} />
@@ -846,7 +846,7 @@ export default function MarketplaceProducts() {
                   <TableBody>
                     {filtered.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={isSelectedWebsite ? 5 : 7} className="text-center text-gray-500 py-8">
+                        <TableCell colSpan={isSelectedWebsite ? 5 : 7} className="text-center text-muted-foreground py-8">
                           {isSelectedWebsite ? 'Henüz ürün yüklenmemiş. CSV Yükle butonunu kullanın.' : 'Ürün bulunamadı'}
                         </TableCell>
                       </TableRow>
@@ -854,7 +854,7 @@ export default function MarketplaceProducts() {
                       filtered.map((row) => {
                         const matchedProduct = products.find(p => p.id === row.matched_product_id);
                         return (
-                          <TableRow key={row.id} className={`${selectedRows.has(row.id) ? 'bg-gray-100' : ''} relative`}>
+                          <TableRow key={row.id} className={`${selectedRows.has(row.id) ? 'bg-secondary' : ''} relative`}>
                             <TableCell>
                               <Checkbox checked={selectedRows.has(row.id)} onCheckedChange={() => handleSelectRow(row.id)} />
                             </TableCell>
@@ -869,7 +869,7 @@ export default function MarketplaceProducts() {
                                 {matchedProduct ? (
                                   <div className="flex-1">
                                     <p className="text-sm font-medium">{matchedProduct.name}</p>
-                                    <p className="text-xs text-gray-500">{matchedProduct.sku}</p>
+                                    <p className="text-xs text-muted-foreground">{matchedProduct.sku}</p>
                                   </div>
                                 ) : (
                                   <div className="flex-1 space-y-1">
@@ -879,7 +879,7 @@ export default function MarketplaceProducts() {
                                         return (
                                           <div className="flex items-center gap-1">
                                             <span className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded px-1.5 py-0.5">Öneri</span>
-                                            <button onClick={() => handleMatchProduct(row.id, suggestion.id)} className="text-xs text-gray-900 hover:underline">{suggestion.name}</button>
+                                            <button onClick={() => handleMatchProduct(row.id, suggestion.id)} className="text-xs text-foreground hover:underline">{suggestion.name}</button>
                                           </div>
                                         );
                                       }
@@ -888,25 +888,25 @@ export default function MarketplaceProducts() {
                                       if (topMatches.length === 0) return null;
                                       return (
                                         <div className="space-y-0.5">
-                                          <span className="text-xs text-gray-400">Adaylar:</span>
+                                          <span className="text-xs text-muted-foreground/70">Adaylar:</span>
                                           {topMatches.map(({ product: p, score: s }) => (
                                             <div key={p.id} className="flex items-center gap-1">
-                                              <span className="text-xs text-gray-400 shrink-0">%{s}</span>
-                                              <button onClick={() => handleMatchProduct(row.id, p.id)} className="text-xs text-gray-500 hover:underline">{p.name}</button>                                            </div>
+                                              <span className="text-xs text-muted-foreground/70 shrink-0">%{s}</span>
+                                              <button onClick={() => handleMatchProduct(row.id, p.id)} className="text-xs text-muted-foreground hover:underline">{p.name}</button>                                            </div>
                                           ))}
                                         </div>
                                       );
                                     })()}
                                     {activeSearchRow === row.id ? (
                                       <div className="flex gap-1">
-                                        <select value={searchCriteria} onChange={e => setSearchCriteria(e.target.value)} className="text-xs border border-gray-200 rounded px-1 py-1 bg-white">
+                                        <select value={searchCriteria} onChange={e => setSearchCriteria(e.target.value)} className="text-xs border border-border rounded px-1 py-1 bg-card">
                                           <option value="name">Ad</option>
                                           <option value="sku">SKU</option>
                                         </select>
                                         <Input ref={inputRef} placeholder={searchCriteria === 'sku' ? 'SKU ara...' : 'Ürün adı ara...'} value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="text-xs" autoFocus />
                                       </div>
                                     ) : (
-                                      <button onClick={() => { setActiveSearchRow(row.id); setSearchQuery(''); }} className="text-xs text-gray-400 hover:text-gray-700 flex items-center gap-1 border border-dashed border-gray-200 rounded px-2 py-1 w-full">
+                                      <button onClick={() => { setActiveSearchRow(row.id); setSearchQuery(''); }} className="text-xs text-muted-foreground/70 hover:text-muted-foreground flex items-center gap-1 border border-dashed border-border rounded px-2 py-1 w-full">
                                         <Search className="w-3 h-3" />Ürün bul
                                       </button>
                                     )}
@@ -937,29 +937,29 @@ export default function MarketplaceProducts() {
 
         {!selectedPlatform && (
           <div className="rounded-[18px] border border-border bg-card p-12 text-center">
-            <p className="text-gray-500">Platform seçerek başlayın</p>
+            <p className="text-muted-foreground">Platform seçerek başlayın</p>
           </div>
         )}
 
         {/* İlerleme Popup */}
         {progressPopup && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-            <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md mx-4">
-              <h3 className="text-lg font-bold text-gray-900 mb-1">{progressPopup.title}</h3>
-              <p className="text-sm text-gray-500 mb-4">Lütfen bekleyin, işlem devam ediyor...</p>
+            <div className="bg-card rounded-2xl shadow-2xl p-8 w-full max-w-md mx-4">
+              <h3 className="text-lg font-bold text-foreground mb-1">{progressPopup.title}</h3>
+              <p className="text-sm text-muted-foreground mb-4">Lütfen bekleyin, işlem devam ediyor...</p>
               <div className="mb-3">
-                <div className="flex justify-between text-xs text-gray-600 mb-1">
+                <div className="flex justify-between text-xs text-muted-foreground mb-1">
                   <span className="truncate max-w-xs">{progressPopup.currentItemName}</span>
                   <span className="shrink-0 ml-2">{progressPopup.current} / {progressPopup.total}</span>
                 </div>
-                <div className="w-full bg-gray-100 rounded-full h-3 overflow-hidden">
+                <div className="w-full bg-secondary rounded-full h-3 overflow-hidden">
                   <div
                     className="bg-gray-900 h-3 rounded-full transition-all duration-200"
                     style={{ width: progressPopup.total > 0 ? `${(progressPopup.current / progressPopup.total) * 100}%` : '0%' }}
                   />
                 </div>
               </div>
-              <p className="text-xs text-gray-400 text-center">%{progressPopup.total > 0 ? Math.round((progressPopup.current / progressPopup.total) * 100) : 0} tamamlandı</p>
+              <p className="text-xs text-muted-foreground/70 text-center">%{progressPopup.total > 0 ? Math.round((progressPopup.current / progressPopup.total) * 100) : 0} tamamlandı</p>
             </div>
           </div>
         )}
@@ -1006,11 +1006,11 @@ export default function MarketplaceProducts() {
         )}
 
         {activeSearchRow && dropdownPosition && searchResults.length > 0 && createPortal(
-          <div ref={dropdownRef} style={{ position: 'absolute', top: `${dropdownPosition.top}px`, left: `${dropdownPosition.left}px`, width: `${dropdownPosition.width}px`, zIndex: 9999 }} className="bg-white border border-gray-200 rounded-lg shadow-xl max-h-80 overflow-y-auto">
+          <div ref={dropdownRef} style={{ position: 'absolute', top: `${dropdownPosition.top}px`, left: `${dropdownPosition.left}px`, width: `${dropdownPosition.width}px`, zIndex: 9999 }} className="bg-card border border-border rounded-lg shadow-xl max-h-80 overflow-y-auto">
             {searchResults.map((p) => (
-              <button key={p.id} onClick={() => { handleMatchProduct(activeSearchRow, p.id); setSearchQuery(''); setActiveSearchRow(null); }} className="w-full text-left px-3 py-2 hover:bg-gray-100 text-xs border-b last:border-b-0">
+              <button key={p.id} onClick={() => { handleMatchProduct(activeSearchRow, p.id); setSearchQuery(''); setActiveSearchRow(null); }} className="w-full text-left px-3 py-2 hover:bg-secondary text-xs border-b last:border-b-0">
                 <p className="font-medium">{p.name}</p>
-                <p className="text-gray-500 text-xs">{p.sku}</p>
+                <p className="text-muted-foreground text-xs">{p.sku}</p>
               </button>
             ))}
           </div>,

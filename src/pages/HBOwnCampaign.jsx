@@ -233,11 +233,11 @@ export default function HBOwnCampaign() {
               )}
 
               <div className="space-y-2">
-                <Label>Komisyon İndirimi (%) <span className="text-xs text-slate-400">opsiyonel</span></Label>
+                <Label>Komisyon İndirimi (%) <span className="text-xs text-muted-foreground/70">opsiyonel</span></Label>
                 <Input type="number" value={commissionDiscount} onChange={(e) => setCommissionDiscount(e.target.value)} placeholder="örn. 7" />
               </div>
             </div>
-            <p className="text-xs text-slate-400 mt-3">Not: "X al Y öde" ürün başına ortalama birim fiyatı (Y/X) baz alır. Komisyon indirimi girersen, kampanya kârı düşük komisyonla hesaplanır.</p>
+            <p className="text-xs text-muted-foreground/70 mt-3">Not: "X al Y öde" ürün başına ortalama birim fiyatı (Y/X) baz alır. Komisyon indirimi girersen, kampanya kârı düşük komisyonla hesaplanır.</p>
           </CardContent>
         </Card>
 
@@ -264,7 +264,7 @@ export default function HBOwnCampaign() {
               <CardContent>
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
-                    <thead className="bg-slate-50 border-b">
+                    <thead className="bg-secondary border-b">
                       <tr>
                         <th className="p-3 text-left font-semibold min-w-[200px]">Ürün</th>
                         <th className="p-3 text-center font-semibold min-w-[150px]">Mevcut</th>
@@ -276,23 +276,23 @@ export default function HBOwnCampaign() {
                       {filteredRows.map((r, i) => {
                         const diff = r.campaign.profit - r.current.profit;
                         return (
-                          <tr key={i} className={`border-b hover:bg-slate-50 ${r.campaign.profit < 0 ? 'bg-rose-50/50' : ''}`}>
+                          <tr key={i} className={`border-b hover:bg-secondary ${r.campaign.profit < 0 ? 'bg-rose-50/50' : ''}`}>
                             <td className="p-3">
-                              <div className="font-medium text-slate-900">{r.product.name}</div>
-                              <div className="text-xs text-slate-500 font-mono">{r.product.sku}</div>
-                              <div className="text-xs text-slate-400">{r.product.category_name}</div>
+                              <div className="font-medium text-foreground">{r.product.name}</div>
+                              <div className="text-xs text-muted-foreground font-mono">{r.product.sku}</div>
+                              <div className="text-xs text-muted-foreground/70">{r.product.category_name}</div>
                             </td>
                             <td className="p-3 text-center">
-                              <div className="font-semibold text-slate-900">₺{r.basePrice.toFixed(2)}</div>
-                              <div className="text-[11px] text-slate-500">Kom: {commLabel(r.baseCommission)}</div>
+                              <div className="font-semibold text-foreground">₺{r.basePrice.toFixed(2)}</div>
+                              <div className="text-[11px] text-muted-foreground">Kom: {commLabel(r.baseCommission)}</div>
                               <div className={`text-xs font-medium ${r.current.profit > 0 ? 'text-emerald-600' : 'text-rose-600'}`}>₺{r.current.profit.toFixed(2)} (%{r.current.profitRate.toFixed(1)})</div>
                             </td>
                             <td className="p-3 text-center">
                               <div className="flex items-center justify-center gap-1">
-                                <span className="font-semibold text-slate-900">₺{r.campPrice.toFixed(2)}</span>
+                                <span className="font-semibold text-foreground">₺{r.campPrice.toFixed(2)}</span>
                                 <Button size="sm" variant="ghost" className="h-5 w-5 p-0" onClick={() => openDetail(r.campPrice, r.effCommission, r.product)}><Info className="h-3 w-3" /></Button>
                               </div>
-                              <div className="text-[11px] text-slate-500">Kom: {commLabel(r.effCommission)}</div>
+                              <div className="text-[11px] text-muted-foreground">Kom: {commLabel(r.effCommission)}</div>
                               <div className={`text-xs font-semibold ${r.campaign.profit > 0 ? 'text-emerald-600' : 'text-rose-600'}`}>₺{r.campaign.profit.toFixed(2)} (%{r.campaign.profitRate.toFixed(1)})</div>
                             </td>
                             <td className="p-3 text-center">
@@ -310,9 +310,9 @@ export default function HBOwnCampaign() {
         ) : (
           <Card>
             <CardContent className="p-12 text-center">
-              <Megaphone className="h-16 w-16 text-slate-300 mx-auto mb-4" />
-              <p className="text-slate-500 mb-2">Hepsiburada fiyatı olan ürün bulunamadı</p>
-              <p className="text-sm text-slate-400">Bu araç, Fiyatlar sayfasında Hepsiburada fiyatı belirlenmiş ürünler üzerinden kâr etkisini hesaplar.</p>
+              <Megaphone className="h-16 w-16 text-muted-foreground/50 mx-auto mb-4" />
+              <p className="text-muted-foreground mb-2">Hepsiburada fiyatı olan ürün bulunamadı</p>
+              <p className="text-sm text-muted-foreground/70">Bu araç, Fiyatlar sayfasında Hepsiburada fiyatı belirlenmiş ürünler üzerinden kâr etkisini hesaplar.</p>
             </CardContent>
           </Card>
         )}

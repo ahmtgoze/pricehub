@@ -1159,11 +1159,11 @@ export default function FlashProducts() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-secondary">
       <div className="ph-page mx-auto">
         <div className="mb-8">
           <h1 className="ph-title">Flaş Ürünler</h1>
-          <p className="text-slate-500 mt-1">Flaş ürün fiyatlarını yükleyip kârlılık analizi yapın</p>
+          <p className="text-muted-foreground mt-1">Flaş ürün fiyatlarını yükleyip kârlılık analizi yapın</p>
         </div>
 
         {!hasTrendyol && (
@@ -1192,7 +1192,7 @@ export default function FlashProducts() {
               <div className="space-y-2">
                 <Label>Platform *</Label>
                 {trendyolPlatforms.length === 1 ? (
-                  <div className="flex items-center h-10 px-3 border border-gray-200 rounded-xl bg-gray-50 text-sm font-medium">
+                  <div className="flex items-center h-10 px-3 border border-border rounded-xl bg-secondary text-sm font-medium">
                     {trendyolPlatforms[0].name}
                   </div>
                 ) : (
@@ -1454,7 +1454,7 @@ export default function FlashProducts() {
               <CardContent>
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
-                    <thead className="bg-slate-50 border-b">
+                    <thead className="bg-secondary border-b">
                       <tr>
                         <th className="p-3 text-left font-semibold min-w-[180px]">Ürün</th>
                         <th className="p-3 text-center font-semibold">Stok</th>
@@ -1475,9 +1475,9 @@ export default function FlashProducts() {
                         const commissionRate3h = getCommissionRate(item, item.price_3h);
 
                         return (
-                          <tr key={index} className="border-b hover:bg-slate-50">
+                          <tr key={index} className="border-b hover:bg-secondary">
                             <td className="p-3">
-                              <div className="font-medium text-slate-900">{item.product_name}</div>
+                              <div className="font-medium text-foreground">{item.product_name}</div>
                               {!matchedProduct && (
                                 <Badge variant="outline" className="mt-1 text-xs text-red-600 border-red-300">
                                   Master eşleşmedi
@@ -1492,37 +1492,37 @@ export default function FlashProducts() {
                               {category ? (
                                 <span className="text-xs font-medium">{category.name}</span>
                               ) : (
-                                <span className="text-slate-400">-</span>
+                                <span className="text-muted-foreground/70">-</span>
                               )}
                             </td>
                             <td className="p-3">
                               {systemPrice ? (
                                 <div className="text-center">
                                   <div className="font-semibold">₺{systemPrice.sale_price?.toFixed(2)}</div>
-                                  <div className="text-xs text-slate-500">
+                                  <div className="text-xs text-muted-foreground">
                                     {matchedProduct?.desi} desi • {systemPrice.barem_used === 'barem1' ? 'Barem 1' : systemPrice.barem_used === 'barem2' ? 'Barem 2' : 'Desi'}
                                   </div>
-                                  <div className="text-xs text-slate-500">Kom: %{systemPrice.commission_rate || 0}</div>
+                                  <div className="text-xs text-muted-foreground">Kom: %{systemPrice.commission_rate || 0}</div>
                                   <div className={`text-xs font-medium ${(systemPrice.profit_rate || 0) > 0 ? 'text-green-600' : 'text-red-600'}`}>
                                     ₺{(systemPrice.net_profit || 0).toFixed(2)} (%{(systemPrice.profit_rate || 0).toFixed(1)})
                                   </div>
                                 </div>
                               ) : (
-                                <span className="text-slate-400">-</span>
+                                <span className="text-muted-foreground/70">-</span>
                               )}
                             </td>
                             <td className="p-3">
                               {item.price_24h > 0 ? (
-                                <div className={`border rounded-lg p-2 ${item.selected_type === 'flash_24h' ? 'border-gray-900 bg-gray-50' : 'border-slate-200'}`}>
-                                  <div className="text-xs font-semibold text-slate-700 mb-1">₺{item.price_24h.toFixed(2)}</div>
+                                <div className={`border rounded-lg p-2 ${item.selected_type === 'flash_24h' ? 'border-gray-900 bg-secondary' : 'border-border'}`}>
+                                  <div className="text-xs font-semibold text-muted-foreground mb-1">₺{item.price_24h.toFixed(2)}</div>
                                   {item.start_24h && item.end_24h && (
-                                    <div className="text-xs text-slate-400 mb-1">
+                                    <div className="text-xs text-muted-foreground/70 mb-1">
                                       {format(new Date(item.start_24h), 'd MMM', { locale: tr })} - {format(new Date(item.end_24h), 'd MMM', { locale: tr })}
                                     </div>
                                   )}
                                   {commissionRate24h !== null ? (
                                     <>
-                                      <div className="text-xs text-slate-500">
+                                      <div className="text-xs text-muted-foreground">
                                         Kom: %{commissionRate24h}
                                       </div>
                                       {(() => {
@@ -1583,25 +1583,25 @@ export default function FlashProducts() {
                                       })()}
                                     </>
                                   ) : (
-                                    <div className="text-center text-slate-400 text-xs">-</div>
+                                    <div className="text-center text-muted-foreground/70 text-xs">-</div>
                                   )}
                                 </div>
                               ) : (
-                                <span className="text-slate-400">-</span>
+                                <span className="text-muted-foreground/70">-</span>
                               )}
                             </td>
                             <td className="p-3">
                               {item.price_3h > 0 ? (
-                                <div className={`border rounded-lg p-2 ${item.selected_type === 'flash_3h' ? 'border-gray-900 bg-gray-50' : 'border-slate-200'}`}>
-                                  <div className="text-xs font-semibold text-slate-700 mb-1">₺{item.price_3h.toFixed(2)}</div>
+                                <div className={`border rounded-lg p-2 ${item.selected_type === 'flash_3h' ? 'border-gray-900 bg-secondary' : 'border-border'}`}>
+                                  <div className="text-xs font-semibold text-muted-foreground mb-1">₺{item.price_3h.toFixed(2)}</div>
                                   {item.start_3h && item.end_3h && (
-                                    <div className="text-xs text-slate-400 mb-1">
+                                    <div className="text-xs text-muted-foreground/70 mb-1">
                                       {format(new Date(item.start_3h), 'd MMM', { locale: tr })} - {format(new Date(item.end_3h), 'd MMM', { locale: tr })}
                                     </div>
                                   )}
                                   {commissionRate3h !== null ? (
                                     <>
-                                      <div className="text-xs text-slate-500">
+                                      <div className="text-xs text-muted-foreground">
                                         Kom: %{commissionRate3h}
                                       </div>
                                       {(() => {
@@ -1662,11 +1662,11 @@ export default function FlashProducts() {
                                       })()}
                                     </>
                                   ) : (
-                                    <div className="text-center text-slate-400 text-xs">-</div>
+                                    <div className="text-center text-muted-foreground/70 text-xs">-</div>
                                   )}
                                 </div>
                               ) : (
-                                <span className="text-slate-400">-</span>
+                                <span className="text-muted-foreground/70">-</span>
                               )}
                             </td>
 
@@ -1675,12 +1675,12 @@ export default function FlashProducts() {
                               {(() => {
                                 const selectedPrice = item.selected_price || 0;
                                 if (selectedPrice === 0 || item.selected_type === 'none') return (
-                                  <div className="text-center text-slate-400 text-xs">-</div>
+                                  <div className="text-center text-muted-foreground/70 text-xs">-</div>
                                 );
 
                                 const selectedCommissionRate = getCommissionRate(item, selectedPrice);
                                 if (selectedCommissionRate === null) return (
-                                  <div className="text-center text-slate-400 text-xs">-</div>
+                                  <div className="text-center text-muted-foreground/70 text-xs">-</div>
                                 );
 
                                 const currentCalc = calculateProfit(selectedPrice, selectedCommissionRate, item);
@@ -1688,7 +1688,7 @@ export default function FlashProducts() {
                                 const currentBaremUsed = currentCalc.baremUsed;
 
                                 if (currentBaremUsed === 'barem1' || currentBaremUsed === 'barem2') {
-                                  return <div className="text-center text-slate-400 text-xs">-</div>;
+                                  return <div className="text-center text-muted-foreground/70 text-xs">-</div>;
                                 }
 
                                 let bestBaremSuggestion = null;
@@ -1734,7 +1734,7 @@ export default function FlashProducts() {
                                 }
 
                                 if (!bestBaremSuggestion) {
-                                  return <div className="text-center text-slate-400 text-xs">-</div>;
+                                  return <div className="text-center text-muted-foreground/70 text-xs">-</div>;
                                 }
 
                                 const profitIncrease = bestBaremSuggestion.profitRate - currentProfitRate;
@@ -1744,10 +1744,10 @@ export default function FlashProducts() {
                                     <div className="text-xs font-semibold text-amber-800 mb-1">
                                       {bestBaremSuggestion.baremType} Önerisi
                                     </div>
-                                    <div className="text-xs text-slate-600">
+                                    <div className="text-xs text-muted-foreground">
                                       Fiyat: ₺{bestBaremSuggestion.price.toFixed(2)}
                                     </div>
-                                    <div className="text-xs text-slate-600">
+                                    <div className="text-xs text-muted-foreground">
                                       Kom: %{bestBaremSuggestion.commissionRate}
                                     </div>
                                     <div className="flex items-center justify-between mt-1">
@@ -1806,8 +1806,8 @@ export default function FlashProducts() {
                             </td>
 
                             <td className="p-3">
-                              <div className={`border rounded-lg p-2 ${item.selected_type === 'manual' ? 'border-gray-900 bg-gray-50' : 'border-slate-200'}`}>
-                                <div className="text-xs font-semibold text-slate-700 mb-2">Manuel Fiyat</div>
+                              <div className={`border rounded-lg p-2 ${item.selected_type === 'manual' ? 'border-gray-900 bg-secondary' : 'border-border'}`}>
+                                <div className="text-xs font-semibold text-muted-foreground mb-2">Manuel Fiyat</div>
                                     <Input
                                       type="number"
                                       step="0.01"
@@ -1888,7 +1888,7 @@ export default function FlashProducts() {
                                              </div>
                                            ) : (
                                              item.manual_time_range && (
-                                               <div className="mb-2 text-xs text-slate-600">
+                                               <div className="mb-2 text-xs text-muted-foreground">
                                                  Zaman: {item.manual_time_range === 'flash_24h' ? '24 Saat' : '3 Saat'}
                                                </div>
                                              )
@@ -1922,9 +1922,9 @@ export default function FlashProducts() {
         {uploadedData.length === 0 && (
           <Card>
             <CardContent className="p-12 text-center">
-              <Upload className="h-16 w-16 text-slate-300 mx-auto mb-4" />
-              <p className="text-slate-500 mb-2">Henüz dosya yüklenmedi</p>
-              <p className="text-sm text-slate-400">Platform seçip Excel dosyasını yükleyin</p>
+              <Upload className="h-16 w-16 text-muted-foreground/50 mx-auto mb-4" />
+              <p className="text-muted-foreground mb-2">Henüz dosya yüklenmedi</p>
+              <p className="text-sm text-muted-foreground/70">Platform seçip Excel dosyasını yükleyin</p>
             </CardContent>
           </Card>
         )}

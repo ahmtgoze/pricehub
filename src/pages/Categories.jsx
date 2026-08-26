@@ -237,7 +237,7 @@ export default function Categories() {
     {
       header: 'Kategori Adı',
       accessor: 'name',
-      cell: (row) => <span className="font-medium text-slate-900">{row.name}</span>
+      cell: (row) => <span className="font-medium text-foreground">{row.name}</span>
     },
     {
       header: 'Varsayılan KDV',
@@ -250,8 +250,8 @@ export default function Categories() {
       cell: (row) => {
         const n = countForCat(row.id);
         return n > 0
-          ? <span className="text-slate-700">{n}</span>
-          : <span className="text-slate-400">0</span>;
+          ? <span className="text-muted-foreground">{n}</span>
+          : <span className="text-muted-foreground/70">0</span>;
       }
     },
     {
@@ -294,12 +294,12 @@ export default function Categories() {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-secondary">
       <div className="max-w-[1200px] mx-auto px-3 sm:px-6 py-5 sm:py-8">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
           <div>
             <h1 className="ph-title">Kategoriler</h1>
-            <p className="text-slate-500 mt-1">{filteredCategories.length} kategori</p>
+            <p className="text-muted-foreground mt-1">{filteredCategories.length} kategori</p>
           </div>
           <div className="flex gap-2 flex-wrap">
             <input ref={importRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={handleImport} />

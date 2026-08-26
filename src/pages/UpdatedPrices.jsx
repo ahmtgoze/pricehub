@@ -289,7 +289,7 @@ export default function UpdatedPrices() {
 
   const changeOranCell = (row) => (
     <TableCell className="text-sm">
-      <span className={`font-medium ${row.price_change_percent > 0 ? 'text-green-600' : row.price_change_percent < 0 ? 'text-red-600' : 'text-gray-600'}`}>
+      <span className={`font-medium ${row.price_change_percent > 0 ? 'text-green-600' : row.price_change_percent < 0 ? 'text-red-600' : 'text-muted-foreground'}`}>
         {row.price_change_percent > 0 ? '+' : ''}{row.price_change_percent?.toFixed(2)}%
       </span>
     </TableCell>
@@ -297,18 +297,18 @@ export default function UpdatedPrices() {
 
   const changeTutarCell = (row) => (
     <TableCell className="text-sm">
-      <span className={`font-medium ${row.price_diff > 0 ? 'text-green-600' : row.price_diff < 0 ? 'text-red-600' : 'text-gray-600'}`}>
+      <span className={`font-medium ${row.price_diff > 0 ? 'text-green-600' : row.price_diff < 0 ? 'text-red-600' : 'text-muted-foreground'}`}>
         {row.price_diff > 0 ? '+' : ''}₺{row.price_diff?.toFixed(2)}
       </span>
     </TableCell>
   );
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
+    <div className="min-h-screen bg-secondary p-6">
       <div className="max-w-7xl mx-auto">
         <div className="mb-8">
           <h1 className="ph-title">Düzenlenen Fiyatlar</h1>
-          <p className="text-gray-600">Sistemde güncellenen fiyatları görüntüleyin ve indirin</p>
+          <p className="text-muted-foreground">Sistemde güncellenen fiyatları görüntüleyin ve indirin</p>
         </div>
 
         {/* HepsiBurada Kılavuz */}
@@ -352,17 +352,17 @@ export default function UpdatedPrices() {
         </div>
 
         {/* ✅ Web Sitesi Kılavuz */}
-        <div className="mb-6 rounded-xl border border-gray-200 bg-gray-50 overflow-hidden">
+        <div className="mb-6 rounded-xl border border-border bg-secondary overflow-hidden">
           <button onClick={() => setShowWebsiteGuide(!showWebsiteGuide)} className="w-full flex items-center justify-between px-5 py-3 text-left">
-            <span className="font-semibold text-gray-900 text-sm">🌐 Web Sitesi — Fiyat Güncelleme Nasıl Yapılır?</span>
-            {showWebsiteGuide ? <ChevronUp className="w-4 h-4 text-gray-600" /> : <ChevronDown className="w-4 h-4 text-gray-600" />}
+            <span className="font-semibold text-foreground text-sm">🌐 Web Sitesi — Fiyat Güncelleme Nasıl Yapılır?</span>
+            {showWebsiteGuide ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
           </button>
           {showWebsiteGuide && (
-            <div className="px-5 pb-4 border-t border-gray-200">
+            <div className="px-5 pb-4 border-t border-border">
               <ol className="mt-3 space-y-1.5">
                 {WEBSITE_FIYAT_ADIMLARI.map((adim, i) => (
-                  <li key={i} className={`text-sm flex gap-2 ${adim.startsWith('⚠️') ? 'text-red-700 font-medium' : 'text-gray-900'}`}>
-                    {!adim.startsWith('⚠️') && <span className="font-bold text-gray-600 shrink-0">{i + 1}.</span>}
+                  <li key={i} className={`text-sm flex gap-2 ${adim.startsWith('⚠️') ? 'text-red-700 font-medium' : 'text-foreground'}`}>
+                    {!adim.startsWith('⚠️') && <span className="font-bold text-muted-foreground shrink-0">{i + 1}.</span>}
                     <span>{adim}</span>
                   </li>
                 ))}
@@ -403,7 +403,7 @@ export default function UpdatedPrices() {
 
         {!selectedPlatform && (
           <div className="rounded-[18px] border border-border bg-card p-12 text-center">
-            <p className="text-gray-500">Ürünleri görüntülemek için lütfen platform seçin</p>
+            <p className="text-muted-foreground">Ürünleri görüntülemek için lütfen platform seçin</p>
           </div>
         )}
 
@@ -411,8 +411,8 @@ export default function UpdatedPrices() {
           <>
             <div className="rounded-[18px] border border-border bg-card p-4 mb-4 flex items-center justify-between flex-wrap gap-3">
               <div className="flex items-center gap-4">
-                <span className="text-sm font-semibold text-gray-900">Toplam: {updatedPrices.length} ürün</span>
-                {selectedRows.size > 0 && <span className="text-sm text-gray-600">{selectedRows.size} seçildi</span>}
+                <span className="text-sm font-semibold text-foreground">Toplam: {updatedPrices.length} ürün</span>
+                {selectedRows.size > 0 && <span className="text-sm text-muted-foreground">{selectedRows.size} seçildi</span>}
               </div>
               <div className="flex items-center gap-2">
                 <Label className="text-sm">Sırala:</Label>
@@ -438,7 +438,7 @@ export default function UpdatedPrices() {
 
             <div className="rounded-[18px] border border-border bg-card overflow-x-auto">
               <Table>
-                <TableHeader className="bg-gray-50">
+                <TableHeader className="bg-secondary">
                   <TableRow>
                     <TableHead className="w-12">
                       <Checkbox checked={selectedRows.size === updatedPrices.length && updatedPrices.length > 0} onCheckedChange={handleSelectAll} />
@@ -473,7 +473,7 @@ export default function UpdatedPrices() {
                 </TableHeader>
                 <TableBody>
                   {updatedPrices.map((row) => (
-                    <TableRow key={row.id} className={selectedRows.has(row.id) ? 'bg-gray-100' : ''}>
+                    <TableRow key={row.id} className={selectedRows.has(row.id) ? 'bg-secondary' : ''}>
                       <TableCell>
                         <Checkbox checked={selectedRows.has(row.id)} onCheckedChange={() => handleSelectRow(row.id)} />
                       </TableCell>
@@ -483,9 +483,9 @@ export default function UpdatedPrices() {
                         </TableCell>
                         <TableCell className="text-sm">
                           <p>{row.product_name}</p>
-                          <p className="text-xs text-gray-400">{row.product_sku}</p>
+                          <p className="text-xs text-muted-foreground/70">{row.product_sku}</p>
                         </TableCell>
-                        <TableCell className="text-sm font-medium text-gray-500">₺{row.market_price?.toFixed(2)}</TableCell>
+                        <TableCell className="text-sm font-medium text-muted-foreground">₺{row.market_price?.toFixed(2)}</TableCell>
                         <TableCell className="text-sm font-bold text-green-700">₺{row.system_price?.toFixed(2)}</TableCell>
                         {changeOranCell(row)}
                         {changeTutarCell(row)}
@@ -493,7 +493,7 @@ export default function UpdatedPrices() {
                       {isHepsiburada && <>
                         <TableCell className="text-sm">{row.hb_sku || ''}</TableCell>
                         <TableCell className="text-sm">{row.platform_product_name}</TableCell>
-                        <TableCell className="text-sm font-medium text-gray-500">₺{row.market_price?.toFixed(2)}</TableCell>
+                        <TableCell className="text-sm font-medium text-muted-foreground">₺{row.market_price?.toFixed(2)}</TableCell>
                         <TableCell className="text-sm font-bold text-green-700">₺{row.system_price?.toFixed(2)}</TableCell>
                         {changeOranCell(row)}
                         {changeTutarCell(row)}
@@ -502,7 +502,7 @@ export default function UpdatedPrices() {
                       {!isHepsiburada && !isWebsite && <>
                         <TableCell className="text-sm">{row.barkod}</TableCell>
                         <TableCell className="text-sm">{row.platform_product_name}</TableCell>
-                        <TableCell className="text-sm font-medium text-gray-500">₺{row.market_price?.toFixed(2)}</TableCell>
+                        <TableCell className="text-sm font-medium text-muted-foreground">₺{row.market_price?.toFixed(2)}</TableCell>
                         <TableCell className="text-sm font-bold text-green-700">₺{row.system_price?.toFixed(2)}</TableCell>
                         {changeOranCell(row)}
                         {changeTutarCell(row)}
@@ -518,32 +518,32 @@ export default function UpdatedPrices() {
 
         {selectedPlatform && updatedPrices.length === 0 && (
           <div className="rounded-[18px] border border-border bg-card p-12 text-center">
-            <p className="text-gray-500">Bu platform için eşleştirilmiş ürün bulunamadı</p>
-            <p className="text-xs text-gray-400 mt-2">Pazaryeri Ürünleri sayfasında ürünleri eşleştirin, sonra "Ürünleri Güncelle" butonuna basın</p>
+            <p className="text-muted-foreground">Bu platform için eşleştirilmiş ürün bulunamadı</p>
+            <p className="text-xs text-muted-foreground/70 mt-2">Pazaryeri Ürünleri sayfasında ürünleri eşleştirin, sonra "Ürünleri Güncelle" butonuna basın</p>
           </div>
         )}
 
         {/* Güncelleme İlerleme Popup */}
         {refreshProgress && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-            <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md mx-4">
-              <h3 className="text-lg font-bold text-gray-900 mb-1">Veriler Güncelleniyor</h3>
-              <p className="text-sm text-gray-900 font-medium mb-1">{refreshProgress.step}</p>
-              {refreshProgress.detail && <p className="text-xs text-gray-500 mb-4">{refreshProgress.detail}</p>}
-              {!refreshProgress.detail && <p className="text-xs text-gray-400 mb-4">Lütfen bekleyin...</p>}
+            <div className="bg-card rounded-2xl shadow-2xl p-8 w-full max-w-md mx-4">
+              <h3 className="text-lg font-bold text-foreground mb-1">Veriler Güncelleniyor</h3>
+              <p className="text-sm text-foreground font-medium mb-1">{refreshProgress.step}</p>
+              {refreshProgress.detail && <p className="text-xs text-muted-foreground mb-4">{refreshProgress.detail}</p>}
+              {!refreshProgress.detail && <p className="text-xs text-muted-foreground/70 mb-4">Lütfen bekleyin...</p>}
               <div className="mb-3">
-                <div className="flex justify-between text-xs text-gray-600 mb-1">
+                <div className="flex justify-between text-xs text-muted-foreground mb-1">
                   <span>Adım {refreshProgress.stepNum} / {refreshProgress.totalSteps}</span>
                   <span>%{Math.round((refreshProgress.stepNum / refreshProgress.totalSteps) * 100)}</span>
                 </div>
-                <div className="w-full bg-gray-100 rounded-full h-3 overflow-hidden">
+                <div className="w-full bg-secondary rounded-full h-3 overflow-hidden">
                   <div
                     className="bg-gray-900 h-3 rounded-full transition-all duration-500"
                     style={{ width: `${(refreshProgress.stepNum / refreshProgress.totalSteps) * 100}%` }}
                   />
                 </div>
               </div>
-              <p className="text-xs text-gray-400 text-center">Tüm veriler yüklenene kadar bekleyin, kapatmayın</p>
+              <p className="text-xs text-muted-foreground/70 text-center">Tüm veriler yüklenene kadar bekleyin, kapatmayın</p>
             </div>
           </div>
         )}

@@ -231,7 +231,7 @@ export default function PlatformSettingsModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-xl flex flex-col p-0 gap-0 max-h-[90dvh]">
         <div className={`h-1 w-full bg-gradient-to-r ${platformColor} rounded-t-lg flex-shrink-0`} />
-        <DialogHeader className="px-6 pt-4 pb-4 border-b border-slate-100 flex-shrink-0">
+        <DialogHeader className="px-6 pt-4 pb-4 border-b border-border flex-shrink-0">
           <DialogTitle className="text-xl font-semibold flex items-center gap-2">
             {platform?.name} Ayarları
           </DialogTitle>
@@ -258,28 +258,28 @@ export default function PlatformSettingsModal({
                     ))}
                   </SelectContent>
                 </Select>
-                <p className="text-xs text-slate-500">Dosya yükleme ve dışa aktarma formatı bu seçime göre belirlenir.</p>
+                <p className="text-xs text-muted-foreground">Dosya yükleme ve dışa aktarma formatı bu seçime göre belirlenir.</p>
               </div>
             )}
 
             {/* KARGO AYARLARI */}
             <div className="space-y-4">
               <div className="flex items-center gap-2">
-                <Truck className="h-4 w-4 text-slate-500" />
-                <h4 className="font-semibold text-slate-700">Kargo Ayarları</h4>
+                <Truck className="h-4 w-4 text-muted-foreground" />
+                <h4 className="font-semibold text-muted-foreground">Kargo Ayarları</h4>
               </div>
 
               {!isMarketplace && (
                 <div className="space-y-2">
                   <Label>Kargo Firması</Label>
                   {shippingCompanies.length === 0 ? (
-                    <div className="text-sm text-slate-400 italic bg-slate-50 border border-slate-100 rounded-lg px-3 py-2">
+                    <div className="text-sm text-muted-foreground/70 italic bg-secondary border border-border rounded-lg px-3 py-2">
                       Henüz sisteme kargo firması eklenmemiş.
                     </div>
                   ) : shippingCompanies.length === 1 ? (
-                    <div className="text-sm text-slate-700 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2">
+                    <div className="text-sm text-muted-foreground bg-secondary border border-border rounded-lg px-3 py-2">
                       {shippingCompanies[0].name}{' '}
-                      <span className="text-xs text-slate-400">(otomatik seçildi)</span>
+                      <span className="text-xs text-muted-foreground/70">(otomatik seçildi)</span>
                     </div>
                   ) : (
                     <Select
@@ -301,25 +301,25 @@ export default function PlatformSettingsModal({
               )}
 
               {isMarketplace && (
-                <div className="space-y-3 bg-slate-50 border border-slate-200 rounded-xl p-4">
-                  <Label className="text-sm font-semibold text-slate-700">Kargo Fiyat Modu</Label>
+                <div className="space-y-3 bg-secondary border border-border rounded-xl p-4">
+                  <Label className="text-sm font-semibold text-muted-foreground">Kargo Fiyat Modu</Label>
                   <div className="flex flex-col gap-3">
                     <label className="flex items-start gap-3 cursor-pointer">
                       <input type="radio" name="shipping_mode" checked={!formData.use_custom_shipping_price}
                         onChange={() => setFormData((prev) => ({ ...prev, use_custom_shipping_price: false, shipping_company_id: '', shipping_company_name: '' }))}
                         className="mt-0.5 accent-gray-900" />
                       <div className="flex-1">
-                        <p className="text-sm font-medium text-slate-700">Sistem Tarifesi</p>
-                        <p className="text-xs text-slate-400">Yüklenen kargo tarifeleri üzerinden otomatik hesaplanır</p>
+                        <p className="text-sm font-medium text-muted-foreground">Sistem Tarifesi</p>
+                        <p className="text-xs text-muted-foreground/70">Yüklenen kargo tarifeleri üzerinden otomatik hesaplanır</p>
                         {!formData.use_custom_shipping_price && (
                           <div className="mt-2">
                             {shippingCompanies.length === 0 ? (
-                              <div className="text-xs text-slate-400 italic bg-white border border-slate-100 rounded-lg px-3 py-2">Henüz sisteme kargo firması eklenmemiş.</div>
+                              <div className="text-xs text-muted-foreground/70 italic bg-card border border-border rounded-lg px-3 py-2">Henüz sisteme kargo firması eklenmemiş.</div>
                             ) : shippingCompanies.length === 1 ? (
-                              <div className="text-xs text-slate-700 bg-white border border-slate-200 rounded-lg px-3 py-2">{shippingCompanies[0].name}{' '}<span className="text-slate-400">(otomatik seçildi)</span></div>
+                              <div className="text-xs text-muted-foreground bg-card border border-border rounded-lg px-3 py-2">{shippingCompanies[0].name}{' '}<span className="text-muted-foreground/70">(otomatik seçildi)</span></div>
                             ) : (
                               <Select value={formData.shipping_company_id || 'none'} onValueChange={handleShippingCompanyChange}>
-                                <SelectTrigger className="bg-white text-sm"><SelectValue placeholder="Kargo firması seçin..." /></SelectTrigger>
+                                <SelectTrigger className="bg-card text-sm"><SelectValue placeholder="Kargo firması seçin..." /></SelectTrigger>
                                 <SelectContent>
                                   <SelectItem value="none">-- Seçilmedi --</SelectItem>
                                   {shippingCompanies.map((c) => (<SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>))}
@@ -336,17 +336,17 @@ export default function PlatformSettingsModal({
                         onChange={() => setFormData((prev) => ({ ...prev, use_custom_shipping_price: true, shipping_company_id: '', shipping_company_name: '' }))}
                         className="mt-0.5 accent-gray-900" />
                       <div className="flex-1">
-                        <p className="text-sm font-medium text-slate-700">Manuel Anlaşmalı Fiyat</p>
-                        <p className="text-xs text-slate-400">Kargo Tarifeleri sayfasında tanımladığınız manuel tarifeler kullanılır</p>
+                        <p className="text-sm font-medium text-muted-foreground">Manuel Anlaşmalı Fiyat</p>
+                        <p className="text-xs text-muted-foreground/70">Kargo Tarifeleri sayfasında tanımladığınız manuel tarifeler kullanılır</p>
                         {formData.use_custom_shipping_price && (
                           <div className="mt-2">
                             {shippingCompanies.length === 0 ? (
-                              <div className="text-xs text-slate-400 italic bg-white border border-slate-100 rounded-lg px-3 py-2">Henüz sisteme kargo firması eklenmemiş.</div>
+                              <div className="text-xs text-muted-foreground/70 italic bg-card border border-border rounded-lg px-3 py-2">Henüz sisteme kargo firması eklenmemiş.</div>
                             ) : shippingCompanies.length === 1 ? (
-                              <div className="text-xs text-slate-700 bg-white border border-slate-200 rounded-lg px-3 py-2">{shippingCompanies[0].name}{' '}<span className="text-slate-400">(otomatik seçildi)</span></div>
+                              <div className="text-xs text-muted-foreground bg-card border border-border rounded-lg px-3 py-2">{shippingCompanies[0].name}{' '}<span className="text-muted-foreground/70">(otomatik seçildi)</span></div>
                             ) : (
                               <Select value={formData.shipping_company_id || 'none'} onValueChange={handleShippingCompanyChange}>
-                                <SelectTrigger className="bg-white text-sm"><SelectValue placeholder="Kargo firması seçin..." /></SelectTrigger>
+                                <SelectTrigger className="bg-card text-sm"><SelectValue placeholder="Kargo firması seçin..." /></SelectTrigger>
                                 <SelectContent>
                                   <SelectItem value="none">-- Seçilmedi --</SelectItem>
                                   {shippingCompanies.map((c) => (<SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>))}
@@ -367,7 +367,7 @@ export default function PlatformSettingsModal({
               <>
                 <Separator />
                 <div className="space-y-4">
-                  <h4 className="font-semibold text-slate-900 text-sm bg-slate-100 rounded-lg px-3 py-2">
+                  <h4 className="font-semibold text-foreground text-sm bg-secondary rounded-lg px-3 py-2">
                     {isAdmin ? '⚙️ Sistem Yönetim Ayarları' : 'Platform Bilgileri'}
                   </h4>
 
@@ -376,7 +376,7 @@ export default function PlatformSettingsModal({
                     <div className="flex items-center justify-between">
                       <div>
                         <Label>Kurumlar (Gelir) Vergisi</Label>
-                        <p className="text-xs text-slate-400 mt-0.5">Kâr üzerinden alınan vergi (%{formData.corporate_tax_rate})</p>
+                        <p className="text-xs text-muted-foreground/70 mt-0.5">Kâr üzerinden alınan vergi (%{formData.corporate_tax_rate})</p>
                       </div>
                       <Switch
                         checked={formData.has_corporate_tax}
@@ -403,7 +403,7 @@ export default function PlatformSettingsModal({
                       {isAdmin ? (
                         <Switch checked={formData.has_withholding} onCheckedChange={(checked) => setFormData({ ...formData, has_withholding: checked })} />
                       ) : (
-                        <span className={`text-sm font-medium px-2 py-0.5 rounded-full ${formData.has_withholding ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'}`}>
+                        <span className={`text-sm font-medium px-2 py-0.5 rounded-full ${formData.has_withholding ? 'bg-green-100 text-green-700' : 'bg-secondary text-muted-foreground'}`}>
                           {formData.has_withholding ? 'Aktif' : 'Pasif'}
                         </span>
                       )}
@@ -414,7 +414,7 @@ export default function PlatformSettingsModal({
                         {isAdmin ? (
                           <Input type="number" step="0.01" min="0" value={formData.withholding_rate} onChange={(e) => setFormData({ ...formData, withholding_rate: e.target.value })} placeholder="1" />
                         ) : (
-                          <div className="px-3 py-2 rounded-lg text-sm font-medium bg-slate-50 border border-slate-100">%{formData.withholding_rate}</div>
+                          <div className="px-3 py-2 rounded-lg text-sm font-medium bg-secondary border border-border">%{formData.withholding_rate}</div>
                         )}
                       </div>
                     )}
@@ -427,7 +427,7 @@ export default function PlatformSettingsModal({
                       {isAdmin ? (
                         <Switch checked={formData.has_service_fee} onCheckedChange={(checked) => setFormData({ ...formData, has_service_fee: checked })} />
                       ) : (
-                        <span className={`text-sm font-medium px-2 py-0.5 rounded-full ${formData.has_service_fee ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'}`}>
+                        <span className={`text-sm font-medium px-2 py-0.5 rounded-full ${formData.has_service_fee ? 'bg-green-100 text-green-700' : 'bg-secondary text-muted-foreground'}`}>
                           {formData.has_service_fee ? 'Aktif' : 'Pasif'}
                         </span>
                       )}
@@ -445,7 +445,7 @@ export default function PlatformSettingsModal({
                             </SelectContent>
                           </Select>
                         ) : (
-                          <div className="px-3 py-2 rounded-lg text-sm font-medium bg-slate-50 border border-slate-100">
+                          <div className="px-3 py-2 rounded-lg text-sm font-medium bg-secondary border border-border">
                             {formData.service_fee_type === 'fixed_per_order' ? 'Sabit (Sipariş Başı)' : formData.service_fee_type === 'percent_of_sale' ? 'Yüzde (Satış Üzerinden)' : 'Yok'}
                           </div>
                         )}
@@ -455,7 +455,7 @@ export default function PlatformSettingsModal({
                             {isAdmin ? (
                               <Input type="number" step="0.01" min="0" value={formData.service_fee_amount} onChange={(e) => setFormData({ ...formData, service_fee_amount: e.target.value })} />
                             ) : (
-                              <div className="px-3 py-2 rounded-lg text-sm font-medium bg-slate-50 border border-slate-100">
+                              <div className="px-3 py-2 rounded-lg text-sm font-medium bg-secondary border border-border">
                                 {formData.service_fee_type === 'percent_of_sale' ? `%${formData.service_fee_amount}` : `₺${formData.service_fee_amount}`}
                               </div>
                             )}
@@ -465,35 +465,35 @@ export default function PlatformSettingsModal({
                             {isAdmin ? (
                               <Input type="number" value={formData.service_fee_vat_rate} onChange={(e) => setFormData({ ...formData, service_fee_vat_rate: e.target.value })} />
                             ) : (
-                              <div className="px-3 py-2 rounded-lg text-sm font-medium bg-slate-50 border border-slate-100">%{formData.service_fee_vat_rate}</div>
+                              <div className="px-3 py-2 rounded-lg text-sm font-medium bg-secondary border border-border">%{formData.service_fee_vat_rate}</div>
                             )}
                           </div>
                         </div>
-                        <div className="border-t border-slate-200 pt-3 mt-3">
+                        <div className="border-t border-border pt-3 mt-3">
                           <Label className="text-sm font-medium block mb-2">Bugün Kargoda Hizmet Bedeli (İndirimli)</Label>
                           {isAdmin ? (
                             <>
                               <Input type="number" step="0.01" min="0" value={formData.same_day_delivery_service_fee} onChange={(e) => setFormData({ ...formData, same_day_delivery_service_fee: e.target.value })} placeholder="0" className="text-sm" />
-                              <p className="text-xs text-slate-500 mt-1">"Bugün Kargoda" seçildiğinde bu bedel uygulanır</p>
+                              <p className="text-xs text-muted-foreground mt-1">"Bugün Kargoda" seçildiğinde bu bedel uygulanır</p>
                             </>
                           ) : (
                             <>
-                              <div className="px-3 py-2 rounded-lg text-sm font-medium bg-slate-50 border border-slate-100">₺{formData.same_day_delivery_service_fee}</div>
-                              <p className="text-xs text-slate-500 mt-1">"Bugün Kargoda" seçildiğinde bu bedel uygulanır</p>
+                              <div className="px-3 py-2 rounded-lg text-sm font-medium bg-secondary border border-border">₺{formData.same_day_delivery_service_fee}</div>
+                              <p className="text-xs text-muted-foreground mt-1">"Bugün Kargoda" seçildiğinde bu bedel uygulanır</p>
                             </>
                           )}
                         </div>
                         {platform?.platform_type === 'hepsiburada' && (
-                          <div className="border-t border-slate-200 pt-3 mt-3">
+                          <div className="border-t border-border pt-3 mt-3">
                             <div className="flex items-center justify-between mb-2">
                               <div>
                                 <Label className="text-sm font-medium">POS Hizmet Bedeli</Label>
-                                <p className="text-xs text-slate-500 mt-0.5">Sipariş başına yüzdelik kesinti (Bugün Kargoda dahil)</p>
+                                <p className="text-xs text-muted-foreground mt-0.5">Sipariş başına yüzdelik kesinti (Bugün Kargoda dahil)</p>
                               </div>
                               {isAdmin ? (
                                 <Switch checked={formData.has_pos_service_fee} onCheckedChange={(checked) => setFormData({ ...formData, has_pos_service_fee: checked })} />
                               ) : (
-                                <span className={`text-sm font-medium px-2 py-0.5 rounded-full ${formData.has_pos_service_fee ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'}`}>
+                                <span className={`text-sm font-medium px-2 py-0.5 rounded-full ${formData.has_pos_service_fee ? 'bg-green-100 text-green-700' : 'bg-secondary text-muted-foreground'}`}>
                                   {formData.has_pos_service_fee ? 'Aktif' : 'Pasif'}
                                 </span>
                               )}
@@ -502,10 +502,10 @@ export default function PlatformSettingsModal({
                               isAdmin ? (
                                 <>
                                   <Input type="number" step="0.0001" min="0" value={formData.pos_service_fee_rate} onChange={(e) => setFormData({ ...formData, pos_service_fee_rate: e.target.value })} placeholder="0" className="text-sm" />
-                                  <p className="text-xs text-slate-500 mt-1">KDV dahil satış fiyatı üzerinden yüzde olarak kesilir</p>
+                                  <p className="text-xs text-muted-foreground mt-1">KDV dahil satış fiyatı üzerinden yüzde olarak kesilir</p>
                                 </>
                               ) : (
-                                <div className="px-3 py-2 rounded-lg text-sm font-medium bg-slate-50 border border-slate-100">%{formData.pos_service_fee_rate}</div>
+                                <div className="px-3 py-2 rounded-lg text-sm font-medium bg-secondary border border-border">%{formData.pos_service_fee_rate}</div>
                               )
                             )}
                           </div>
@@ -521,7 +521,7 @@ export default function PlatformSettingsModal({
                       {isAdmin ? (
                         <Switch checked={formData.use_barem} onCheckedChange={(checked) => setFormData({ ...formData, use_barem: checked })} />
                       ) : (
-                        <span className={`text-sm font-medium px-2 py-0.5 rounded-full ${formData.use_barem ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'}`}>
+                        <span className={`text-sm font-medium px-2 py-0.5 rounded-full ${formData.use_barem ? 'bg-green-100 text-green-700' : 'bg-secondary text-muted-foreground'}`}>
                           {formData.use_barem ? 'Aktif' : 'Pasif'}
                         </span>
                       )}
@@ -532,27 +532,27 @@ export default function PlatformSettingsModal({
                         {isAdmin ? (
                           <>
                             <Input type="number" step="1" min="0" value={formData.barem_max_desi} onChange={(e) => setFormData({ ...formData, barem_max_desi: e.target.value })} />
-                            <p className="text-xs text-slate-500">Bu değerin üzerindeki ürünler desi tarifesiyle hesaplanır</p>
+                            <p className="text-xs text-muted-foreground">Bu değerin üzerindeki ürünler desi tarifesiyle hesaplanır</p>
                           </>
                         ) : (
                           <>
-                            <div className="px-3 py-2 rounded-lg text-sm font-medium bg-slate-50 border border-slate-100">{formData.barem_max_desi} desi</div>
-                            <p className="text-xs text-slate-500">Bu değerin üzerindeki ürünler desi tarifesiyle hesaplanır</p>
+                            <div className="px-3 py-2 rounded-lg text-sm font-medium bg-secondary border border-border">{formData.barem_max_desi} desi</div>
+                            <p className="text-xs text-muted-foreground">Bu değerin üzerindeki ürünler desi tarifesiyle hesaplanır</p>
                           </>
                         )}
                         <div className="grid grid-cols-2 gap-2 mt-3">
                           <div>
                             <Label className="text-xs">Barem 1 Aralığı (₺)</Label>
-                            <div className="px-3 py-2 rounded-lg text-sm font-medium bg-slate-50 border border-slate-100">{formData.barem1_min} - {formData.barem1_max}</div>
+                            <div className="px-3 py-2 rounded-lg text-sm font-medium bg-secondary border border-border">{formData.barem1_min} - {formData.barem1_max}</div>
                           </div>
                           <div>
                             <Label className="text-xs">Barem 2 Aralığı (₺)</Label>
-                            <div className="px-3 py-2 rounded-lg text-sm font-medium bg-slate-50 border border-slate-100">{formData.barem2_min} - {formData.barem2_max}</div>
+                            <div className="px-3 py-2 rounded-lg text-sm font-medium bg-secondary border border-border">{formData.barem2_min} - {formData.barem2_max}</div>
                           </div>
                         </div>
                         {isAdmin && (
-                          <div className="mt-3 pt-3 border-t border-slate-200">
-                            <p className="text-xs font-semibold text-slate-600 mb-2">Admin: Aralıkları Düzenle</p>
+                          <div className="mt-3 pt-3 border-t border-border">
+                            <p className="text-xs font-semibold text-muted-foreground mb-2">Admin: Aralıkları Düzenle</p>
                             <div className="grid grid-cols-2 gap-2">
                               <div>
                                 <Label className="text-xs">Barem 1 Min (₺)</Label>
@@ -585,12 +585,12 @@ export default function PlatformSettingsModal({
               <>
                 <Separator />
                 <div className="space-y-4">
-                  <h4 className="font-semibold text-slate-900 text-sm bg-slate-100 rounded-lg px-3 py-2">Vergi Ayarları</h4>
+                  <h4 className="font-semibold text-foreground text-sm bg-secondary rounded-lg px-3 py-2">Vergi Ayarları</h4>
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
                       <div>
                         <Label>Kurumlar (Gelir) Vergisi</Label>
-                        <p className="text-xs text-slate-400 mt-0.5">Kâr üzerinden alınan vergi (%{formData.corporate_tax_rate})</p>
+                        <p className="text-xs text-muted-foreground/70 mt-0.5">Kâr üzerinden alınan vergi (%{formData.corporate_tax_rate})</p>
                       </div>
                       <Switch
                         checked={formData.has_corporate_tax}
@@ -619,13 +619,13 @@ export default function PlatformSettingsModal({
             {isMarketplace && (
               <div className="space-y-4">
                 <div className="flex items-center gap-2">
-                  <Zap className="h-4 w-4 text-slate-500" />
-                  <h4 className="font-semibold text-slate-700">Bugün Kargoda</h4>
+                  <Zap className="h-4 w-4 text-muted-foreground" />
+                  <h4 className="font-semibold text-muted-foreground">Bugün Kargoda</h4>
                 </div>
                 <div className="flex items-center justify-between">
                   <div>
                     <Label className="text-sm">Bugün Kargoda özelliği</Label>
-                    <p className="text-xs text-slate-400 mt-0.5">Müşteri ürün bazında bu seçeneği açıp kapatabilir</p>
+                    <p className="text-xs text-muted-foreground/70 mt-0.5">Müşteri ürün bazında bu seçeneği açıp kapatabilir</p>
                   </div>
                   <Switch
                     checked={formData.has_same_day_delivery}
@@ -633,7 +633,7 @@ export default function PlatformSettingsModal({
                   />
                 </div>
                 {!formData.has_same_day_delivery && (
-                  <div className="flex items-start gap-2 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-xs text-gray-600 mt-1">
+                  <div className="flex items-start gap-2 bg-secondary border border-border rounded-lg px-3 py-2 text-xs text-muted-foreground mt-1">
                     <Info className="h-3.5 w-3.5 mt-0.5 flex-shrink-0" />
                     <span>Bu seçenek aktif olduğunda aynı gün kargoya verilen siparişler için indirimli hizmet bedeli otomatik uygulanır.</span>
                   </div>
@@ -647,8 +647,8 @@ export default function PlatformSettingsModal({
                 <Separator />
                 <div className="space-y-4">
                   <div className="flex items-center gap-2">
-                    <Link2 className="h-4 w-4 text-slate-500" />
-                    <h4 className="font-semibold text-slate-700">Entegrasyon Bilgileri</h4>
+                    <Link2 className="h-4 w-4 text-muted-foreground" />
+                    <h4 className="font-semibold text-muted-foreground">Entegrasyon Bilgileri</h4>
                     <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-medium">Yakında Aktif</span>
                   </div>
                   <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-xs text-amber-800">
@@ -660,7 +660,7 @@ export default function PlatformSettingsModal({
                       <div className="space-y-2">
                         <Label className="text-sm">Satıcı ID (Supplier ID)</Label>
                         <Input type="text" placeholder="Örn: 123456" value={formData.integration_supplier_id} onChange={(e) => setFormData({ ...formData, integration_supplier_id: e.target.value })} disabled />
-                        <p className="text-xs text-slate-400">Trendyol Satıcı Paneli → Entegrasyon → API Bilgileri</p>
+                        <p className="text-xs text-muted-foreground/70">Trendyol Satıcı Paneli → Entegrasyon → API Bilgileri</p>
                       </div>
                       <div className="space-y-2">
                         <Label className="text-sm">API Key</Label>
@@ -677,7 +677,7 @@ export default function PlatformSettingsModal({
                       <div className="space-y-2">
                         <Label className="text-sm">Kullanıcı Adı (Username)</Label>
                         <Input type="text" placeholder="API Kullanıcı Adı" value={formData.integration_username} onChange={(e) => setFormData({ ...formData, integration_username: e.target.value })} disabled />
-                        <p className="text-xs text-slate-400">Hepsiburada Satıcı Paneli → Hesap Ayarları → API Bilgileri</p>
+                        <p className="text-xs text-muted-foreground/70">Hepsiburada Satıcı Paneli → Hesap Ayarları → API Bilgileri</p>
                       </div>
                       <div className="space-y-2">
                         <Label className="text-sm">Şifre (Password)</Label>
@@ -695,7 +695,7 @@ export default function PlatformSettingsModal({
 
           </div>
 
-          <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 sm:gap-3 px-4 sm:px-6 py-4 border-t border-slate-100 flex-shrink-0">
+          <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 sm:gap-3 px-4 sm:px-6 py-4 border-t border-border flex-shrink-0">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className="w-full sm:w-auto">
               İptal
             </Button>

@@ -10,11 +10,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
 
 const changeTypeLabels = {
-  cost_update: { label: 'Maliyet', color: 'bg-gray-100 text-gray-700' },
-  shipping_update: { label: 'Kargo', color: 'bg-gray-100 text-gray-700' },
+  cost_update: { label: 'Maliyet', color: 'bg-secondary text-muted-foreground' },
+  shipping_update: { label: 'Kargo', color: 'bg-secondary text-muted-foreground' },
   commission_update: { label: 'Komisyon', color: 'bg-amber-100 text-amber-700' },
-  platform_update: { label: 'Platform', color: 'bg-gray-100 text-gray-700' },
-  manual: { label: 'Manuel', color: 'bg-slate-100 text-slate-700' },
+  platform_update: { label: 'Platform', color: 'bg-secondary text-muted-foreground' },
+  manual: { label: 'Manuel', color: 'bg-secondary text-muted-foreground' },
 };
 
 const PLATFORM_COLORS = ['#6366f1', '#f59e0b', '#10b981', '#ef4444', '#8b5cf6', '#06b6d4'];
@@ -71,17 +71,17 @@ export default function ProductHistoryModal({ open, onClose, productId, productN
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="text-xl font-bold text-slate-900">
+          <DialogTitle className="text-xl font-bold text-foreground">
             Geçmiş Analizi — {productName}
           </DialogTitle>
         </DialogHeader>
 
         {isLoading ? (
           <div className="flex items-center justify-center py-16">
-            <div className="w-8 h-8 border-4 border-gray-200 border-t-gray-800 rounded-full animate-spin" />
+            <div className="w-8 h-8 border-4 border-border border-t-gray-800 rounded-full animate-spin" />
           </div>
         ) : reports.length === 0 ? (
-          <div className="text-center py-16 text-slate-400">
+          <div className="text-center py-16 text-muted-foreground/70">
             <TrendingUp className="h-12 w-12 mx-auto mb-3 opacity-30" />
             <p className="font-medium">Bu ürün için geçmiş kayıt bulunamadı</p>
             <p className="text-sm mt-1">Fiyat güncellemeleri yapıldıkça burada görünecek</p>
@@ -90,7 +90,7 @@ export default function ProductHistoryModal({ open, onClose, productId, productN
           <div className="space-y-6">
             {/* Platform filtresi */}
             <div className="flex items-center gap-3">
-              <span className="text-sm font-medium text-slate-600">Platform:</span>
+              <span className="text-sm font-medium text-muted-foreground">Platform:</span>
               <Select value={selectedPlatform} onValueChange={setSelectedPlatform}>
                 <SelectTrigger className="w-48">
                   <SelectValue />
@@ -118,8 +118,8 @@ export default function ProductHistoryModal({ open, onClose, productId, productN
             {/* Fiyat Grafiği */}
             {chartData.length > 1 && (
               <div>
-                <p className="text-sm font-semibold text-slate-700 mb-3">Fiyat Değişimi</p>
-                <div className="bg-slate-50 rounded-xl p-4">
+                <p className="text-sm font-semibold text-muted-foreground mb-3">Fiyat Değişimi</p>
+                <div className="bg-secondary rounded-xl p-4">
                   <ResponsiveContainer width="100%" height={220}>
                     <LineChart data={chartData}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
@@ -148,8 +148,8 @@ export default function ProductHistoryModal({ open, onClose, productId, productN
             {/* Kâr Grafiği */}
             {chartData.length > 1 && (
               <div>
-                <p className="text-sm font-semibold text-slate-700 mb-3">Kâr Oranı Değişimi</p>
-                <div className="bg-slate-50 rounded-xl p-4">
+                <p className="text-sm font-semibold text-muted-foreground mb-3">Kâr Oranı Değişimi</p>
+                <div className="bg-secondary rounded-xl p-4">
                   <ResponsiveContainer width="100%" height={200}>
                     <LineChart data={chartData}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
@@ -178,19 +178,19 @@ export default function ProductHistoryModal({ open, onClose, productId, productN
 
             {/* Tablo */}
             <div>
-              <p className="text-sm font-semibold text-slate-700 mb-3">Değişiklik Geçmişi ({filtered.length})</p>
-              <div className="overflow-x-auto rounded-xl border border-slate-100">
+              <p className="text-sm font-semibold text-muted-foreground mb-3">Değişiklik Geçmişi ({filtered.length})</p>
+              <div className="overflow-x-auto rounded-xl border border-border">
                 <table className="w-full text-sm">
-                  <thead className="bg-slate-50 border-b border-slate-100">
+                  <thead className="bg-secondary border-b border-border">
                     <tr>
-                      <th className="p-3 text-left font-semibold text-slate-600">Tarih</th>
-                      <th className="p-3 text-left font-semibold text-slate-600">Platform</th>
-                      <th className="p-3 text-right font-semibold text-slate-600">Eski Fiyat</th>
-                      <th className="p-3 text-right font-semibold text-slate-600">Yeni Fiyat</th>
-                      <th className="p-3 text-center font-semibold text-slate-600">Değişim</th>
-                      <th className="p-3 text-right font-semibold text-slate-600">Eski Kâr</th>
-                      <th className="p-3 text-right font-semibold text-slate-600">Yeni Kâr</th>
-                      <th className="p-3 text-center font-semibold text-slate-600">Neden</th>
+                      <th className="p-3 text-left font-semibold text-muted-foreground">Tarih</th>
+                      <th className="p-3 text-left font-semibold text-muted-foreground">Platform</th>
+                      <th className="p-3 text-right font-semibold text-muted-foreground">Eski Fiyat</th>
+                      <th className="p-3 text-right font-semibold text-muted-foreground">Yeni Fiyat</th>
+                      <th className="p-3 text-center font-semibold text-muted-foreground">Değişim</th>
+                      <th className="p-3 text-right font-semibold text-muted-foreground">Eski Kâr</th>
+                      <th className="p-3 text-right font-semibold text-muted-foreground">Yeni Kâr</th>
+                      <th className="p-3 text-center font-semibold text-muted-foreground">Neden</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -199,13 +199,13 @@ export default function ProductHistoryModal({ open, onClose, productId, productN
                       const profitDiff = (r.new_profit_rate || 0) - (r.old_profit_rate || 0);
                       const ct = changeTypeLabels[r.change_type] || changeTypeLabels.manual;
                       return (
-                        <tr key={r.id} className={`border-b border-slate-50 ${i % 2 === 0 ? 'bg-white' : 'bg-slate-50/40'}`}>
-                          <td className="p-3 text-slate-600 whitespace-nowrap">
+                        <tr key={r.id} className={`border-b border-slate-50 ${i % 2 === 0 ? 'bg-card' : 'bg-secondary/40'}`}>
+                          <td className="p-3 text-muted-foreground whitespace-nowrap">
                             {r.created_date ? format(new Date(r.created_date), 'dd MMM yyyy HH:mm', { locale: tr }) : '-'}
                           </td>
-                          <td className="p-3 font-medium text-slate-800">{r.platform_name}</td>
-                          <td className="p-3 text-right font-mono text-slate-500">₺{r.old_sale_price?.toFixed(2)}</td>
-                          <td className="p-3 text-right font-mono font-semibold text-slate-900">₺{r.new_sale_price?.toFixed(2)}</td>
+                          <td className="p-3 font-medium text-foreground">{r.platform_name}</td>
+                          <td className="p-3 text-right font-mono text-muted-foreground">₺{r.old_sale_price?.toFixed(2)}</td>
+                          <td className="p-3 text-right font-mono font-semibold text-foreground">₺{r.new_sale_price?.toFixed(2)}</td>
                           <td className="p-3 text-center">
                             {diff > 0 ? (
                               <span className="flex items-center justify-center gap-1 text-emerald-600 text-xs font-medium">
@@ -216,12 +216,12 @@ export default function ProductHistoryModal({ open, onClose, productId, productN
                                 <TrendingDown className="h-3 w-3" />₺{diff.toFixed(2)}
                               </span>
                             ) : (
-                              <span className="flex items-center justify-center gap-1 text-slate-400 text-xs">
+                              <span className="flex items-center justify-center gap-1 text-muted-foreground/70 text-xs">
                                 <Minus className="h-3 w-3" />—
                               </span>
                             )}
                           </td>
-                          <td className="p-3 text-right text-slate-500">%{r.old_profit_rate?.toFixed(1)}</td>
+                          <td className="p-3 text-right text-muted-foreground">%{r.old_profit_rate?.toFixed(1)}</td>
                           <td className="p-3 text-right">
                             <span className={`font-semibold ${profitDiff >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
                               %{r.new_profit_rate?.toFixed(1)}
@@ -246,13 +246,13 @@ export default function ProductHistoryModal({ open, onClose, productId, productN
 
 function SummaryCard({ label, value, unit, color = 'slate', small = false }) {
   const colors = {
-    slate: 'bg-slate-50 border-slate-100 text-slate-700',
+    slate: 'bg-secondary border-border text-muted-foreground',
     emerald: 'bg-emerald-50 border-emerald-100 text-emerald-700',
     rose: 'bg-rose-50 border-rose-100 text-rose-700',
   };
   return (
     <div className={`rounded-xl border p-4 ${colors[color]}`}>
-      <p className="text-xs font-medium text-slate-500 mb-1">{label}</p>
+      <p className="text-xs font-medium text-muted-foreground mb-1">{label}</p>
       <p className={`font-bold ${small ? 'text-sm' : 'text-xl'}`}>{unit}{value}</p>
     </div>
   );

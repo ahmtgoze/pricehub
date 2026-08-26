@@ -136,7 +136,7 @@ export default function PlatformModal({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-xl flex flex-col p-0 gap-0 max-h-[90dvh]">
-        <DialogHeader className="px-6 pt-4 pb-4 border-b border-slate-100 flex-shrink-0">
+        <DialogHeader className="px-6 pt-4 pb-4 border-b border-border flex-shrink-0">
            <DialogTitle className="text-xl font-semibold">
              {platform ? 'Platform Düzenle' : 'Yeni Platform Ekle'}
            </DialogTitle>
@@ -203,7 +203,7 @@ export default function PlatformModal({
           <Separator />
 
           <div className="space-y-4">
-            <h4 className="font-medium text-slate-700">Stopaj Ayarları</h4>
+            <h4 className="font-medium text-muted-foreground">Stopaj Ayarları</h4>
             <div className="flex items-center justify-between">
               <Label>Stopaj Var mı?</Label>
               <Switch
@@ -229,7 +229,7 @@ export default function PlatformModal({
           <Separator />
 
           <div className="space-y-4">
-            <h4 className="font-medium text-slate-700">Hizmet Bedeli Ayarları</h4>
+            <h4 className="font-medium text-muted-foreground">Hizmet Bedeli Ayarları</h4>
             <div className="flex items-center justify-between">
               <Label>Hizmet Bedeli Var mı?</Label>
               <Switch
@@ -278,11 +278,11 @@ export default function PlatformModal({
                   </div>
                   </div>
 
-                  <div className="border-t border-slate-200 pt-4 mt-4">
+                  <div className="border-t border-border pt-4 mt-4">
                   <div className="flex items-center justify-between mb-3">
                     <div>
                       <Label>İşlem Başına Ücret</Label>
-                      <p className="text-xs text-slate-500 mt-0.5">Sanal pos / ödeme sistemi işlem ücreti</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">Sanal pos / ödeme sistemi işlem ücreti</p>
                     </div>
                     <Switch
                       checked={formData.has_transaction_fee}
@@ -313,7 +313,7 @@ export default function PlatformModal({
                     </div>
                   )}
                   </div>
-                  <div className="border-t border-slate-200 pt-4 mt-4">
+                  <div className="border-t border-border pt-4 mt-4">
                   <div className="flex items-center justify-between mb-3">
                     <Label>Bugün Kapında</Label>
                     <Switch
@@ -352,7 +352,7 @@ export default function PlatformModal({
           <Separator />
 
           <div className="space-y-4">
-            <h4 className="font-medium text-slate-700">Barem Ayarları</h4>
+            <h4 className="font-medium text-muted-foreground">Barem Ayarları</h4>
             <div className="flex items-center justify-between">
               <Label>Barem Desteği Var mı?</Label>
               <Switch
@@ -372,7 +372,7 @@ export default function PlatformModal({
                     onChange={(e) => setFormData({ ...formData, barem_max_desi: e.target.value })}
                     placeholder="5"
                   />
-                  <p className="text-xs text-slate-500">Bu değerin üzerindeki desili ürünler desi tarifesiyle hesaplanır</p>
+                  <p className="text-xs text-muted-foreground">Bu değerin üzerindeki desili ürünler desi tarifesiyle hesaplanır</p>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
@@ -427,7 +427,7 @@ export default function PlatformModal({
           </div>
 
           </div>
-          <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 sm:gap-3 px-4 sm:px-6 py-4 border-t border-slate-100 flex-shrink-0">
+          <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 sm:gap-3 px-4 sm:px-6 py-4 border-t border-border flex-shrink-0">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className="w-full sm:w-auto">
               İptal
             </Button>

@@ -22,7 +22,7 @@ export default function AdminAnnouncementCompose({ onClose }) {
     return (
       <button
         onClick={() => setOpen(true)}
-        className="flex items-center gap-2 text-xs text-gray-900 hover:text-gray-700 font-semibold px-4 py-3 border-b border-slate-100 w-full hover:bg-gray-50 transition-colors"
+        className="flex items-center gap-2 text-xs text-foreground hover:text-muted-foreground font-semibold px-4 py-3 border-b border-border w-full hover:bg-secondary transition-colors"
       >
         <Plus className="h-4 w-4" /> Yeni Duyuru Yayınla
       </button>
@@ -30,10 +30,10 @@ export default function AdminAnnouncementCompose({ onClose }) {
   }
 
   return (
-    <div className="px-4 py-4 border-b border-slate-100 bg-white space-y-3.5">
+    <div className="px-4 py-4 border-b border-border bg-card space-y-3.5">
       <div className="flex items-center justify-between">
-        <p className="text-sm font-bold text-slate-900">Yeni Duyuru Oluştur</p>
-        <button onClick={() => setOpen(false)} className="text-slate-400 hover:text-slate-600 transition-colors">
+        <p className="text-sm font-bold text-foreground">Yeni Duyuru Oluştur</p>
+        <button onClick={() => setOpen(false)} className="text-muted-foreground/70 hover:text-muted-foreground transition-colors">
           <X className="h-5 w-5" />
         </button>
       </div>
@@ -42,14 +42,14 @@ export default function AdminAnnouncementCompose({ onClose }) {
         <button
           type="button"
           onClick={() => setForm(f => ({ ...f, type: 'announcement' }))}
-          className={`flex items-center justify-center gap-1.5 text-xs px-3 py-2.5 rounded-xl border-2 font-semibold transition-all ${form.type === 'announcement' ? 'bg-gray-900 text-white border-gray-900 shadow-md' : 'border-slate-200 text-slate-600 hover:border-gray-400 hover:bg-gray-50'}`}
+          className={`flex items-center justify-center gap-1.5 text-xs px-3 py-2.5 rounded-xl border-2 font-semibold transition-all ${form.type === 'announcement' ? 'bg-gray-900 text-white border-gray-900 shadow-md' : 'border-border text-muted-foreground hover:border-gray-400 hover:bg-secondary'}`}
         >
           <Megaphone className="h-4 w-4" /> Duyuru
         </button>
         <button
           type="button"
           onClick={() => setForm(f => ({ ...f, type: 'system_update' }))}
-          className={`flex items-center justify-center gap-1.5 text-xs px-3 py-2.5 rounded-xl border-2 font-semibold transition-all ${form.type === 'system_update' ? 'bg-gray-900 text-white border-gray-900 shadow-md' : 'border-slate-200 text-slate-600 hover:border-gray-400 hover:bg-gray-50'}`}
+          className={`flex items-center justify-center gap-1.5 text-xs px-3 py-2.5 rounded-xl border-2 font-semibold transition-all ${form.type === 'system_update' ? 'bg-gray-900 text-white border-gray-900 shadow-md' : 'border-border text-muted-foreground hover:border-gray-400 hover:bg-secondary'}`}
         >
           <Zap className="h-4 w-4" /> Güncellemesi
         </button>
@@ -60,21 +60,21 @@ export default function AdminAnnouncementCompose({ onClose }) {
         placeholder="Başlık yazın..."
         value={form.title}
         onChange={e => setForm(f => ({ ...f, title: e.target.value }))}
-        className="w-full text-sm border border-slate-200 rounded-xl px-3.5 py-2.5 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:border-transparent bg-white font-medium"
+        className="w-full text-sm border border-border rounded-xl px-3.5 py-2.5 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:border-transparent bg-card font-medium"
       />
       <textarea
         placeholder="Duyuru içeriğini yazın..."
         value={form.content}
         onChange={e => setForm(f => ({ ...f, content: e.target.value }))}
         rows={3}
-        className="w-full text-sm border border-slate-200 rounded-xl px-3.5 py-2.5 resize-none focus:outline-none focus:ring-2 focus:ring-gray-400 focus:border-transparent bg-white"
+        className="w-full text-sm border border-border rounded-xl px-3.5 py-2.5 resize-none focus:outline-none focus:ring-2 focus:ring-gray-400 focus:border-transparent bg-card"
       />
       <div className="flex justify-between items-center pt-2">
         <Button
           size="sm"
           variant="outline"
           onClick={() => setOpen(false)}
-          className="text-slate-600"
+          className="text-muted-foreground"
         >
           İptal
         </Button>

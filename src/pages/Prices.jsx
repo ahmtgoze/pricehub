@@ -485,7 +485,7 @@ export default function Prices() {
 
   const getProfitColor = (rate) => {
     if (rate >= 30) return 'text-emerald-600 bg-emerald-50';
-    if (rate >= 20) return 'text-gray-700 bg-gray-100';
+    if (rate >= 20) return 'text-muted-foreground bg-secondary';
     if (rate >= 10) return 'text-amber-600 bg-amber-50';
     return 'text-rose-600 bg-rose-50';
   };
@@ -506,7 +506,7 @@ export default function Prices() {
 
   const getBaremBadge = (barem) => {
     if (barem === 'barem1') return <Badge className="bg-red-100 text-red-700 text-xs">B1</Badge>;
-    if (barem === 'barem2') return <Badge className="bg-gray-200 text-gray-700 text-xs">B2</Badge>;
+    if (barem === 'barem2') return <Badge className="bg-gray-200 text-muted-foreground text-xs">B2</Badge>;
     if (barem === 'desi') return <Badge variant="outline" className="text-xs">Desi</Badge>;
     return null;
   };
@@ -529,7 +529,7 @@ export default function Prices() {
     setVisiblePlatforms(prev => ({ ...prev, [platformId]: !prev[platformId] }));
   };
 
-  const platformColors = { trendyol: 'bg-orange-100 text-orange-700 border-orange-200', hepsiburada: 'bg-purple-100 text-purple-700 border-purple-200', website: 'bg-gray-200 text-gray-700 border-gray-300' };
+  const platformColors = { trendyol: 'bg-orange-100 text-orange-700 border-orange-200', hepsiburada: 'bg-purple-100 text-purple-700 border-purple-200', website: 'bg-gray-200 text-muted-foreground border-input' };
 
   return (
     <div className="min-h-screen">
@@ -563,7 +563,7 @@ export default function Prices() {
                 <span className="sm:hidden">İndir</span>
               </Button>
               {selectedIds.size > 0 && (
-                <Button onClick={handleExportSelected} variant="outline" className="gap-2 border-gray-300 text-gray-700 hover:bg-gray-50" size="sm">
+                <Button onClick={handleExportSelected} variant="outline" className="gap-2 border-input text-muted-foreground hover:bg-secondary" size="sm">
                   <Download className="h-4 w-4" />
                   <span>Seçilileri İndir ({selectedIds.size})</span>
                 </Button>
@@ -593,15 +593,15 @@ export default function Prices() {
             </div>
 
             {showFilters && (
-              <div className="border border-gray-200 rounded-xl p-4 bg-gray-50 space-y-4">
+              <div className="border border-border rounded-xl p-4 bg-secondary space-y-4">
                 {profitRangeLabel && (
-                  <div className="flex items-center gap-2 text-sm text-gray-700 bg-gray-100 rounded-lg px-3 py-2">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground bg-secondary rounded-lg px-3 py-2">
                     <span>Dashboard filtresi: <strong>{profitRangeLabel}</strong></span>
                   </div>
                 )}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                   <div>
-                    <label className="text-xs text-gray-500 mb-1 block font-medium">Kategori</label>
+                    <label className="text-xs text-muted-foreground mb-1 block font-medium">Kategori</label>
                     <Select value={categoryFilter} onValueChange={setCategoryFilter}>
                       <SelectTrigger className="w-full"><SelectValue placeholder="Tüm Kategoriler" /></SelectTrigger>
                       <SelectContent>
@@ -611,35 +611,35 @@ export default function Prices() {
                     </Select>
                   </div>
                   <div>
-                    <label className="text-xs text-gray-500 mb-1 block font-medium">Kâr Tutarı (₺)</label>
+                    <label className="text-xs text-muted-foreground mb-1 block font-medium">Kâr Tutarı (₺)</label>
                     <div className="flex gap-2">
                       <Input type="number" placeholder="Min" value={minProfit} onChange={e => setMinProfit(e.target.value)} className="text-sm" />
                       <Input type="number" placeholder="Max" value={maxProfit} onChange={e => setMaxProfit(e.target.value)} className="text-sm" />
                     </div>
                   </div>
                   <div>
-                    <label className="text-xs text-gray-500 mb-1 block font-medium">Kâr Oranı (%)</label>
+                    <label className="text-xs text-muted-foreground mb-1 block font-medium">Kâr Oranı (%)</label>
                     <div className="flex gap-2">
                       <Input type="number" placeholder="Min" value={minProfitRate} onChange={e => setMinProfitRate(e.target.value)} className="text-sm" />
                       <Input type="number" placeholder="Max" value={maxProfitRate} onChange={e => setMaxProfitRate(e.target.value)} className="text-sm" />
                     </div>
                   </div>
                   <div>
-                    <label className="text-xs text-gray-500 mb-1 block font-medium">Hedef Kâr Tutarı (₺)</label>
+                    <label className="text-xs text-muted-foreground mb-1 block font-medium">Hedef Kâr Tutarı (₺)</label>
                     <div className="flex gap-2">
                       <Input type="number" placeholder="Min" value={minTargetAmount} onChange={e => setMinTargetAmount(e.target.value)} className="text-sm" />
                       <Input type="number" placeholder="Max" value={maxTargetAmount} onChange={e => setMaxTargetAmount(e.target.value)} className="text-sm" />
                     </div>
                   </div>
                   <div className="sm:col-span-2">
-                    <label className="text-xs text-gray-500 mb-1 block font-medium">Platform Görünürlüğü</label>
+                    <label className="text-xs text-muted-foreground mb-1 block font-medium">Platform Görünürlüğü</label>
                     <div className="flex gap-2 flex-wrap">
                       {platforms.map(platform => {
                         const isVisible = visiblePlatforms[platform.id] !== false;
-                        const colorClass = platformColors[platform.platform_type] || 'bg-gray-100 text-gray-700 border-gray-200';
+                        const colorClass = platformColors[platform.platform_type] || 'bg-secondary text-muted-foreground border-border';
                         return (
                           <button key={platform.id} onClick={() => togglePlatformVisibility(platform.id)}
-                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium transition-all ${isVisible ? colorClass : 'bg-gray-100 text-gray-400 border-gray-200 opacity-50'}`}>
+                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium transition-all ${isVisible ? colorClass : 'bg-secondary text-muted-foreground/70 border-border opacity-50'}`}>
                             {isVisible ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
                             {platform.name}
                           </button>
@@ -658,15 +658,15 @@ export default function Prices() {
           </div>
         </div>
 
-        <div className="mb-3 flex items-center justify-between text-sm text-gray-500">
+        <div className="mb-3 flex items-center justify-between text-sm text-muted-foreground">
           <div>
-            <span className="font-semibold text-gray-700">{filteredProducts.length}</span> ürün listeleniyor
-            {hasActiveFilters && <span className="ml-2 text-gray-600">(filtre aktif)</span>}
-            {selectedIds.size > 0 && <span className="ml-2 text-gray-600 font-medium">{selectedIds.size} seçili</span>}
+            <span className="font-semibold text-muted-foreground">{filteredProducts.length}</span> ürün listeleniyor
+            {hasActiveFilters && <span className="ml-2 text-muted-foreground">(filtre aktif)</span>}
+            {selectedIds.size > 0 && <span className="ml-2 text-muted-foreground font-medium">{selectedIds.size} seçili</span>}
             {showBeforeTax && <span className="ml-2 text-amber-700 font-medium">— vergi öncesi kâr gösteriliyor</span>}
           </div>
           {selectedIds.size > 0 && (
-            <Button variant="ghost" size="sm" className="text-xs text-gray-400" onClick={() => setSelectedIds(new Set())}>
+            <Button variant="ghost" size="sm" className="text-xs text-muted-foreground/70" onClick={() => setSelectedIds(new Set())}>
               Seçimi Temizle
             </Button>
           )}
@@ -681,16 +681,16 @@ export default function Prices() {
               </div>
             ))
           ) : filteredProducts.length === 0 ? (
-            <div className="rounded-[18px] border border-border bg-card p-8 text-center text-gray-500">Ürün bulunamadı</div>
+            <div className="rounded-[18px] border border-border bg-card p-8 text-center text-muted-foreground">Ürün bulunamadı</div>
           ) : (
             filteredProducts.map(product => (
-              <div key={product.id} className={`bg-white rounded-xl border shadow-sm p-4 ${selectedIds.has(product.id) ? 'border-gray-400 bg-gray-100/50' : 'border-gray-100'}`}>
+              <div key={product.id} className={`bg-card rounded-xl border shadow-sm p-4 ${selectedIds.has(product.id) ? 'border-gray-400 bg-secondary/50' : 'border-border'}`}>
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex items-center gap-2">
-                    <input type="checkbox" checked={selectedIds.has(product.id)} onChange={() => toggleSelect(product.id)} className="rounded border-gray-300 text-gray-900" />
+                    <input type="checkbox" checked={selectedIds.has(product.id)} onChange={() => toggleSelect(product.id)} className="rounded border-input text-foreground" />
                     <div>
-                      <p className="font-semibold text-gray-900 text-sm">{product.name}</p>
-                      <p className="text-xs text-gray-500 font-mono">{product.sku} · {product.category_name}</p>
+                      <p className="font-semibold text-foreground text-sm">{product.name}</p>
+                      <p className="text-xs text-muted-foreground font-mono">{product.sku} · {product.category_name}</p>
                     </div>
                   </div>
                   <Button variant="ghost" size="sm" className="h-7 px-2 shrink-0" onClick={() => handleCalculateSingleProduct(product)} disabled={calculating || calculatingSingle === product.id}>
@@ -701,20 +701,20 @@ export default function Prices() {
                   {visiblePlatformList.map(platform => {
                     const price = product.prices[platform.id];
                     const commission = commissions.find(c => c.category_id === product.category_id && c.platform_id === platform.id && c.is_active !== false);
-                    if (!price) return <div key={platform.id} className="flex items-center justify-between bg-gray-50 rounded-lg px-3 py-2"><span className="text-xs font-medium text-gray-600">{platform.name}</span><span className="text-xs text-gray-400">—</span></div>;
+                    if (!price) return <div key={platform.id} className="flex items-center justify-between bg-secondary rounded-lg px-3 py-2"><span className="text-xs font-medium text-muted-foreground">{platform.name}</span><span className="text-xs text-muted-foreground/70">—</span></div>;
                     const { amount: profitAmount, rate: profitRateDisplay } = getDisplayProfit(price, product, commission);
                     return (
-                      <div key={platform.id} className="flex flex-col gap-1 bg-gray-50 rounded-lg px-3 py-2">
+                      <div key={platform.id} className="flex flex-col gap-1 bg-secondary rounded-lg px-3 py-2">
                         <div className="flex items-center justify-between">
-                          <span className="text-xs font-medium text-gray-700">{platform.name}</span>
-                          <button onClick={() => handleShowDetail(product, platform)} className="text-gray-400 hover:text-gray-700"><Info className="h-3.5 w-3.5" /></button>
+                          <span className="text-xs font-medium text-muted-foreground">{platform.name}</span>
+                          <button onClick={() => handleShowDetail(product, platform)} className="text-muted-foreground/70 hover:text-muted-foreground"><Info className="h-3.5 w-3.5" /></button>
                         </div>
                         <div className="flex items-center gap-2">
-                          <span className="text-sm font-bold text-gray-900">₺{formatTurkishCurrency(price.sale_price)}</span>
+                          <span className="text-sm font-bold text-foreground">₺{formatTurkishCurrency(price.sale_price)}</span>
                           <span className={`text-xs font-medium px-1.5 py-0.5 rounded-full ${getProfitColor(profitRateDisplay)}`}>{formatTurkishPercent(profitRateDisplay)}</span>
                           {getBaremBadge(price.barem_used)}
                         </div>
-                        <p className="text-[11px] text-gray-500">Kâr: ₺{formatTurkishCurrency(profitAmount)}{showBeforeTax && <span className="text-gray-400"> (vergi öncesi)</span>}</p>
+                        <p className="text-[11px] text-muted-foreground">Kâr: ₺{formatTurkishCurrency(profitAmount)}{showBeforeTax && <span className="text-muted-foreground/70"> (vergi öncesi)</span>}</p>
                       </div>
                     );
                   })}
@@ -729,13 +729,13 @@ export default function Prices() {
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
-                <TableRow className="bg-gray-50 hover:bg-gray-50">
+                <TableRow className="bg-secondary hover:bg-secondary">
                   <TableHead className="w-10">
-                    <input type="checkbox" checked={isAllSelected} ref={el => { if (el) el.indeterminate = isPartialSelected; }} onChange={toggleSelectAll} className="rounded border-gray-300 text-gray-900" />
+                    <input type="checkbox" checked={isAllSelected} ref={el => { if (el) el.indeterminate = isPartialSelected; }} onChange={toggleSelectAll} className="rounded border-input text-foreground" />
                   </TableHead>
-                  <TableHead className="font-semibold cursor-pointer hover:text-gray-900" onClick={() => handleSort('sku')}>SKU <SortIcon field="sku" /></TableHead>
-                  <TableHead className="font-semibold cursor-pointer hover:text-gray-900" onClick={() => handleSort('name')}>Ürün Adı <SortIcon field="name" /></TableHead>
-                  <TableHead className="font-semibold cursor-pointer hover:text-gray-900 text-right" onClick={() => handleSort('cost')}>Maliyet <SortIcon field="cost" /></TableHead>
+                  <TableHead className="font-semibold cursor-pointer hover:text-foreground" onClick={() => handleSort('sku')}>SKU <SortIcon field="sku" /></TableHead>
+                  <TableHead className="font-semibold cursor-pointer hover:text-foreground" onClick={() => handleSort('name')}>Ürün Adı <SortIcon field="name" /></TableHead>
+                  <TableHead className="font-semibold cursor-pointer hover:text-foreground text-right" onClick={() => handleSort('cost')}>Maliyet <SortIcon field="cost" /></TableHead>
                   <TableHead className="font-semibold">Baskı</TableHead>
                   <TableHead className="font-semibold">Ek Maliyet</TableHead>
                   <TableHead className="font-semibold">Desi 1</TableHead>
@@ -744,7 +744,7 @@ export default function Prices() {
                   <TableHead className="font-semibold">Desi 4</TableHead>
                   <TableHead className="font-semibold">Desi 5</TableHead>
                   {visiblePlatformList.map(p => (
-                    <TableHead key={p.id} className="font-semibold text-center min-w-[160px] cursor-pointer hover:text-gray-900" onClick={() => handleSort(`platform_${p.id}`)}>{p.name} <SortIcon field={`platform_${p.id}`} /></TableHead>
+                    <TableHead key={p.id} className="font-semibold text-center min-w-[160px] cursor-pointer hover:text-foreground" onClick={() => handleSort(`platform_${p.id}`)}>{p.name} <SortIcon field={`platform_${p.id}`} /></TableHead>
                   ))}
                 </TableRow>
               </TableHeader>
@@ -754,41 +754,41 @@ export default function Prices() {
                     <TableRow key={i}>{[...Array(11 + visiblePlatformList.length)].map((_, j) => <TableCell key={j}><Skeleton className="h-5 w-20" /></TableCell>)}</TableRow>
                   ))
                 ) : filteredProducts.length === 0 ? (
-                  <TableRow><TableCell colSpan={11 + visiblePlatformList.length} className="h-32 text-center text-slate-500">Ürün bulunamadı</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={11 + visiblePlatformList.length} className="h-32 text-center text-muted-foreground">Ürün bulunamadı</TableCell></TableRow>
                 ) : (
                   filteredProducts.map(product => (
-                    <TableRow key={product.id} className={`hover:bg-slate-50/50 ${selectedIds.has(product.id) ? 'bg-gray-100/60' : ''}`}>
+                    <TableRow key={product.id} className={`hover:bg-secondary/50 ${selectedIds.has(product.id) ? 'bg-secondary/60' : ''}`}>
                       <TableCell>
-                        <input type="checkbox" checked={selectedIds.has(product.id)} onChange={() => toggleSelect(product.id)} className="rounded border-gray-300 text-gray-900" />
+                        <input type="checkbox" checked={selectedIds.has(product.id)} onChange={() => toggleSelect(product.id)} className="rounded border-input text-foreground" />
                       </TableCell>
-                      <TableCell className="font-mono text-sm text-slate-600">
+                      <TableCell className="font-mono text-sm text-muted-foreground">
                         <div className="flex items-center gap-2">
                           <span>{product.sku || '-'}</span>
                           <Button variant="ghost" size="sm" className="h-6 px-2 text-xs" onClick={() => handleCalculateSingleProduct(product)} disabled={calculating || calculatingSingle === product.id}>
                             <RefreshCw className={`h-3 w-3 ${calculatingSingle === product.id ? 'animate-spin' : ''}`} />
                           </Button>
-                          <Button variant="ghost" size="sm" className="h-6 px-2 text-xs text-gray-600 hover:text-gray-900 hover:bg-gray-100" onClick={() => setHistoryModal({ open: true, productId: product.id, productName: product.name })} title="Geçmiş Analizi">📈</Button>
+                          <Button variant="ghost" size="sm" className="h-6 px-2 text-xs text-muted-foreground hover:text-foreground hover:bg-secondary" onClick={() => setHistoryModal({ open: true, productId: product.id, productName: product.name })} title="Geçmiş Analizi">📈</Button>
                         </div>
                       </TableCell>
-                      <TableCell><div><p className="font-medium text-slate-900">{product.name}</p><p className="text-xs text-slate-500">{product.category_name}</p></div></TableCell>
+                      <TableCell><div><p className="font-medium text-foreground">{product.name}</p><p className="text-xs text-muted-foreground">{product.category_name}</p></div></TableCell>
                       <TableCell className="font-semibold">₺{formatTurkishCurrency(product.cost)}</TableCell>
-                      <TableCell className="text-sm">{product.printing_cost > 0 ? <span className="text-gray-700 font-medium">₺{formatTurkishCurrency(product.printing_cost)}</span> : '-'}</TableCell>
+                      <TableCell className="text-sm">{product.printing_cost > 0 ? <span className="text-muted-foreground font-medium">₺{formatTurkishCurrency(product.printing_cost)}</span> : '-'}</TableCell>
                       <TableCell className="text-sm">{product.extra_cost > 0 ? <span className="text-rose-600 font-medium">₺{formatTurkishCurrency(product.extra_cost)}</span> : '-'}</TableCell>
                       {[0, 1, 2, 3, 4].map(idx => <TableCell key={idx}>{getDesiValue(product, idx)}</TableCell>)}
                       {visiblePlatformList.map(platform => {
                         const price = product.prices[platform.id];
-                        if (!price) return <TableCell key={platform.id} className="text-center text-slate-400">-</TableCell>;
+                        if (!price) return <TableCell key={platform.id} className="text-center text-muted-foreground/70">-</TableCell>;
                         const commission = commissions.find(c => c.category_id === product.category_id && c.platform_id === platform.id && c.is_active !== false);
                         const { amount: profitAmount, rate: profitRateDisplay } = getDisplayProfit(price, product, commission);
                         return (
                           <TableCell key={platform.id} className="text-center">
                             <div className="space-y-1">
-                              <p className="font-bold text-slate-900">₺{formatTurkishCurrency(price.sale_price)}</p>
+                              <p className="font-bold text-foreground">₺{formatTurkishCurrency(price.sale_price)}</p>
                               <div className="flex items-center justify-center gap-1">
                                 <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${getProfitColor(profitRateDisplay)}`}>{formatTurkishPercent(profitRateDisplay)}</span>
                                 {getBaremBadge(price.barem_used)}
                               </div>
-                              <p className="text-xs text-slate-500">Kâr: ₺{formatTurkishCurrency(profitAmount)}{showBeforeTax && <span className="text-slate-400"> (vergi öncesi)</span>}</p>
+                              <p className="text-xs text-muted-foreground">Kâr: ₺{formatTurkishCurrency(profitAmount)}{showBeforeTax && <span className="text-muted-foreground/70"> (vergi öncesi)</span>}</p>
                               {price.packaging_cost > 0 && <p className="text-xs text-amber-600 font-medium">📦 Paket: ₺{formatTurkishCurrency(price.packaging_cost)}</p>}
                               <Button variant="ghost" size="sm" className="h-7 text-xs mt-1" onClick={() => handleShowDetail(product, platform)}>
                                 <Info className="h-3 w-3 mr-1" />Detay
@@ -825,12 +825,12 @@ export default function Prices() {
           <DialogContent className="max-w-sm" onInteractOutside={(e) => e.preventDefault()}>
             <DialogHeader><DialogTitle>Fiyatlar Hesaplanıyor</DialogTitle></DialogHeader>
             <div className="space-y-4">
-              <div className="w-full bg-slate-100 rounded-full h-4 overflow-hidden">
+              <div className="w-full bg-secondary rounded-full h-4 overflow-hidden">
                 <div className="bg-gray-900 h-4 rounded-full transition-all duration-300" style={{ width: `${fakeProgress}%` }} />
               </div>
               <div className="text-center">
-                <p className="text-3xl font-bold text-gray-900">%{fakeProgress}</p>
-                <p className="text-sm text-slate-500 mt-1">Lütfen bekleyin...</p>
+                <p className="text-3xl font-bold text-foreground">%{fakeProgress}</p>
+                <p className="text-sm text-muted-foreground mt-1">Lütfen bekleyin...</p>
               </div>
             </div>
           </DialogContent>

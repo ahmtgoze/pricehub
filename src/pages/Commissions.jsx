@@ -346,7 +346,7 @@ export default function Commissions() {
           checked={allSelected}
           ref={input => input && (input.indeterminate = someSelected && !allSelected)}
           onChange={toggleAll}
-          className="rounded border-gray-300"
+          className="rounded border-input"
         />
       ),
       cell: (row) => (
@@ -355,7 +355,7 @@ export default function Commissions() {
           checked={selectedIds.includes(row.id)}
           onChange={() => toggleRow(row.id)}
           onClick={(e) => e.stopPropagation()}
-          className="rounded border-gray-300"
+          className="rounded border-input"
         />
       )
     },
@@ -406,7 +406,7 @@ export default function Commissions() {
               setSortDir('asc');
             }
           }}
-          className="flex items-center gap-1 hover:text-gray-900"
+          className="flex items-center gap-1 hover:text-foreground"
         >
           Kâr Hedefleri
           {sortField === 'target_profit_amount' && (sortDir === 'asc' ? ' ↑' : ' ↓')}
@@ -414,10 +414,10 @@ export default function Commissions() {
       ),
       cell: (row) => (
         <div className="text-sm space-y-1">
-          {row.minimum_profit_amount != null && row.minimum_profit_amount !== '' && <div className="text-gray-600">Min: ₺{Number(row.minimum_profit_amount).toFixed(2)}</div>}
+          {row.minimum_profit_amount != null && row.minimum_profit_amount !== '' && <div className="text-muted-foreground">Min: ₺{Number(row.minimum_profit_amount).toFixed(2)}</div>}
           {row.target_profit_rate != null && row.target_profit_rate !== '' && <div className="font-medium text-green-600">Oran: %{Number(row.target_profit_rate).toFixed(1)}</div>}
-          {row.target_profit_amount != null && row.target_profit_amount !== '' && <div className="font-medium text-gray-900">Tutar: ₺{Number(row.target_profit_amount).toFixed(2)}</div>}
-          {(row.minimum_profit_amount == null || row.minimum_profit_amount === '') && (row.target_profit_rate == null || row.target_profit_rate === '') && (row.target_profit_amount == null || row.target_profit_amount === '') && <div className="text-gray-300 text-xs">-</div>}
+          {row.target_profit_amount != null && row.target_profit_amount !== '' && <div className="font-medium text-foreground">Tutar: ₺{Number(row.target_profit_amount).toFixed(2)}</div>}
+          {(row.minimum_profit_amount == null || row.minimum_profit_amount === '') && (row.target_profit_rate == null || row.target_profit_rate === '') && (row.target_profit_amount == null || row.target_profit_amount === '') && <div className="text-muted-foreground/50 text-xs">-</div>}
         </div>
       )
     },
@@ -432,7 +432,7 @@ export default function Commissions() {
               setSortDir('asc');
             }
           }}
-          className="flex items-center gap-1 hover:text-gray-900"
+          className="flex items-center gap-1 hover:text-foreground"
         >
           İndirimli Kâr Hedefleri
           {sortField === 'discounted_target_profit_amount' && (sortDir === 'asc' ? ' ↑' : ' ↓')}
@@ -440,10 +440,10 @@ export default function Commissions() {
       ),
       cell: (row) => (
         <div className="text-sm space-y-1">
-          {row.discounted_minimum_profit_amount != null && row.discounted_minimum_profit_amount !== '' && <div className="text-gray-600">Min: ₺{Number(row.discounted_minimum_profit_amount).toFixed(2)}</div>}
-          {row.discounted_target_profit_rate != null && row.discounted_target_profit_rate !== '' && <div className="font-medium text-gray-900">Oran: %{Number(row.discounted_target_profit_rate).toFixed(1)}</div>}
-          {row.discounted_target_profit_amount != null && row.discounted_target_profit_amount !== '' && <div className="font-medium text-gray-700">Tutar: ₺{Number(row.discounted_target_profit_amount).toFixed(2)}</div>}
-          {(row.discounted_minimum_profit_amount == null || row.discounted_minimum_profit_amount === '') && (row.discounted_target_profit_rate == null || row.discounted_target_profit_rate === '') && (row.discounted_target_profit_amount == null || row.discounted_target_profit_amount === '') && <div className="text-gray-300 text-xs">-</div>}
+          {row.discounted_minimum_profit_amount != null && row.discounted_minimum_profit_amount !== '' && <div className="text-muted-foreground">Min: ₺{Number(row.discounted_minimum_profit_amount).toFixed(2)}</div>}
+          {row.discounted_target_profit_rate != null && row.discounted_target_profit_rate !== '' && <div className="font-medium text-foreground">Oran: %{Number(row.discounted_target_profit_rate).toFixed(1)}</div>}
+          {row.discounted_target_profit_amount != null && row.discounted_target_profit_amount !== '' && <div className="font-medium text-muted-foreground">Tutar: ₺{Number(row.discounted_target_profit_amount).toFixed(2)}</div>}
+          {(row.discounted_minimum_profit_amount == null || row.discounted_minimum_profit_amount === '') && (row.discounted_target_profit_rate == null || row.discounted_target_profit_rate === '') && (row.discounted_target_profit_amount == null || row.discounted_target_profit_amount === '') && <div className="text-muted-foreground/50 text-xs">-</div>}
         </div>
       )
     },
@@ -527,7 +527,7 @@ export default function Commissions() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-secondary">
       <div className="max-w-[1400px] mx-auto px-3 sm:px-6 py-5 sm:py-8">
         <div className="flex flex-col gap-4 mb-8">
           <div>
@@ -642,13 +642,13 @@ export default function Commissions() {
             </DialogHeader>
             <div className="space-y-4">
               <div className="text-center py-4">
-                <p className="text-sm font-semibold text-gray-700 mb-2">{importProgress.current} / {importProgress.total} kayıt</p>
-                <p className="text-2xl font-bold text-gray-900">%{Math.round((importProgress.current / (importProgress.total || 1)) * 100)}</p>
+                <p className="text-sm font-semibold text-muted-foreground mb-2">{importProgress.current} / {importProgress.total} kayıt</p>
+                <p className="text-2xl font-bold text-foreground">%{Math.round((importProgress.current / (importProgress.total || 1)) * 100)}</p>
               </div>
               <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
                 <div className="bg-gray-900 h-3 rounded-full transition-all duration-300" style={{ width: `${(importProgress.current / (importProgress.total || 1)) * 100}%` }} />
               </div>
-              <p className="text-xs text-gray-500 text-center">Lütfen bekleyin, veriler işleniyor...</p>
+              <p className="text-xs text-muted-foreground text-center">Lütfen bekleyin, veriler işleniyor...</p>
             </div>
           </DialogContent>
         </Dialog>

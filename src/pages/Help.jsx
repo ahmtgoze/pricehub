@@ -21,7 +21,7 @@ function StepBadge({ n }) {
 
 function InfoNote({ children }) {
   return (
-    <div className="rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-600 leading-relaxed mt-3">
+    <div className="rounded-xl border border-border bg-secondary px-4 py-3 text-sm text-muted-foreground leading-relaxed mt-3">
       {children}
     </div>
   );
@@ -32,18 +32,18 @@ function FAQ({ items }) {
   return (
     <div className="mt-3 space-y-1.5">
       {items.map((item, i) => (
-        <div key={i} className="border border-gray-200 rounded-xl overflow-hidden">
+        <div key={i} className="border border-border rounded-xl overflow-hidden">
           <button
-            className="w-full flex items-center justify-between px-4 py-3 text-left bg-white hover:bg-gray-50 transition-colors"
+            className="w-full flex items-center justify-between px-4 py-3 text-left bg-card hover:bg-secondary transition-colors"
             onClick={() => setOpen(open === i ? null : i)}
           >
-            <span className="text-sm font-medium text-gray-800">{item.q}</span>
+            <span className="text-sm font-medium text-foreground">{item.q}</span>
             {open === i
-              ? <ChevronDown className="w-4 h-4 text-gray-400 shrink-0" />
-              : <ChevronRight className="w-4 h-4 text-gray-400 shrink-0" />}
+              ? <ChevronDown className="w-4 h-4 text-muted-foreground/70 shrink-0" />
+              : <ChevronRight className="w-4 h-4 text-muted-foreground/70 shrink-0" />}
           </button>
           {open === i && (
-            <div className="px-4 py-3 text-sm text-gray-600 bg-gray-50 border-t border-gray-100 leading-relaxed">
+            <div className="px-4 py-3 text-sm text-muted-foreground bg-secondary border-t border-border leading-relaxed">
               {item.a}
             </div>
           )}
@@ -198,39 +198,39 @@ const WIZARD_STEPS = [
 function WizardStep({ step, done, onToggle, isActive, onActivate }) {
   const Icon = step.icon;
   return (
-    <div className={`bg-white rounded-2xl border transition-all ${done ? 'border-gray-200' : isActive ? 'border-gray-900' : 'border-gray-200'}`}>
+    <div className={`bg-card rounded-2xl border transition-all ${done ? 'border-border' : isActive ? 'border-gray-900' : 'border-border'}`}>
       <div className="flex items-center gap-4 p-4 cursor-pointer" onClick={onActivate}>
         <button
           onClick={(e) => { e.stopPropagation(); onToggle(); }}
           className={`w-8 h-8 rounded-full border-2 flex items-center justify-center shrink-0 transition-all ${
-            done ? 'bg-gray-900 border-gray-900 text-white' : 'border-gray-300 bg-white hover:border-gray-500'
+            done ? 'bg-gray-900 border-gray-900 text-white' : 'border-input bg-card hover:border-gray-500'
           }`}
         >
-          {done ? <CheckCheck className="w-4 h-4" /> : <span className="text-xs font-bold text-gray-500">{step.id}</span>}
+          {done ? <CheckCheck className="w-4 h-4" /> : <span className="text-xs font-bold text-muted-foreground">{step.id}</span>}
         </button>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2.5">
-            <Icon className="w-4 h-4 text-gray-400 shrink-0" />
-            <span className={`font-semibold text-sm ${done ? 'text-gray-400 line-through' : 'text-gray-900'}`}>{step.title}</span>
-            {done && <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">Tamamlandı</span>}
+            <Icon className="w-4 h-4 text-muted-foreground/70 shrink-0" />
+            <span className={`font-semibold text-sm ${done ? 'text-muted-foreground/70 line-through' : 'text-foreground'}`}>{step.title}</span>
+            {done && <span className="text-xs bg-secondary text-muted-foreground px-2 py-0.5 rounded-full">Tamamlandı</span>}
           </div>
-          <p className="text-xs text-gray-500 mt-0.5 ml-6">{step.desc}</p>
+          <p className="text-xs text-muted-foreground mt-0.5 ml-6">{step.desc}</p>
         </div>
-        <ChevronRight className={`w-4 h-4 text-gray-400 shrink-0 transition-transform ${isActive ? 'rotate-90' : ''}`} />
+        <ChevronRight className={`w-4 h-4 text-muted-foreground/70 shrink-0 transition-transform ${isActive ? 'rotate-90' : ''}`} />
       </div>
 
       {isActive && (
-        <div className="px-5 pb-5 border-t border-gray-100 pt-4">
+        <div className="px-5 pb-5 border-t border-border pt-4">
           <ol className="space-y-2.5">
             {step.items.map((item, i) => (
-              <li key={i} className="flex items-start gap-3 text-sm text-gray-700">
+              <li key={i} className="flex items-start gap-3 text-sm text-muted-foreground">
                 <StepBadge n={i + 1} />
                 <span>{item}</span>
               </li>
             ))}
           </ol>
-          <div className="mt-4 rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-600">
-            <strong className="text-gray-800">İpucu:</strong> {step.tip}
+          <div className="mt-4 rounded-xl border border-border bg-secondary px-4 py-3 text-sm text-muted-foreground">
+            <strong className="text-foreground">İpucu:</strong> {step.tip}
           </div>
           <div className="flex items-center gap-3 mt-4">
             <Link
@@ -243,7 +243,7 @@ function WizardStep({ step, done, onToggle, isActive, onActivate }) {
             {!done && (
               <button
                 onClick={onToggle}
-                className="flex items-center gap-2 border border-gray-300 text-gray-700 text-sm font-medium px-4 py-2 rounded-xl hover:bg-gray-50 transition-colors"
+                className="flex items-center gap-2 border border-input text-muted-foreground text-sm font-medium px-4 py-2 rounded-xl hover:bg-secondary transition-colors"
               >
                 <CheckCheck className="w-4 h-4" />
                 Tamamlandı işaretle
@@ -441,11 +441,11 @@ export default function Help() {
         </div>
 
         {/* Tab geçişi */}
-        <div className="flex gap-1.5 bg-gray-100 rounded-xl p-1 w-fit">
+        <div className="flex gap-1.5 bg-secondary rounded-xl p-1 w-fit">
           <button
             onClick={() => setTab('wizard')}
             className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-              tab === 'wizard' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+              tab === 'wizard' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-muted-foreground'
             }`}
           >
             <Map className="w-4 h-4" /> İlk Kurulum Rehberi
@@ -453,7 +453,7 @@ export default function Help() {
           <button
             onClick={() => setTab('docs')}
             className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-              tab === 'docs' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+              tab === 'docs' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-muted-foreground'
             }`}
           >
             <BookOpen className="w-4 h-4" /> Sayfa Rehberi
@@ -468,19 +468,19 @@ export default function Help() {
             <div className="rounded-[18px] border border-border bg-card p-5">
               <div className="flex items-center justify-between mb-3">
                 <div>
-                  <p className="font-semibold text-gray-900">Kurulum İlerlemesi</p>
-                  <p className="text-sm text-gray-500">{completedCount} / {totalSteps} adım tamamlandı</p>
+                  <p className="font-semibold text-foreground">Kurulum İlerlemesi</p>
+                  <p className="text-sm text-muted-foreground">{completedCount} / {totalSteps} adım tamamlandı</p>
                 </div>
-                <span className="text-2xl font-bold text-gray-900">%{progress}</span>
+                <span className="text-2xl font-bold text-foreground">%{progress}</span>
               </div>
-              <div className="w-full bg-gray-100 rounded-full h-2 overflow-hidden">
+              <div className="w-full bg-secondary rounded-full h-2 overflow-hidden">
                 <div
                   className="bg-gray-900 h-2 rounded-full transition-all duration-500"
                   style={{ width: `${progress}%` }}
                 />
               </div>
               {completedCount === totalSteps && (
-                <div className="mt-3 flex items-center gap-2 text-gray-700 bg-gray-50 border border-gray-200 rounded-xl p-3 text-sm">
+                <div className="mt-3 flex items-center gap-2 text-muted-foreground bg-secondary border border-border rounded-xl p-3 text-sm">
                   <CheckCheck className="w-4 h-4 shrink-0" />
                   <span className="font-medium">Tüm kurulum adımları tamamlandı.</span>
                 </div>
@@ -515,40 +515,40 @@ export default function Help() {
               return (
                 <div key={p.id} className="rounded-[18px] border border-border bg-card overflow-hidden">
                   <button
-                    className="w-full flex items-center gap-4 p-4 text-left hover:bg-gray-50 transition-colors"
+                    className="w-full flex items-center gap-4 p-4 text-left hover:bg-secondary transition-colors"
                     onClick={() => setOpenId(isOpen ? null : p.id)}
                   >
-                    <div className="w-9 h-9 rounded-xl bg-gray-100 flex items-center justify-center shrink-0">
-                      <Icon className="w-4 h-4 text-gray-600" />
+                    <div className="w-9 h-9 rounded-xl bg-secondary flex items-center justify-center shrink-0">
+                      <Icon className="w-4 h-4 text-muted-foreground" />
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <Link
                           to={createPageUrl(p.page)}
                           onClick={(e) => e.stopPropagation()}
-                          className="font-semibold text-sm text-gray-900 hover:text-gray-600 transition-colors flex items-center gap-1"
+                          className="font-semibold text-sm text-foreground hover:text-muted-foreground transition-colors flex items-center gap-1"
                         >
                           {p.title}
-                          <ExternalLink className="w-3 h-3 text-gray-400" />
+                          <ExternalLink className="w-3 h-3 text-muted-foreground/70" />
                         </Link>
                       </div>
-                      <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">{p.short}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">{p.short}</p>
                     </div>
-                    <ChevronRight className={`w-4 h-4 text-gray-400 shrink-0 transition-transform ${isOpen ? 'rotate-90' : ''}`} />
+                    <ChevronRight className={`w-4 h-4 text-muted-foreground/70 shrink-0 transition-transform ${isOpen ? 'rotate-90' : ''}`} />
                   </button>
 
                   {isOpen && (
-                    <div className="px-5 pb-5 border-t border-gray-100 pt-4">
-                      <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-line">{p.detail}</p>
+                    <div className="px-5 pb-5 border-t border-border pt-4">
+                      <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-line">{p.detail}</p>
                       {p.faq.length > 0 && (
                         <>
-                          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mt-4 mb-1">Sık Sorulan Sorular</p>
+                          <p className="text-xs font-semibold text-muted-foreground/70 uppercase tracking-wide mt-4 mb-1">Sık Sorulan Sorular</p>
                           <FAQ items={p.faq} />
                         </>
                       )}
                       <Link
                         to={createPageUrl(p.page)}
-                        className="inline-flex items-center gap-2 mt-4 text-sm font-medium text-gray-900 hover:text-gray-600 transition-colors"
+                        className="inline-flex items-center gap-2 mt-4 text-sm font-medium text-foreground hover:text-muted-foreground transition-colors"
                       >
                         {p.title} sayfasını aç
                         <ArrowRight className="w-4 h-4" />

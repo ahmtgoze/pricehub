@@ -55,16 +55,16 @@ export default function PriceDetailModal({ open, onClose, product, platform, pri
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="w-full max-w-2xl flex flex-col p-0 gap-0" style={{maxHeight: '90dvh'}}>
-        <DialogHeader className="px-4 pt-4 pb-3 sm:px-6 sm:pt-6 border-b border-slate-100 flex-shrink-0">
+        <DialogHeader className="px-4 pt-4 pb-3 sm:px-6 sm:pt-6 border-b border-border flex-shrink-0">
           <DialogTitle className="flex items-center gap-2 text-lg sm:text-xl">
-            <Calculator className="h-5 w-5 text-gray-900 flex-shrink-0" />
+            <Calculator className="h-5 w-5 text-foreground flex-shrink-0" />
             Fiyat Hesaplama Detayları
           </DialogTitle>
         </DialogHeader>
 
         <div className="overflow-y-auto flex-1 min-h-0 px-4 pb-6 sm:px-6 pt-4">
           {!priceData ? (
-            <div className="text-center py-12 text-slate-400">
+            <div className="text-center py-12 text-muted-foreground/70">
               <Calculator className="h-12 w-12 mx-auto mb-3 opacity-30" />
               <p>Bu ürün için hesaplama detayı bulunamadı.</p>
               <p className="text-xs mt-1">Ürün sisteme eşleştirilmemiş olabilir.</p>
@@ -72,19 +72,19 @@ export default function PriceDetailModal({ open, onClose, product, platform, pri
           ) : (
             <div className="space-y-4 sm:space-y-6">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="flex items-start gap-3 p-4 bg-slate-50 rounded-xl">
-                  <Package className="h-5 w-5 text-slate-600 mt-0.5" />
+                <div className="flex items-start gap-3 p-4 bg-secondary rounded-xl">
+                  <Package className="h-5 w-5 text-muted-foreground mt-0.5" />
                   <div>
-                    <p className="text-xs text-slate-500 mb-1">Ürün</p>
-                    <p className="font-semibold text-slate-900">{product?.name}</p>
-                    <p className="text-xs text-slate-500 mt-1">SKU: {product?.sku || '-'}</p>
+                    <p className="text-xs text-muted-foreground mb-1">Ürün</p>
+                    <p className="font-semibold text-foreground">{product?.name}</p>
+                    <p className="text-xs text-muted-foreground mt-1">SKU: {product?.sku || '-'}</p>
                   </div>
                 </div>
-                <div className="flex items-start gap-3 p-4 bg-slate-50 rounded-xl">
-                  <Store className="h-5 w-5 text-slate-600 mt-0.5" />
+                <div className="flex items-start gap-3 p-4 bg-secondary rounded-xl">
+                  <Store className="h-5 w-5 text-muted-foreground mt-0.5" />
                   <div>
-                    <p className="text-xs text-slate-500 mb-1">Platform</p>
-                    <p className="font-semibold text-slate-900">{platform?.name}</p>
+                    <p className="text-xs text-muted-foreground mb-1">Platform</p>
+                    <p className="font-semibold text-foreground">{platform?.name}</p>
                     <Badge variant="outline" className="mt-2">
                       {getBaremLabel(priceData.barem_used)}
                     </Badge>
@@ -94,9 +94,9 @@ export default function PriceDetailModal({ open, onClose, product, platform, pri
 
               <Separator />
 
-              <div className="bg-gray-50 rounded-xl p-4 sm:p-6">
-                <p className="text-sm text-gray-500 font-medium mb-2 text-center">Satış Fiyatı</p>
-                <p className="text-3xl sm:text-4xl font-bold text-gray-900 text-center">
+              <div className="bg-secondary rounded-xl p-4 sm:p-6">
+                <p className="text-sm text-muted-foreground font-medium mb-2 text-center">Satış Fiyatı</p>
+                <p className="text-3xl sm:text-4xl font-bold text-foreground text-center">
                   ₺{priceData.sale_price?.toFixed(2)}
                 </p>
                 <div className="flex items-center justify-center gap-3 mt-4 flex-wrap">
@@ -105,7 +105,7 @@ export default function PriceDetailModal({ open, onClose, product, platform, pri
                   </Badge>
                   <Badge className={`${
                     (priceData.profit_rate || 0) >= 30 ? 'bg-emerald-100 text-emerald-700' :
-                    (priceData.profit_rate || 0) >= 20 ? 'bg-gray-100 text-gray-700' :
+                    (priceData.profit_rate || 0) >= 20 ? 'bg-secondary text-muted-foreground' :
                     'bg-amber-100 text-amber-700'
                   }`}>
                     %{(priceData.profit_rate || 0)?.toFixed(1)}
@@ -114,38 +114,38 @@ export default function PriceDetailModal({ open, onClose, product, platform, pri
               </div>
 
               <div>
-                <h4 className="font-semibold text-slate-700 mb-3">Detaylı Hesaplama</h4>
+                <h4 className="font-semibold text-muted-foreground mb-3">Detaylı Hesaplama</h4>
                 <div className="space-y-1 text-sm">
-                  <div className="flex justify-between py-2 border-b-2 border-gray-200 bg-gray-50 px-3 rounded-t-lg">
-                    <span className="font-semibold text-gray-900">Satış Fiyatı (KDV Dahil)</span>
-                    <span className="font-bold text-gray-900 ml-2 shrink-0">₺{priceData.sale_price?.toFixed(2)}</span>
+                  <div className="flex justify-between py-2 border-b-2 border-border bg-secondary px-3 rounded-t-lg">
+                    <span className="font-semibold text-foreground">Satış Fiyatı (KDV Dahil)</span>
+                    <span className="font-bold text-foreground ml-2 shrink-0">₺{priceData.sale_price?.toFixed(2)}</span>
                   </div>
 
-                  <div className="flex justify-between py-2 pl-3 sm:pl-6 border-b border-slate-100">
-                    <span className="text-slate-600">- Ürün Maliyeti (KDV Dahil)</span>
+                  <div className="flex justify-between py-2 pl-3 sm:pl-6 border-b border-border">
+                    <span className="text-muted-foreground">- Ürün Maliyeti (KDV Dahil)</span>
                     <span className="font-medium text-red-600 ml-2 shrink-0">-₺{Number(productCost).toFixed(2)}</span>
                   </div>
 
-                  <div className="flex justify-between py-2 pl-3 sm:pl-6 border-b border-slate-100">
-                    <span className="text-slate-600">- Baskı Maliyeti (KDV Dahil)</span>
+                  <div className="flex justify-between py-2 pl-3 sm:pl-6 border-b border-border">
+                    <span className="text-muted-foreground">- Baskı Maliyeti (KDV Dahil)</span>
                     <span className="font-medium text-red-600 ml-2 shrink-0">-₺{Number(printingCost).toFixed(2)}</span>
                   </div>
 
-                  <div className="flex justify-between py-2 pl-3 sm:pl-6 border-b border-slate-100">
-                    <span className="text-slate-600">- Ek Maliyet (KDV Dahil)</span>
+                  <div className="flex justify-between py-2 pl-3 sm:pl-6 border-b border-border">
+                    <span className="text-muted-foreground">- Ek Maliyet (KDV Dahil)</span>
                     <span className="font-medium text-red-600 ml-2 shrink-0">-₺{Number(extraCost).toFixed(2)}</span>
                   </div>
 
-                  <div className="flex justify-between py-2 pl-3 sm:pl-6 border-b border-slate-100">
-                    <span className="text-slate-600">
+                  <div className="flex justify-between py-2 pl-3 sm:pl-6 border-b border-border">
+                    <span className="text-muted-foreground">
                       {isDoubleShipping ? '- Çift Kargo Ücreti (KDV Dahil)' : '- Kargo Ücreti (KDV Dahil)'}
                     </span>
                     <span className="font-medium text-red-600 ml-2 shrink-0">-₺{Number(shippingCost).toFixed(2)}</span>
                   </div>
 
                   {priceData.service_fee != null && (
-                    <div className="flex justify-between py-2 pl-3 sm:pl-6 border-b border-slate-100">
-                      <span className="text-slate-600">
+                    <div className="flex justify-between py-2 pl-3 sm:pl-6 border-b border-border">
+                      <span className="text-muted-foreground">
                         {product?.same_day_delivery && platform?.has_same_day_delivery
                           ? '- Bugün Kargoda Hizmet Bedeli (İndirimli, KDV Dahil)'
                           : '- Hizmet Bedeli (KDV Dahil)'}
@@ -155,37 +155,37 @@ export default function PriceDetailModal({ open, onClose, product, platform, pri
                   )}
 
                   {(calculationDetails.posServiceFee > 0) && (
-                    <div className="flex justify-between py-2 pl-3 sm:pl-6 border-b border-slate-100">
-                      <span className="text-slate-600">- POS Hizmet Bedeli (KDV Dahil)</span>
+                    <div className="flex justify-between py-2 pl-3 sm:pl-6 border-b border-border">
+                      <span className="text-muted-foreground">- POS Hizmet Bedeli (KDV Dahil)</span>
                       <span className="font-medium text-red-600 ml-2 shrink-0">-₺{Number(calculationDetails.posServiceFee).toFixed(2)}</span>
                     </div>
                   )}
 
-                  <div className="flex justify-between py-2 pl-3 sm:pl-6 border-b border-slate-100">
-                    <span className="text-slate-600">- Paketleme Maliyeti (KDV Dahil)</span>
+                  <div className="flex justify-between py-2 pl-3 sm:pl-6 border-b border-border">
+                    <span className="text-muted-foreground">- Paketleme Maliyeti (KDV Dahil)</span>
                     <span className="font-medium text-red-600 ml-2 shrink-0">-₺{Number(packagingCost).toFixed(2)}</span>
                   </div>
 
-                  <div className="flex justify-between py-2 pl-3 sm:pl-6 border-b border-slate-100">
-                    <span className="text-slate-600">- Komisyon Tutarı (KDV Dahil)</span>
+                  <div className="flex justify-between py-2 pl-3 sm:pl-6 border-b border-border">
+                    <span className="text-muted-foreground">- Komisyon Tutarı (KDV Dahil)</span>
                     <span className="font-medium text-red-600 ml-2 shrink-0">-₺{(priceData.commission_amount || 0)?.toFixed(2)}</span>
                   </div>
 
-                  <div className="flex justify-between py-2 pl-3 sm:pl-6 border-b border-slate-100">
-                    <span className="text-slate-600">- Stopaj Tutarı</span>
+                  <div className="flex justify-between py-2 pl-3 sm:pl-6 border-b border-border">
+                    <span className="text-muted-foreground">- Stopaj Tutarı</span>
                     <span className="font-medium text-red-600 ml-2 shrink-0">-₺{(priceData.withholding_amount || 0)?.toFixed(2)}</span>
                   </div>
 
-                  <div className="flex justify-between py-2 pl-3 sm:pl-6 border-b border-slate-200">
-                    <span className="text-slate-600">- Net KDV</span>
+                  <div className="flex justify-between py-2 pl-3 sm:pl-6 border-b border-border">
+                    <span className="text-muted-foreground">- Net KDV</span>
                     <span className="font-medium text-red-600 ml-2 shrink-0">-₺{(priceData.net_vat || 0)?.toFixed(2)}</span>
                   </div>
 
                   {/* Vergi Öncesi Net Kâr */}
                   {((priceData.corporate_tax_amount ?? 0) > 0) && (
-                    <div className="flex justify-between py-2 pl-3 sm:pl-6 border-b border-slate-100 bg-slate-50/50">
-                      <span className="text-slate-600 font-medium">= Vergi Öncesi Net Kâr</span>
-                      <span className="font-medium text-slate-700 ml-2 shrink-0">
+                    <div className="flex justify-between py-2 pl-3 sm:pl-6 border-b border-border bg-secondary/50">
+                      <span className="text-muted-foreground font-medium">= Vergi Öncesi Net Kâr</span>
+                      <span className="font-medium text-muted-foreground ml-2 shrink-0">
                         ₺{(priceData.net_profit_before_tax ?? ((priceData.net_profit ?? 0) + (priceData.corporate_tax_amount ?? 0))).toFixed(2)}
                       </span>
                     </div>
@@ -193,8 +193,8 @@ export default function PriceDetailModal({ open, onClose, product, platform, pri
 
                   {/* Kurumlar (Gelir) Vergisi */}
                   {((priceData.corporate_tax_amount ?? 0) > 0) && (
-                    <div className="flex justify-between py-2 pl-3 sm:pl-6 border-b-2 border-slate-200">
-                      <span className="text-slate-600">- Kurumlar (Gelir) Vergisi (%{calculationDetails.corporateTaxRate ?? 25})</span>
+                    <div className="flex justify-between py-2 pl-3 sm:pl-6 border-b-2 border-border">
+                      <span className="text-muted-foreground">- Kurumlar (Gelir) Vergisi (%{calculationDetails.corporateTaxRate ?? 25})</span>
                       <span className="font-medium text-red-600 ml-2 shrink-0">-₺{(priceData.corporate_tax_amount ?? 0).toFixed(2)}</span>
                     </div>
                   )}
@@ -207,31 +207,31 @@ export default function PriceDetailModal({ open, onClose, product, platform, pri
                 </div>
               </div>
 
-              <div className="bg-slate-50 rounded-lg p-4 space-y-2 text-sm">
+              <div className="bg-secondary rounded-lg p-4 space-y-2 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-slate-600">Ürün Desisi:</span>
+                  <span className="text-muted-foreground">Ürün Desisi:</span>
                   <span className="font-medium">{product?.desi || '-'}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-slate-600">Komisyon Oranı:</span>
+                  <span className="text-muted-foreground">Komisyon Oranı:</span>
                   <span className="font-medium">%{Number(calculationDetails.commissionRate || 0).toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-slate-600">Ürün KDV Oranı:</span>
+                  <span className="text-muted-foreground">Ürün KDV Oranı:</span>
                   <span className="font-medium">%{calculationDetails.productVatRate || 20}</span>
                 </div>
 
-                <div className="border-t border-slate-200 pt-2 mt-2">
-                  <p className="text-xs font-semibold text-slate-600 mb-2">Platform Ayarları</p>
+                <div className="border-t border-border pt-2 mt-2">
+                  <p className="text-xs font-semibold text-muted-foreground mb-2">Platform Ayarları</p>
                   {platformData.hasWithholding && (
                     <div className="flex justify-between">
-                      <span className="text-slate-600">Stopaj Oranı:</span>
+                      <span className="text-muted-foreground">Stopaj Oranı:</span>
                       <span className="font-medium">%{platformData.withholdingRate?.toFixed(2)}</span>
                     </div>
                   )}
                   {platformData.hasServiceFee && (
                     <div className="flex justify-between">
-                      <span className="text-slate-600">Hizmet Bedeli Tipi:</span>
+                      <span className="text-muted-foreground">Hizmet Bedeli Tipi:</span>
                       <span className="font-medium">
                         {platformData.serviceFeeType === 'fixed_per_order' ? 'Sabit (Sipariş Başı)' :
                          platformData.serviceFeeType === 'percent_of_sale' ? 'Yüzde (Satış Üzerinden)' : 'Yok'}
@@ -240,7 +240,7 @@ export default function PriceDetailModal({ open, onClose, product, platform, pri
                   )}
                   {platformData.hasServiceFee && platformData.serviceFeeType !== 'none' && (
                     <div className="flex justify-between">
-                      <span className="text-slate-600">Hizmet Bedeli Tutarı:</span>
+                      <span className="text-muted-foreground">Hizmet Bedeli Tutarı:</span>
                       <span className="font-medium">
                         {platformData.serviceFeeType === 'percent_of_sale'
                           ? `%${platformData.serviceFeeAmount?.toFixed(2)}`
@@ -251,20 +251,20 @@ export default function PriceDetailModal({ open, onClose, product, platform, pri
                 </div>
 
                 <div className="flex justify-between">
-                  <span className="text-slate-600">Gerçekleşen Kâr Oranı:</span>
+                  <span className="text-muted-foreground">Gerçekleşen Kâr Oranı:</span>
                   <span className="font-medium">%{(priceData.profit_rate || 0)?.toFixed(1)}</span>
                 </div>
 
                 {calculationDetails.targetProfitRate && (
                   <div className="flex justify-between">
-                    <span className="text-slate-600">Hedef Kâr Oranı:</span>
+                    <span className="text-muted-foreground">Hedef Kâr Oranı:</span>
                     <span className="font-medium">%{calculationDetails.targetProfitRate}</span>
                   </div>
                 )}
 
                 {((priceData.corporate_tax_amount ?? 0) > 0) && (
                   <div className="flex justify-between">
-                    <span className="text-slate-600">Kurumlar Vergisi Oranı:</span>
+                    <span className="text-muted-foreground">Kurumlar Vergisi Oranı:</span>
                     <span className="font-medium">%{calculationDetails.corporateTaxRate ?? 25}</span>
                   </div>
                 )}
