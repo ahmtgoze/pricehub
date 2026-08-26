@@ -44,7 +44,7 @@ export default function BackgroundTaskWidget() {
         </div>
         <div className="w-full bg-secondary rounded-full h-2 overflow-hidden">
           <div
-            className="bg-gray-900 h-2 rounded-full transition-all duration-300"
+            className="bg-primary h-2 rounded-full transition-all duration-300"
             style={{ width: `${pct}%` }}
           />
         </div>

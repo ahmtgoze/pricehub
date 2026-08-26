@@ -110,7 +110,7 @@ export default function NotificationCenter() {
         >
           <Bell className="h-5 w-5" />
           {unreadAnnouncementsCount > 0 && (
-            <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] bg-gray-900 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1 leading-none">
+            <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] bg-primary text-primary-foreground text-[10px] font-bold rounded-full flex items-center justify-center px-1 leading-none">
               {unreadAnnouncementsCount > 99 ? '99+' : unreadAnnouncementsCount}
             </span>
           )}
@@ -127,7 +127,7 @@ export default function NotificationCenter() {
         >
           <MessageSquare className="h-5 w-5" />
           {unreadMessagesCount > 0 && (
-            <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] bg-gray-900 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1 leading-none">
+            <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] bg-primary text-primary-foreground text-[10px] font-bold rounded-full flex items-center justify-center px-1 leading-none">
               {unreadMessagesCount > 99 ? '99+' : unreadMessagesCount}
             </span>
           )}
@@ -197,7 +197,7 @@ function PanelContent({ open, setOpen, isAdmin, user, unreadAnnouncementsCount, 
             <Bell className="h-4 w-4" />
             Duyurular
             {unreadAnnouncementsCount > 0 && (
-              <span className="bg-gray-900 text-white text-[10px] px-1.5 py-0.5 rounded-full">{unreadAnnouncementsCount}</span>
+              <span className="bg-primary text-primary-foreground text-[10px] px-1.5 py-0.5 rounded-full">{unreadAnnouncementsCount}</span>
             )}
           </button>
           <button
@@ -207,7 +207,7 @@ function PanelContent({ open, setOpen, isAdmin, user, unreadAnnouncementsCount, 
             <MessageSquare className="h-4 w-4" />
             Mesajlar
             {unreadMessagesCount > 0 && (
-              <span className="bg-gray-900 text-white text-[10px] px-1.5 py-0.5 rounded-full">{unreadMessagesCount}</span>
+              <span className="bg-primary text-primary-foreground text-[10px] px-1.5 py-0.5 rounded-full">{unreadMessagesCount}</span>
             )}
           </button>
         </div>

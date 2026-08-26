@@ -954,7 +954,7 @@ export default function MarketplaceProducts() {
                 </div>
                 <div className="w-full bg-secondary rounded-full h-3 overflow-hidden">
                   <div
-                    className="bg-gray-900 h-3 rounded-full transition-all duration-200"
+                    className="bg-primary h-3 rounded-full transition-all duration-200"
                     style={{ width: progressPopup.total > 0 ? `${(progressPopup.current / progressPopup.total) * 100}%` : '0%' }}
                   />
                 </div>

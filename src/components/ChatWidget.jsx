@@ -198,7 +198,7 @@ ${topProducts || 'Veri yok'}
           style={{ width: '360px', maxWidth: 'calc(100vw - 24px)', height: '500px' }}
         >
           {/* Header */}
-          <div className="flex items-center justify-between px-4 py-3 bg-gray-900 flex-shrink-0">
+          <div className="flex items-center justify-between px-4 py-3 bg-primary flex-shrink-0">
             <div className="flex items-center gap-2.5">
               <div className="w-7 h-7 rounded-full bg-card/20 flex items-center justify-center">
                 <Bot className="h-4 w-4 text-white" />
@@ -228,7 +228,7 @@ ${topProducts || 'Veri yok'}
                 <div
                   className={`max-w-[80%] rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed whitespace-pre-wrap ${
                     msg.role === 'user'
-                      ? 'bg-gray-900 text-white rounded-tr-sm'
+                      ? 'bg-primary text-primary-foreground rounded-tr-sm'
                       : 'bg-card text-foreground rounded-tl-sm border border-border shadow-sm'
                   }`}
                 >
@@ -245,9 +245,9 @@ ${topProducts || 'Veri yok'}
                 </div>
                 <div className="bg-card rounded-2xl rounded-tl-sm border border-border shadow-sm px-4 py-3">
                   <div className="flex gap-1 items-center">
-                    <span className="w-1.5 h-1.5 rounded-full bg-slate-400 animate-bounce" style={{ animationDelay: '0ms' }} />
-                    <span className="w-1.5 h-1.5 rounded-full bg-slate-400 animate-bounce" style={{ animationDelay: '150ms' }} />
-                    <span className="w-1.5 h-1.5 rounded-full bg-slate-400 animate-bounce" style={{ animationDelay: '300ms' }} />
+                    <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground animate-bounce" style={{ animationDelay: '0ms' }} />
+                    <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground animate-bounce" style={{ animationDelay: '150ms' }} />
+                    <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground animate-bounce" style={{ animationDelay: '300ms' }} />
                   </div>
                 </div>
               </div>
@@ -264,7 +264,7 @@ ${topProducts || 'Veri yok'}
                   <button
                     key={q}
                     onClick={() => handleQuickQuestion(q)}
-                    className="text-xs px-2.5 py-1 rounded-full bg-secondary text-muted-foreground hover:bg-gray-200 transition-colors border border-border"
+                    className="text-xs px-2.5 py-1 rounded-full bg-secondary text-muted-foreground hover:bg-border transition-colors border border-border"
                   >
                     {q}
                   </button>
@@ -293,7 +293,7 @@ ${topProducts || 'Veri yok'}
               <button
                 onClick={sendMessage}
                 disabled={!input.trim() || isLoading}
-                className="w-9 h-9 rounded-xl bg-gray-900 hover:bg-gray-800 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center transition-colors flex-shrink-0"
+                className="w-9 h-9 rounded-xl bg-primary hover:bg-black disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center transition-colors flex-shrink-0"
               >
                 {isLoading
                   ? <Loader2 className="h-4 w-4 text-white animate-spin" />
@@ -309,7 +309,7 @@ ${topProducts || 'Veri yok'}
       {/* ── Yüzen Buton ── */}
       <button
         onClick={() => setIsOpen(prev => !prev)}
-        className="fixed bottom-5 right-5 z-50 rounded-full bg-gray-900 hover:bg-gray-800 shadow-lg hover:shadow-xl transition-all flex items-center justify-center"
+        className="fixed bottom-5 right-5 z-50 rounded-full bg-primary hover:bg-black shadow-lg hover:shadow-xl transition-all flex items-center justify-center"
         style={{ width: '52px', height: '52px' }}
         title="PriceHub Asistan"
       >

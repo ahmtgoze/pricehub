@@ -199,7 +199,7 @@ export default function ProductHistoryModal({ open, onClose, productId, productN
                       const profitDiff = (r.new_profit_rate || 0) - (r.old_profit_rate || 0);
                       const ct = changeTypeLabels[r.change_type] || changeTypeLabels.manual;
                       return (
-                        <tr key={r.id} className={`border-b border-slate-50 ${i % 2 === 0 ? 'bg-card' : 'bg-secondary/40'}`}>
+                        <tr key={r.id} className={`border-b border-border ${i % 2 === 0 ? 'bg-card' : 'bg-secondary/40'}`}>
                           <td className="p-3 text-muted-foreground whitespace-nowrap">
                             {r.created_date ? format(new Date(r.created_date), 'dd MMM yyyy HH:mm', { locale: tr }) : '-'}
                           </td>

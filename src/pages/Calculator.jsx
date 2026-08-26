@@ -329,7 +329,7 @@ export default function Calculator() {
 
         <div className="grid lg:grid-cols-2 gap-8">
           {/* Input Section */}
-          <Card className="border-border shadow-sm">
+          <Card className="border-border">
             <CardHeader className="pb-4">
               <div className="flex items-center gap-4">
                 <Button
@@ -517,7 +517,7 @@ export default function Calculator() {
 
               <div className="space-y-4">
                <div className={`border rounded-xl p-4 transition-all ${
-                 isMultiPackage ? 'border-gray-900 bg-secondary' : 'border-border bg-secondary/50'
+                 isMultiPackage ? 'border-primary bg-secondary' : 'border-border bg-secondary/50'
                }`}>
                  <div className="flex items-center space-x-3">
                    <input
@@ -695,7 +695,7 @@ export default function Calculator() {
               <div className="flex gap-3 pt-4">
                 <Button 
                   onClick={handleCalculate}
-                  className="flex-1 bg-gray-900 hover:bg-gray-800"
+                  className="flex-1 bg-primary hover:bg-black"
                   disabled={!selectedPlatform || (shippingMode === 'company' && !selectedShippingCompany) || (shippingMode === 'manual' && !manualShippingCost) || !cost || (!isMultiPackage && !desi) || (isMultiPackage && packages.some(p => !p.desi))}
                 >
                   <CalcIcon className="mr-2 h-4 w-4" />
@@ -709,7 +709,7 @@ export default function Calculator() {
           </Card>
 
           {/* Result Section */}
-          <Card className={`border-border shadow-sm transition-all ${result ? 'bg-card' : 'bg-secondary'}`}>
+          <Card className={`border-border transition-all ${result ? 'bg-card' : 'bg-secondary'}`}>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <ArrowRight className="h-5 w-5 text-foreground" />

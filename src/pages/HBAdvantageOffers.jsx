@@ -435,13 +435,13 @@ export default function HBAdvantageOffers() {
               </div>
             </div>
             <div className="flex flex-wrap gap-3">
-              <Button onClick={() => document.getElementById('hbOfferUpload').click()} disabled={!selectedPlatform} className="bg-gray-900 hover:bg-gray-800">
+              <Button onClick={() => document.getElementById('hbOfferUpload').click()} disabled={!selectedPlatform} className="bg-primary hover:bg-black">
                 <Upload className="mr-2 h-4 w-4" />{uploadedData.length > 0 ? 'Yeni Excel Yükle' : 'Excel Yükle'}
               </Button>
               <input id="hbOfferUpload" type="file" accept=".xlsx,.xls" onChange={handleFileUpload} className="hidden" />
               {uploadedData.length > 0 && (
                 <>
-                  <Button onClick={handleSmartAutoSelect} className="bg-gray-900 hover:bg-gray-800 text-white gap-2"><Sparkles className="h-4 w-4" />Akıllı Otomatik Seç</Button>
+                  <Button onClick={handleSmartAutoSelect} className="bg-primary hover:bg-black text-primary-foreground gap-2"><Sparkles className="h-4 w-4" />Akıllı Otomatik Seç</Button>
                   <Button variant="outline" onClick={() => { setUploadedData([]); setOriginalExcelData(null); toast.success('Liste temizlendi'); }} className="text-rose-600 hover:bg-rose-50"><Trash2 className="mr-2 h-4 w-4" />Temizle</Button>
                   <Button variant="outline" onClick={() => setUploadedData(uploadedData.map((i) => ({ ...i, selected_tier: 'none', selected_price: 0 })))}>Seçimleri Kaldır</Button>
                   <Button variant="outline" onClick={handleExport}><Download className="mr-2 h-4 w-4" />Excel İndir ({selectedCount})</Button>
@@ -523,7 +523,7 @@ export default function HBAdvantageOffers() {
                               return (
                                 <td key={n} className="p-3">
                                   {price > 0 ? (
-                                    <div className={`border rounded-lg p-2 ${isSelected ? 'border-gray-900 bg-secondary' : 'border-border'}`}>
+                                    <div className={`border rounded-lg p-2 ${isSelected ? 'border-primary bg-secondary' : 'border-border'}`}>
                                       <div className="text-xs font-semibold text-muted-foreground mb-1">₺{price.toFixed(2)} ve altı</div>
                                       <div className="text-xs text-muted-foreground">Kom: {commLabel(commission)}</div>
                                       <div className="flex items-center justify-between mt-1">
@@ -537,7 +537,7 @@ export default function HBAdvantageOffers() {
                               );
                             })}
                             <td className="p-3">
-                              <div className={`border rounded-lg p-2 ${item.selected_tier === 'manual' ? 'border-gray-900 bg-secondary' : 'border-border'}`}>
+                              <div className={`border rounded-lg p-2 ${item.selected_tier === 'manual' ? 'border-primary bg-secondary' : 'border-border'}`}>
                                 <div className="text-xs font-semibold text-muted-foreground mb-2">Manuel Fiyat</div>
                                 <Input type="number" step="0.01" value={item.manual_price || ''} onChange={(e) => handleManualPriceChange(item, e.target.value)} placeholder="Fiyat girin" className="h-8 text-xs mb-2" />
                                 {item.manual_price > 0 && (() => {

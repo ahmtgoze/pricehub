@@ -538,7 +538,7 @@ export default function UpdatedPrices() {
                 </div>
                 <div className="w-full bg-secondary rounded-full h-3 overflow-hidden">
                   <div
-                    className="bg-gray-900 h-3 rounded-full transition-all duration-500"
+                    className="bg-primary h-3 rounded-full transition-all duration-500"
                     style={{ width: `${(refreshProgress.stepNum / refreshProgress.totalSteps) * 100}%` }}
                   />
                 </div>

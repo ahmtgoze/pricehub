@@ -1243,7 +1243,7 @@ export default function FlashProducts() {
                       defaultMonth={new Date()}
                       numberOfMonths={2}
                       locale={tr}
-                      classNames={{ day_today: "bg-gray-900 font-bold text-white" }}
+                      classNames={{ day_today: "bg-primary font-bold text-primary-foreground" }}
                     />
                   </PopoverContent>
                 </Popover>
@@ -1254,7 +1254,7 @@ export default function FlashProducts() {
               <Button
                 onClick={() => document.getElementById('excelUpload').click()}
                 disabled={!selectedPlatform || !dateRangeValue?.from || !dateRangeValue?.to}
-                className="bg-gray-900 hover:bg-gray-800"
+                className="bg-primary hover:bg-black"
               >
                 <Upload className="mr-2 h-4 w-4" />
                 {uploadProgress.total > 0
@@ -1270,7 +1270,7 @@ export default function FlashProducts() {
               />
               {uploadedData.length > 0 && (
                 <>
-                  <Button onClick={handleSmartAutoSelect} className="bg-gray-900 hover:bg-gray-800 text-white gap-2">
+                  <Button onClick={handleSmartAutoSelect} className="bg-primary hover:bg-black text-primary-foreground gap-2">
                     <Sparkles className="h-4 w-4" />
                     Akıllı Otomatik Seç
                   </Button>
@@ -1513,7 +1513,7 @@ export default function FlashProducts() {
                             </td>
                             <td className="p-3">
                               {item.price_24h > 0 ? (
-                                <div className={`border rounded-lg p-2 ${item.selected_type === 'flash_24h' ? 'border-gray-900 bg-secondary' : 'border-border'}`}>
+                                <div className={`border rounded-lg p-2 ${item.selected_type === 'flash_24h' ? 'border-primary bg-secondary' : 'border-border'}`}>
                                   <div className="text-xs font-semibold text-muted-foreground mb-1">₺{item.price_24h.toFixed(2)}</div>
                                   {item.start_24h && item.end_24h && (
                                     <div className="text-xs text-muted-foreground/70 mb-1">
@@ -1592,7 +1592,7 @@ export default function FlashProducts() {
                             </td>
                             <td className="p-3">
                               {item.price_3h > 0 ? (
-                                <div className={`border rounded-lg p-2 ${item.selected_type === 'flash_3h' ? 'border-gray-900 bg-secondary' : 'border-border'}`}>
+                                <div className={`border rounded-lg p-2 ${item.selected_type === 'flash_3h' ? 'border-primary bg-secondary' : 'border-border'}`}>
                                   <div className="text-xs font-semibold text-muted-foreground mb-1">₺{item.price_3h.toFixed(2)}</div>
                                   {item.start_3h && item.end_3h && (
                                     <div className="text-xs text-muted-foreground/70 mb-1">
@@ -1806,7 +1806,7 @@ export default function FlashProducts() {
                             </td>
 
                             <td className="p-3">
-                              <div className={`border rounded-lg p-2 ${item.selected_type === 'manual' ? 'border-gray-900 bg-secondary' : 'border-border'}`}>
+                              <div className={`border rounded-lg p-2 ${item.selected_type === 'manual' ? 'border-primary bg-secondary' : 'border-border'}`}>
                                 <div className="text-xs font-semibold text-muted-foreground mb-2">Manuel Fiyat</div>
                                     <Input
                                       type="number"

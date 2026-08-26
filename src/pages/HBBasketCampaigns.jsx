@@ -369,13 +369,13 @@ export default function HBBasketCampaigns() {
               </div>
             </div>
             <div className="flex flex-wrap gap-3">
-              <Button onClick={() => document.getElementById('hbBasketUpload').click()} disabled={!selectedPlatform} className="bg-gray-900 hover:bg-gray-800">
+              <Button onClick={() => document.getElementById('hbBasketUpload').click()} disabled={!selectedPlatform} className="bg-primary hover:bg-black">
                 <Upload className="mr-2 h-4 w-4" />{uploadedData.length > 0 ? 'Yeni Excel Yükle' : 'Excel Yükle'}
               </Button>
               <input id="hbBasketUpload" type="file" accept=".xlsx,.xls" onChange={handleFileUpload} className="hidden" />
               {uploadedData.length > 0 && (
                 <>
-                  <Button onClick={handleSmartAutoSelect} className="bg-gray-900 hover:bg-gray-800 text-white gap-2"><Sparkles className="h-4 w-4" />Max Fiyatla Seç</Button>
+                  <Button onClick={handleSmartAutoSelect} className="bg-primary hover:bg-black text-primary-foreground gap-2"><Sparkles className="h-4 w-4" />Max Fiyatla Seç</Button>
                   <Button variant="outline" onClick={() => { setUploadedData([]); setOriginalExcelData(null); toast.success('Liste temizlendi'); }} className="text-rose-600 hover:bg-rose-50"><Trash2 className="mr-2 h-4 w-4" />Temizle</Button>
                   <Button variant="outline" onClick={() => setUploadedData(uploadedData.map((i) => ({ ...i, selected: false })))}>Seçimleri Kaldır</Button>
                   <Button variant="outline" onClick={handleExport}><Download className="mr-2 h-4 w-4" />Excel İndir ({selectedCount})</Button>
@@ -453,7 +453,7 @@ export default function HBBasketCampaigns() {
                             </td>
                             <td className="p-3 text-center font-semibold text-muted-foreground">₺{(item.max_price || 0).toFixed(2)}</td>
                             <td className="p-3">
-                              <div className={`border rounded-lg p-2 ${item.selected ? 'border-gray-900 bg-card' : 'border-border'}`}>
+                              <div className={`border rounded-lg p-2 ${item.selected ? 'border-primary bg-card' : 'border-border'}`}>
                                 <div className="flex items-center gap-1 mb-1">
                                   <Input type="number" step="0.01" value={item.campaign_price || ''} onChange={(e) => handleCampaignPriceChange(item, e.target.value)} placeholder="Fiyat" className="h-8 text-xs" />
                                   <Button size="sm" variant="ghost" className="h-5 w-5 p-0 shrink-0" onClick={() => openDetailModal(item.campaign_price, item.discounted_commission, item)}><Info className="h-3 w-3" /></Button>

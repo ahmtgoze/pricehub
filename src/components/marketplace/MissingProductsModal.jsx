@@ -43,7 +43,7 @@ export default function MissingProductsModal({ items = [], onClose }) {
             </thead>
             <tbody>
               {items.map((item, idx) => (
-                <tr key={item.id} className={`border-b border-gray-50 ${idx % 2 === 0 ? 'bg-card' : 'bg-secondary/50'}`}>
+                <tr key={item.id} className={`border-b border-border ${idx % 2 === 0 ? 'bg-card' : 'bg-secondary/50'}`}>
                   <td className="px-4 py-2 text-muted-foreground font-mono text-xs">{item.barkod || item.hb_sku || '-'}</td>
                   <td className="px-4 py-2 text-foreground">{item.platform_product_name || '-'}</td>
                   <td className="px-4 py-2">

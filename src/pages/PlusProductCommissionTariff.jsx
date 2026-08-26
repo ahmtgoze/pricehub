@@ -684,20 +684,20 @@ export default function PlusProductCommissionTariff() {
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar mode="range" selected={dateRangeValue} onSelect={(range) => { setDateRangeValue(range || { from: undefined, to: undefined }); if (range?.from && range?.to && range.from.getTime() !== range.to.getTime()) setCalendarOpen(false); }} defaultMonth={new Date()} numberOfMonths={2} locale={tr} classNames={{ day_today: "bg-gray-900 font-bold text-white" }} />
+                    <Calendar mode="range" selected={dateRangeValue} onSelect={(range) => { setDateRangeValue(range || { from: undefined, to: undefined }); if (range?.from && range?.to && range.from.getTime() !== range.to.getTime()) setCalendarOpen(false); }} defaultMonth={new Date()} numberOfMonths={2} locale={tr} classNames={{ day_today: "bg-primary font-bold text-primary-foreground" }} />
                   </PopoverContent>
                 </Popover>
               </div>
             </div>
             <div className="flex flex-wrap gap-3">
-              <Button onClick={() => document.getElementById('plusExcelUpload').click()} disabled={!selectedPlatform || !dateRangeValue?.from || !dateRangeValue?.to} className="bg-gray-900 hover:bg-gray-800">
+              <Button onClick={() => document.getElementById('plusExcelUpload').click()} disabled={!selectedPlatform || !dateRangeValue?.from || !dateRangeValue?.to} className="bg-primary hover:bg-black">
                 <Upload className="mr-2 h-4 w-4" />{uploadedData.length > 0 ? 'Yeni Excel Yükle' : 'Excel Yükle'}
               </Button>
               <input id="plusExcelUpload" type="file" accept=".xlsx,.xls" onChange={handleFileUpload} className="hidden" />
               {uploadProgress.total > 0 && (<div className="flex items-center text-sm text-muted-foreground">{uploadProgress.current}/{uploadProgress.total} kaydediliyor...</div>)}
               {uploadedData.length > 0 && (
                 <>
-                  <Button onClick={handleSmartAutoSelect} className="bg-gray-900 hover:bg-gray-800 text-white gap-2"><Sparkles className="h-4 w-4" />Akıllı Otomatik Seç</Button>
+                  <Button onClick={handleSmartAutoSelect} className="bg-primary hover:bg-black text-primary-foreground gap-2"><Sparkles className="h-4 w-4" />Akıllı Otomatik Seç</Button>
                   <Button variant="outline" onClick={handleDeleteExcel} className="text-red-600 hover:text-red-700 hover:bg-red-50"><Trash2 className="mr-2 h-4 w-4" />Excel'i Sil</Button>
                   <Button variant="outline" onClick={handleSave}><Check className="mr-2 h-4 w-4" />Seçimleri Kaydet ({selectedCount})</Button>
                   <Button variant="outline" onClick={() => { setUploadedData(uploadedData.map(item => ({ ...item, selected_type: 'none', selected_price: 0 }))); toast.success('Tüm seçimler kaldırıldı'); }}>Seçimleri Kaldır</Button>
@@ -803,7 +803,7 @@ export default function PlusProductCommissionTariff() {
                             </td>
                             <td className="p-3">
                               {plusPrice > 0 ? (
-                                <div className={`border rounded-lg p-2 ${isPlusSelected ? 'border-gray-900 bg-secondary' : 'border-border'}`}>
+                                <div className={`border rounded-lg p-2 ${isPlusSelected ? 'border-primary bg-secondary' : 'border-border'}`}>
                                   <div className="text-xs font-semibold text-muted-foreground mb-1">₺{plusPrice.toFixed(2)} ve altı</div>
                                   <div className="text-xs text-muted-foreground">Plus Kom: %{plusComm}</div>
                                   <div className="flex items-center justify-between mt-1">
@@ -845,7 +845,7 @@ export default function PlusProductCommissionTariff() {
                               })()}
                             </td>
                             <td className="p-3">
-                              <div className={`border rounded-lg p-2 ${item.selected_type === 'manual' ? 'border-gray-900 bg-secondary' : 'border-border'}`}>
+                              <div className={`border rounded-lg p-2 ${item.selected_type === 'manual' ? 'border-primary bg-secondary' : 'border-border'}`}>
                                 <div className="text-xs font-semibold text-muted-foreground mb-2">Manuel Fiyat</div>
                                 <Input type="number" step="0.01" value={item.manual_price || ''} onChange={(e) => handleManualPriceChange(index, e.target.value)} placeholder="Fiyat girin" className="h-8 text-xs mb-2" />
                                 {item.manual_price > 0 && (

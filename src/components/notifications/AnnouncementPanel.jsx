@@ -135,20 +135,20 @@ export default function AnnouncementPanel({ user, isAdmin, onReplyToAnnouncement
       <div className="flex items-center gap-2 px-4 py-4 border-b border-border bg-secondary flex-shrink-0">
         <button
           onClick={() => setShowArchived(false)}
-          className={cn("text-xs font-semibold px-3 py-1.5 rounded-lg transition-all", !showArchived ? "bg-gray-900 text-white" : "text-muted-foreground hover:bg-secondary")}
+          className={cn("text-xs font-semibold px-3 py-1.5 rounded-lg transition-all", !showArchived ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-secondary")}
         >
           Gelen Kutusu
           {activeAnnouncements.length > 0 && (
-            <span className="ml-1.5 bg-gray-900 text-white text-[9px] px-2 py-0.5 rounded-full font-bold">{activeAnnouncements.length}</span>
+            <span className="ml-1.5 bg-primary text-primary-foreground text-[9px] px-2 py-0.5 rounded-full font-bold">{activeAnnouncements.length}</span>
           )}
         </button>
         <button
           onClick={() => setShowArchived(true)}
-          className={cn("text-xs font-semibold px-3 py-1.5 rounded-lg transition-all", showArchived ? "bg-gray-900 text-white" : "text-muted-foreground hover:bg-secondary")}
+          className={cn("text-xs font-semibold px-3 py-1.5 rounded-lg transition-all", showArchived ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-secondary")}
         >
           Arşiv
           {archivedAnnouncements.length > 0 && (
-            <span className="ml-1.5 bg-slate-400 text-white text-[9px] px-2 py-0.5 rounded-full font-bold">{archivedAnnouncements.length}</span>
+            <span className="ml-1.5 bg-muted-foreground text-white text-[9px] px-2 py-0.5 rounded-full font-bold">{archivedAnnouncements.length}</span>
           )}
         </button>
 
@@ -180,7 +180,7 @@ export default function AnnouncementPanel({ user, isAdmin, onReplyToAnnouncement
                 <div
                   key={announcement.id}
                   className={cn("px-4 py-3.5 hover:bg-secondary transition-colors border-l-4 cursor-pointer",
-                    !isRead ? "bg-secondary border-gray-900" : "border-transparent"
+                    !isRead ? "bg-secondary border-primary" : "border-transparent"
                   )}
                   onClick={() => !isRead && markReadMutation.mutate(announcement.id)}
                 >
@@ -189,7 +189,7 @@ export default function AnnouncementPanel({ user, isAdmin, onReplyToAnnouncement
                       <div className="flex items-center gap-2 mb-1.5">
                         {typeIcon(announcement.type)}
                         <span className="text-sm font-semibold text-foreground truncate">{announcement.title}</span>
-                        {!isRead && <span className="text-[10px] bg-gray-900 text-white px-2 py-0.5 rounded-full font-bold flex-shrink-0">YENİ</span>}
+                        {!isRead && <span className="text-[10px] bg-primary text-primary-foreground px-2 py-0.5 rounded-full font-bold flex-shrink-0">YENİ</span>}
                       </div>
                       <p className="text-sm text-muted-foreground leading-relaxed mb-2">{announcement.content}</p>
                       <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground mb-2.5">

@@ -13,7 +13,7 @@ import {
 
 function StepBadge({ n }) {
   return (
-    <span className="w-6 h-6 rounded-full bg-gray-900 text-white flex items-center justify-center text-xs font-bold shrink-0">
+    <span className="w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold shrink-0">
       {n}
     </span>
   );
@@ -198,12 +198,12 @@ const WIZARD_STEPS = [
 function WizardStep({ step, done, onToggle, isActive, onActivate }) {
   const Icon = step.icon;
   return (
-    <div className={`bg-card rounded-2xl border transition-all ${done ? 'border-border' : isActive ? 'border-gray-900' : 'border-border'}`}>
+    <div className={`bg-card rounded-2xl border transition-all ${done ? 'border-border' : isActive ? 'border-primary' : 'border-border'}`}>
       <div className="flex items-center gap-4 p-4 cursor-pointer" onClick={onActivate}>
         <button
           onClick={(e) => { e.stopPropagation(); onToggle(); }}
           className={`w-8 h-8 rounded-full border-2 flex items-center justify-center shrink-0 transition-all ${
-            done ? 'bg-gray-900 border-gray-900 text-white' : 'border-input bg-card hover:border-gray-500'
+            done ? 'bg-primary border-primary text-white' : 'border-input bg-card hover:border-gray-500'
           }`}
         >
           {done ? <CheckCheck className="w-4 h-4" /> : <span className="text-xs font-bold text-muted-foreground">{step.id}</span>}
@@ -235,7 +235,7 @@ function WizardStep({ step, done, onToggle, isActive, onActivate }) {
           <div className="flex items-center gap-3 mt-4">
             <Link
               to={createPageUrl(step.page)}
-              className="flex items-center gap-2 bg-gray-900 text-white text-sm font-medium px-4 py-2 rounded-xl hover:bg-gray-700 transition-colors"
+              className="flex items-center gap-2 bg-primary text-primary-foreground text-sm font-medium px-4 py-2 rounded-xl hover:bg-gray-700 transition-colors"
             >
               {step.title} sayfasına git
               <ExternalLink className="w-3.5 h-3.5" />
@@ -475,7 +475,7 @@ export default function Help() {
               </div>
               <div className="w-full bg-secondary rounded-full h-2 overflow-hidden">
                 <div
-                  className="bg-gray-900 h-2 rounded-full transition-all duration-500"
+                  className="bg-primary h-2 rounded-full transition-all duration-500"
                   style={{ width: `${progress}%` }}
                 />
               </div>

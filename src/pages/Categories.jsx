@@ -313,7 +313,7 @@ export default function Categories() {
             </Button>
             <Button 
               onClick={() => { setEditingCategory(null); setModalOpen(true); }}
-              className="bg-gray-900 hover:bg-gray-800 gap-2"
+              className="bg-primary hover:bg-black gap-2"
             >
               <Plus className="h-4 w-4" />
               Yeni Kategori

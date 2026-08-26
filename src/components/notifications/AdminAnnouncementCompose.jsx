@@ -42,14 +42,14 @@ export default function AdminAnnouncementCompose({ onClose }) {
         <button
           type="button"
           onClick={() => setForm(f => ({ ...f, type: 'announcement' }))}
-          className={`flex items-center justify-center gap-1.5 text-xs px-3 py-2.5 rounded-xl border-2 font-semibold transition-all ${form.type === 'announcement' ? 'bg-gray-900 text-white border-gray-900 shadow-md' : 'border-border text-muted-foreground hover:border-gray-400 hover:bg-secondary'}`}
+          className={`flex items-center justify-center gap-1.5 text-xs px-3 py-2.5 rounded-xl border-2 font-semibold transition-all ${form.type === 'announcement' ? 'bg-primary text-primary-foreground border-primary shadow-md' : 'border-border text-muted-foreground hover:border-input hover:bg-secondary'}`}
         >
           <Megaphone className="h-4 w-4" /> Duyuru
         </button>
         <button
           type="button"
           onClick={() => setForm(f => ({ ...f, type: 'system_update' }))}
-          className={`flex items-center justify-center gap-1.5 text-xs px-3 py-2.5 rounded-xl border-2 font-semibold transition-all ${form.type === 'system_update' ? 'bg-gray-900 text-white border-gray-900 shadow-md' : 'border-border text-muted-foreground hover:border-gray-400 hover:bg-secondary'}`}
+          className={`flex items-center justify-center gap-1.5 text-xs px-3 py-2.5 rounded-xl border-2 font-semibold transition-all ${form.type === 'system_update' ? 'bg-primary text-primary-foreground border-primary shadow-md' : 'border-border text-muted-foreground hover:border-input hover:bg-secondary'}`}
         >
           <Zap className="h-4 w-4" /> Güncellemesi
         </button>
@@ -82,7 +82,7 @@ export default function AdminAnnouncementCompose({ onClose }) {
           size="sm"
           onClick={() => createMutation.mutate()}
           disabled={!form.title.trim() || !form.content.trim() || createMutation.isPending}
-          className="bg-gray-900 hover:bg-gray-800 text-white font-semibold gap-2"
+          className="bg-primary hover:bg-black text-primary-foreground font-semibold gap-2"
         >
           <Megaphone className="h-4 w-4" /> Yayınla
         </Button>

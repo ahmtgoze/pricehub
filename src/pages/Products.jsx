@@ -784,7 +784,7 @@ export default function Products() {
       header: 'Çift Kargo',
       accessor: 'double_shipping',
       cell: (row) => (
-        <Badge variant={row.double_shipping === true ? 'default' : 'outline'} className={row.double_shipping === true ? 'bg-gray-900' : ''}>
+        <Badge variant={row.double_shipping === true ? 'default' : 'outline'} className={row.double_shipping === true ? 'bg-primary' : ''}>
           {row.double_shipping === true ? '✓ x2' : '-'}
         </Badge>
       )
@@ -968,7 +968,7 @@ export default function Products() {
               filename="urunler"
               onImport={handleImport}
             />
-            <Button onClick={() => { setEditingProduct(null); setModalOpen(true); }} className="bg-gray-900 hover:bg-gray-800 gap-2" size="sm">
+            <Button onClick={() => { setEditingProduct(null); setModalOpen(true); }} className="bg-primary hover:bg-black gap-2" size="sm">
               <Plus className="h-4 w-4" />
               <span className="hidden sm:inline">Yeni Ürün</span>
               <span className="sm:hidden">Ekle</span>
@@ -1108,8 +1108,8 @@ export default function Products() {
                 <span className="text-sm text-muted-foreground">İlerleme</span>
                 <span className="text-sm font-bold text-foreground">{importProgress.current} / {importProgress.total}</span>
               </div>
-              <div className="w-full bg-gray-200 rounded-full h-4 overflow-hidden">
-                <div className="bg-gray-900 h-4 rounded-full transition-all duration-300" style={{ width: `${(importProgress.current / (importProgress.total || 1)) * 100}%` }} />
+              <div className="w-full bg-border rounded-full h-4 overflow-hidden">
+                <div className="bg-primary h-4 rounded-full transition-all duration-300" style={{ width: `${(importProgress.current / (importProgress.total || 1)) * 100}%` }} />
               </div>
               <div className="text-center">
                 <p className="text-3xl font-bold text-foreground">%{Math.round((importProgress.current / (importProgress.total || 1)) * 100)}</p>

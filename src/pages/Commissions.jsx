@@ -549,7 +549,7 @@ export default function Commissions() {
               filename="komisyonlar"
               onImport={handleImport}
             />
-            <Button onClick={() => { setEditingCommission(null); setModalOpen(true); }} className="bg-gray-900 hover:bg-gray-800 gap-2 w-full sm:w-auto">
+            <Button onClick={() => { setEditingCommission(null); setModalOpen(true); }} className="bg-primary hover:bg-black gap-2 w-full sm:w-auto">
               <Plus className="h-4 w-4" />
               Yeni Komisyon
             </Button>
@@ -645,8 +645,8 @@ export default function Commissions() {
                 <p className="text-sm font-semibold text-muted-foreground mb-2">{importProgress.current} / {importProgress.total} kayıt</p>
                 <p className="text-2xl font-bold text-foreground">%{Math.round((importProgress.current / (importProgress.total || 1)) * 100)}</p>
               </div>
-              <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
-                <div className="bg-gray-900 h-3 rounded-full transition-all duration-300" style={{ width: `${(importProgress.current / (importProgress.total || 1)) * 100}%` }} />
+              <div className="w-full bg-border rounded-full h-3 overflow-hidden">
+                <div className="bg-primary h-3 rounded-full transition-all duration-300" style={{ width: `${(importProgress.current / (importProgress.total || 1)) * 100}%` }} />
               </div>
               <p className="text-xs text-muted-foreground text-center">Lütfen bekleyin, veriler işleniyor...</p>
             </div>

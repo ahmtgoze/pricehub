@@ -683,7 +683,7 @@ export default function AdvantageProductTag() {
     const isSelected = item.selected_range === rangeType;
 
     return (
-      <div className={`border rounded-lg p-2 ${isSelected ? 'border-gray-900 bg-secondary' : 'border-border'}`}>
+      <div className={`border rounded-lg p-2 ${isSelected ? 'border-primary bg-secondary' : 'border-border'}`}>
         <div className="text-xs font-semibold text-muted-foreground mb-1">{label}</div>
         {maxPrice > 0 && (
           <div className="text-xs text-muted-foreground text-center">
@@ -817,21 +817,21 @@ export default function AdvantageProductTag() {
                       defaultMonth={new Date()}
                       numberOfMonths={2}
                       locale={tr}
-                      classNames={{ day_today: "bg-gray-900 font-bold text-white" }}
+                      classNames={{ day_today: "bg-primary font-bold text-primary-foreground" }}
                     />
                   </PopoverContent>
                 </Popover>
               </div>
             </div>
             <div className="flex flex-wrap gap-3">
-              <Button onClick={() => document.getElementById('advantageExcelUpload').click()} disabled={!selectedPlatform || !dateRangeValue?.from || !dateRangeValue?.to} className="bg-gray-900 hover:bg-gray-800">
+              <Button onClick={() => document.getElementById('advantageExcelUpload').click()} disabled={!selectedPlatform || !dateRangeValue?.from || !dateRangeValue?.to} className="bg-primary hover:bg-black">
                 <Upload className="mr-2 h-4 w-4" />
                 {uploadProgress.total > 0 ? `Yükleniyor... ${uploadProgress.current}/${uploadProgress.total}` : uploadedData.length > 0 ? 'Yeni Excel Yükle' : 'Excel Yükle'}
               </Button>
               <input id="advantageExcelUpload" type="file" accept=".xlsx,.xls" onChange={handleFileUpload} className="hidden" />
               {uploadedData.length > 0 && (
                 <>
-                  <Button onClick={handleSmartAutoSelect} className="bg-gray-900 hover:bg-gray-800 text-white gap-2">
+                  <Button onClick={handleSmartAutoSelect} className="bg-primary hover:bg-black text-primary-foreground gap-2">
                     <Sparkles className="h-4 w-4" />
                     Akıllı Otomatik Seç
                   </Button>
@@ -983,7 +983,7 @@ export default function AdvantageProductTag() {
                             <td className="p-3">{renderRangeCell(item, index, 'super_advantage', item.super_advantage_min, item.super_advantage_max, item.super_advantage_commission, 'Çok Avantaj')}</td>
                             <td className="p-3">{renderRangeCell(item, index, 'mega_advantage', item.mega_advantage_min, item.mega_advantage_max, item.mega_advantage_commission, 'Süper Avantaj')}</td>
                             <td className="p-3">
-                              <div className={`border rounded-lg p-2 ${item.selected_range === 'manual' ? 'border-gray-900 bg-secondary' : 'border-border'}`}>
+                              <div className={`border rounded-lg p-2 ${item.selected_range === 'manual' ? 'border-primary bg-secondary' : 'border-border'}`}>
                                 <div className="text-xs font-semibold text-muted-foreground mb-2">Manuel Fiyat</div>
                                 <Input type="number" step="0.01" value={item.manual_price || ''} onChange={(e) => handleManualPriceChange(uploadedData.indexOf(item), e.target.value)} placeholder="Fiyat girin" className="h-8 text-xs mb-2" />
                                 {item.manual_price > 0 && (

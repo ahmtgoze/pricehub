@@ -31,7 +31,7 @@ const PLATFORM_DEFAULTS = [
     platform_type: 'website',
     name: 'Web Sitesi',
     code: 'website',
-    color: 'bg-gray-200',
+    color: 'bg-border',
     bgColor: 'bg-secondary',
     borderColor: 'border-border',
     badgeColor: 'bg-secondary text-foreground',
@@ -220,8 +220,8 @@ export default function Platforms() {
             return (
               <div
                 key={def.platform_type}
-                className={`relative bg-card rounded-2xl border shadow-sm overflow-hidden transition-all duration-200 ${
-                  isActive ? 'border-border shadow-md' : 'border-border opacity-70'
+                className={`relative bg-card rounded-[18px] border overflow-hidden transition-colors duration-200 ${
+                  isActive ? 'border-border' : 'border-border opacity-60'
                 }`}
               >
                 <div className={`h-1.5 w-full bg-gradient-to-r ${def.color}`} />
@@ -294,8 +294,8 @@ export default function Platforms() {
                       disabled={!record}
                       className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all ${
                         canEdit
-                          ? 'bg-gray-900 hover:bg-gray-800 text-white shadow-sm'
-                          : 'bg-secondary hover:bg-slate-200 text-muted-foreground'
+                          ? 'bg-primary hover:bg-black text-primary-foreground shadow-sm'
+                          : 'bg-secondary hover:bg-border text-muted-foreground'
                       }`}
                     >
                       <Settings2 className="h-4 w-4" />

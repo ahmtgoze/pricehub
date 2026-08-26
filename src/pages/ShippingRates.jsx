@@ -223,7 +223,7 @@ export default function ShippingRates() {
   const getRateTypeBadge = (type) => {
     switch (type) {
       case 'barem1': return <Badge className="bg-secondary text-muted-foreground">Barem 1</Badge>;
-      case 'barem2': return <Badge className="bg-gray-200 text-foreground">Barem 2</Badge>;
+      case 'barem2': return <Badge className="bg-border text-foreground">Barem 2</Badge>;
       default: return <Badge variant="outline">Desi</Badge>;
     }
   };
@@ -341,7 +341,7 @@ export default function ShippingRates() {
                 <Plus className="h-4 w-4" />Sistem Tarifesi Ekle
               </Button>
             )}
-            <Button onClick={() => { setEditingRate(null); setIsSystemRate(false); setModalOpen(true); }} className="bg-gray-900 hover:bg-gray-800 gap-2">
+            <Button onClick={() => { setEditingRate(null); setIsSystemRate(false); setModalOpen(true); }} className="bg-primary hover:bg-black gap-2">
               <Plus className="h-4 w-4" />Manuel Tarife Ekle
             </Button>
           </div>
@@ -426,8 +426,8 @@ export default function ShippingRates() {
                 <span className="text-sm text-muted-foreground">İlerleme</span>
                 <span className="text-sm font-bold text-foreground">{importProgress.current} / {importProgress.total}</span>
               </div>
-              <div className="w-full bg-gray-200 rounded-full h-4 overflow-hidden">
-                <div className="bg-gray-900 h-4 rounded-full transition-all duration-300" style={{ width: `${(importProgress.current / (importProgress.total || 1)) * 100}%` }} />
+              <div className="w-full bg-border rounded-full h-4 overflow-hidden">
+                <div className="bg-primary h-4 rounded-full transition-all duration-300" style={{ width: `${(importProgress.current / (importProgress.total || 1)) * 100}%` }} />
               </div>
               <div className="text-center">
                 <p className="text-3xl font-bold text-foreground">%{Math.round((importProgress.current / (importProgress.total || 1)) * 100)}</p>

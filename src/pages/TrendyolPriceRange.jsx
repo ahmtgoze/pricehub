@@ -916,20 +916,20 @@ export default function TrendyolPriceRange() {
                     defaultMonth={new Date()}
                     numberOfMonths={2}
                     locale={tr}
-                    classNames={{ day_today: "bg-gray-900 font-bold text-white" }}
+                    classNames={{ day_today: "bg-primary font-bold text-primary-foreground" }}
                   />
                 </PopoverContent>
                 </Popover>
               </div>
             </div>
             <div className="flex flex-wrap gap-3">
-              <Button onClick={() => document.getElementById('excelUpload').click()} disabled={!selectedPlatform || !dateRangeValue?.from || !dateRangeValue?.to} className="bg-gray-900 hover:bg-gray-800">
+              <Button onClick={() => document.getElementById('excelUpload').click()} disabled={!selectedPlatform || !dateRangeValue?.from || !dateRangeValue?.to} className="bg-primary hover:bg-black">
                 <Upload className="mr-2 h-4 w-4" />{uploadedData.length > 0 ? 'Yeni Excel Yükle' : 'Excel Yükle'}
               </Button>
               <input id="excelUpload" type="file" accept=".xlsx,.xls" onChange={handleFileUpload} className="hidden" />
               {uploadedData.length > 0 && (
                 <>
-                  <Button onClick={handleSmartAutoSelect} className="bg-gray-900 hover:bg-gray-800 text-white gap-2">
+                  <Button onClick={handleSmartAutoSelect} className="bg-primary hover:bg-black text-primary-foreground gap-2">
                     <Sparkles className="h-4 w-4" />
                     Akıllı Otomatik Seç
                   </Button>
@@ -1093,7 +1093,7 @@ export default function TrendyolPriceRange() {
                               return (
                                 <td key={rangeNum} className="p-3">
                                   {priceToUse > 0 ? (
-                                    <div className={`border rounded-lg p-2 ${isSelected ? 'border-gray-900 bg-secondary' : 'border-border'}`}>
+                                    <div className={`border rounded-lg p-2 ${isSelected ? 'border-primary bg-secondary' : 'border-border'}`}>
                                       <div className="text-xs font-semibold text-muted-foreground mb-1">{headerLabel}</div>
                                       <div className="text-xs text-muted-foreground">
                                         Fiyat: ₺{rangeNum === 1 && systemPrice ? systemPrice.sale_price?.toFixed(2) : priceToUse.toFixed(2)}
@@ -1181,7 +1181,7 @@ export default function TrendyolPriceRange() {
                             </td>
 
                             <td className="p-3">
-                              <div className={`border rounded-lg p-2 ${item.selected_range === 'manual' ? 'border-gray-900 bg-secondary' : 'border-border'}`}>
+                              <div className={`border rounded-lg p-2 ${item.selected_range === 'manual' ? 'border-primary bg-secondary' : 'border-border'}`}>
                                 <div className="text-xs font-semibold text-muted-foreground mb-2">Manuel Fiyat</div>
                                 <Input type="number" step="0.01" value={item.manual_price || ''} onChange={(e) => handleManualPriceChange(uploadedData.indexOf(item), e.target.value)} placeholder="Fiyat girin" className="h-8 text-xs mb-2" />
                                 {item.manual_price > 0 && (

@@ -310,7 +310,7 @@ export default function UpdateReports() {
           <button
             onClick={() => { setTab('aktif'); setSelectedIds([]); setPage(1); }}
             className={`px-4 py-2 font-medium border-b-2 transition-colors ${
-              tab === 'aktif' ? 'border-gray-900 text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground'
+              tab === 'aktif' ? 'border-primary text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground'
             }`}
           >
             Aktif Raporlar
@@ -318,7 +318,7 @@ export default function UpdateReports() {
           <button
             onClick={() => { setTab('arsiv'); setSelectedIds([]); setPage(1); }}
             className={`px-4 py-2 font-medium border-b-2 transition-colors ${
-              tab === 'arsiv' ? 'border-gray-900 text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground'
+              tab === 'arsiv' ? 'border-primary text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground'
             }`}
           >
             Arşiv

@@ -506,7 +506,7 @@ export default function Prices() {
 
   const getBaremBadge = (barem) => {
     if (barem === 'barem1') return <Badge className="bg-red-100 text-red-700 text-xs">B1</Badge>;
-    if (barem === 'barem2') return <Badge className="bg-gray-200 text-muted-foreground text-xs">B2</Badge>;
+    if (barem === 'barem2') return <Badge className="bg-border text-muted-foreground text-xs">B2</Badge>;
     if (barem === 'desi') return <Badge variant="outline" className="text-xs">Desi</Badge>;
     return null;
   };
@@ -529,7 +529,7 @@ export default function Prices() {
     setVisiblePlatforms(prev => ({ ...prev, [platformId]: !prev[platformId] }));
   };
 
-  const platformColors = { trendyol: 'bg-orange-100 text-orange-700 border-orange-200', hepsiburada: 'bg-purple-100 text-purple-700 border-purple-200', website: 'bg-gray-200 text-muted-foreground border-input' };
+  const platformColors = { trendyol: 'bg-orange-100 text-orange-700 border-orange-200', hepsiburada: 'bg-purple-100 text-purple-700 border-purple-200', website: 'bg-border text-muted-foreground border-input' };
 
   return (
     <div className="min-h-screen">
@@ -684,7 +684,7 @@ export default function Prices() {
             <div className="rounded-[18px] border border-border bg-card p-8 text-center text-muted-foreground">Ürün bulunamadı</div>
           ) : (
             filteredProducts.map(product => (
-              <div key={product.id} className={`bg-card rounded-xl border shadow-sm p-4 ${selectedIds.has(product.id) ? 'border-gray-400 bg-secondary/50' : 'border-border'}`}>
+              <div key={product.id} className={`bg-card rounded-[14px] border p-4 ${selectedIds.has(product.id) ? 'border-input bg-secondary/50' : 'border-border'}`}>
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex items-center gap-2">
                     <input type="checkbox" checked={selectedIds.has(product.id)} onChange={() => toggleSelect(product.id)} className="rounded border-input text-foreground" />
@@ -826,7 +826,7 @@ export default function Prices() {
             <DialogHeader><DialogTitle>Fiyatlar Hesaplanıyor</DialogTitle></DialogHeader>
             <div className="space-y-4">
               <div className="w-full bg-secondary rounded-full h-4 overflow-hidden">
-                <div className="bg-gray-900 h-4 rounded-full transition-all duration-300" style={{ width: `${fakeProgress}%` }} />
+                <div className="bg-primary h-4 rounded-full transition-all duration-300" style={{ width: `${fakeProgress}%` }} />
               </div>
               <div className="text-center">
                 <p className="text-3xl font-bold text-foreground">%{fakeProgress}</p>

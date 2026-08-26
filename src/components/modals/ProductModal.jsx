@@ -423,7 +423,7 @@ export default function ProductModal({
                     </div>
                   ) : (
                     <div>
-                      <div className="flex items-center gap-2 border border-border rounded-lg px-3 py-2 bg-card focus-within:border-gray-400">
+                      <div className="flex items-center gap-2 border border-border rounded-lg px-3 py-2 bg-card focus-within:border-input">
                         <Search className="h-4 w-4 text-muted-foreground/70 shrink-0" />
                         <input
                           value={refSearch}
@@ -454,7 +454,7 @@ export default function ProductModal({
                             <button key={opt.val} type="button"
                               onClick={() => upd('cost_addon_type', opt.val)}
                               className={`py-2 px-2 text-xs rounded-lg border transition-colors ${form.cost_addon_type === opt.val
-                                ? 'bg-gray-900 border-gray-900 text-white font-medium'
+                                ? 'bg-primary border-primary text-primary-foreground font-medium'
                                 : 'bg-card border-border text-muted-foreground hover:bg-secondary'}`}>
                               {opt.label}
                             </button>
@@ -505,7 +505,7 @@ export default function ProductModal({
                     </div>
                   ) : (
                     <div>
-                      <div className="flex items-center gap-2 border border-border rounded-lg px-3 py-2 bg-card focus-within:border-gray-400">
+                      <div className="flex items-center gap-2 border border-border rounded-lg px-3 py-2 bg-card focus-within:border-input">
                         <Search className="h-4 w-4 text-muted-foreground/70 shrink-0" />
                         <input
                           value={refSearchSize}
@@ -612,7 +612,7 @@ export default function ProductModal({
                   )}
                   {showChainSearch && (
                     <div>
-                      <div className="flex items-center gap-2 border border-border rounded-lg px-3 py-2 bg-card focus-within:border-gray-400">
+                      <div className="flex items-center gap-2 border border-border rounded-lg px-3 py-2 bg-card focus-within:border-input">
                         <Search className="h-4 w-4 text-muted-foreground/70 shrink-0" />
                         <input autoFocus value={chainSearch} onChange={e => setChainSearch(e.target.value)}
                           placeholder="Ürün adı, ölçü, adet ile ara..."
@@ -648,7 +648,7 @@ export default function ProductModal({
                   )}
                   {showMatchSearch && (
                     <div>
-                      <div className="flex items-center gap-2 border border-border rounded-lg px-3 py-2 bg-card focus-within:border-gray-400">
+                      <div className="flex items-center gap-2 border border-border rounded-lg px-3 py-2 bg-card focus-within:border-input">
                         <Search className="h-4 w-4 text-muted-foreground/70 shrink-0" />
                         <input autoFocus value={matchSearch} onChange={e => setMatchSearch(e.target.value)}
                           placeholder="Ürün adı, renk veya ölçü ile ara..."
@@ -743,7 +743,7 @@ export default function ProductModal({
 
             <div className="flex justify-end gap-3 px-6 py-4 border-t border-border flex-shrink-0">
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>İptal</Button>
-              <Button type="submit" disabled={isSaving} className="bg-gray-900 hover:bg-gray-800">
+              <Button type="submit" disabled={isSaving} className="bg-primary hover:bg-black">
                 {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 {product ? 'Güncelle' : 'Ekle'}
               </Button>

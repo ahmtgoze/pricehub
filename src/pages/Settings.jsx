@@ -48,7 +48,7 @@ export default function Settings() {
                     className={cn(
                       'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all text-left',
                       active
-                        ? 'bg-gray-900 text-white'
+                        ? 'bg-primary text-primary-foreground'
                         : 'text-muted-foreground hover:bg-secondary hover:text-foreground'
                     )}
                   >
@@ -107,13 +107,13 @@ function AccountSection({ user }) {
         </Field>
         <Field label="Rol">
           <div className="flex items-center gap-2 h-9">
-            <Badge className={user?.role === 'admin' ? 'bg-gray-900' : ''} variant={user?.role === 'admin' ? 'default' : 'secondary'}>
+            <Badge className={user?.role === 'admin' ? 'bg-primary' : ''} variant={user?.role === 'admin' ? 'default' : 'secondary'}>
               {user?.role === 'admin' ? 'Yönetici' : 'Kullanıcı'}
             </Badge>
           </div>
         </Field>
         <div className="pt-2">
-          <Button onClick={handleSave} disabled={saving} className="bg-gray-900 hover:bg-gray-800">
+          <Button onClick={handleSave} disabled={saving} className="bg-primary hover:bg-black">
             {saving ? 'Kaydediliyor…' : 'Kaydet'}
           </Button>
         </div>
@@ -167,7 +167,7 @@ function SecuritySection() {
           <Input type={showPw ? 'text' : 'password'} value={confirmPw} onChange={e => setConfirmPw(e.target.value)} placeholder="••••••••" />
         </Field>
         <div className="pt-2">
-          <Button onClick={handleChange} disabled={loading || !currentPw || !newPw || !confirmPw} className="bg-gray-900 hover:bg-gray-800">
+          <Button onClick={handleChange} disabled={loading || !currentPw || !newPw || !confirmPw} className="bg-primary hover:bg-black">
             {loading ? 'Güncelleniyor…' : 'Şifreyi Güncelle'}
           </Button>
         </div>
@@ -219,7 +219,7 @@ function BrandSection() {
             <p className="text-xs text-muted-foreground/70 mt-1">Sidebar ve giriş ekranında görünen isim.</p>
           </Field>
           <div className="pt-2">
-            <Button onClick={() => save.mutate()} disabled={save.isPending || !markaAdi.trim()} className="bg-gray-900 hover:bg-gray-800">
+            <Button onClick={() => save.mutate()} disabled={save.isPending || !markaAdi.trim()} className="bg-primary hover:bg-black">
               {save.isPending ? 'Kaydediliyor…' : 'Kaydet'}
             </Button>
           </div>

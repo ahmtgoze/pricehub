@@ -12,7 +12,7 @@ export default function StatCard({
 }) {
   return (
     <div className={cn(
-      "bg-card rounded-2xl border border-border p-6 shadow-sm hover:shadow-md transition-shadow",
+      "bg-card rounded-[18px] border border-border p-[22px] transition-colors",
       className
     )}>
       <div className="flex items-start justify-between">
