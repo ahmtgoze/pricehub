@@ -35,7 +35,9 @@ import { MARKA_ADI } from '@/config/marka';
 const TRENDYOL_COLOR = '#F27A1B';
 const HB_COLOR = '#7B2D9B';
 
-// Navigation structure
+// Gezinme yapısı — sayfa anahtarları (page) pages.config.js ile birebir aynı.
+// NOT: "Düzenlenen Maliyetler" (UpdatedCosts) yeni temada menüden çıkarıldı;
+// rota hâlâ çalışır (/UpdatedCosts), istenirse aşağıya geri eklenir.
 const NAV_GROUPS = [
   {
     type: 'single',
@@ -71,7 +73,6 @@ const NAV_GROUPS = [
       { name: 'Güncelleme Raporları', page: 'UpdateReports', icon: FileText },
       { name: 'Pazaryeri Ürünleri', page: 'MarketplaceProducts', icon: Store },
       { name: 'Düzenlenen Fiyatlar', page: 'UpdatedPrices', icon: Tag },
-      { name: 'Düzenlenen Maliyetler', page: 'UpdatedCosts', icon: FileText },
     ],
   },
   {
@@ -100,21 +101,19 @@ const BOTTOM_ITEMS = [
 
 function NavLink({ item, isActive, color, onClick }) {
   const colorStyle = color ? { color: isActive ? '#fff' : color } : {};
-  const bgStyle = color && !isActive ? {
-    backgroundColor: color + '15',
-  } : {};
+  const bgStyle = color && !isActive ? { backgroundColor: color + '15' } : {};
 
   return (
     <Link
       to={createPageUrl(item.page)}
       onClick={onClick}
       className={cn(
-        "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all",
+        "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors",
         isActive
-          ? "bg-gray-900 text-white shadow-md"
+          ? "bg-[#1d1d1f] text-white"
           : color
           ? "hover:opacity-80"
-          : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+          : "text-[#6e6e73] hover:bg-[#f5f5f7] hover:text-[#1d1d1f]"
       )}
       style={isActive ? {} : { ...bgStyle, ...colorStyle }}
     >
@@ -129,8 +128,8 @@ function GroupHeader({ label, isOpen, onToggle, hasActive }) {
     <button
       onClick={onToggle}
       className={cn(
-        "w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-semibold uppercase tracking-wider transition-colors",
-        hasActive ? "text-gray-900" : "text-gray-400 hover:text-gray-600"
+        "w-full flex items-center justify-between px-3 py-2 rounded-lg text-[11px] font-semibold uppercase tracking-[0.08em] transition-colors",
+        hasActive ? "text-[#1d1d1f]" : "text-[#a1a1a6] hover:text-[#6e6e73]"
       )}
     >
       <span>{label}</span>
@@ -153,7 +152,6 @@ export default function Layout({ children, currentPageName }) {
   const hasTrendyol = platforms.some(p => p.platform_type === 'trendyol' && p.is_active !== false);
   const hasHepsiburada = platforms.some(p => p.platform_type === 'hepsiburada' && p.is_active !== false);
 
-  // Determine which group contains the current page (for auto-open)
   const activeGroupId = useMemo(() => {
     for (const g of NAV_GROUPS) {
       if (g.type === 'group') {
@@ -169,19 +167,12 @@ export default function Layout({ children, currentPageName }) {
 
   const [openGroups, setOpenGroups] = useState(() => {
     const init = {};
-    NAV_GROUPS.forEach(g => {
-      if (g.id) init[g.id] = false;
-    });
+    NAV_GROUPS.forEach(g => { if (g.id) init[g.id] = false; });
     return init;
   });
 
-  // Auto-open the group containing the active page
   const effectiveOpen = (id) => openGroups[id] || activeGroupId === id;
-
-  const toggleGroup = (id) => {
-    setOpenGroups(prev => ({ ...prev, [id]: !effectiveOpen(id) }));
-  };
-
+  const toggleGroup = (id) => setOpenGroups(prev => ({ ...prev, [id]: !effectiveOpen(id) }));
   const closeSidebar = () => setSidebarOpen(false);
 
   const filterItems = (items) => items
@@ -189,10 +180,9 @@ export default function Layout({ children, currentPageName }) {
     .filter(i => !i.hepsiburadaOnly || hasHepsiburada);
 
   return (
-    <div className="overflow-hidden bg-gray-50 flex flex-col lg:flex-row" style={{ height: '100dvh' }}>
+    <div className="overflow-hidden bg-[#fbfbfc] flex flex-col lg:flex-row" style={{ height: '100dvh' }}>
       <Toaster position="top-right" richColors />
 
-      {/* Mobile sidebar backdrop */}
       {sidebarOpen && (
         <div
           className="fixed inset-0 bg-black/30 backdrop-blur-sm z-40 lg:hidden"
@@ -200,25 +190,27 @@ export default function Layout({ children, currentPageName }) {
         />
       )}
 
-      {/* Sidebar */}
+      {/* Yan menü */}
       <aside className={cn(
-        "fixed top-0 left-0 z-50 h-full w-72 bg-white border-r border-gray-100 shadow-lg transition-transform duration-300 lg:translate-x-0",
+        "fixed top-0 left-0 z-50 h-full w-72 bg-white border-r border-[#ececee] transition-transform duration-300 lg:translate-x-0",
         sidebarOpen ? "translate-x-0" : "-translate-x-full"
       )}>
         <div className="flex flex-col h-full">
-          {/* Logo */}
-          <div className="h-16 flex items-center justify-between px-4 border-b border-gray-50">
-            <Link to={createPageUrl('Dashboard')} className="flex-1 flex items-center justify-center">
-              <span className="font-bold text-lg text-gray-900">{MARKA_ADI}</span>
+          {/* Marka */}
+          <div className="h-16 flex items-center justify-between px-5 border-b border-[#f2f2f4]">
+            <Link to={createPageUrl('Dashboard')} className="flex items-center gap-2.5">
+              <span className="w-8 h-8 rounded-[10px] bg-[#1d1d1f] text-white grid place-items-center text-[13px] font-semibold">
+                {MARKA_ADI.slice(0, 1)}
+              </span>
+              <span className="font-semibold text-[17px] tracking-tight text-[#1d1d1f]">{MARKA_ADI}</span>
             </Link>
             <Button variant="ghost" size="icon" className="lg:hidden shrink-0" onClick={closeSidebar}>
               <X className="h-5 w-5" />
             </Button>
           </div>
 
-          {/* Navigation */}
+          {/* Gezinme */}
           <nav className="flex-1 p-3 space-y-0.5 overflow-y-auto">
-
             {NAV_GROUPS.map((group) => {
               if (group.type === 'single') {
                 const item = group.item;
@@ -325,8 +317,7 @@ export default function Layout({ children, currentPageName }) {
               return null;
             })}
 
-            {/* Bottom items - always visible */}
-            <div className="pt-4 border-t border-gray-100 mt-2 space-y-0.5">
+            <div className="pt-4 border-t border-[#f2f2f4] mt-2 space-y-0.5">
               {BOTTOM_ITEMS.map(item => (
                 <NavLink
                   key={item.page}
@@ -338,30 +329,30 @@ export default function Layout({ children, currentPageName }) {
             </div>
           </nav>
 
-          {/* Footer */}
-          <div className="p-3 border-t border-gray-50">
-            <div className="px-3 py-2 rounded-xl bg-gray-50">
-              <p className="text-xs font-semibold text-gray-700">Merkezi Fiyat Yönetimi</p>
-              <p className="text-xs text-gray-500 mt-0.5">Trendyol • Hepsiburada • Web</p>
+          {/* Alt bilgi */}
+          <div className="p-3 border-t border-[#f2f2f4]">
+            <div className="px-3.5 py-3 rounded-[14px] bg-[#f5f5f7]">
+              <p className="text-xs font-semibold text-[#1d1d1f]">Merkezi Fiyat Yönetimi</p>
+              <p className="text-xs text-[#86868b] mt-0.5">Trendyol · Hepsiburada · Web</p>
             </div>
           </div>
         </div>
       </aside>
 
-      {/* Main content */}
+      {/* Ana içerik */}
       <div className="flex-1 flex flex-col min-w-0 lg:pl-72 overflow-hidden" style={{ height: '100dvh' }}>
-        {/* Mobile header */}
-        <header className="lg:hidden flex-shrink-0 z-30 h-16 bg-white/80 backdrop-blur-md border-b border-gray-100 flex items-center px-4 justify-between">
+        {/* Mobil üst bar */}
+        <header className="lg:hidden flex-shrink-0 z-30 h-16 bg-white/85 backdrop-blur-md border-b border-[#ececee] flex items-center px-4 justify-between">
           <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(true)}>
             <Menu className="h-6 w-6" />
           </Button>
-          <span className="font-semibold text-gray-800 flex-1 ml-3">{MARKA_ADI}</span>
+          <span className="font-semibold text-[#1d1d1f] flex-1 ml-3">{MARKA_ADI}</span>
           <div className="flex items-center gap-2">
             <NotificationCenter />
             <Button
               variant="ghost"
               size="icon"
-              className="text-red-600 hover:text-red-700 hover:bg-red-50"
+              className="text-[#d70015] hover:text-[#d70015] hover:bg-red-50"
               onClick={async () => { await db.auth.logout(); window.location.href = '/login'; }}
             >
               <LogOut className="h-5 w-5" />
@@ -369,19 +360,19 @@ export default function Layout({ children, currentPageName }) {
           </div>
         </header>
 
-        {/* Desktop notification bar */}
-        <div className="hidden lg:flex items-center justify-end gap-2 px-6 py-2 border-b border-gray-100 bg-white/60 backdrop-blur-sm flex-shrink-0">
+        {/* Masaüstü üst bar */}
+        <div className="hidden lg:flex items-center justify-end gap-2 px-6 py-2 border-b border-[#ececee] bg-white/70 backdrop-blur-sm flex-shrink-0">
           <NotificationCenter />
           <button
             onClick={async () => { await db.auth.logout(); window.location.href = '/login'; }}
-            className="flex items-center justify-center w-9 h-9 rounded-xl text-red-500 hover:bg-red-50 hover:text-red-600 transition-all"
+            className="flex items-center justify-center w-9 h-9 rounded-xl text-[#d70015] hover:bg-red-50 transition-colors"
             title="Çıkış Yap"
           >
             <LogOut className="h-5 w-5" />
           </button>
         </div>
 
-        {/* Page content */}
+        {/* Sayfa içeriği */}
         <main className="flex-1 overflow-y-auto pt-4">
           <div className="pb-24 lg:pb-8">
             {children}
