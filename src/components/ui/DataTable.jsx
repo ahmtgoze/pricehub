@@ -118,8 +118,12 @@ export default function DataTable({
       ? `${surukle.px}px`
       : col.width;
     const off = offsetler[idx];
-    if (off == null) return { width: genislik, position: 'relative' };
-    return { width: genislik, position: 'sticky', left: off, zIndex: 2 };
+    // minWidth olmadan width yalnizca "oneri"dir: tablo sikisinca (ozellikle
+    // satir yokken) tarayici sutunu eziyor ve baslik harf harf kiriliyordu.
+    // Tablo zaten yatay kaydirilabilir, tasma sorun degil.
+    const olcu = { width: genislik, minWidth: genislik };
+    if (off == null) return { ...olcu, position: 'relative' };
+    return { ...olcu, position: 'sticky', left: off, zIndex: 2 };
   };
   const hucreSinifi = (idx, taban) =>
     offsetler[idx] == null ? taban : `${taban} bg-card`;

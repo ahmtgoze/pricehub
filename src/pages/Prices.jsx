@@ -636,7 +636,7 @@ export default function Prices() {
             <span className="truncate">{platform.name}</span>
             <SortIcon field={`platform_${platform.id}`} />
           </div>
-          <div className="grid grid-cols-3 gap-x-2 mt-1 text-[10.5px] font-semibold uppercase tracking-wider text-muted-foreground/70">
+          <div className="grid grid-cols-3 gap-x-2 mt-1 text-[10.5px] font-semibold uppercase tracking-wider text-muted-foreground/70 whitespace-nowrap">
             <span>Fiyat</span>
             <span className="text-right">Net Kâr</span>
             <span className="text-right">Kâr %</span>
