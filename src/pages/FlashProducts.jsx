@@ -36,6 +36,9 @@ export default function FlashProducts() {
   const [bulkColumn, setBulkColumn] = useState('');
   const [bulkMinProfitRate, setBulkMinProfitRate] = useState('');
   const [bulkMinProfitAmount, setBulkMinProfitAmount] = useState('');
+  // Ust sinir: bos birakilirsa sinir yok. Min-max araligi disindaki urunler secilmez.
+  const [bulkMaxProfitRate, setBulkMaxProfitRate] = useState('');
+  const [bulkMaxProfitAmount, setBulkMaxProfitAmount] = useState('');
   const [calendarKey, setCalendarKey] = useState(0);
 
   const queryClient = useQueryClient();
@@ -763,6 +766,12 @@ export default function FlashProducts() {
 
     const minRate = parseFloat(bulkMinProfitRate) || 0;
     const minAmount = parseFloat(bulkMinProfitAmount) || 0;
+    const maxRate = bulkMaxProfitRate !== '' ? parseFloat(bulkMaxProfitRate) : Infinity;
+    const maxAmount = bulkMaxProfitAmount !== '' ? parseFloat(bulkMaxProfitAmount) : Infinity;
+    const araliktaMi = (oran, tutar) =>
+      oran >= minRate && tutar >= minAmount &&
+      oran <= (Number.isNaN(maxRate) ? Infinity : maxRate) &&
+      tutar <= (Number.isNaN(maxAmount) ? Infinity : maxAmount);
 
     // Kategori filtresi aktifse sadece görünen ürünlerin adlarını bul
     const visibleProductNames = filterCategory
@@ -798,7 +807,7 @@ export default function FlashProducts() {
       let commissionRate = getCommissionRate(item, price);
       const { profit, profitRate } = calculateProfit(price, commissionRate, item);
 
-      if (profitRate >= minRate && profit >= minAmount && commissionRate !== null) {
+      if (araliktaMi(profitRate, profit) && commissionRate !== null) {
         return { ...item, selected_type: bulkColumn, selected_price: price };
       }
 
@@ -1438,6 +1447,18 @@ export default function FlashProducts() {
                     placeholder="Min Kâr Tutarı (₺)"
                     value={bulkMinProfitAmount}
                     onChange={(e) => setBulkMinProfitAmount(e.target.value)}
+                  />
+                  <Input
+                    type="number"
+                    placeholder="Maks Kâr Oranı (%)"
+                    value={bulkMaxProfitRate}
+                    onChange={(e) => setBulkMaxProfitRate(e.target.value)}
+                  />
+                  <Input
+                    type="number"
+                    placeholder="Maks Kâr Tutarı (₺)"
+                    value={bulkMaxProfitAmount}
+                    onChange={(e) => setBulkMaxProfitAmount(e.target.value)}
                   />
                   <Button onClick={handleBulkSelect} variant="outline">
                     Toplu Seç

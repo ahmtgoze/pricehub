@@ -68,6 +68,9 @@ export default function Campaigns() {
   const [filterCategory, setFilterCategory] = useState('');
   const [bulkMinProfitRate, setBulkMinProfitRate] = useState('');
   const [bulkMinProfitAmount, setBulkMinProfitAmount] = useState('');
+  // Ust sinir: bos birakilirsa sinir yok. Min-max araligi disindaki urunler secilmez.
+  const [bulkMaxProfitRate, setBulkMaxProfitRate] = useState('');
+  const [bulkMaxProfitAmount, setBulkMaxProfitAmount] = useState('');
   const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0 });
   const [detailModal, setDetailModal] = useState({ open: false, product: null, priceData: null, calculationDetails: null });
 
@@ -547,13 +550,19 @@ export default function Campaigns() {
   const handleBulkSelect = () => {
     const minRate = parseFloat(bulkMinProfitRate) || 0;
     const minAmount = parseFloat(bulkMinProfitAmount) || 0;
+    const maxRate = bulkMaxProfitRate !== '' ? parseFloat(bulkMaxProfitRate) : Infinity;
+    const maxAmount = bulkMaxProfitAmount !== '' ? parseFloat(bulkMaxProfitAmount) : Infinity;
+    const araliktaMi = (oran, tutar) =>
+      oran >= minRate && tutar >= minAmount &&
+      oran <= (Number.isNaN(maxRate) ? Infinity : maxRate) &&
+      tutar <= (Number.isNaN(maxAmount) ? Infinity : maxAmount);
     const visible = new Set(sortedData.map(i => i.barcode));
     const updated = uploadedData.map(item => {
       if (!visible.has(item.barcode)) return item;
       const price = item.campaign_price || item.max_price;
       if (!price || price <= 0) return item;
       const { profit, profitRate } = calculateProfit(price, item);
-      if (profitRate >= minRate && profit >= minAmount) return { ...item, selected_type: 'campaign', campaign_price: price };
+      if (araliktaMi(profitRate, profit)) return { ...item, selected_type: 'campaign', campaign_price: price };
       if (item.selected_type === 'campaign') return { ...item, selected_type: 'none' };
       return item;
     });
@@ -736,6 +745,8 @@ export default function Campaigns() {
                 <div className="flex items-center gap-2">
                   <Input type="number" placeholder="min %" value={bulkMinProfitRate} onChange={(e) => setBulkMinProfitRate(e.target.value)} className="w-24" />
                   <Input type="number" placeholder="min TL" value={bulkMinProfitAmount} onChange={(e) => setBulkMinProfitAmount(e.target.value)} className="w-24" />
+                  <Input type="number" placeholder="maks %" value={bulkMaxProfitRate} onChange={(e) => setBulkMaxProfitRate(e.target.value)} className="w-24" />
+                  <Input type="number" placeholder="maks TL" value={bulkMaxProfitAmount} onChange={(e) => setBulkMaxProfitAmount(e.target.value)} className="w-24" />
                   <Button variant="outline" onClick={handleBulkSelect}>Toplu Seç</Button>
                 </div>
                 <div className="flex-1" />

@@ -34,6 +34,9 @@ export default function AdvantageProductTag() {
   const [bulkColumn, setBulkColumn] = useState('');
   const [bulkMinProfitRate, setBulkMinProfitRate] = useState('');
   const [bulkMinProfitAmount, setBulkMinProfitAmount] = useState('');
+  // Ust sinir: bos birakilirsa sinir yok. Min-max araligi disindaki urunler secilmez.
+  const [bulkMaxProfitRate, setBulkMaxProfitRate] = useState('');
+  const [bulkMaxProfitAmount, setBulkMaxProfitAmount] = useState('');
   const [detailModal, setDetailModal] = useState({ open: false, product: null, priceData: null, calculationDetails: null });
   const [calendarKey, setCalendarKey] = useState(0);
   const [calendarOpen, setCalendarOpen] = useState(false);
@@ -525,6 +528,12 @@ export default function AdvantageProductTag() {
     if (!bulkColumn) { toast.error('Lütfen kolon seçin'); return; }
     const minRate = parseFloat(bulkMinProfitRate) || 0;
     const minAmount = parseFloat(bulkMinProfitAmount) || 0;
+    const maxRate = bulkMaxProfitRate !== '' ? parseFloat(bulkMaxProfitRate) : Infinity;
+    const maxAmount = bulkMaxProfitAmount !== '' ? parseFloat(bulkMaxProfitAmount) : Infinity;
+    const araliktaMi = (oran, tutar) =>
+      oran >= minRate && tutar >= minAmount &&
+      oran <= (Number.isNaN(maxRate) ? Infinity : maxRate) &&
+      tutar <= (Number.isNaN(maxAmount) ? Infinity : maxAmount);
 
     const updated = uploadedData.map(item => {
       if (item.selected_range !== 'none' && item.selected_range !== bulkColumn) return item;
@@ -540,7 +549,7 @@ export default function AdvantageProductTag() {
       }
 
       const { profit, profitRate } = calculateProfit(price, commissionRate, item);
-      if (profitRate >= minRate && profit >= minAmount) return { ...item, selected_range: bulkColumn, selected_price: price };
+      if (araliktaMi(profitRate, profit)) return { ...item, selected_range: bulkColumn, selected_price: price };
       if (item.selected_range === bulkColumn) return { ...item, selected_range: 'none', selected_price: 0 };
       return item;
     });
@@ -678,9 +687,12 @@ export default function AdvantageProductTag() {
     if (!minPrice || minPrice <= 0) return <div className="text-center text-muted-foreground/70 text-xs">-</div>;
 
     const dynamicCommission = getDynamicCommissionForPrice(item, maxPrice);
-    const { profit, profitRate } = calculateProfit(maxPrice, dynamicCommission, item);
+    const { profit, profitRate, baremUsed } = calculateProfit(maxPrice, dynamicCommission, item);
     const isProfitable = profit > 0;
     const isSelected = item.selected_range === rangeType;
+    // Barem onerisi: bu fiyatta hangi kargo tarifesinin gecerli oldugunu satirda goster,
+    // boylece kaydetmeden once hangi baremle hesaplandigi anlasilir.
+    const baremEtiketi = { barem1: 'B1', barem2: 'B2', desi: 'Desi' }[baremUsed] || null;
 
     return (
       <div className={`border rounded-lg p-2 ${isSelected ? 'border-primary bg-secondary' : 'border-border'}`}>
@@ -691,7 +703,14 @@ export default function AdvantageProductTag() {
             <div>ve altı</div>
           </div>
         )}
-        <div className="text-xs text-muted-foreground">Kom: %{dynamicCommission}</div>
+        <div className="flex items-center justify-between gap-1">
+          <span className="text-xs text-muted-foreground">Kom: %{dynamicCommission}</span>
+          {baremEtiketi && (
+            <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-secondary text-muted-foreground" title="Bu fiyatta geçerli kargo baremi">
+              {baremEtiketi}
+            </span>
+          )}
+        </div>
         <div className="flex items-center justify-between mt-1">
           <div className={`text-xs font-semibold ${isProfitable ? 'text-green-600' : 'text-red-600'}`}>
             {isProfitable ? '+' : ''}₺{profit.toFixed(2)} (%{profitRate.toFixed(1)})
@@ -931,6 +950,8 @@ export default function AdvantageProductTag() {
                   </Select>
                   <Input type="number" placeholder="Min Kâr Oranı (%)" value={bulkMinProfitRate} onChange={(e) => setBulkMinProfitRate(e.target.value)} />
                   <Input type="number" placeholder="Min Kâr Tutarı (₺)" value={bulkMinProfitAmount} onChange={(e) => setBulkMinProfitAmount(e.target.value)} />
+                  <Input type="number" placeholder="Maks Kâr Oranı (%)" value={bulkMaxProfitRate} onChange={(e) => setBulkMaxProfitRate(e.target.value)} />
+                  <Input type="number" placeholder="Maks Kâr Tutarı (₺)" value={bulkMaxProfitAmount} onChange={(e) => setBulkMaxProfitAmount(e.target.value)} />
                   <Button onClick={handleBulkSelect} variant="outline">Toplu Seç</Button>
                 </div>
               </CardContent>

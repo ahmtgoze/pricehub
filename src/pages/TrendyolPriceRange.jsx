@@ -44,6 +44,9 @@ export default function TrendyolPriceRange() {
   const [bulkColumn, setBulkColumn] = useState('');
   const [bulkMinProfitRate, setBulkMinProfitRate] = useState('');
   const [bulkMinProfitAmount, setBulkMinProfitAmount] = useState('');
+  // Ust sinir: bos birakilirsa sinir yok. Min-max araligi disindaki urunler secilmez.
+  const [bulkMaxProfitRate, setBulkMaxProfitRate] = useState('');
+  const [bulkMaxProfitAmount, setBulkMaxProfitAmount] = useState('');
   
   const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0 });
   const [calendarKey, setCalendarKey] = useState(0);
@@ -460,6 +463,12 @@ export default function TrendyolPriceRange() {
     if (!bulkColumn) { toast.error('Lütfen kolon seçin'); return; }
     const minRate = parseFloat(bulkMinProfitRate) || 0;
     const minAmount = parseFloat(bulkMinProfitAmount) || 0;
+    const maxRate = bulkMaxProfitRate !== '' ? parseFloat(bulkMaxProfitRate) : Infinity;
+    const maxAmount = bulkMaxProfitAmount !== '' ? parseFloat(bulkMaxProfitAmount) : Infinity;
+    const araliktaMi = (oran, tutar) =>
+      oran >= minRate && tutar >= minAmount &&
+      oran <= (Number.isNaN(maxRate) ? Infinity : maxRate) &&
+      tutar <= (Number.isNaN(maxAmount) ? Infinity : maxAmount);
     const visibleBarcodes = filterCategory ? new Set(filteredData.map(item => item.barcode)) : null;
 
     const updated = uploadedData.map(item => {
@@ -474,7 +483,7 @@ export default function TrendyolPriceRange() {
       else if (bulkColumn === 'range_4') { price = item.price_range_4_max; }
 
       const { profit, profitRate } = calculateProfit(price, commissionRate, item);
-      if (profitRate >= minRate && profit >= minAmount) return { ...item, selected_range: bulkColumn, selected_price: price };
+      if (araliktaMi(profitRate, profit)) return { ...item, selected_range: bulkColumn, selected_price: price };
       if (item.selected_range === bulkColumn) return { ...item, selected_range: 'none', selected_price: 0 };
       return item;
     });
@@ -1018,6 +1027,8 @@ export default function TrendyolPriceRange() {
                   </Select>
                   <Input type="number" placeholder="Min Kâr Oranı (%)" value={bulkMinProfitRate} onChange={(e) => setBulkMinProfitRate(e.target.value)} />
                   <Input type="number" placeholder="Min Kâr Tutarı (₺)" value={bulkMinProfitAmount} onChange={(e) => setBulkMinProfitAmount(e.target.value)} />
+                  <Input type="number" placeholder="Maks Kâr Oranı (%)" value={bulkMaxProfitRate} onChange={(e) => setBulkMaxProfitRate(e.target.value)} />
+                  <Input type="number" placeholder="Maks Kâr Tutarı (₺)" value={bulkMaxProfitAmount} onChange={(e) => setBulkMaxProfitAmount(e.target.value)} />
                   <Button onClick={handleBulkSelect} variant="outline">Toplu Seç</Button>
                 </div>
               </CardContent>

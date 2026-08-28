@@ -40,6 +40,9 @@ export default function PlusProductCommissionTariff() {
 
   const [bulkMinProfitRate, setBulkMinProfitRate] = useState('');
   const [bulkMinProfitAmount, setBulkMinProfitAmount] = useState('');
+  // Ust sinir: bos birakilirsa sinir yok. Min-max araligi disindaki urunler secilmez.
+  const [bulkMaxProfitRate, setBulkMaxProfitRate] = useState('');
+  const [bulkMaxProfitAmount, setBulkMaxProfitAmount] = useState('');
 
   const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0 });
   const [calendarOpen, setCalendarOpen] = useState(false);
@@ -418,6 +421,12 @@ export default function PlusProductCommissionTariff() {
   const handleBulkSelect = () => {
     const minRate = parseFloat(bulkMinProfitRate) || 0;
     const minAmount = parseFloat(bulkMinProfitAmount) || 0;
+    const maxRate = bulkMaxProfitRate !== '' ? parseFloat(bulkMaxProfitRate) : Infinity;
+    const maxAmount = bulkMaxProfitAmount !== '' ? parseFloat(bulkMaxProfitAmount) : Infinity;
+    const araliktaMi = (oran, tutar) =>
+      oran >= minRate && tutar >= minAmount &&
+      oran <= (Number.isNaN(maxRate) ? Infinity : maxRate) &&
+      tutar <= (Number.isNaN(maxAmount) ? Infinity : maxAmount);
     const visibleBarcodes = new Set(filteredData.map(i => i.barcode));
 
     const updated = uploadedData.map(item => {
@@ -426,7 +435,7 @@ export default function PlusProductCommissionTariff() {
       const price = item.plus_price_limit;
       if (!price || price <= 0) return item.selected_type === 'plus' ? { ...item, selected_type: 'none', selected_price: 0 } : item;
       const { profit, profitRate } = calculateProfit(price, item.plus_commission_offer || 0, item);
-      if (profitRate >= minRate && profit >= minAmount) return { ...item, selected_type: 'plus', selected_price: price };
+      if (araliktaMi(profitRate, profit)) return { ...item, selected_type: 'plus', selected_price: price };
       if (item.selected_type === 'plus') return { ...item, selected_type: 'none', selected_price: 0 };
       return item;
     });
@@ -748,6 +757,8 @@ export default function PlusProductCommissionTariff() {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <Input type="number" placeholder="Min Kâr Oranı (%)" value={bulkMinProfitRate} onChange={(e) => setBulkMinProfitRate(e.target.value)} />
                   <Input type="number" placeholder="Min Kâr Tutarı (₺)" value={bulkMinProfitAmount} onChange={(e) => setBulkMinProfitAmount(e.target.value)} />
+                  <Input type="number" placeholder="Maks Kâr Oranı (%)" value={bulkMaxProfitRate} onChange={(e) => setBulkMaxProfitRate(e.target.value)} />
+                  <Input type="number" placeholder="Maks Kâr Tutarı (₺)" value={bulkMaxProfitAmount} onChange={(e) => setBulkMaxProfitAmount(e.target.value)} />
                   <Button onClick={handleBulkSelect} variant="outline">Toplu Seç</Button>
                 </div>
               </CardContent>
