@@ -12,6 +12,7 @@ import { Label } from '@/components/ui/label';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
 import * as XLSX from 'xlsx';
+import FiltreEtiketi from '@/components/ui/FiltreEtiketi';
 
 const HEPSIBURADA_FIYAT_ADIMLARI = [
   'Bu sayfada sağ üstteki "Sırala" butonuna tıklayarak "Değişim Oranı (Yüksekten Düşüğe)" veya "Değişim Tutarı (Yüksekten Düşüğe)" seçeneğini seçin.',
@@ -449,8 +450,7 @@ export default function UpdatedPrices() {
                 <span className="text-sm font-semibold text-foreground">Toplam: {updatedPrices.length} ürün</span>
                 {selectedRows.size > 0 && <span className="text-sm text-muted-foreground">{selectedRows.size} seçildi</span>}
               </div>
-              <div className="flex items-center gap-2">
-                <Label className="text-sm">Sırala:</Label>
+              <FiltreEtiketi ad="Sırala">
                 <Select value={sortBy} onValueChange={setSortBy}>
                   <SelectTrigger className="w-64"><SelectValue /></SelectTrigger>
                   <SelectContent>
@@ -463,7 +463,7 @@ export default function UpdatedPrices() {
                     <SelectItem value="change_amount_desc">Değişim Tutarı (Yüksekten Düşüğe)</SelectItem>
                   </SelectContent>
                 </Select>
-              </div>
+              </FiltreEtiketi>
               {selectedRows.size > 0 && (
                 <Button variant="destructive" size="sm" onClick={() => setDeleteDialogOpen(true)}>
                   <Trash2 className="w-4 h-4 mr-2" />Seçilenleri Sil ({selectedRows.size})

@@ -22,7 +22,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { calculateProductPrice } from '@/components/PriceCalculationEngine';
+import { calculateProductPrice, calculatePriceBreakdown } from '@/components/PriceCalculationEngine';
 
 const Platform = db.entities.Platform;
 const ShippingRate = db.entities.ShippingRate;
@@ -35,7 +35,10 @@ export default function Calculator() {
   const isAdmin = user?.role === 'admin';
 
   const [userEmail, setUserEmail] = React.useState(null);
-  const [mode, setMode] = useState('manual'); // manual | product
+  // manual = maliyetten hedef kara, product = sistem urununden,
+  // from_price = satis fiyatindan kar (prototipteki ucuncu mod)
+  const [mode, setMode] = useState('manual');
+  const [enteredSalePrice, setEnteredSalePrice] = useState('');
   const [selectedProduct, setSelectedProduct] = useState('');
   const [selectedPlatform, setSelectedPlatform] = useState('');
   const [selectedShippingCompany, setSelectedShippingCompany] = useState('');
@@ -273,11 +276,54 @@ export default function Calculator() {
     // POS hizmet bedeli motorun ust duzey ciktisinda yok (o nesne dogrudan
     // product_prices'a yaziliyor, tabloda boyle bir kolon yok). Motorun kendi
     // hesapladigi degeri calculation_details icinden okuyup ekrana tasiyoruz.
-    let posBedeli = 0;
-    try {
-      const detay = JSON.parse(calcResult.calculation_details || '{}');
-      posBedeli = detay.posServiceFee || 0;
-    } catch { posBedeli = 0; }
+    let detay = {};
+    try { detay = JSON.parse(calcResult.calculation_details || '{}'); } catch { detay = {}; }
+    const posBedeli = detay.posServiceFee || 0;
+
+    // ── Satis fiyatindan kar modu ───────────────────────────────────────
+    // Fiyat motoruna DOKUNMUYORUZ: once motor kendi mantigiyla kargo/barem
+    // seciyor, sonra ayni girdilerle kullanicinin yazdigi fiyat uzerinden
+    // kirilim aliniyor. Kargo KDV orani tahmin edilmiyor, motorun dondurdugu
+    // tutarlardan birebir turetiliyor.
+    if (mode === 'from_price') {
+      const girilenFiyat = pozitif(enteredSalePrice);
+      if (girilenFiyat <= 0) { setResult(null); return; }
+
+      const kargoTutar = calcResult.shipping_cost || 0;
+      const kargoKdv = detay.shippingVat || 0;
+      const kargoHaric = kargoTutar - kargoKdv;
+      const kargoKdvOrani = kargoHaric > 0 ? (kargoKdv / kargoHaric) * 100 : 20;
+
+      const kirilim = calculatePriceBreakdown({
+        salePriceInclVat: girilenFiyat,
+        productCost: fakeProduct.cost,
+        productVatRate: fakeProduct.vat_rate,
+        shippingCost: kargoTutar,
+        shippingVatRate: kargoKdvOrani,
+        commissionRate: fakeCommission.commission_rate,
+        commissionVatRate: fakeCommission.commission_vat_rate,
+        platform,
+        baremUsed: calcResult.barem_used,
+        packagingCost: getTotalPackagingCost(),
+        printingCost: pozitif(printingCost),
+        extraCost: pozitif(extraCost),
+        isSameDayDelivery,
+      });
+
+      const yuvarla = (v) => Math.round((v || 0) * 100) / 100;
+      setResult({
+        ...calcResult,
+        sale_price: yuvarla(girilenFiyat),
+        net_profit: yuvarla(kirilim.netProfit),
+        profit_rate: yuvarla(kirilim.profitRate),
+        shipping_cost: yuvarla(kirilim.shippingCost),
+        commission_amount: yuvarla(kirilim.commissionAmount),
+        calculation_details: JSON.stringify(kirilim),
+        pos_service_fee: yuvarla(kirilim.posServiceFee),
+        pos_service_fee_rate: platform?.has_pos_service_fee ? (platform.pos_service_fee_rate || 0) : 0,
+      });
+      return;
+    }
 
     setResult({
       ...calcResult,
@@ -294,6 +340,7 @@ export default function Calculator() {
   };
 
   const handleReset = () => {
+    setEnteredSalePrice('');
     setCost('');
     setDesi('');
     setVatRate('20');
@@ -351,25 +398,33 @@ export default function Calculator() {
           {/* Input Section */}
           <Card className="border-border">
             <CardHeader className="pb-4">
-              <div className="flex items-center gap-4">
-                <Button
-                  variant={mode === 'manual' ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => { setMode('manual'); handleReset(); }}
-                >
-                  Manuel Giriş
-                </Button>
-                <Button
-                  variant={mode === 'product' ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => { setMode('product'); handleReset(); }}
-                >
-                  Ürün Seç
-                </Button>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground mb-3">
+                Nasıl hesaplamak istiyorsun?
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                {[
+                  { id: 'manual', ad: 'Manuel Giriş', aciklama: 'Maliyetleri elle gir, hedef kâr oranına göre satış fiyatını gör' },
+                  { id: 'product', ad: 'Üründen Kâr Hesaplama', aciklama: 'Sistemdeki master ürünü seç, maliyetleri üzerinde oyna' },
+                  { id: 'from_price', ad: 'Satış Fiyatından Kâr Hesaplama', aciklama: 'Satış fiyatını gir, net kârını ve kâr oranını gör' },
+                ].map((m) => (
+                  <button
+                    key={m.id}
+                    type="button"
+                    onClick={() => { setMode(m.id); handleReset(); }}
+                    className={`text-left rounded-xl border p-3 transition-colors ${
+                      mode === m.id
+                        ? 'border-foreground bg-secondary'
+                        : 'border-border hover:bg-secondary/60'
+                    }`}
+                  >
+                    <span className="block text-[13px] font-semibold leading-snug">{m.ad}</span>
+                    <span className="block text-[11.5px] text-muted-foreground mt-1 leading-snug">{m.aciklama}</span>
+                  </button>
+                ))}
               </div>
             </CardHeader>
             <CardContent className="space-y-5">
-              {mode === 'product' && (
+              {(mode === 'product' || mode === 'from_price') && (
                 <div className="space-y-2">
                   <Label>Ürün</Label>
                   <Select value={selectedProduct} onValueChange={setSelectedProduct}>
@@ -649,28 +704,44 @@ export default function Calculator() {
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <Label className="flex items-center gap-2">
-                  Hedef Kâr Oranı (%)
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger>
-                        <Info className="h-4 w-4 text-muted-foreground/70" />
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Kâr Oranı = Net Kâr / Maliyet × 100</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                </Label>
-                <Input
-                  type="number" min="0"
-                  step="0.01"
-                  value={targetProfit}
-                  onChange={(e) => setTargetProfit(e.target.value)}
-                  placeholder="30"
-                />
-              </div>
+              {mode === 'from_price' ? (
+                <div className="space-y-2">
+                  <Label>Satış Fiyatı (KDV dahil) *</Label>
+                  <Input
+                    type="number" min="0"
+                    step="0.01"
+                    value={enteredSalePrice}
+                    onChange={(e) => setEnteredSalePrice(e.target.value)}
+                    placeholder="0,00"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Platformdaki güncel satış fiyatını gir — kârın ve kâr oranın anında hesaplanır.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2">
+                    Hedef Kâr Oranı (%)
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger>
+                          <Info className="h-4 w-4 text-muted-foreground/70" />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Kâr Oranı = Net Kâr / Maliyet × 100</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </Label>
+                  <Input
+                    type="number" min="0"
+                    step="0.01"
+                    value={targetProfit}
+                    onChange={(e) => setTargetProfit(e.target.value)}
+                    placeholder="30"
+                  />
+                </div>
+              )}
 
               {!isMultiPackage && (
                 <div className="space-y-2">
@@ -716,7 +787,7 @@ export default function Calculator() {
                 <Button 
                   onClick={handleCalculate}
                   className="flex-1 bg-primary hover:bg-black dark:hover:bg-white/90"
-                  disabled={!selectedPlatform || (shippingMode === 'company' && !selectedShippingCompany) || (shippingMode === 'manual' && !manualShippingCost) || !cost || (!isMultiPackage && !desi) || (isMultiPackage && packages.some(p => !p.desi))}
+                  disabled={!selectedPlatform || (shippingMode === 'company' && !selectedShippingCompany) || (shippingMode === 'manual' && !manualShippingCost) || !cost || (!isMultiPackage && !desi) || (isMultiPackage && packages.some(p => !p.desi)) || (mode === 'from_price' && !enteredSalePrice)}
                 >
                   <CalcIcon className="mr-2 h-4 w-4" />
                   Hesapla
