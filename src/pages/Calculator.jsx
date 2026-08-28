@@ -339,6 +339,18 @@ export default function Calculator() {
     return n < 0 ? 0 : n;
   };
 
+  // Mod degistirirken girdiler KORUNUR: ayni urun icin "hedef kardan fiyat"
+  // ile "fiyattan kar" arasinda gidip gelmek bu sayfanin asil kullanimi.
+  // Yalnizca sonuc ve moda ozel alan temizlenir.
+  const modDegistir = (yeniMod) => {
+    if (yeniMod === mode) return;
+    setMode(yeniMod);
+    setResult(null);
+    if (yeniMod === 'from_price') setEnteredSalePrice('');
+    else setTargetProfit('');
+    if (yeniMod === 'manual') setSelectedProduct('');
+  };
+
   const handleReset = () => {
     setEnteredSalePrice('');
     setCost('');
@@ -410,7 +422,7 @@ export default function Calculator() {
                   <button
                     key={m.id}
                     type="button"
-                    onClick={() => { setMode(m.id); handleReset(); }}
+                    onClick={() => modDegistir(m.id)}
                     className={`text-left rounded-xl border p-3 transition-colors ${
                       mode === m.id
                         ? 'border-foreground bg-secondary'
