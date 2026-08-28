@@ -28,6 +28,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import SearchInput from '@/components/ui/SearchInput';
+import FiltreEtiketi from '@/components/ui/FiltreEtiketi';
 import DataTable from '@/components/ui/DataTable';
 import CommissionModal from '@/components/modals/CommissionModal';
 import ImportExport from '@/components/ImportExport';
@@ -572,31 +573,37 @@ export default function Commissions() {
           <div className="grid grid-cols-1 gap-3">
             <SearchInput value={search} onChange={setSearch} placeholder="Platform veya kategori ara..." />
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <Select value={platformFilter} onValueChange={setPlatformFilter}>
-                <SelectTrigger><SelectValue placeholder="Platform" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Tüm Platformlar</SelectItem>
-                  {platforms.map(p => <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>)}
-                </SelectContent>
-              </Select>
-              <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                <SelectTrigger><SelectValue placeholder="Kategori" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Tüm Kategoriler</SelectItem>
-                  {categories.map(c => <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>)}
-                </SelectContent>
-              </Select>
+              <FiltreEtiketi ad="Platform">
+                <Select value={platformFilter} onValueChange={setPlatformFilter}>
+                  <SelectTrigger><SelectValue placeholder="Platform" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Tüm Platformlar</SelectItem>
+                    {platforms.map(p => <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </FiltreEtiketi>
+              <FiltreEtiketi ad="Kategori">
+                <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                  <SelectTrigger><SelectValue placeholder="Kategori" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Tüm Kategoriler</SelectItem>
+                    {categories.map(c => <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </FiltreEtiketi>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <Select value={sortType} onValueChange={setSortType}>
-                <SelectTrigger><SelectValue placeholder="Sıralama" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="kategori_az">Kategori (A-Z)</SelectItem>
-                  <SelectItem value="kategori_za">Kategori (Z-A)</SelectItem>
-                  <SelectItem value="platform_az">Platform (A-Z)</SelectItem>
-                  <SelectItem value="platform_za">Platform (Z-A)</SelectItem>
-                </SelectContent>
-              </Select>
+              <FiltreEtiketi ad="Sırala">
+                <Select value={sortType} onValueChange={setSortType}>
+                  <SelectTrigger><SelectValue placeholder="Sıralama" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="kategori_az">Kategori (A-Z)</SelectItem>
+                    <SelectItem value="kategori_za">Kategori (Z-A)</SelectItem>
+                    <SelectItem value="platform_az">Platform (A-Z)</SelectItem>
+                    <SelectItem value="platform_za">Platform (Z-A)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </FiltreEtiketi>
               <Button
                 variant={showMissingOnly ? 'default' : 'outline'}
                 onClick={() => { setShowMissingOnly(v => !v); setPage(1); }}

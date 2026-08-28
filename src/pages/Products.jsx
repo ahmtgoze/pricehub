@@ -34,6 +34,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import SearchInput from '@/components/ui/SearchInput';
+import FiltreEtiketi from '@/components/ui/FiltreEtiketi';
 import DataTable from '@/components/ui/DataTable';
 import ProductModal from '@/components/modals/ProductModal';
 import BulkOperationsModal from '@/components/modals/BulkOperationsModal';
@@ -1172,19 +1173,6 @@ export default function Products() {
           </AlertDialogContent>
         </AlertDialog>
       </div>
-    </div>
-  );
-}
-
-/**
- * Filtrenin ustunde kucuk etiket — tasarim prototipinde filtreler
- * "Kategori: Tüm Kategoriler" seklinde adlandirilmis.
- */
-function FiltreEtiketi({ ad, children }) {
-  return (
-    <div className="flex flex-col gap-1">
-      <span className="text-[11px] font-medium text-muted-foreground">{ad}</span>
-      {children}
     </div>
   );
 }

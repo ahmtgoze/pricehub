@@ -9,6 +9,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import SearchInput from '@/components/ui/SearchInput';
 import DataTable from '@/components/ui/DataTable';
+import FiltreEtiketi from '@/components/ui/FiltreEtiketi';
 import ShippingRateModal from '@/components/modals/ShippingRateModal';
 import ImportExport from '@/components/ImportExport';
 import { toast } from 'sonner';
@@ -363,40 +364,48 @@ export default function ShippingRates() {
         <div className="rounded-[18px] border border-border bg-card p-5 mb-6">
           <div className="flex flex-col sm:flex-row gap-4">
             <SearchInput value={search} onChange={setSearch} placeholder="Platform, firma veya desi ara (örn: 4, 4 desi)..." className="flex-1" />
-            <Select value={platformFilter} onValueChange={setPlatformFilter}>
-              <SelectTrigger className="w-full sm:w-48"><SelectValue placeholder="Platform" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Tüm Platformlar</SelectItem>
-                <SelectItem value="trendyol">Trendyol</SelectItem>
-                <SelectItem value="hepsiburada">HepsiBurada</SelectItem>
-                <SelectItem value="website">Web Sitesi</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={typeFilter} onValueChange={setTypeFilter}>
-              <SelectTrigger className="w-full sm:w-40"><SelectValue placeholder="Tip" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Tüm Tipler</SelectItem>
-                <SelectItem value="barem1">Barem 1</SelectItem>
-                <SelectItem value="barem2">Barem 2</SelectItem>
-                <SelectItem value="desi">Desi</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={companyFilter} onValueChange={(v) => { setCompanyFilter(v); setSourceFilter('all'); }}>
-              <SelectTrigger className="w-full sm:w-48"><SelectValue placeholder="Kargo Firması" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Tüm Firmalar</SelectItem>
-                {[...new Set(shippingRates.map(r => r.shipping_company).filter(Boolean))].sort().map(company => (
-                  <SelectItem key={company} value={company}>{company}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={sourceFilter} onValueChange={(v) => { setSourceFilter(v); setCompanyFilter('all'); }}>
-              <SelectTrigger className="w-full sm:w-52"><SelectValue placeholder="Kaynak" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Tüm Tarifeler</SelectItem>
-                <SelectItem value="manual">📋 Manuel Anlaşmalı Fiyatlar</SelectItem>
-              </SelectContent>
-            </Select>
+            <FiltreEtiketi ad="Platform">
+              <Select value={platformFilter} onValueChange={setPlatformFilter}>
+                <SelectTrigger className="w-full sm:w-48"><SelectValue placeholder="Platform" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tüm Platformlar</SelectItem>
+                  <SelectItem value="trendyol">Trendyol</SelectItem>
+                  <SelectItem value="hepsiburada">HepsiBurada</SelectItem>
+                  <SelectItem value="website">Web Sitesi</SelectItem>
+                </SelectContent>
+              </Select>
+            </FiltreEtiketi>
+            <FiltreEtiketi ad="Tarife Tipi">
+              <Select value={typeFilter} onValueChange={setTypeFilter}>
+                <SelectTrigger className="w-full sm:w-40"><SelectValue placeholder="Tip" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tüm Tipler</SelectItem>
+                  <SelectItem value="barem1">Barem 1</SelectItem>
+                  <SelectItem value="barem2">Barem 2</SelectItem>
+                  <SelectItem value="desi">Desi</SelectItem>
+                </SelectContent>
+              </Select>
+            </FiltreEtiketi>
+            <FiltreEtiketi ad="Kargo Firması">
+              <Select value={companyFilter} onValueChange={(v) => { setCompanyFilter(v); setSourceFilter('all'); }}>
+                <SelectTrigger className="w-full sm:w-48"><SelectValue placeholder="Kargo Firması" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tüm Firmalar</SelectItem>
+                  {[...new Set(shippingRates.map(r => r.shipping_company).filter(Boolean))].sort().map(company => (
+                    <SelectItem key={company} value={company}>{company}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </FiltreEtiketi>
+            <FiltreEtiketi ad="Kaynak">
+              <Select value={sourceFilter} onValueChange={(v) => { setSourceFilter(v); setCompanyFilter('all'); }}>
+                <SelectTrigger className="w-full sm:w-52"><SelectValue placeholder="Kaynak" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tüm Tarifeler</SelectItem>
+                  <SelectItem value="manual">📋 Manuel Anlaşmalı Fiyatlar</SelectItem>
+                </SelectContent>
+              </Select>
+            </FiltreEtiketi>
           </div>
         </div>
 
