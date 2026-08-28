@@ -201,7 +201,7 @@ function WizardStep({ step, done, onToggle, isActive, onActivate }) {
         <button
           onClick={(e) => { e.stopPropagation(); onToggle(); }}
           className={`w-8 h-8 rounded-full border-2 flex items-center justify-center shrink-0 transition-all ${
-            done ? 'bg-primary border-primary text-white' : 'border-input bg-card hover:border-gray-500'
+            done ? 'bg-primary border-primary text-primary-foreground' : 'border-input bg-card hover:border-muted-foreground'
           }`}
         >
           {done ? <CheckCheck className="w-4 h-4" /> : <span className="text-xs font-bold text-muted-foreground">{step.id}</span>}
@@ -233,7 +233,7 @@ function WizardStep({ step, done, onToggle, isActive, onActivate }) {
           <div className="flex items-center gap-3 mt-4">
             <Link
               to={createPageUrl(step.page)}
-              className="flex items-center gap-2 bg-primary text-primary-foreground text-sm font-medium px-4 py-2 rounded-xl hover:bg-gray-700 transition-colors"
+              className="flex items-center gap-2 bg-primary text-primary-foreground text-sm font-medium px-4 py-2 rounded-xl hover:bg-black dark:hover:bg-white/90 transition-colors"
             >
               {step.title} sayfasına git
               <ExternalLink className="w-3.5 h-3.5" />

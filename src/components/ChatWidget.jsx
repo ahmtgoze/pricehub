@@ -293,7 +293,7 @@ ${topProducts || 'Veri yok'}
               <button
                 onClick={sendMessage}
                 disabled={!input.trim() || isLoading}
-                className="w-9 h-9 rounded-xl bg-primary hover:bg-black disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center transition-colors flex-shrink-0"
+                className="w-9 h-9 rounded-xl bg-primary hover:bg-black dark:hover:bg-white/90 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center transition-colors flex-shrink-0"
               >
                 {isLoading
                   ? <Loader2 className="h-4 w-4 text-white animate-spin" />
@@ -309,7 +309,7 @@ ${topProducts || 'Veri yok'}
       {/* ── Yüzen Buton ── */}
       <button
         onClick={() => setIsOpen(prev => !prev)}
-        className="fixed bottom-5 right-5 z-50 rounded-full bg-primary hover:bg-black shadow-lg hover:shadow-xl transition-all flex items-center justify-center"
+        className="fixed bottom-5 right-5 z-50 rounded-full bg-primary hover:bg-black dark:hover:bg-white/90 shadow-lg hover:shadow-xl transition-all flex items-center justify-center"
         style={{ width: '52px', height: '52px' }}
         title="PriceHub Asistan"
       >

@@ -309,7 +309,7 @@ export default function ShippingRateModal({
               İptal
             </Button>
             {!isReadOnly && (
-              <Button type="submit" disabled={isSaving} className="bg-primary hover:bg-black">
+              <Button type="submit" disabled={isSaving} className="bg-primary hover:bg-black dark:hover:bg-white/90">
                 {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 {shippingRate ? 'Güncelle' : 'Ekle'}
               </Button>

@@ -94,7 +94,7 @@ export default function Login() {
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full bg-primary text-primary-foreground rounded-[11px] h-[38px] text-[13.5px] font-medium hover:bg-black transition-colors disabled:opacity-50"
+              className="w-full bg-primary text-primary-foreground rounded-[11px] h-[38px] text-[13.5px] font-medium hover:bg-black dark:hover:bg-white/90 transition-colors disabled:opacity-50"
             >
               {isLoading ? 'Gönderiliyor...' : 'Giriş Kodu Gönder'}
             </button>
@@ -120,7 +120,7 @@ export default function Login() {
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full bg-primary text-primary-foreground rounded-[11px] h-[38px] text-[13.5px] font-medium hover:bg-black transition-colors disabled:opacity-50"
+              className="w-full bg-primary text-primary-foreground rounded-[11px] h-[38px] text-[13.5px] font-medium hover:bg-black dark:hover:bg-white/90 transition-colors disabled:opacity-50"
             >
               {isLoading ? 'Doğrulanıyor...' : 'Giriş Yap'}
             </button>

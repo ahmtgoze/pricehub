@@ -732,7 +732,7 @@ export default function Campaigns() {
                     {allCategories.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
                   </SelectContent>
                 </Select>
-                <Button onClick={handleSmartAutoSelect} className="bg-primary hover:bg-black"><Sparkles className="h-4 w-4 mr-1" />Akıllı Otomatik Seç</Button>
+                <Button onClick={handleSmartAutoSelect} className="bg-primary hover:bg-black dark:hover:bg-white/90"><Sparkles className="h-4 w-4 mr-1" />Akıllı Otomatik Seç</Button>
                 <div className="flex items-center gap-2">
                   <Input type="number" placeholder="min %" value={bulkMinProfitRate} onChange={(e) => setBulkMinProfitRate(e.target.value)} className="w-24" />
                   <Input type="number" placeholder="min TL" value={bulkMinProfitAmount} onChange={(e) => setBulkMinProfitAmount(e.target.value)} className="w-24" />
@@ -825,7 +825,7 @@ export default function Campaigns() {
             <h1 className="ph-title">Kampanyalar</h1>
             <p className="text-muted-foreground mt-1">Kampanya oluşturun ve yönetin</p>
           </div>
-          <Button onClick={() => (showForm ? (resetForm(), setShowForm(false)) : openNew())} className="bg-primary hover:bg-black">
+          <Button onClick={() => (showForm ? (resetForm(), setShowForm(false)) : openNew())} className="bg-primary hover:bg-black dark:hover:bg-white/90">
             <Plus className="mr-2 h-4 w-4" />Yeni Kampanya
           </Button>
         </div>
@@ -912,7 +912,7 @@ export default function Campaigns() {
                 )}
 
                 <div className="flex gap-3">
-                  <Button type="submit" className="bg-primary hover:bg-black">{editingId ? 'Güncelle' : 'Oluştur'}</Button>
+                  <Button type="submit" className="bg-primary hover:bg-black dark:hover:bg-white/90">{editingId ? 'Güncelle' : 'Oluştur'}</Button>
                   <Button type="button" variant="outline" onClick={() => { resetForm(); setShowForm(false); }}>İptal</Button>
                 </div>
               </form>
@@ -939,7 +939,7 @@ export default function Campaigns() {
                     <p className="text-sm text-muted-foreground mt-3">{safeDate(campaign.start_date)} - {safeDate(campaign.end_date)}</p>
                   </div>
                   <div className="flex gap-2 shrink-0">
-                    <Button size="sm" className="bg-primary hover:bg-black" onClick={() => openManager(campaign)}><Plus className="h-4 w-4 mr-1" />Ürün Ekle</Button>
+                    <Button size="sm" className="bg-primary hover:bg-black dark:hover:bg-white/90" onClick={() => openManager(campaign)}><Plus className="h-4 w-4 mr-1" />Ürün Ekle</Button>
                     <Button size="sm" variant="outline" onClick={() => openEdit(campaign)}><Edit2 className="h-4 w-4" /></Button>
                     <Button size="sm" variant="outline" className="text-red-600 hover:text-red-700" onClick={() => handleDelete(campaign.id)}><Trash2 className="h-4 w-4" /></Button>
                   </div>

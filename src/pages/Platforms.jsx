@@ -211,7 +211,7 @@ export default function Platforms() {
           <p className="mt-2 text-xs text-muted-foreground/70">{authHatasi}</p>
           <button
             onClick={() => { window.location.href = '/login'; }}
-            className="mt-5 h-[38px] px-4 rounded-[11px] bg-primary text-primary-foreground text-[13.5px] font-semibold hover:bg-black transition-colors"
+            className="mt-5 h-[38px] px-4 rounded-[11px] bg-primary text-primary-foreground text-[13.5px] font-semibold hover:bg-black dark:hover:bg-white/90 transition-colors"
           >
             Tekrar giriş yap
           </button>
@@ -320,7 +320,7 @@ export default function Platforms() {
                       disabled={!record}
                       className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all ${
                         canEdit
-                          ? 'bg-primary hover:bg-black text-primary-foreground shadow-sm'
+                          ? 'bg-primary hover:bg-black dark:hover:bg-white/90 text-primary-foreground shadow-sm'
                           : 'bg-secondary hover:bg-border text-muted-foreground'
                       }`}
                     >

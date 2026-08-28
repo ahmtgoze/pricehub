@@ -968,7 +968,7 @@ export default function Products() {
               filename="urunler"
               onImport={handleImport}
             />
-            <Button onClick={() => { setEditingProduct(null); setModalOpen(true); }} className="bg-primary hover:bg-black gap-2" size="sm">
+            <Button onClick={() => { setEditingProduct(null); setModalOpen(true); }} className="bg-primary hover:bg-black dark:hover:bg-white/90 gap-2" size="sm">
               <Plus className="h-4 w-4" />
               <span className="hidden sm:inline">Yeni Ürün</span>
               <span className="sm:hidden">Ekle</span>

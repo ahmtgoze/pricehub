@@ -107,7 +107,7 @@ export default function AdminAnnouncementCompose({ onClose }) {
           size="sm"
           onClick={() => createMutation.mutate()}
           disabled={!form.title.trim() || !form.content.trim() || createMutation.isPending}
-          className="bg-primary hover:bg-black text-primary-foreground font-semibold gap-2"
+          className="bg-primary hover:bg-black dark:hover:bg-white/90 text-primary-foreground font-semibold gap-2"
         >
           <Megaphone className="h-4 w-4" /> Yayınla
         </Button>

@@ -549,7 +549,7 @@ export default function Commissions() {
               filename="komisyonlar"
               onImport={handleImport}
             />
-            <Button onClick={() => { setEditingCommission(null); setModalOpen(true); }} className="bg-primary hover:bg-black gap-2 w-full sm:w-auto">
+            <Button onClick={() => { setEditingCommission(null); setModalOpen(true); }} className="bg-primary hover:bg-black dark:hover:bg-white/90 gap-2 w-full sm:w-auto">
               <Plus className="h-4 w-4" />
               Yeni Komisyon
             </Button>

@@ -1254,7 +1254,7 @@ export default function FlashProducts() {
               <Button
                 onClick={() => document.getElementById('excelUpload').click()}
                 disabled={!selectedPlatform || !dateRangeValue?.from || !dateRangeValue?.to}
-                className="bg-primary hover:bg-black"
+                className="bg-primary hover:bg-black dark:hover:bg-white/90"
               >
                 <Upload className="mr-2 h-4 w-4" />
                 {uploadProgress.total > 0
@@ -1270,7 +1270,7 @@ export default function FlashProducts() {
               />
               {uploadedData.length > 0 && (
                 <>
-                  <Button onClick={handleSmartAutoSelect} className="bg-primary hover:bg-black text-primary-foreground gap-2">
+                  <Button onClick={handleSmartAutoSelect} className="bg-primary hover:bg-black dark:hover:bg-white/90 text-primary-foreground gap-2">
                     <Sparkles className="h-4 w-4" />
                     Akıllı Otomatik Seç
                   </Button>

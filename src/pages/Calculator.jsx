@@ -695,7 +695,7 @@ export default function Calculator() {
               <div className="flex gap-3 pt-4">
                 <Button 
                   onClick={handleCalculate}
-                  className="flex-1 bg-primary hover:bg-black"
+                  className="flex-1 bg-primary hover:bg-black dark:hover:bg-white/90"
                   disabled={!selectedPlatform || (shippingMode === 'company' && !selectedShippingCompany) || (shippingMode === 'manual' && !manualShippingCost) || !cost || (!isMultiPackage && !desi) || (isMultiPackage && packages.some(p => !p.desi))}
                 >
                   <CalcIcon className="mr-2 h-4 w-4" />

@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { db } from '@/api/db';
 import { useAuth } from '@/lib/AuthContext';
 import { supabase } from '@/api/supabaseClient';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -113,7 +112,7 @@ function AccountSection({ user }) {
           </div>
         </Field>
         <div className="pt-2">
-          <Button onClick={handleSave} disabled={saving} className="bg-primary hover:bg-black">
+          <Button onClick={handleSave} disabled={saving} className="bg-primary hover:bg-black dark:hover:bg-white/90">
             {saving ? 'Kaydediliyor…' : 'Kaydet'}
           </Button>
         </div>
@@ -167,7 +166,7 @@ function SecuritySection() {
           <Input type={showPw ? 'text' : 'password'} value={confirmPw} onChange={e => setConfirmPw(e.target.value)} placeholder="••••••••" />
         </Field>
         <div className="pt-2">
-          <Button onClick={handleChange} disabled={loading || !currentPw || !newPw || !confirmPw} className="bg-primary hover:bg-black">
+          <Button onClick={handleChange} disabled={loading || !currentPw || !newPw || !confirmPw} className="bg-primary hover:bg-black dark:hover:bg-white/90">
             {loading ? 'Güncelleniyor…' : 'Şifreyi Güncelle'}
           </Button>
         </div>
@@ -219,7 +218,7 @@ function BrandSection() {
             <p className="text-xs text-muted-foreground/70 mt-1">Sidebar ve giriş ekranında görünen isim.</p>
           </Field>
           <div className="pt-2">
-            <Button onClick={() => save.mutate()} disabled={save.isPending || !markaAdi.trim()} className="bg-primary hover:bg-black">
+            <Button onClick={() => save.mutate()} disabled={save.isPending || !markaAdi.trim()} className="bg-primary hover:bg-black dark:hover:bg-white/90">
               {save.isPending ? 'Kaydediliyor…' : 'Kaydet'}
             </Button>
           </div>

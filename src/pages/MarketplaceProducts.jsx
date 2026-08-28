@@ -878,7 +878,7 @@ export default function MarketplaceProducts() {
                                       if (suggestion) {
                                         return (
                                           <div className="flex items-center gap-1">
-                                            <span className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded px-1.5 py-0.5">Öneri</span>
+                                            <span className="text-xs text-muted-foreground bg-secondary border border-border rounded px-1.5 py-0.5">Öneri</span>
                                             <button onClick={() => handleMatchProduct(row.id, suggestion.id)} className="text-xs text-foreground hover:underline">{suggestion.name}</button>
                                           </div>
                                         );

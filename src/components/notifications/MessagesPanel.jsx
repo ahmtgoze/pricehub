@@ -386,7 +386,7 @@ export default function MessagesPanel({ user, isAdmin, replyRef, onReplyRefConsu
               rows={2}
               className="flex-1 text-sm border border-border rounded-xl px-3 py-2 resize-none focus:outline-none focus:ring-1 focus:ring-gray-400 bg-card"
             />
-            <Button size="icon" onClick={handleSend} disabled={!newMessage.trim()} className="flex-shrink-0 h-10 w-10 bg-primary hover:bg-black">
+            <Button size="icon" onClick={handleSend} disabled={!newMessage.trim()} className="flex-shrink-0 h-10 w-10 bg-primary hover:bg-black dark:hover:bg-white/90">
               <Send className="h-4 w-4" />
             </Button>
           </div>
@@ -497,7 +497,7 @@ export default function MessagesPanel({ user, isAdmin, replyRef, onReplyRefConsu
              setShowNewConv(false);
              setNewMessage('');
              setNewConversationEmail('');
-            }} disabled={isAdmin ? (!newConversationEmail || !newMessage.trim()) : (!newMessage.trim() || adminLoading)} className="bg-primary hover:bg-black">
+            }} disabled={isAdmin ? (!newConversationEmail || !newMessage.trim()) : (!newMessage.trim() || adminLoading)} className="bg-primary hover:bg-black dark:hover:bg-white/90">
               <Send className="h-3.5 w-3.5 mr-1" /> Gönder
             </Button>
           </div>

@@ -341,7 +341,7 @@ export default function ShippingRates() {
                 <Plus className="h-4 w-4" />Sistem Tarifesi Ekle
               </Button>
             )}
-            <Button onClick={() => { setEditingRate(null); setIsSystemRate(false); setModalOpen(true); }} className="bg-primary hover:bg-black gap-2">
+            <Button onClick={() => { setEditingRate(null); setIsSystemRate(false); setModalOpen(true); }} className="bg-primary hover:bg-black dark:hover:bg-white/90 gap-2">
               <Plus className="h-4 w-4" />Manuel Tarife Ekle
             </Button>
           </div>

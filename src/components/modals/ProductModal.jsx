@@ -743,7 +743,7 @@ export default function ProductModal({
 
             <div className="flex justify-end gap-3 px-6 py-4 border-t border-border flex-shrink-0">
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>İptal</Button>
-              <Button type="submit" disabled={isSaving} className="bg-primary hover:bg-black">
+              <Button type="submit" disabled={isSaving} className="bg-primary hover:bg-black dark:hover:bg-white/90">
                 {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 {product ? 'Güncelle' : 'Ekle'}
               </Button>
