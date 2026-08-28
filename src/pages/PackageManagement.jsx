@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { db } from '@/api/db';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,9 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import DataTable from "@/components/ui/DataTable";
+import SearchInput from '@/components/ui/SearchInput';
+import FiltreEtiketi from '@/components/ui/FiltreEtiketi';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Plus, Trash2, Edit2, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -21,6 +24,8 @@ export default function PackageManagement() {
   const [editingPackage, setEditingPackage] = useState(null);
   const [editingItem, setEditingItem] = useState(null);
   const [selectedPackageId, setSelectedPackageId] = useState(null);
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
 
   const queryClient = useQueryClient();
 
@@ -174,6 +179,19 @@ export default function PackageManagement() {
     { id: 'created_at', header: 'Eklenme Tarihi', optional: true, cell: (row) => row.created_at ? new Date(row.created_at).toLocaleDateString('tr-TR') : '-' },
   ];
 
+  const suzulmusPaketler = useMemo(() => {
+    let sonuc = [...packages];
+    if (search) {
+      const a = search.trim().toLowerCase();
+      sonuc = sonuc.filter(p => p.name?.toLowerCase().includes(a));
+    }
+    if (statusFilter !== 'all') {
+      const aktifMi = statusFilter === 'active';
+      sonuc = sonuc.filter(p => (p.is_active !== false) === aktifMi);
+    }
+    return sonuc;
+  }, [packages, search, statusFilter]);
+
   return (
     <div className="p-6 space-y-8">
       <div className="flex justify-between items-center">
@@ -194,10 +212,33 @@ export default function PackageManagement() {
           sarilirsa kart-icinde-kart gorunumu olusuyordu. */}
       <div className="space-y-4">
         <h2 className="text-lg font-semibold text-foreground">Paketler</h2>
+
+        <div className="rounded-[18px] border border-border bg-card p-5">
+          <div className="flex flex-col sm:flex-row gap-4">
+            <SearchInput
+              value={search}
+              onChange={setSearch}
+              placeholder="Paket ara..."
+              className="flex-1 max-w-md"
+            />
+            <FiltreEtiketi ad="Durum">
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-full sm:w-40"><SelectValue placeholder="Durum" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tümü</SelectItem>
+                  <SelectItem value="active">Aktif</SelectItem>
+                  <SelectItem value="passive">Pasif</SelectItem>
+                </SelectContent>
+              </Select>
+            </FiltreEtiketi>
+          </div>
+        </div>
+
         <DataTable pageKey="paketleme"
           columns={packageColumns}
-          data={packages}
+          data={suzulmusPaketler}
           isLoading={packagesLoading}
+          emptyMessage="Paket bulunamadı"
         />
       </div>
 

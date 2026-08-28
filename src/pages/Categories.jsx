@@ -16,6 +16,8 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import SearchInput from '@/components/ui/SearchInput';
+import FiltreEtiketi from '@/components/ui/FiltreEtiketi';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import DataTable from '@/components/ui/DataTable';
 import CategoryModal from '@/components/modals/CategoryModal';
 import { toast } from 'sonner';
@@ -36,6 +38,7 @@ export default function Categories() {
 
   // Seçim (toplu/tek tek)
   const [selectedIds, setSelectedIds] = useState([]);
+  const [statusFilter, setStatusFilter] = useState('all');
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
   const selectAllRef = useRef(null);
 
@@ -181,8 +184,12 @@ export default function Categories() {
       const s = search.toLowerCase();
       result = result.filter(c => c.name?.toLowerCase().includes(s));
     }
+    if (statusFilter !== 'all') {
+      const aktifMi = statusFilter === 'active';
+      result = result.filter(c => (c.is_active !== false) === aktifMi);
+    }
     return result.sort((a, b) => a.name?.localeCompare(b.name));
-  }, [categories, search]);
+  }, [categories, search, statusFilter]);
 
   const paginatedCategories = filteredCategories.slice((page - 1) * pageSize, page * pageSize);
 
@@ -326,12 +333,24 @@ export default function Categories() {
         </div>
 
         <div className="rounded-[18px] border border-border bg-card p-5 mb-6">
-          <SearchInput
-            value={search}
-            onChange={setSearch}
-            placeholder="Kategori ara..."
-            className="max-w-md"
-          />
+          <div className="flex flex-col sm:flex-row gap-4">
+            <SearchInput
+              value={search}
+              onChange={setSearch}
+              placeholder="Kategori ara..."
+              className="flex-1 max-w-md"
+            />
+            <FiltreEtiketi ad="Durum">
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-full sm:w-40"><SelectValue placeholder="Durum" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tümü</SelectItem>
+                  <SelectItem value="active">Aktif</SelectItem>
+                  <SelectItem value="passive">Pasif</SelectItem>
+                </SelectContent>
+              </Select>
+            </FiltreEtiketi>
+          </div>
         </div>
 
         {validSelectedIds.length > 0 && (
