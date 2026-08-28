@@ -67,6 +67,34 @@ export default function ShippingRates() {
 
   const platforms = rawPlatforms.filter((p, idx, arr) => arr.findIndex(x => x.name === p.name) === idx);
 
+  // Barem sinirlari (barem1_min/max, barem2_min/max, barem_max_desi) sistem
+  // platformunda tanimli; Fiyatlar ve Hesaplayici da bunu boyle okuyor.
+  const { data: adminPlatforms = [] } = useQuery({
+    queryKey: ['adminPlatforms'],
+    queryFn: () => Platform.filter({ is_system_admin: true }),
+  });
+
+  const baremAyari = React.useMemo(() => {
+    const harita = {};
+    for (const p of adminPlatforms) harita[p.platform_type] = p;
+    // Sistem sablonu yoksa kullanicinin kendi platformuna dus
+    for (const p of platforms) if (!harita[p.platform_type]) harita[p.platform_type] = p;
+    return harita;
+  }, [adminPlatforms, platforms]);
+
+  const paraYaz = (v) =>
+    Number(v ?? 0).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+  // Barem tarifesi desiye degil SATIS FIYATINA gore gecerli; bu aralik
+  // tabloda hic gorunmuyordu.
+  const fiyatAraligi = (row) => {
+    const ayar = baremAyari[row.platform_type];
+    if (!ayar) return '—';
+    if (row.rate_type === 'barem1') return `${paraYaz(ayar.barem1_min)} – ${paraYaz(ayar.barem1_max)} ₺`;
+    if (row.rate_type === 'barem2') return `${paraYaz(ayar.barem2_min)} – ${paraYaz(ayar.barem2_max)} ₺`;
+    return '—';
+  };
+
   const { data: shippingCompanies = [] } = useQuery({
     queryKey: ['shipping-companies'],
     queryFn: () => db.entities.ShippingCompany.filter({ is_active: true }),
@@ -257,7 +285,26 @@ export default function ShippingRates() {
         </div>
       )
     },
-    { id: 'desi', header: 'Desi', cell: (row) => row.rate_type === 'desi' ? `${row.desi || 0} desi` : '-' },
+    {
+      id: 'fiyat_araligi',
+      header: 'Fiyat Aralığı',
+      cell: (row) => {
+        const deger = fiyatAraligi(row);
+        return deger === '—'
+          ? <span className="text-muted-foreground/70">—</span>
+          : <span className="whitespace-nowrap">{deger}</span>;
+      },
+    },
+    {
+      id: 'desi',
+      header: 'Desi',
+      cell: (row) => {
+        if (row.rate_type === 'desi') return `${row.desi || 0} desi`;
+        // Barem satirlarinda barem'in gecerli oldugu ust desi siniri
+        const ayar = baremAyari[row.platform_type];
+        return ayar?.barem_max_desi ? `≤ ${ayar.barem_max_desi}` : '-';
+      },
+    },
     { header: 'Ücret', accessor: 'price', cell: (row) => <span className="font-semibold">₺{row.price?.toFixed(2)}</span> },
     { header: 'KDV', accessor: 'vat_rate', cell: (row) => `%${row.vat_rate || 20}` },
     { id: 'durum', header: 'Durum', cell: (row) => <Badge variant={row.is_active !== false ? 'default' : 'secondary'}>{row.is_active !== false ? 'Aktif' : 'Pasif'}</Badge> },

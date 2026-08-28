@@ -96,6 +96,7 @@ export const TABLO_KAYITLARI = [
       { id: 'platform_name', etiket: "Platform" },
       { id: 'shipping_company', etiket: "Kargo Firması" },
       { id: 'rate_type', etiket: "Tarife Tipi" },
+      { id: 'fiyat_araligi', etiket: "Fiyat Aralığı" },
       { id: 'desi', etiket: "Desi" },
       { id: 'price', etiket: "Ücret" },
       { id: 'vat_rate', etiket: "KDV" },
