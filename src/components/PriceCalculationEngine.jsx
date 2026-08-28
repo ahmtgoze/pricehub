@@ -166,7 +166,12 @@ export const calculatePriceBreakdown = ({
   const transactionFeeVatRate = platform.transaction_fee_vat_rate || 20;
   const transactionFeeExclVat = transactionFeeInclVat / (1 + transactionFeeVatRate / 100);
   const transactionFeeVat = transactionFeeInclVat - transactionFeeExclVat;
-  const posServiceFeeRate = (platform.has_pos_service_fee && platform.platform_type === 'hepsiburada')
+  // POS hizmet bedeli: HepsiBurada'nin yaninda Web Sitesi platformunda da
+  // uygulanir (kendi POS/sanal pos kesintisi). Yalnizca platformun kendi
+  // has_pos_service_fee anahtari aciksa devreye girer; kapaliyken oran 0
+  // oldugu icin hesap eskisiyle birebir ayni kalir.
+  const POS_BEDELI_OLAN_PLATFORMLAR = ['hepsiburada', 'website'];
+  const posServiceFeeRate = (platform.has_pos_service_fee && POS_BEDELI_OLAN_PLATFORMLAR.includes(platform.platform_type))
     ? (platform.pos_service_fee_rate || 0)
     : 0;
   const posServiceFeeInclVat = salePriceInclVat * posServiceFeeRate / 100;

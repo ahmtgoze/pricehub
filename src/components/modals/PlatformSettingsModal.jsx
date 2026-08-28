@@ -483,12 +483,16 @@ export default function PlatformSettingsModal({
                             </>
                           )}
                         </div>
-                        {platform?.platform_type === 'hepsiburada' && (
+                        {(platform?.platform_type === 'hepsiburada' || platform?.platform_type === 'website') && (
                           <div className="border-t border-border pt-3 mt-3">
                             <div className="flex items-center justify-between mb-2">
                               <div>
                                 <Label className="text-sm font-medium">POS Hizmet Bedeli</Label>
-                                <p className="text-xs text-muted-foreground mt-0.5">Sipariş başına yüzdelik kesinti (Bugün Kargoda dahil)</p>
+                                <p className="text-xs text-muted-foreground mt-0.5">
+                                  {platform?.platform_type === 'website'
+                                    ? 'Sipariş başına sanal POS yüzdelik kesintisi'
+                                    : 'Sipariş başına yüzdelik kesinti (Bugün Kargoda dahil)'}
+                                </p>
                               </div>
                               {isAdmin ? (
                                 <Switch checked={formData.has_pos_service_fee} onCheckedChange={(checked) => setFormData({ ...formData, has_pos_service_fee: checked })} />
