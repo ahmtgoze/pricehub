@@ -49,6 +49,7 @@ const SYSTEM_FIELDS = [
 export default function Platforms() {
   const queryClient = useQueryClient();
   const [userEmail, setUserEmail] = useState(null);
+  const [authHatasi, setAuthHatasi] = useState(null);
   const [user, setUser] = useState(null);
   const [selectedPlatform, setSelectedPlatform] = useState(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -57,7 +58,11 @@ export default function Platforms() {
     db.auth.me().then(u => {
       setUserEmail(u.email);
       setUser(u);
-    }).catch(() => {});
+    }).catch((err) => {
+      // Onceden bu hata sessizce yutuluyordu: userEmail hic dolmadigi icin
+      // sayfa sonsuza kadar spinner gosteriyordu.
+      setAuthHatasi(err?.message || 'Oturum bilgisi alinamadi.');
+    });
   }, []);
 
   const isAdmin = user?.role === 'admin';
@@ -193,6 +198,27 @@ export default function Platforms() {
       setSettingsOpen(true);
     }
   };
+
+  if (authHatasi) {
+    return (
+      <div className="min-h-screen bg-secondary flex items-center justify-center px-6">
+        <div className="ph-card max-w-md w-full text-center">
+          <p className="text-[15px] font-semibold text-foreground">Platformlar açılamadı</p>
+          <p className="mt-2 text-[13.5px] leading-relaxed text-muted-foreground">
+            Oturum bilgisi alınamadı, bu yüzden platformların yüklenemedi.
+            Genellikle oturumun sona ermesinden kaynaklanır.
+          </p>
+          <p className="mt-2 text-xs text-muted-foreground/70">{authHatasi}</p>
+          <button
+            onClick={() => { window.location.href = '/login'; }}
+            className="mt-5 h-[38px] px-4 rounded-[11px] bg-primary text-primary-foreground text-[13.5px] font-semibold hover:bg-black transition-colors"
+          >
+            Tekrar giriş yap
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   if (isLoading || !userEmail) {
     return (

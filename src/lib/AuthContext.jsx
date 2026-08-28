@@ -16,6 +16,10 @@ export const AuthProvider = ({ children }) => {
       if (session?.user) {
         loadUserProfile(session.user);
       } else {
+        // Oturum yok: App.jsx bunu gorup login'e yonlendirir. Daha once
+        // authError set edilmedigi icin uygulama girissiz de aciliyor,
+        // sayfalar bos veri gosteriyor ve Platformlar sonsuz donuyordu.
+        setAuthError({ type: 'auth_required', message: 'Oturum acik degil.' });
         setIsLoadingAuth(false);
         setIsAuthenticated(false);
       }
@@ -26,6 +30,7 @@ export const AuthProvider = ({ children }) => {
         loadUserProfile(session.user);
       } else {
         setUser(null);
+        setAuthError({ type: 'auth_required', message: 'Oturum acik degil.' });
         setIsAuthenticated(false);
         setIsLoadingAuth(false);
       }
