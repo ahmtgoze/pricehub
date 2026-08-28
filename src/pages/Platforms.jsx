@@ -5,6 +5,7 @@ import { Store, Check, X, Settings2, Truck } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
 import PlatformSettingsModal from '@/components/modals/PlatformSettingsModal';
+import { hesaplaPlatformIstatistigi } from '@/lib/platformIstatistigi';
 
 const PlatformEntity = db.entities.Platform;
 
@@ -119,22 +120,10 @@ export default function Platforms() {
     staleTime: 60_000,
   });
 
-  const platformIstatistigi = React.useMemo(() => {
-    const harita = {};
-    for (const satir of fiyatKayitlari) {
-      const ad = (satir.platform_name || '').toLowerCase();
-      if (!ad) continue;
-      const kutu = harita[ad] || (harita[ad] = { adet: 0, komisyonToplam: 0, komisyonAdet: 0 });
-      kutu.adet += 1;
-      let detay = satir.calculation_details;
-      if (typeof detay === 'string') {
-        try { detay = JSON.parse(detay); } catch { detay = null; }
-      }
-      const oran = Number(detay?.commissionRate);
-      if (Number.isFinite(oran)) { kutu.komisyonToplam += oran; kutu.komisyonAdet += 1; }
-    }
-    return harita;
-  }, [fiyatKayitlari]);
+  const platformIstatistigi = React.useMemo(
+    () => hesaplaPlatformIstatistigi(fiyatKayitlari),
+    [fiyatKayitlari]
+  );
 
   const [initialized, setInitialized] = useState(false);
 
@@ -309,9 +298,7 @@ export default function Platforms() {
                   <div className="space-y-3 mb-5">
                     {(() => {
                       const ist = platformIstatistigi[def.name.toLowerCase()];
-                      const ortalama = ist?.komisyonAdet
-                        ? (ist.komisyonToplam / ist.komisyonAdet)
-                        : null;
+                      const ortalama = ist?.ortalamaKomisyon ?? null;
                       return (
                         <>
                           <div className="flex items-center justify-between gap-3 text-sm">
