@@ -115,6 +115,8 @@ export const TABLO_KAYITLARI = [
     sutunlar: [
       { id: 'name', etiket: "Kategori Adı" },
       { id: 'default_vat_rate', etiket: "Varsayılan KDV" },
+      { id: 'trendyol_category', etiket: "Trendyol Kategorisi" },
+      { id: 'hepsiburada_category', etiket: "HepsiBurada Kategorisi" },
       { id: '__pcount', etiket: "Ürün Sayısı" },
       { id: 'is_active', etiket: "Durum" },
       { id: 'islemler', etiket: "İşlemler" },

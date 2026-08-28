@@ -153,21 +153,40 @@ export default function Categories() {
 
       let created = 0, updated = 0, skipped = 0;
 
+      // Bos hucre "eslesmeyi sil" demek degil; sadece dolu gelen deger yazilir.
+      const metin = (v) => {
+        const t = (v ?? '').toString().trim();
+        return t === '' ? null : t;
+      };
+
       for (const row of rows) {
         const name = (row['Kategori Adı'] || row['name'] || '').toString().trim();
         const vatRate = parseFloat(row['Varsayılan KDV (%)'] || row['default_vat_rate'] || 20);
+        const trendyol = metin(row['Trendyol Kategorisi'] || row['trendyol_category']);
+        const hepsiburada = metin(row['HepsiBurada Kategorisi'] || row['hepsiburada_category']);
         if (!name) { skipped++; continue; }
 
         const existing = existingByName[name.toLowerCase()];
         if (existing) {
-          if ((existing.default_vat_rate || 20) !== vatRate) {
-            await Category.update(existing.id, { default_vat_rate: vatRate });
+          const degisiklik = {};
+          if ((existing.default_vat_rate || 20) !== vatRate) degisiklik.default_vat_rate = vatRate;
+          if (trendyol !== null && trendyol !== existing.trendyol_category) degisiklik.trendyol_category = trendyol;
+          if (hepsiburada !== null && hepsiburada !== existing.hepsiburada_category) degisiklik.hepsiburada_category = hepsiburada;
+
+          if (Object.keys(degisiklik).length > 0) {
+            await Category.update(existing.id, degisiklik);
             updated++;
           } else {
             skipped++;
           }
         } else {
-          await Category.create({ name, default_vat_rate: vatRate, is_active: true });
+          await Category.create({
+            name,
+            default_vat_rate: vatRate,
+            trendyol_category: trendyol,
+            hepsiburada_category: hepsiburada,
+            is_active: true,
+          });
           created++;
         }
       }
@@ -250,6 +269,20 @@ export default function Categories() {
       header: 'Varsayılan KDV',
       accessor: 'default_vat_rate',
       cell: (row) => `%${row.default_vat_rate || 20}`
+    },
+    {
+      id: 'trendyol_category',
+      header: 'Trendyol Kategorisi',
+      cell: (row) => row.trendyol_category
+        ? <span className="text-muted-foreground">{row.trendyol_category}</span>
+        : <span className="text-muted-foreground/60">—</span>
+    },
+    {
+      id: 'hepsiburada_category',
+      header: 'HepsiBurada Kategorisi',
+      cell: (row) => row.hepsiburada_category
+        ? <span className="text-muted-foreground">{row.hepsiburada_category}</span>
+        : <span className="text-muted-foreground/60">—</span>
     },
     {
       header: 'Ürün Sayısı',

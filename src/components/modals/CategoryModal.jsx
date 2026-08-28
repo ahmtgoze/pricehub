@@ -28,6 +28,8 @@ export default function CategoryModal({
   const [formData, setFormData] = useState({
     name: '',
     default_vat_rate: 20,
+    trendyol_category: '',
+    hepsiburada_category: '',
     is_active: true
   });
 
@@ -36,12 +38,16 @@ export default function CategoryModal({
       setFormData({
         name: category.name || '',
         default_vat_rate: category.default_vat_rate || 20,
+        trendyol_category: category.trendyol_category || '',
+        hepsiburada_category: category.hepsiburada_category || '',
         is_active: category.is_active !== false
       });
     } else {
       setFormData({
         name: '',
         default_vat_rate: 20,
+        trendyol_category: '',
+        hepsiburada_category: '',
         is_active: true
       });
     }
@@ -51,7 +57,10 @@ export default function CategoryModal({
     e.preventDefault();
     onSave({
       ...formData,
-      default_vat_rate: parseFloat(formData.default_vat_rate) || 20
+      default_vat_rate: parseFloat(formData.default_vat_rate) || 20,
+      // Bos birakilan eslesme bos metin degil null olarak kaydedilsin
+      trendyol_category: formData.trendyol_category.trim() || null,
+      hepsiburada_category: formData.hepsiburada_category.trim() || null
     });
   };
 
@@ -90,6 +99,26 @@ export default function CategoryModal({
                 <SelectItem value="20">%20</SelectItem>
               </SelectContent>
             </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="trendyol_category">Trendyol Kategorisi</Label>
+            <Input
+              id="trendyol_category"
+              value={formData.trendyol_category}
+              onChange={(e) => setFormData({ ...formData, trendyol_category: e.target.value })}
+              placeholder="Trendyol'daki karşılığı (opsiyonel)"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="hepsiburada_category">HepsiBurada Kategorisi</Label>
+            <Input
+              id="hepsiburada_category"
+              value={formData.hepsiburada_category}
+              onChange={(e) => setFormData({ ...formData, hepsiburada_category: e.target.value })}
+              placeholder="HepsiBurada'daki karşılığı (opsiyonel)"
+            />
           </div>
 
           <div className="flex items-center justify-between py-2">
