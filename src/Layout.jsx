@@ -25,6 +25,7 @@ import {
   ChevronDown,
   ChevronRight,
   Columns3,
+  Megaphone,
   HelpCircle as HelpIcon,
   Sun,
   Moon,
@@ -101,9 +102,11 @@ const NAV_GROUPS = [
 ];
 
 const BOTTOM_ITEMS = [
-  { name: 'Görünümü Özelleştir', page: 'ViewCustomize', icon: Columns3 },
   { name: 'Kullanım Kılavuzu', page: 'Help', icon: HelpCircle },
   { name: 'Genel Ayarlar', page: 'Settings', icon: Settings },
+  // Tasarim prototipindeki sira: Tanitim Sayfasi, en altta Gorunumu Ozellestir
+  { name: 'Tanıtım Sayfası', page: 'Landing', icon: Megaphone },
+  { name: 'Görünümü Özelleştir', page: 'ViewCustomize', icon: Columns3 },
 ];
 
 // Ust bardaki yardim / tema dugmeleri (mobil ve masaustunde ayni gorunum)
@@ -379,9 +382,16 @@ export default function Layout({ children, currentPageName }) {
         {/* Masaüstü üst bar */}
         <div className="hidden lg:flex items-center justify-end gap-1 h-[52px] px-6 border-b border-border bg-card/70 backdrop-blur-xl backdrop-saturate-150 flex-shrink-0">
           <NotificationCenter />
-          <BarButton onClick={() => setHelpOpen(true)} title="Nasıl kullanılır?">
-            <HelpIcon className="h-5 w-5" />
-          </BarButton>
+          <button
+            onClick={() => setHelpOpen(true)}
+            title="Nasıl kullanılır?"
+            className="flex items-center gap-1.5 h-8 px-3 rounded-[10px] border border-border bg-card
+                       text-[12.5px] font-medium text-muted-foreground
+                       hover:text-foreground hover:bg-secondary transition-colors"
+          >
+            <HelpIcon className="h-4 w-4" />
+            Nasıl kullanılır?
+          </button>
           <BarButton onClick={temaDegistir} title={koyuMu ? 'Açık temaya geç' : 'Koyu temaya geç'}>
             {koyuMu ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
           </BarButton>

@@ -197,22 +197,29 @@ if (filteredByRange) {
     return 'text-foreground';
   };
 
-  // Prototip paleti: negatif kâr kırmızı, kalanlar kâr arttıkça koyulaşan gri.
-  // Böylece monokrom görünüm korunur ama sütunun hangi kâr aralığı olduğu okunur kalır.
+  // Prototipten birebir olculen kar dagilimi paleti (11 aralik):
+  // negatiften basliyor, kar arttikca kirmizi -> turuncu -> sari -> yesil.
+  // Degerler tasarim dosyasindaki sutunlardan dogrudan okundu.
+  const KAR_PALETI = {
+    '< 0%': '#d70015',
+    '0\u201310%': '#e8834a',
+    '10\u201320%': '#e8a33d',
+    '20\u201330%': '#d7c04a',
+    '30\u201340%': '#8fc46b',
+    '40\u201350%': '#5fb96a',
+    '50\u201375%': '#39a35a',
+    '75\u2013100%': '#2b8c4c',
+    '100\u2013200%': '#22703d',
+    '200\u2013300%': '#1a5c31',
+    '> 300%': '#124524',
+  };
+
   const barColor = (item) => {
-    if (item.type === 'negative') return '#d70015';
-    if (item.type === 'positive') return '#1d1d1f';
-    const name = item.name || item;
-    if (name === '< 0%') return '#d70015';
-    if (name.startsWith('0\u2013')) return '#e0e0e4';
-    if (name.startsWith('10\u2013')) return '#d2d2d7';
-    if (name.startsWith('20\u2013')) return '#c2c2c8';
-    if (name.startsWith('30\u2013')) return '#b8b8be';
-    if (name.startsWith('40\u2013')) return '#a1a1a6';
-    if (name.startsWith('50\u2013')) return '#86868b';
-    if (name.startsWith('75\u2013')) return '#6e6e73';
-    if (name.startsWith('100\u2013')) return '#48484c';
-    if (name.startsWith('200\u2013')) return '#333336';
+    if (item.type === 'negative') return KAR_PALETI['< 0%'];
+    const ad = item.name || item;
+    if (KAR_PALETI[ad]) return KAR_PALETI[ad];
+    // Ozel aralik secildiginde tek sutun cikar: kar pozitifse koyu yesil
+    if (item.type === 'positive') return '#22703d';
     return '#1d1d1f';
   };
 
