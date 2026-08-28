@@ -369,3 +369,49 @@ drop table if exists public.user_view_preferences;
 drop table if exists public.export_templates;
 alter table public.announcements drop column if exists link_page;
 ```
+
+---
+
+## 8. Görünüm özelleştirme (28 Ağustos 2026)
+
+### Tablolarda
+Her tablonun sağ üstünde **Sütunlar** düğmesi:
+
+- **Gizle / göster** — göz simgesi
+- **Sırala** — soldaki tutamaktan **sürükle-bırak**, ya da yukarı/aşağı oklarla
+- **Genişlet** — tablo başlığının **sağ kenarından çekerek** (Excel gibi).
+  Asgari 90px; daraldığında metin kırpılmaz, **alt satıra kayar**
+- **Sola sabitle** — yatay kaydırmada sabit kalır
+- **Eklenebilir sütunlar** — varsayılanda gizli olan ek veri sütunları
+- **Sıfırla** — ilk hâline döner
+
+Ayarlar kullanıcıya özeldir (`user_view_preferences`, RLS ile izole) ve her
+girişte kaldığı yerden devam eder.
+
+**Kapsam (11 tablo):** Ürünler · Kategoriler · Komisyonlar · Kargo Tarifeleri ·
+Paketleme · Güncelleme Raporları · Düzenlenen Maliyetler · Düzenlenen Fiyatlar ·
+Pazaryeri Ürünleri · Fiyatlar (Platform sütunlu) · Fiyatlar (Satır bazlı).
+Promosyon sayfaları kapsam dışı bırakıldı.
+
+### Dashboard'da
+**Düzen** düğmesi → **Düzenleme modu**. Her kutunun üstünde tutamak,
+**Dar / Orta / Geniş** boyut düğmeleri ve gizleme çıkar. Kutular sürüklenerek
+taşınır. Üstteki özet kutuları satırı sabittir. Mobilde tek sütun.
+
+### Excel indirme
+- **Standart şablon** (Excel/CSV) kodda tanımlı — müşteri **silemez**,
+  her zaman dönebileceği ilk hâl
+- **Kendi şablonların** — ad ver, biçim seç (xlsx/csv), **hangi sütunların
+  gireceğini işaretle**, kaydet. Silmeden önce onay sorulur
+- Dosya adı: `Sayfa_2026-08-28_14-05`
+
+### Otomatik testler
+`npm test` — 35 test:
+- `tests/tabloSutunlari.test.mjs` (18): sıra, gizleme, ek sütun, sabitleme,
+  genişlik, sistem sütunu koruması
+- `tests/widgetDuzeni.test.mjs` (17): Dashboard kutu sırası, gizleme, boyut
+  kırpma, sabit kutu koruması, sıfırlama
+
+Mantığın saf çekirdeği `src/lib/tabloSutunlari.js` ve `src/lib/widgetDuzeni.js`
+dosyalarında; bu dosyalar bilerek hiçbir şey import etmiyor, böylece doğrudan
+node ile test edilebiliyor.
