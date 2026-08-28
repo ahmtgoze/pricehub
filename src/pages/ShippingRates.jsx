@@ -26,6 +26,9 @@ export default function ShippingRates() {
   const [typeFilter, setTypeFilter] = useState('all');
   const [companyFilter, setCompanyFilter] = useState('all');
   const [sourceFilter, setSourceFilter] = useState('all');
+  const [sameDayFilter, setSameDayFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [sortFilter, setSortFilter] = useState('default');
   const [page, setPage] = useState(1);
   const pageSize = 20;
   const [modalOpen, setModalOpen] = useState(false);
@@ -236,6 +239,18 @@ export default function ShippingRates() {
     if (typeFilter !== 'all') result = result.filter(r => r.rate_type === typeFilter);
     if (companyFilter !== 'all') result = result.filter(r => r.shipping_company === companyFilter);
     if (sourceFilter === 'manual') result = result.filter(r => r.is_manual === true);
+    if (sourceFilter === 'system') result = result.filter(r => r.is_admin_created === true);
+    if (sameDayFilter !== 'all') {
+      const istenen = sameDayFilter === 'yes';
+      result = result.filter(r => !!r.same_day_delivery === istenen);
+    }
+    if (statusFilter !== 'all') {
+      const aktifMi = statusFilter === 'active';
+      result = result.filter(r => (r.is_active !== false) === aktifMi);
+    }
+
+    if (sortFilter === 'desi_asc') return result.sort((a, b) => (a.desi || 0) - (b.desi || 0));
+    if (sortFilter === 'price_desc') return result.sort((a, b) => (b.price || 0) - (a.price || 0));
 
     return result.sort((a, b) => {
       if (a.platform_name !== b.platform_name) return a.platform_name?.localeCompare(b.platform_name);
@@ -245,7 +260,7 @@ export default function ShippingRates() {
       }
       return (a.desi_min || 0) - (b.desi_min || 0);
     });
-  }, [shippingRates, search, platformFilter, typeFilter, userRole, userEmail, companyFilter, sourceFilter]);
+  }, [shippingRates, search, platformFilter, typeFilter, userRole, userEmail, companyFilter, sourceFilter, sameDayFilter, statusFilter, sortFilter]);
 
   const paginatedRates = filteredRates.slice((page - 1) * pageSize, page * pageSize);
 
@@ -409,8 +424,8 @@ export default function ShippingRates() {
         )}
 
         <div className="rounded-[18px] border border-border bg-card p-5 mb-6">
-          <div className="flex flex-col sm:flex-row gap-4">
-            <SearchInput value={search} onChange={setSearch} placeholder="Platform, firma veya desi ara (örn: 4, 4 desi)..." className="flex-1" />
+          <div className="flex flex-col sm:flex-row sm:flex-wrap gap-4">
+            <SearchInput value={search} onChange={setSearch} placeholder="Platform, firma veya desi ara (örn: 4, 4 desi)..." className="flex-1 sm:min-w-[240px]" />
             <FiltreEtiketi ad="Platform">
               <Select value={platformFilter} onValueChange={setPlatformFilter}>
                 <SelectTrigger className="w-full sm:w-48"><SelectValue placeholder="Platform" /></SelectTrigger>
@@ -450,6 +465,37 @@ export default function ShippingRates() {
                 <SelectContent>
                   <SelectItem value="all">Tüm Tarifeler</SelectItem>
                   <SelectItem value="manual">📋 Manuel Anlaşmalı Fiyatlar</SelectItem>
+                  <SelectItem value="system">⚙️ Sistem Tarifeleri</SelectItem>
+                </SelectContent>
+              </Select>
+            </FiltreEtiketi>
+            <FiltreEtiketi ad="Bugün Kargoda">
+              <Select value={sameDayFilter} onValueChange={setSameDayFilter}>
+                <SelectTrigger className="w-full sm:w-40"><SelectValue placeholder="Bugün Kargoda" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tümü</SelectItem>
+                  <SelectItem value="yes">Evet</SelectItem>
+                  <SelectItem value="no">Hayır</SelectItem>
+                </SelectContent>
+              </Select>
+            </FiltreEtiketi>
+            <FiltreEtiketi ad="Durum">
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-full sm:w-36"><SelectValue placeholder="Durum" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tümü</SelectItem>
+                  <SelectItem value="active">Aktif</SelectItem>
+                  <SelectItem value="passive">Pasif</SelectItem>
+                </SelectContent>
+              </Select>
+            </FiltreEtiketi>
+            <FiltreEtiketi ad="Sırala">
+              <Select value={sortFilter} onValueChange={setSortFilter}>
+                <SelectTrigger className="w-full sm:w-52"><SelectValue placeholder="Sırala" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="default">Varsayılan</SelectItem>
+                  <SelectItem value="desi_asc">Desi: küçük → büyük</SelectItem>
+                  <SelectItem value="price_desc">Ücret: yüksek → düşük</SelectItem>
                 </SelectContent>
               </Select>
             </FiltreEtiketi>
