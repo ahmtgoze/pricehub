@@ -167,6 +167,9 @@ export default function UpdateReports() {
       shipping_update: { label: 'Kargo', color: 'bg-secondary text-muted-foreground' },
       commission_update: { label: 'Komisyon', color: 'bg-amber-100 text-amber-700' },
       platform_update: { label: 'Platform', color: 'bg-secondary text-muted-foreground' },
+      // Urun zinciri tutarsizligi: motor bu tiple kayit yaziyordu ama listede
+      // tanimli olmadigi icin "Manuel" gorunuyordu.
+      chain_inconsistency: { label: 'Zincir Tutarsızlığı', color: 'bg-destructive/10 text-destructive' },
       manual: { label: 'Manuel', color: 'bg-secondary text-muted-foreground' }
     };
     const config = types[type] || types.manual;
@@ -343,6 +346,7 @@ export default function UpdateReports() {
                 <SelectItem value="shipping_update">Kargo</SelectItem>
                 <SelectItem value="commission_update">Komisyon</SelectItem>
                 <SelectItem value="platform_update">Platform</SelectItem>
+                <SelectItem value="chain_inconsistency">Zincir Tutarsızlığı</SelectItem>
                 <SelectItem value="manual">Manuel</SelectItem>
               </SelectContent>
             </Select>
