@@ -14,7 +14,8 @@ export default function SearchInput({
     // girdinin degil uzayan kutunun ortasina hizalandigi icin asagida
     // kaliyordu. self-end: yanindaki etiketli filtrelerde secim kutusu
     // altta oldugu icin arama kutusu onlarla ayni hizaya oturuyor.
-    <div className={`relative h-[38px] self-end ${className}`}>
+    // sm: ile sinirli — mobilde sutun duzeninde saga yaslanmasin.
+    <div className={`relative h-[38px] sm:self-end ${className}`}>
       <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/70" />
       <Input
         value={value}
