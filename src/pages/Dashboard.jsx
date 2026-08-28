@@ -1,3 +1,4 @@
+import WidgetIzgarasi from '@/components/dashboard/WidgetIzgarasi';
 import React, { useMemo, useState, useEffect } from 'react';
 import { db } from '@/api/db';
 import { useQuery } from '@tanstack/react-query';
@@ -219,6 +220,220 @@ if (filteredByRange) {
   const platformTextColors = { trendyol: 'text-orange-700', hepsiburada: 'text-purple-700', website: 'text-foreground' };
   const platformBadgeColors = { trendyol: 'bg-orange-100 text-orange-800', hepsiburada: 'bg-purple-100 text-purple-800', website: 'bg-secondary text-muted-foreground' };
 
+  // Dashboard kutulari. WidgetIzgarasi bunlari tasinabilir ve
+  // boyutlandirilabilir hale getiriyor; icerik/hesap mantigi degismedi.
+  const widgetTanimlari = [
+    {
+      id: 'ozet',
+      baslik: 'Özet Kutuları',
+      varsayilanSpan: 3,
+      sabit: true,
+      icerik: (
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                <StatCard icon={Package} label="Aktif Ürün" value={activeProducts.length} color="blue" />
+                <StatCard icon={Store} label="Platform" value={activePlatforms.length} color="purple" />
+                <StatCard icon={Tag} label="Hesaplanan Fiyat" value={productPrices.length} color="green" />
+                <StatCard icon={AlertCircle} label="Fiyatlanmamış" value={unpricedProducts.length} color={unpricedProducts.length > 0 ? 'red' : 'green'} onClick={() => navigate('/Prices?filter=unpriced')} />
+              </div>
+      ),
+    },
+    {
+      id: 'kar-ozeti',
+      baslik: 'Kâr Özeti',
+      varsayilanSpan: 1,
+      icerik: (
+      <div className="ph-card flex flex-col gap-4">
+                <h2 className="text-[15px] font-semibold tracking-[-0.2px]">Kâr Özeti</h2>
+                <div className="flex flex-col gap-3">
+                    <div className="flex justify-between items-center text-[13.5px]">
+                      <span className="text-muted-foreground">Ort. Kâr Oranı</span>
+                      <span className={`font-semibold tabular-nums ${profitColor(overallAvgProfit)}`}>{formatTurkishPercent(overallAvgProfit)}</span>
+                    </div>
+                    <div className="flex justify-between items-center text-[13.5px]">
+                      <span className="text-muted-foreground">Toplam Fiyatlı Kayıt</span>
+                      <span className="font-semibold tabular-nums">{productPrices.length}</span>
+                    </div>
+                    <div className="flex justify-between items-center text-[13.5px]">
+                      <span className="text-muted-foreground">Negatif Kârlı</span>
+                      <span className={`font-semibold tabular-nums ${negativeProfitTotal > 0 ? 'text-destructive' : 'text-foreground'}`}>
+                        {negativeProfitTotal}
+                        {negativeProfitTotal > 0 && <AlertCircle className="inline ml-1 h-3.5 w-3.5" />}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center text-[13.5px]">
+                      <span className="text-muted-foreground">Kategoriler</span>
+                      <span className="font-semibold tabular-nums">{categories.length}</span>
+                    </div>
+                    <div className="flex justify-between items-center text-[13.5px]">
+                      <span className="text-muted-foreground">Komisyon Kuralı</span>
+                      <span className="font-semibold tabular-nums">{commissions.filter(c => c.is_active !== false).length}</span>
+                    </div>
+                  </div>
+                </div>
+      ),
+    },
+    {
+      id: 'kar-dagilimi',
+      baslik: 'Kâr Oranı Dağılımı',
+      varsayilanSpan: 2,
+      icerik: (
+      <div className="ph-card">
+                  <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-[15px] font-semibold tracking-[-0.2px]">Kâr Oranı Dağılımı</h2>
+                    <Button variant="outline" size="sm" onClick={() => setShowCustomFilter(!showCustomFilter)} className="text-xs">
+                      {filteredByRange ? '✓ Filtre Aktif' : 'Özel Aralık Seç'}
+                    </Button>
+                  </div>
+                  {showCustomFilter && (
+                    <div className="mb-4 p-[14px] bg-secondary rounded-xl flex gap-2 items-end">
+                      <div className="flex-1 min-w-0">
+                        <Label className="text-[11.5px] text-muted-foreground mb-[5px] block">Min %</Label>
+                        <Input type="number" value={customMinProfit} onChange={(e) => setCustomMinProfit(e.target.value)} placeholder="0" className="text-sm" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <Label className="text-[11.5px] text-muted-foreground mb-[5px] block">Max %</Label>
+                        <Input type="number" value={customMaxProfit} onChange={(e) => setCustomMaxProfit(e.target.value)} placeholder="100" className="text-sm" />
+                      </div>
+                      <Button size="sm" onClick={() => { if (customMinProfit !== '' || customMaxProfit !== '') setFilteredByRange(true); }} className="text-xs shrink-0">Filtrele</Button>
+                      <Button variant="outline" size="sm" onClick={() => { setCustomMinProfit(''); setCustomMaxProfit(''); setFilteredByRange(false); }} className="text-xs shrink-0">Sıfırla</Button>
+                    </div>
+                  )}
+                  {productPrices.length === 0 ? (
+                    <div className="flex items-center justify-center h-32 text-muted-foreground text-[13.5px]">Henüz fiyat hesaplanmamış</div>
+                  ) : (
+                    <ResponsiveContainer width="100%" height={160}>
+                      <BarChart data={profitDistribution} barSize={36} style={{ cursor: 'pointer' }} onClick={handleBarClick}>
+                        <XAxis dataKey="name" tick={{ fontSize: 10, fill: '#86868b' }} axisLine={false} tickLine={false} />
+                        <YAxis tick={{ fontSize: 10, fill: '#a1a1a6' }} axisLine={false} tickLine={false} allowDecimals={false} />
+                        <Tooltip contentStyle={{ borderRadius: 12, border: '1px solid #ececee', fontSize: 12 }} formatter={(v) => [`${v} fiyat`, 'Adet']} />
+                        <Bar dataKey="value" radius={[6, 6, 0, 0]}>
+                          {profitDistribution.map((entry) => (<Cell key={entry.name} fill={barColor(entry)} />))}
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                  )}
+                  <p className="text-xs text-muted-foreground mt-2 text-center">Bir sütuna tıklayarak o kâr aralığındaki ürünleri görün</p>
+              </div>
+      ),
+    },
+    {
+      id: 'platform-ozeti',
+      baslik: 'Platform Bazlı Kâr Özeti',
+      varsayilanSpan: 3,
+      icerik: (
+      <div className="ph-card">
+                <h2 className="text-[15px] font-semibold tracking-[-0.2px] mb-4">Platform Bazlı Kâr Özeti</h2>
+                {platformSummary.length === 0 ? (
+                  <p className="ph-empty">Platform bulunamadı</p>
+                ) : (
+                  <div className="hidden sm:block overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="text-left border-b border-border">
+                          <th className="ph-th pb-[13px] pr-4">Platform</th>
+                          <th className="ph-th pb-[13px] pr-4 text-center">Fiyat Sayısı</th>
+                          <th className="ph-th pb-[13px] pr-4 text-center">Ort. Kâr</th>
+                          <th className="ph-th pb-[13px] pr-4 text-center">Min</th>
+                          <th className="ph-th pb-[13px] pr-4 text-center">Maks</th>
+                          <th className="ph-th pb-[13px] text-center">Negatif</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {platformSummary.map(({ platform, prices, avgProfit, minProfit, maxProfit, negativeProfitCount }) => (
+                          <tr key={platform.id} className="border-b border-[#f2f2f4] last:border-0 hover:bg-secondary/60 transition-colors">
+                            <td className="py-[11px] pr-4 font-medium">{platform.name}</td>
+                            <td className="py-[11px] pr-4 text-center text-muted-foreground tabular-nums">{prices}</td>
+                            <td className={`py-[11px] pr-4 text-center font-semibold tabular-nums ${profitColor(avgProfit)}`}>{avgProfit !== null ? formatTurkishPercent(avgProfit) : '—'}</td>
+                            <td className={`py-[11px] pr-4 text-center text-xs tabular-nums ${profitColor(minProfit)}`}>{minProfit !== null ? formatTurkishPercent(minProfit) : '—'}</td>
+                            <td className={`py-[11px] pr-4 text-center text-xs tabular-nums ${profitColor(maxProfit)}`}>{maxProfit !== null ? formatTurkishPercent(maxProfit) : '—'}</td>
+                            <td className="py-[11px] text-center">
+                              {negativeProfitCount > 0 ? <Badge variant="destructive" className="text-xs">{negativeProfitCount}</Badge> : <CheckCircle2 className="h-4 w-4 text-muted-foreground/50 mx-auto" />}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+      ),
+    },
+    {
+      id: 'tarihe-gore',
+      baslik: 'Tarihe Göre Eklenen Ürünler',
+      varsayilanSpan: 1,
+      icerik: (
+      <div className="ph-card">
+                  <h2 className="text-[15px] font-semibold tracking-[-0.2px] mb-4">Tarihe Göre Eklenen Ürünler</h2>
+                  <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-end w-full">
+                    <div className="flex-1 min-w-0">
+                      <Label className="text-[11.5px] text-muted-foreground mb-[5px] block">Başlangıç</Label>
+                      <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="w-full" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <Label className="text-[11.5px] text-muted-foreground mb-[5px] block">Bitiş</Label>
+                      <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="w-full" />
+                    </div>
+                    <Button onClick={handleShowProducts} disabled={!startDate || !endDate} className="w-full sm:w-auto shrink-0">Listele</Button>
+                  </div>
+                  {showProductsList && (
+                    <div className="mt-4">
+                      <p className="text-[13.5px] font-semibold mb-3">{newProductsList.length} ürün bulundu</p>
+                      <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
+                        {newProductsList.length > 0 ? newProductsList.map(product => (
+                          <div key={product.id} className="flex items-center justify-between px-[13px] py-2.5 bg-secondary rounded-xl hover:bg-accent transition-colors">
+                            <div className="min-w-0 flex-1">
+                              <p className="font-medium text-[13.5px] truncate">{product.name}</p>
+                              {product.sku && <p className="text-xs text-muted-foreground font-mono-numeric truncate">{product.sku}</p>}
+                            </div>
+                            <span className="text-xs text-muted-foreground shrink-0 ml-3 whitespace-nowrap tabular-nums">{new Date(product.created_date).toLocaleDateString('tr-TR')}</span>
+                          </div>
+                        )) : <p className="ph-empty">Bu tarihte eklenen ürün yok</p>}
+                      </div>
+                    </div>
+                  )}
+                </div>
+      ),
+    },
+    {
+      id: 'listelenmeyen',
+      baslik: 'Platformda Listelenmeyen Ürünler',
+      varsayilanSpan: 1,
+      icerik: (
+      <div className="ph-card">
+                  <h2 className="text-[15px] font-semibold tracking-[-0.2px] mb-4">Platformda Listelenmeyen Ürünler</h2>
+                  <div className="space-y-3">
+                    {unlistedByPlatform.map(({ platformType, name, listedCount, unlistedCount, unlistedProducts }) => (
+                      <div key={platformType} className={`rounded-xl border overflow-hidden ${platformColors[platformType]}`}>
+                        <button onClick={() => setExpandedPlatform(expandedPlatform === platformType ? null : platformType)} className="w-full flex items-center justify-between px-4 py-3">
+                          <div className="flex items-center gap-3">
+                            <span className={`font-semibold text-sm ${platformTextColors[platformType]}`}>{name}</span>
+                            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${platformBadgeColors[platformType]}`}>{listedCount} listelendi</span>
+                            {unlistedCount > 0 && <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-red-100 text-red-700">{unlistedCount} listelenmemiş</span>}
+                            {unlistedCount === 0 && <CheckCircle2 className="h-4 w-4 text-muted-foreground/60" />}
+                          </div>
+                          {unlistedCount > 0 && (expandedPlatform === platformType ? <ChevronUp className="h-4 w-4 text-muted-foreground shrink-0" /> : <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />)}
+                        </button>
+                        {expandedPlatform === platformType && unlistedCount > 0 && (
+                          <div className="px-4 pb-3 border-t border-white/50">
+                            <div className="space-y-1.5 max-h-56 overflow-y-auto mt-2 pr-1">
+                              {unlistedProducts.map(p => (
+                                <div key={p.id} className="flex items-center justify-between bg-card rounded-[10px] px-3 py-2 text-xs">
+                                  <span className="font-medium truncate">{p.name}</span>
+                                  {p.sku && <span className="text-muted-foreground font-mono-numeric ml-2 shrink-0">{p.sku}</span>}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+      ),
+    },
+  ];
+
   return (
     <div className="ph-page mx-auto">
       <div>
@@ -226,181 +441,7 @@ if (filteredByRange) {
         <p className="ph-subtitle">Ürün, platform ve kâr özeti</p>
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatCard icon={Package} label="Aktif Ürün" value={activeProducts.length} color="blue" />
-          <StatCard icon={Store} label="Platform" value={activePlatforms.length} color="purple" />
-          <StatCard icon={Tag} label="Hesaplanan Fiyat" value={productPrices.length} color="green" />
-          <StatCard icon={AlertCircle} label="Fiyatlanmamış" value={unpricedProducts.length} color={unpricedProducts.length > 0 ? 'red' : 'green'} onClick={() => navigate('/Prices?filter=unpriced')} />
-        </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <div className="ph-card flex flex-col gap-4">
-          <h2 className="text-[15px] font-semibold tracking-[-0.2px]">Kâr Özeti</h2>
-          <div className="flex flex-col gap-3">
-              <div className="flex justify-between items-center text-[13.5px]">
-                <span className="text-muted-foreground">Ort. Kâr Oranı</span>
-                <span className={`font-semibold tabular-nums ${profitColor(overallAvgProfit)}`}>{formatTurkishPercent(overallAvgProfit)}</span>
-              </div>
-              <div className="flex justify-between items-center text-[13.5px]">
-                <span className="text-muted-foreground">Toplam Fiyatlı Kayıt</span>
-                <span className="font-semibold tabular-nums">{productPrices.length}</span>
-              </div>
-              <div className="flex justify-between items-center text-[13.5px]">
-                <span className="text-muted-foreground">Negatif Kârlı</span>
-                <span className={`font-semibold tabular-nums ${negativeProfitTotal > 0 ? 'text-destructive' : 'text-foreground'}`}>
-                  {negativeProfitTotal}
-                  {negativeProfitTotal > 0 && <AlertCircle className="inline ml-1 h-3.5 w-3.5" />}
-                </span>
-              </div>
-              <div className="flex justify-between items-center text-[13.5px]">
-                <span className="text-muted-foreground">Kategoriler</span>
-                <span className="font-semibold tabular-nums">{categories.length}</span>
-              </div>
-              <div className="flex justify-between items-center text-[13.5px]">
-                <span className="text-muted-foreground">Komisyon Kuralı</span>
-                <span className="font-semibold tabular-nums">{commissions.filter(c => c.is_active !== false).length}</span>
-              </div>
-            </div>
-          </div>
-
-        <div className="ph-card lg:col-span-2">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-[15px] font-semibold tracking-[-0.2px]">Kâr Oranı Dağılımı</h2>
-              <Button variant="outline" size="sm" onClick={() => setShowCustomFilter(!showCustomFilter)} className="text-xs">
-                {filteredByRange ? '✓ Filtre Aktif' : 'Özel Aralık Seç'}
-              </Button>
-            </div>
-            {showCustomFilter && (
-              <div className="mb-4 p-[14px] bg-secondary rounded-xl flex gap-2 items-end">
-                <div className="flex-1 min-w-0">
-                  <Label className="text-[11.5px] text-muted-foreground mb-[5px] block">Min %</Label>
-                  <Input type="number" value={customMinProfit} onChange={(e) => setCustomMinProfit(e.target.value)} placeholder="0" className="text-sm" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <Label className="text-[11.5px] text-muted-foreground mb-[5px] block">Max %</Label>
-                  <Input type="number" value={customMaxProfit} onChange={(e) => setCustomMaxProfit(e.target.value)} placeholder="100" className="text-sm" />
-                </div>
-                <Button size="sm" onClick={() => { if (customMinProfit !== '' || customMaxProfit !== '') setFilteredByRange(true); }} className="text-xs shrink-0">Filtrele</Button>
-                <Button variant="outline" size="sm" onClick={() => { setCustomMinProfit(''); setCustomMaxProfit(''); setFilteredByRange(false); }} className="text-xs shrink-0">Sıfırla</Button>
-              </div>
-            )}
-            {productPrices.length === 0 ? (
-              <div className="flex items-center justify-center h-32 text-muted-foreground text-[13.5px]">Henüz fiyat hesaplanmamış</div>
-            ) : (
-              <ResponsiveContainer width="100%" height={160}>
-                <BarChart data={profitDistribution} barSize={36} style={{ cursor: 'pointer' }} onClick={handleBarClick}>
-                  <XAxis dataKey="name" tick={{ fontSize: 10, fill: '#86868b' }} axisLine={false} tickLine={false} />
-                  <YAxis tick={{ fontSize: 10, fill: '#a1a1a6' }} axisLine={false} tickLine={false} allowDecimals={false} />
-                  <Tooltip contentStyle={{ borderRadius: 12, border: '1px solid #ececee', fontSize: 12 }} formatter={(v) => [`${v} fiyat`, 'Adet']} />
-                  <Bar dataKey="value" radius={[6, 6, 0, 0]}>
-                    {profitDistribution.map((entry) => (<Cell key={entry.name} fill={barColor(entry)} />))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            )}
-            <p className="text-xs text-muted-foreground mt-2 text-center">Bir sütuna tıklayarak o kâr aralığındaki ürünleri görün</p>
-        </div>
-      </div>
-
-      <div className="ph-card">
-          <h2 className="text-[15px] font-semibold tracking-[-0.2px] mb-4">Platform Bazlı Kâr Özeti</h2>
-          {platformSummary.length === 0 ? (
-            <p className="ph-empty">Platform bulunamadı</p>
-          ) : (
-            <div className="hidden sm:block overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="text-left border-b border-border">
-                    <th className="ph-th pb-[13px] pr-4">Platform</th>
-                    <th className="ph-th pb-[13px] pr-4 text-center">Fiyat Sayısı</th>
-                    <th className="ph-th pb-[13px] pr-4 text-center">Ort. Kâr</th>
-                    <th className="ph-th pb-[13px] pr-4 text-center">Min</th>
-                    <th className="ph-th pb-[13px] pr-4 text-center">Maks</th>
-                    <th className="ph-th pb-[13px] text-center">Negatif</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {platformSummary.map(({ platform, prices, avgProfit, minProfit, maxProfit, negativeProfitCount }) => (
-                    <tr key={platform.id} className="border-b border-[#f2f2f4] last:border-0 hover:bg-secondary/60 transition-colors">
-                      <td className="py-[11px] pr-4 font-medium">{platform.name}</td>
-                      <td className="py-[11px] pr-4 text-center text-muted-foreground tabular-nums">{prices}</td>
-                      <td className={`py-[11px] pr-4 text-center font-semibold tabular-nums ${profitColor(avgProfit)}`}>{avgProfit !== null ? formatTurkishPercent(avgProfit) : '—'}</td>
-                      <td className={`py-[11px] pr-4 text-center text-xs tabular-nums ${profitColor(minProfit)}`}>{minProfit !== null ? formatTurkishPercent(minProfit) : '—'}</td>
-                      <td className={`py-[11px] pr-4 text-center text-xs tabular-nums ${profitColor(maxProfit)}`}>{maxProfit !== null ? formatTurkishPercent(maxProfit) : '—'}</td>
-                      <td className="py-[11px] text-center">
-                        {negativeProfitCount > 0 ? <Badge variant="destructive" className="text-xs">{negativeProfitCount}</Badge> : <CheckCircle2 className="h-4 w-4 text-muted-foreground/50 mx-auto" />}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <div className="ph-card">
-            <h2 className="text-[15px] font-semibold tracking-[-0.2px] mb-4">Tarihe Göre Eklenen Ürünler</h2>
-            <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-end w-full">
-              <div className="flex-1 min-w-0">
-                <Label className="text-[11.5px] text-muted-foreground mb-[5px] block">Başlangıç</Label>
-                <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="w-full" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <Label className="text-[11.5px] text-muted-foreground mb-[5px] block">Bitiş</Label>
-                <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="w-full" />
-              </div>
-              <Button onClick={handleShowProducts} disabled={!startDate || !endDate} className="w-full sm:w-auto shrink-0">Listele</Button>
-            </div>
-            {showProductsList && (
-              <div className="mt-4">
-                <p className="text-[13.5px] font-semibold mb-3">{newProductsList.length} ürün bulundu</p>
-                <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
-                  {newProductsList.length > 0 ? newProductsList.map(product => (
-                    <div key={product.id} className="flex items-center justify-between px-[13px] py-2.5 bg-secondary rounded-xl hover:bg-accent transition-colors">
-                      <div className="min-w-0 flex-1">
-                        <p className="font-medium text-[13.5px] truncate">{product.name}</p>
-                        {product.sku && <p className="text-xs text-muted-foreground font-mono-numeric truncate">{product.sku}</p>}
-                      </div>
-                      <span className="text-xs text-muted-foreground shrink-0 ml-3 whitespace-nowrap tabular-nums">{new Date(product.created_date).toLocaleDateString('tr-TR')}</span>
-                    </div>
-                  )) : <p className="ph-empty">Bu tarihte eklenen ürün yok</p>}
-                </div>
-              </div>
-            )}
-          </div>
-
-          <div className="ph-card">
-            <h2 className="text-[15px] font-semibold tracking-[-0.2px] mb-4">Platformda Listelenmeyen Ürünler</h2>
-            <div className="space-y-3">
-              {unlistedByPlatform.map(({ platformType, name, listedCount, unlistedCount, unlistedProducts }) => (
-                <div key={platformType} className={`rounded-xl border overflow-hidden ${platformColors[platformType]}`}>
-                  <button onClick={() => setExpandedPlatform(expandedPlatform === platformType ? null : platformType)} className="w-full flex items-center justify-between px-4 py-3">
-                    <div className="flex items-center gap-3">
-                      <span className={`font-semibold text-sm ${platformTextColors[platformType]}`}>{name}</span>
-                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${platformBadgeColors[platformType]}`}>{listedCount} listelendi</span>
-                      {unlistedCount > 0 && <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-red-100 text-red-700">{unlistedCount} listelenmemiş</span>}
-                      {unlistedCount === 0 && <CheckCircle2 className="h-4 w-4 text-muted-foreground/60" />}
-                    </div>
-                    {unlistedCount > 0 && (expandedPlatform === platformType ? <ChevronUp className="h-4 w-4 text-muted-foreground shrink-0" /> : <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />)}
-                  </button>
-                  {expandedPlatform === platformType && unlistedCount > 0 && (
-                    <div className="px-4 pb-3 border-t border-white/50">
-                      <div className="space-y-1.5 max-h-56 overflow-y-auto mt-2 pr-1">
-                        {unlistedProducts.map(p => (
-                          <div key={p.id} className="flex items-center justify-between bg-card rounded-[10px] px-3 py-2 text-xs">
-                            <span className="font-medium truncate">{p.name}</span>
-                            {p.sku && <span className="text-muted-foreground font-mono-numeric ml-2 shrink-0">{p.sku}</span>}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-      </div>
+            <WidgetIzgarasi pageKey="dashboard" tanimlar={widgetTanimlari} />
     </div>
   );
 }
