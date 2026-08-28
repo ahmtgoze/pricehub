@@ -246,6 +246,9 @@ export default function UpdatedCosts() {
     { id: 'desi', header: 'Desi', accessor: 'desi' },
     { id: 'extra_cost_pct', header: 'Ekstra Maliyet (%)', cell: () => '' },
     { id: 'extra_cost', header: 'Ekstra Maliyet (TL)', cell: (row) => (row.extra_cost > 0 ? row.extra_cost.toFixed(2) : '') },
+    // ── Eklenebilir sutunlar: varsayilanda gizli, panelden acilir ──
+    { id: 'brand', header: 'Marka', optional: true, cell: (row) => row.brand || '-' },
+    { id: 'printing_cost', header: 'Baskı Maliyeti', optional: true, cell: (row) => row.printing_cost > 0 ? `₺${Number(row.printing_cost).toFixed(2)}` : '-' },
   ];
 
   return (

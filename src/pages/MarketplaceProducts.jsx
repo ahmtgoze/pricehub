@@ -282,6 +282,12 @@ export default function MarketplaceProducts() {
         </span>
       ),
     },
+    // ── Eklenebilir sutunlar: varsayilanda gizli, panelden acilir ──
+    { id: 'brand', header: 'Marka', optional: true, cell: (row) => row.brand || '-' },
+    { id: 'category', header: 'Kategori', optional: true, cell: (row) => row.category || '-' },
+    { id: 'marketplace_sale_price', header: 'Pazaryeri Fiyatı', optional: true, cell: (row) => row.marketplace_sale_price != null ? `₺${Number(row.marketplace_sale_price).toFixed(2)}` : '-' },
+    { id: 'stock_quantity', header: 'Stok', optional: true, cell: (row) => row.stock_quantity ?? '-' },
+    { id: 'variant_sku', header: 'Varyant SKU', optional: true, cell: (row) => row.variant_sku || '-' },
   ];
 
   return (

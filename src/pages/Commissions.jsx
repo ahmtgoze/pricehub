@@ -467,7 +467,12 @@ export default function Commissions() {
           </Button>
         </div>
       )
-    }
+    },
+    // ── Eklenebilir sutunlar: varsayilanda gizli, panelden acilir ──
+    { id: 'minimum_profit_amount', header: 'Minimum Kâr', optional: true, cell: (row) => row.minimum_profit_amount != null ? `₺${Number(row.minimum_profit_amount).toFixed(2)}` : '-' },
+    { id: 'target_profit_amount', header: 'Hedef Kâr Tutarı', optional: true, cell: (row) => row.target_profit_amount != null ? `₺${Number(row.target_profit_amount).toFixed(2)}` : '-' },
+    { id: 'discounted_target_profit_rate', header: 'İndirimli Hedef Kâr %', optional: true, cell: (row) => row.discounted_target_profit_rate != null ? `%${row.discounted_target_profit_rate}` : '-' },
+    { id: 'transaction_fee', header: 'İşlem Ücreti', optional: true, cell: (row) => row.transaction_fee != null ? `₺${Number(row.transaction_fee).toFixed(2)}` : '-' },
   ];
 
   const exportColumns = [

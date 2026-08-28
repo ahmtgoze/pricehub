@@ -160,7 +160,10 @@ export default function PackageManagement() {
           </Button>
         </div>
       )
-    }
+    },
+    // ── Eklenebilir sutunlar: varsayilanda gizli, panelden acilir ──
+    { id: 'description', header: 'Açıklama', optional: true, cell: (row) => row.description || '-' },
+    { id: 'created_at', header: 'Eklenme Tarihi', optional: true, cell: (row) => row.created_at ? new Date(row.created_at).toLocaleDateString('tr-TR') : '-' },
   ];
 
   return (

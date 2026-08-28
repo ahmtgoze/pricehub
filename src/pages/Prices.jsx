@@ -642,6 +642,11 @@ export default function Prices() {
         );
       },
     })),
+    // ── Eklenebilir sutunlar: varsayilanda gizli, panelden acilir ──
+    { id: 'barcode', header: 'Barkod', optional: true, cell: (p) => p.barcode || '-' },
+    { id: 'vat_rate', header: 'KDV Oranı', optional: true, cell: (p) => p.vat_rate != null ? `%${p.vat_rate}` : '-' },
+    { id: 'same_day_delivery', header: 'Bugün Kargoda', optional: true, cell: (p) => p.same_day_delivery ? 'Evet' : 'Hayır' },
+    { id: 'notes', header: 'Notlar', optional: true, cell: (p) => p.notes || '-' },
   ];
 
   const satirKolonlari = [

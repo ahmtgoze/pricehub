@@ -333,6 +333,9 @@ export default function UpdatedPrices() {
             ...ortakFiyatKolonlari,
             { id: 'stock_quantity', header: 'Stok', cell: (row) => row.stock_quantity || 0 },
           ]),
+    // ── Eklenebilir sutunlar: varsayilanda gizli, panelden acilir ──
+    { id: 'product_sku', header: 'Sistem Ürünü SKU', optional: true, cell: (row) => row.product_sku || '-' },
+    { id: 'barkod_ek', header: 'Barkod', optional: true, cell: (row) => row.barkod || '-' },
   ];
 
   return (

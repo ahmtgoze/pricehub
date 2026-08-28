@@ -278,7 +278,11 @@ export default function ShippingRates() {
           </div>
         );
       }
-    }
+    },
+    // ── Eklenebilir sutunlar: varsayilanda gizli, panelden acilir ──
+    { id: 'same_day_delivery', header: 'Bugün Kargoda', optional: true, cell: (row) => row.same_day_delivery ? 'Evet' : 'Hayır' },
+    { id: 'is_manual', header: 'Kaynak', optional: true, cell: (row) => row.is_manual ? 'Manuel' : 'Sistem' },
+    { id: 'created_at', header: 'Eklenme Tarihi', optional: true, cell: (row) => row.created_at ? new Date(row.created_at).toLocaleDateString('tr-TR') : '-' },
   ];
 
   const exportColumns = [
