@@ -38,6 +38,7 @@ export default function HBOwnCampaign() {
   const [commissionDiscount, setCommissionDiscount] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCategory, setFilterCategory] = useState('');
+  const [siraSecimi, setSiraSecimi] = useState('default');
   const [onlyLoss, setOnlyLoss] = useState(false);
   const [detailModal, setDetailModal] = useState({ open: false, product: null, priceData: null, calculationDetails: null });
 
@@ -178,6 +179,25 @@ export default function HBOwnCampaign() {
     return true;
   });
 
+  // Kar degerleri satirda hazir; siralama motor calistirmiyor.
+  const siraliRows = React.useMemo(() => {
+    if (siraSecimi === 'default') return filteredRows;
+    const artan = siraSecimi.endsWith('asc');
+    const kopya = [...filteredRows];
+    kopya.sort((a, b) => {
+      if (siraSecimi.startsWith('name')) {
+        const x = (a.product.name || '').toLocaleLowerCase('tr');
+        const y = (b.product.name || '').toLocaleLowerCase('tr');
+        return artan ? x.localeCompare(y, 'tr') : y.localeCompare(x, 'tr');
+      }
+      const alan = siraSecimi.startsWith('rate') ? 'profitRate' : 'profit';
+      const x = Number(a.campaign?.[alan] ?? 0);
+      const y = Number(b.campaign?.[alan] ?? 0);
+      return artan ? x - y : y - x;
+    });
+    return kopya;
+  }, [filteredRows, siraSecimi]);
+
   const lossCount = rows.filter((r) => r.campaign.profit < 0).length;
 
   const openDetail = (price, commissionRate, product) => {
@@ -252,6 +272,18 @@ export default function HBOwnCampaign() {
                     <SelectTrigger><SelectValue placeholder="Kategori" /></SelectTrigger>
                     <SelectContent><SelectItem value="all">Kategori</SelectItem>{allCategories.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
                   </Select>
+                  <Select value={siraSecimi} onValueChange={setSiraSecimi}>
+                    <SelectTrigger><SelectValue placeholder="Sırala" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="default">Varsayılan</SelectItem>
+                      <SelectItem value="rate_desc">Kâr oranı: yüksek → düşük</SelectItem>
+                      <SelectItem value="rate_asc">Kâr oranı: düşük → yüksek</SelectItem>
+                      <SelectItem value="amount_desc">Kâr tutarı: yüksek → düşük</SelectItem>
+                      <SelectItem value="amount_asc">Kâr tutarı: düşük → yüksek</SelectItem>
+                      <SelectItem value="name_asc">Ürün adı: A → Z</SelectItem>
+                      <SelectItem value="name_desc">Ürün adı: Z → A</SelectItem>
+                    </SelectContent>
+                  </Select>
                   <Button variant={onlyLoss ? 'default' : 'outline'} onClick={() => setOnlyLoss(!onlyLoss)} className="gap-2">
                     Sadece zarar edenler {lossCount > 0 && <Badge variant="outline" className="text-rose-600 border-rose-300">{lossCount}</Badge>}
                   </Button>
@@ -260,7 +292,7 @@ export default function HBOwnCampaign() {
             </Card>
 
             <Card>
-              <CardHeader><CardTitle>Kâr Etkisi ({filteredRows.length} ürün)</CardTitle></CardHeader>
+              <CardHeader><CardTitle>Kâr Etkisi ({siraliRows.length} ürün)</CardTitle></CardHeader>
               <CardContent>
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
@@ -273,7 +305,7 @@ export default function HBOwnCampaign() {
                       </tr>
                     </thead>
                     <tbody>
-                      {filteredRows.map((r, i) => {
+                      {siraliRows.map((r, i) => {
                         const diff = r.campaign.profit - r.current.profit;
                         return (
                           <tr key={i} className={`border-b hover:bg-secondary ${r.campaign.profit < 0 ? 'bg-rose-50/50' : ''}`}>

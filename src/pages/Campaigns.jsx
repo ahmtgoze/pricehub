@@ -67,6 +67,7 @@ export default function Campaigns() {
   const [originalExcelData, setOriginalExcelData] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCategory, setFilterCategory] = useState('');
+  const [siraSecimi, setSiraSecimi] = useState('default');
   const [bulkMinProfitRate, setBulkMinProfitRate] = useState('');
   const [bulkMinProfitAmount, setBulkMinProfitAmount] = useState('');
   // Ust sinir: bos birakilirsa sinir yok. Min-max araligi disindaki urunler secilmez.
@@ -765,7 +766,35 @@ export default function Campaigns() {
     if (filterCategory) { const mp = getMatchedProduct(item); if ((mp?.category_name || item.category) !== filterCategory) return false; }
     return true;
   });
-  const sortedData = filteredData;
+  // Siralama: kar orani fiyat motorunu calistirdigi icin anahtar her
+  // karsilastirmada degil, satir basina BIR KEZ hesaplanip sirasi bulunuyor.
+  const sortedData = React.useMemo(() => {
+    if (siraSecimi === 'default') return filteredData;
+
+    const anahtarli = filteredData.map(item => {
+      let anahtar;
+      if (siraSecimi.startsWith('name')) {
+        anahtar = (item.product_name || '').toLocaleLowerCase('tr');
+      } else if (siraSecimi.startsWith('price')) {
+        anahtar = Number(item.campaign_price || item.max_price || 0);
+      } else {
+        anahtar = Number(calculateProfit(item.campaign_price || item.max_price, item)?.profitRate ?? 0);
+      }
+      return { item, anahtar };
+    });
+
+    const artan = siraSecimi.endsWith('asc');
+    anahtarli.sort((a, b) => {
+      if (typeof a.anahtar === 'string') {
+        return artan ? a.anahtar.localeCompare(b.anahtar, 'tr') : b.anahtar.localeCompare(a.anahtar, 'tr');
+      }
+      return artan ? a.anahtar - b.anahtar : b.anahtar - a.anahtar;
+    });
+    return anahtarli.map(x => x.item);
+    // calculateProfit her renderda yeniden tanimlaniyor; bagimliliga
+    // eklemek sonsuz yeniden hesaba yol acar, veri + secim yeterli.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filteredData, siraSecimi]);
   const allCategories = [...new Set(uploadedData.map(item => getMatchedProduct(item)?.category_name || item.category).filter(Boolean))].sort();
   const selectedCount = uploadedData.filter(i => i.selected_type === 'campaign').length;
 
@@ -813,6 +842,18 @@ export default function Campaigns() {
                   <SelectContent>
                     <SelectItem value="all">Tüm kategoriler</SelectItem>
                     {allCategories.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+                <Select value={siraSecimi} onValueChange={setSiraSecimi}>
+                  <SelectTrigger className="w-56"><SelectValue placeholder="Sırala" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="default">Varsayılan</SelectItem>
+                    <SelectItem value="rate_desc">Kâr oranı: yüksek → düşük</SelectItem>
+                    <SelectItem value="rate_asc">Kâr oranı: düşük → yüksek</SelectItem>
+                    <SelectItem value="price_desc">Kampanya fiyatı: yüksek → düşük</SelectItem>
+                    <SelectItem value="price_asc">Kampanya fiyatı: düşük → yüksek</SelectItem>
+                    <SelectItem value="name_asc">Ürün adı: A → Z</SelectItem>
+                    <SelectItem value="name_desc">Ürün adı: Z → A</SelectItem>
                   </SelectContent>
                 </Select>
                 <Button onClick={handleSmartAutoSelect} className="bg-primary hover:bg-black dark:hover:bg-white/90"><Sparkles className="h-4 w-4 mr-1" />Akıllı Otomatik Seç</Button>
