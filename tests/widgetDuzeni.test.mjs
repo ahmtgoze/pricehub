@@ -24,7 +24,7 @@ console.log('\n1) Tercih yokken sira ve varsayilan boyutlar korunur');
 {
   const r = hesaplaWidgetDuzeni(tanimlar, {});
   esit('sira ozgun', idler(r), ['ozet', 'kar-ozeti', 'kar-dagilimi', 'platform-ozeti', 'tarihe-gore', 'listelenmeyen']);
-  esit('varsayilan span"ler', spanlar(r), [3, 1, 2, 3, 1, 1]);
+  esit('varsayilan span"ler', spanlar(r), [4, 1, 2, 3, 1, 1]);
 }
 
 console.log('\n2) Widget gizlenebilir');
@@ -49,7 +49,7 @@ console.log('\n4) Siralama uygulanir');
     idler(r), ['ozet', 'listelenmeyen', 'kar-ozeti', 'kar-dagilimi', 'platform-ozeti', 'tarihe-gore']);
 }
 
-console.log('\n5) Boyut degistirilebilir ve 1..3 araligina kirpilir');
+console.log('\n5) Boyut degistirilebilir ve 1..4 araligina kirpilir');
 {
   const r = hesaplaWidgetDuzeni(tanimlar, { spans: { 'kar-ozeti': 3, 'kar-dagilimi': 1 } });
   const bul = (id) => r.gorunenWidgetlar.find(w => w.id === id).span;
@@ -59,7 +59,7 @@ console.log('\n5) Boyut degistirilebilir ve 1..3 araligina kirpilir');
 {
   const r = hesaplaWidgetDuzeni(tanimlar, { spans: { 'kar-ozeti': 99, 'tarihe-gore': -5 } });
   const bul = (id) => r.gorunenWidgetlar.find(w => w.id === id).span;
-  esit('99 -> 3', bul('kar-ozeti'), 3);
+  esit('99 -> 4', bul('kar-ozeti'), 4);
   esit('-5 -> 1', bul('tarihe-gore'), 1);
 }
 esit('spanDuzelt bozuk deger -> varsayilan', spanDuzelt('abc', 2), 2);

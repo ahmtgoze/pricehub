@@ -5,14 +5,18 @@
  * node ile test edilebiliyor. React tarafi useWidgetLayout.js'te.
  *
  * prefs sekli:
- *   { order: [id], hidden: [id], spans: { id: 1|2|3 } }
+ *   { order: [id], hidden: [id], spans: { id: 1|2|3|4 } }
  *
  * span = widget'in kac sutun kapladigi (Apple widget mantigi):
- *   1 = dar, 2 = orta, 3 = genis (tam satir)
+ *   1 = dar, 2 = orta, 3 = genis, 4 = tam satir
+ *
+ * Izgara 4 sutun: ust ozet kartlari (Aktif Urun / Platform / Hesaplanan
+ * Fiyat / Fiyatlanmamis) tek satirda dorde sigsin diye. Tasarim
+ * prototipinde de bu dort kart ayri ayri yonetilebilen widget'lar.
  */
 
 export const EN_DAR = 1;
-export const EN_GENIS = 3;
+export const EN_GENIS = 4;
 
 export const BOS_DUZEN = { order: [], hidden: [], spans: {} };
 

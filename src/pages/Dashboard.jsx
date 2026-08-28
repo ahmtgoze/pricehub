@@ -227,18 +227,39 @@ if (filteredByRange) {
   // Dashboard kutulari. WidgetIzgarasi bunlari tasinabilir ve
   // boyutlandirilabilir hale getiriyor; icerik/hesap mantigi degismedi.
   const widgetTanimlari = [
+    // Ust ozet kartlari tek bir sabit blok degil, dort ayri widget:
+    // kullanici her birini tasiyabilir, boyutlandirabilir, gizleyebilir.
+    // Tasarim prototipi de bunlari ayri widget olarak tanimliyor.
     {
-      id: 'ozet',
-      baslik: 'Özet Kutuları',
-      varsayilanSpan: 3,
-      sabit: true,
+      id: 'kpi-urun',
+      baslik: 'Aktif Ürün',
+      varsayilanSpan: 1,
+      icerik: <StatCard icon={Package} label="Aktif Ürün" value={activeProducts.length} color="blue" />,
+    },
+    {
+      id: 'kpi-platform',
+      baslik: 'Platform',
+      varsayilanSpan: 1,
+      icerik: <StatCard icon={Store} label="Platform" value={activePlatforms.length} color="purple" />,
+    },
+    {
+      id: 'kpi-fiyat',
+      baslik: 'Hesaplanan Fiyat',
+      varsayilanSpan: 1,
+      icerik: <StatCard icon={Tag} label="Hesaplanan Fiyat" value={productPrices.length} color="green" />,
+    },
+    {
+      id: 'kpi-fiyatlanmamis',
+      baslik: 'Fiyatlanmamış',
+      varsayilanSpan: 1,
       icerik: (
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                <StatCard icon={Package} label="Aktif Ürün" value={activeProducts.length} color="blue" />
-                <StatCard icon={Store} label="Platform" value={activePlatforms.length} color="purple" />
-                <StatCard icon={Tag} label="Hesaplanan Fiyat" value={productPrices.length} color="green" />
-                <StatCard icon={AlertCircle} label="Fiyatlanmamış" value={unpricedProducts.length} color={unpricedProducts.length > 0 ? 'red' : 'green'} onClick={() => navigate('/Prices?filter=unpriced')} />
-              </div>
+        <StatCard
+          icon={AlertCircle}
+          label="Fiyatlanmamış"
+          value={unpricedProducts.length}
+          color={unpricedProducts.length > 0 ? 'red' : 'green'}
+          onClick={() => navigate('/Prices?filter=unpriced')}
+        />
       ),
     },
     {
@@ -323,7 +344,7 @@ if (filteredByRange) {
     {
       id: 'platform-ozeti',
       baslik: 'Platform Bazlı Kâr Özeti',
-      varsayilanSpan: 3,
+      varsayilanSpan: 4,
       icerik: (
       <div className="ph-card">
                 <h2 className="text-[15px] font-semibold tracking-[-0.2px] mb-4">Platform Bazlı Kâr Özeti</h2>

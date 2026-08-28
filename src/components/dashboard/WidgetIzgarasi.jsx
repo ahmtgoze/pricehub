@@ -8,8 +8,8 @@ import { useWidgetLayout } from '@/lib/useWidgetLayout';
 /**
  * WidgetIzgarasi — Dashboard kutularini tasinabilir ve boyutlandirilabilir yapar.
  *
- * Kutular 3 sutunluk bir izgaraya oturur. Her kutunun boyutu (Apple widget
- * mantigi): dar = 1 sutun, orta = 2, geniş = 3 (tam satir).
+ * Kutular 4 sutunluk bir izgaraya oturur. Her kutunun boyutu (Apple widget
+ * mantigi): dar = 1 sutun, orta = 2, geniş = 3, tam = 4 (tam satir).
  * Duzen kullaniciya ozel saklanir; "Sıfırla" ilk hale dondurur.
  * Mobilde tek sutun — boyutlar yok sayilir.
  *
@@ -20,12 +20,14 @@ const BOYUTLAR = [
   { span: 1, ad: 'Dar' },
   { span: 2, ad: 'Orta' },
   { span: 3, ad: 'Geniş' },
+  { span: 4, ad: 'Tam' },
 ];
 
 const SPAN_SINIFI = {
   1: 'lg:col-span-1',
   2: 'lg:col-span-2',
   3: 'lg:col-span-3',
+  4: 'lg:col-span-4',
 };
 
 export default function WidgetIzgarasi({ pageKey, tanimlar }) {
@@ -168,7 +170,7 @@ export default function WidgetIzgarasi({ pageKey, tanimlar }) {
             <div
               ref={alan.innerRef}
               {...alan.droppableProps}
-              className="grid grid-cols-1 lg:grid-cols-3 gap-4"
+              className="grid grid-cols-2 lg:grid-cols-4 gap-4"
             >
               {tasinabilir.map((w, i) => (
                 <Draggable key={w.id} draggableId={w.id} index={i} isDragDisabled={!duzenModu}>
