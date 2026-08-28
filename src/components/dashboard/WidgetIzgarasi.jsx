@@ -56,7 +56,7 @@ export default function WidgetIzgarasi({ pageKey, tanimlar }) {
   };
 
   const kutuIcerik = (w, tutamak) => (
-    <div className="relative h-full">
+    <div className="relative h-full flex flex-col [&>*]:flex-1">
       {duzenModu && (
         <div className="absolute -top-2 right-2 z-10 flex items-center gap-1 rounded-full border border-border bg-card px-1.5 py-1 shadow-sm">
           <span {...(tutamak || {})} className="cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground" title="Sürükleyerek taşı">
@@ -163,7 +163,7 @@ export default function WidgetIzgarasi({ pageKey, tanimlar }) {
             <div
               ref={alan.innerRef}
               {...alan.droppableProps}
-              className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-start"
+              className="grid grid-cols-1 lg:grid-cols-3 gap-4"
             >
               {tasinabilir.map((w, i) => (
                 <Draggable key={w.id} draggableId={w.id} index={i} isDragDisabled={!duzenModu}>
@@ -171,7 +171,7 @@ export default function WidgetIzgarasi({ pageKey, tanimlar }) {
                     <div
                       ref={tut.innerRef}
                       {...tut.draggableProps}
-                      className={`${SPAN_SINIFI[w.span] || 'lg:col-span-1'} ${durum.isDragging ? 'opacity-90' : ''}`}
+                      className={`${SPAN_SINIFI[w.span] || 'lg:col-span-1'} h-full ${durum.isDragging ? 'opacity-90' : ''}`}
                     >
                       {kutuIcerik(w, tut.dragHandleProps)}
                     </div>
