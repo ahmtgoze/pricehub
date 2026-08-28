@@ -25,6 +25,8 @@ export default function Prices() {
   const [userEmail, setUserEmail] = React.useState(null);
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
+  const [baremFilter, setBaremFilter] = useState('all');
+  const [siraSecimi, setSiraSecimi] = useState('default');
   const [sortField, setSortField] = useState('name');
   const [sortDir, setSortDir] = useState('asc');
   const [calculating, setCalculating] = useState(false);
@@ -204,6 +206,28 @@ export default function Prices() {
       });
     }
 
+    if (baremFilter !== 'all') {
+      result = result.filter(p => getVisiblePrices(p).some(price =>
+        baremFilter === 'sameday' ? !!price.same_day_delivery : price.barem_used === baremFilter
+      ));
+    }
+
+    // Sirala acilirI, sutun basligina tiklamayla ayni sirali alanlari kullanir;
+    // secildiginde onun yerine gecer.
+    if (siraSecimi !== 'default') {
+      const enIyiOran = (p) => {
+        const oranlar = getVisiblePrices(p).map(x => x.profit_rate ?? 0);
+        return oranlar.length ? Math.max(...oranlar) : 0;
+      };
+      const enIyiKar = (p) => {
+        const karlar = getVisiblePrices(p).map(x => x.net_profit ?? 0);
+        return karlar.length ? Math.max(...karlar) : 0;
+      };
+      const olcut = siraSecimi.startsWith('rate') ? enIyiOran : enIyiKar;
+      const artan = siraSecimi.endsWith('asc');
+      return result.sort((a, b) => artan ? olcut(a) - olcut(b) : olcut(b) - olcut(a));
+    }
+
     result.sort((a, b) => {
       let valA, valB;
       if (sortField.startsWith('platform_')) {
@@ -220,13 +244,15 @@ export default function Prices() {
       return 0;
     });
     return result;
-  }, [enrichedProducts, search, categoryFilter, sortField, sortDir, unpricedFilter, minProfit, maxProfit, minProfitRate, maxProfitRate, minTargetAmount, maxTargetAmount, commissions, visiblePlatformList]);
+  }, [enrichedProducts, search, categoryFilter, sortField, sortDir, unpricedFilter, minProfit, maxProfit, minProfitRate, maxProfitRate, minTargetAmount, maxTargetAmount, commissions, visiblePlatformList, baremFilter, siraSecimi]);
 
   const clearFilters = () => {
     setMinProfit(''); setMaxProfit('');
     setMinProfitRate(''); setMaxProfitRate('');
     setMinTargetAmount(''); setMaxTargetAmount('');
     setCategoryFilter('all');
+    setBaremFilter('all');
+    setSiraSecimi('default');
   };
 
   const toggleSelect = (id) => {
@@ -814,6 +840,32 @@ export default function Prices() {
                       <SelectContent>
                         <SelectItem value="all">Tüm Kategoriler</SelectItem>
                         {categories.map(cat => <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <label className="text-xs text-muted-foreground mb-1 block font-medium">Barem</label>
+                    <Select value={baremFilter} onValueChange={setBaremFilter}>
+                      <SelectTrigger className="w-full"><SelectValue placeholder="Tümü" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Tümü</SelectItem>
+                        <SelectItem value="barem1">Barem 1</SelectItem>
+                        <SelectItem value="barem2">Barem 2</SelectItem>
+                        <SelectItem value="sameday">Bugün Kargoda</SelectItem>
+                        <SelectItem value="desi">Desi tarifesi</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <label className="text-xs text-muted-foreground mb-1 block font-medium">Sırala</label>
+                    <Select value={siraSecimi} onValueChange={setSiraSecimi}>
+                      <SelectTrigger className="w-full"><SelectValue placeholder="Varsayılan" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="default">Varsayılan</SelectItem>
+                        <SelectItem value="rate_desc">Kâr oranı: yüksek → düşük</SelectItem>
+                        <SelectItem value="rate_asc">Kâr oranı: düşük → yüksek</SelectItem>
+                        <SelectItem value="amount_desc">Kâr tutarı: yüksek → düşük</SelectItem>
+                        <SelectItem value="amount_asc">Kâr tutarı: düşük → yüksek</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
