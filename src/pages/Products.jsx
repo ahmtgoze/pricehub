@@ -857,6 +857,9 @@ export default function Products() {
       )
     },
     // ── Eklenebilir sutunlar: varsayilanda gizli, panelden acilir ──
+    // Kategori urun adinin altinda zaten gorunuyor; ayri sutun isteyen
+    // kullanici icin eklenebilir olarak duruyor (prototipte varsayilan sutun).
+    { id: 'category_name', header: 'Kategori', optional: true, cell: (row) => row.category_name || '-' },
     { id: 'barcode', header: 'Barkod', optional: true, cell: (row) => row.barcode || '-' },
     { id: 'unit_quantity', header: 'Birim Adet', optional: true, cell: (row) => row.unit_quantity ?? '-' },
     { id: 'base_cost', header: 'Baz Maliyet', optional: true, cell: (row) => row.base_cost > 0 ? `₺${Number(row.base_cost).toFixed(2)}` : '-' },

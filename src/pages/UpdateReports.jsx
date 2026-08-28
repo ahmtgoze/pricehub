@@ -268,7 +268,7 @@ export default function UpdateReports() {
       cell: (row) => getChangeTypeBadge(row.change_type)
     },
     // ── Eklenebilir sutunlar: varsayilanda gizli, panelden acilir ──
-    { id: 'product_sku', header: 'SKU', optional: true, cell: (row) => row.product_sku || '-' },
+    { id: 'product_sku', header: 'SKU', cell: (row) => row.product_sku || '-' },
     { id: 'update_type', header: 'Güncelleme Tipi', optional: true, cell: (row) => row.update_type || '-' },
     { id: 'change_reason', header: 'Değişim Sebebi', optional: true, cell: (row) => row.change_reason || '-' },
     { id: 'notes', header: 'Notlar', optional: true, cell: (row) => row.notes || '-' },
