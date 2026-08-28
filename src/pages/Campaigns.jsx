@@ -257,6 +257,59 @@ export default function Campaigns() {
 
   const getPackageCost = (packageId) => (packages.find(p => p.id === packageId)?.total_cost) || 0;
 
+  /**
+   * Barem onerisi: kampanya fiyatinin etkin karsiligi desi tarifesine
+   * dusuyorsa, etkin fiyati barem esigine cekecek kampanya fiyatini onerir.
+   * Yalnizca ekranda gosterilir; Excel sablonuna dahil degildir.
+   */
+  const renderBaremOnerisi = (item, realIndex) => {
+    const mevcutFiyat = parseFloat(item.campaign_price) || 0;
+    if (!mevcutFiyat) return <span className="text-muted-foreground/70 text-xs">-</span>;
+
+    const mevcut = calculateProfit(mevcutFiyat, item);
+    if (!mevcut.breakdown) return <span className="text-muted-foreground/70 text-xs">-</span>;
+    if (mevcut.baremUsed === 'barem1' || mevcut.baremUsed === 'barem2') {
+      return <span className="text-muted-foreground/70 text-xs">-</span>;
+    }
+
+    const maks = parseFloat(item.max_price) || 0;
+    let oneri = null;
+    for (const [hedefEtkin, ad, tip] of [[BAREM2_UST, 'Barem 2', 'barem2'], [BAREM1_UST, 'Barem 1', 'barem1']]) {
+      const aday = etkinFiyatIcinKampanyaFiyati(hedefEtkin);
+      if (!aday || aday <= 0) continue;
+      if (aday >= mevcutFiyat) continue;          // fiyati dusurerek bareme inilir
+      if (maks > 0 && aday > maks) continue;      // max girilebilir asilmasin
+      const c = calculateProfit(aday, item);
+      if (c.baremUsed !== tip) continue;
+      if (c.profitRate <= mevcut.profitRate) continue;
+      if (!oneri || c.profitRate > oneri.profitRate) {
+        oneri = { fiyat: aday, profit: c.profit, profitRate: c.profitRate, ad };
+      }
+    }
+
+    if (!oneri) return <span className="text-muted-foreground/70 text-xs">-</span>;
+    const karArtisi = oneri.profitRate - mevcut.profitRate;
+
+    return (
+      <div className="border border-border rounded-lg p-2 bg-secondary text-left">
+        <div className="text-xs font-semibold text-foreground mb-1">{oneri.ad} Önerisi</div>
+        <div className="text-xs text-muted-foreground">Fiyat: ₺{oneri.fiyat.toFixed(2)}</div>
+        <div className="text-xs font-semibold text-green-600 mt-1">
+          +₺{oneri.profit.toFixed(2)} (%{oneri.profitRate.toFixed(1)})
+        </div>
+        <div className="text-xs font-medium text-foreground mt-1">+%{karArtisi.toFixed(1)} kâr artışı</div>
+        <Button
+          size="sm"
+          variant="outline"
+          className="w-full mt-2 h-7 text-xs"
+          onClick={() => handlePriceChange(realIndex, oneri.fiyat.toFixed(2))}
+        >
+          Uygula
+        </Button>
+      </div>
+    );
+  };
+
   const effectiveSellerPrice = (campaignPrice) => {
     const L = parseFloat(campaignPrice) || 0;
     if (L <= 0 || !managingCampaign) return 0;
@@ -324,6 +377,26 @@ export default function Campaigns() {
     // yedek: kategori komisyonu (Komisyonlar tablosu)
     const commRec = getCommissionRecord(item);
     return parseFloat(commRec?.commission_rate) || parseFloat(item.current_commission) || 0;
+  };
+
+  // Barem esikleri — calculateProfit icindeki degerlerle ayni.
+  const BAREM1_UST = 149.99;
+  const BAREM2_UST = 299.99;
+
+  /**
+   * effectiveSellerPrice'in tersi: hedeflenen ETKIN fiyati veren kampanya
+   * fiyatini bulur. Barem esikleri etkin fiyata gore degerlendirildigi icin
+   * oneri fiyatini dogru hesaplamak adina gerekli.
+   */
+  const etkinFiyatIcinKampanyaFiyati = (hedefEtkin) => {
+    if (!managingCampaign) return 0;
+    const d = parseFloat(managingCampaign.discount_amount) || 0;
+    const cov = (parseFloat(managingCampaign.trendyol_coverage_rate) || 0) / 100;
+    if (managingCampaign.discount_type === 'percent') {
+      const k = 1 - (d / 100) * (1 - cov);
+      return k > 0 ? hedefEtkin / k : 0;
+    }
+    return hedefEtkin + d * (1 - cov);
   };
 
   const calculateProfit = (campaignPrice, item) => {
@@ -770,6 +843,7 @@ export default function Campaigns() {
                         <th className="p-3 text-right">Kampanya Fiyatı</th>
                         <th className="p-3 text-right">Net Kâr</th>
                         <th className="p-3 text-right">Kâr %</th>
+                        <th className="p-3 text-center min-w-[150px]">Barem Önerisi</th>
                         <th className="p-3 text-center">Detay</th>
                       </tr>
                     </thead>
@@ -802,6 +876,7 @@ export default function Campaigns() {
                               {matched && <BaremBadge barem={calc.baremUsed} className="ml-1" />}
                               {below && <div className="text-[10px] text-red-500">taban altı</div>}
                             </td>
+                            <td className="p-3 text-center">{matched ? renderBaremOnerisi(item, realIndex) : <span className="text-muted-foreground/70 text-xs">-</span>}</td>
                             <td className="p-3 text-center"><Button size="sm" variant="ghost" onClick={() => openDetailModal(item)} disabled={!matched}><Info className="h-4 w-4" /></Button></td>
                           </tr>
                         );

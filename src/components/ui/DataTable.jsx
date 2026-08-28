@@ -57,10 +57,42 @@ export default function DataTable({
     gizleAc,
     sabitle,
     tasi,
+    siraAyarla,
     genislikAyarla,
     sifirla,
     kaydediliyor,
   } = useTableColumns(pageKey, columns);
+
+  // Excel gibi surukleyerek genislik: fare basiliyken canli genislik
+  // burada tutulur, birakinca bir kez veritabanina yazilir.
+  const [surukle, setSurukle] = React.useState(null); // { key, px }
+
+  const baslatSurukle = (e, key, thEl) => {
+    if (!key || !thEl) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const baslangicX = e.clientX;
+    const baslangicGenislik = thEl.getBoundingClientRect().width;
+    let sonPx = Math.round(baslangicGenislik);
+
+    const hareket = (ev) => {
+      sonPx = Math.max(60, Math.min(600, Math.round(baslangicGenislik + (ev.clientX - baslangicX))));
+      setSurukle({ key, px: sonPx });
+    };
+    const bitir = () => {
+      document.removeEventListener('mousemove', hareket);
+      document.removeEventListener('mouseup', bitir);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      setSurukle(null);
+      genislikAyarla(key, sonPx);
+    };
+
+    document.addEventListener('mousemove', hareket);
+    document.addEventListener('mouseup', bitir);
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+  };
 
   const kolonlar = pageKey ? gorunenKolonlar : columns;
   const offsetler = React.useMemo(
@@ -73,9 +105,14 @@ export default function DataTable({
   const endItem = Math.min(page * pageSize, totalItems);
 
   const hucreStili = (idx) => {
+    const col = kolonlar[idx];
+    // Surukleme sirasinda o sutunun genisligi canli guncellenir
+    const genislik = (surukle && surukle.key && surukle.key === col.__key)
+      ? `${surukle.px}px`
+      : col.width;
     const off = offsetler[idx];
-    if (off == null) return { width: kolonlar[idx].width };
-    return { width: kolonlar[idx].width, position: 'sticky', left: off, zIndex: 2 };
+    if (off == null) return { width: genislik, position: 'relative' };
+    return { width: genislik, position: 'sticky', left: off, zIndex: 2 };
   };
   const hucreSinifi = (idx, taban) =>
     offsetler[idx] == null ? taban : `${taban} bg-card`;
@@ -119,6 +156,7 @@ export default function DataTable({
             gizleAc={gizleAc}
             sabitle={sabitle}
             tasi={tasi}
+            siraAyarla={siraAyarla}
             genislikAyarla={genislikAyarla}
             sifirla={sifirla}
             kaydediliyor={kaydediliyor}
@@ -137,6 +175,19 @@ export default function DataTable({
                   style={hucreStili(idx)}
                 >
                   {typeof col.header === 'function' ? col.header() : col.header}
+                  {pageKey && col.__key && (
+                    <span
+                      role="separator"
+                      aria-orientation="vertical"
+                      title="Sürükleyerek genişlet"
+                      onMouseDown={(e) => baslatSurukle(e, col.__key, e.currentTarget.parentElement)}
+                      onClick={(e) => e.stopPropagation()}
+                      className="absolute top-0 right-0 h-full w-[7px] cursor-col-resize select-none
+                                 before:content-[''] before:absolute before:top-[6px] before:bottom-[6px]
+                                 before:right-[3px] before:w-px before:bg-border
+                                 hover:before:bg-foreground hover:before:w-[2px]"
+                    />
+                  )}
                 </TableHead>
               ))}
             </TableRow>

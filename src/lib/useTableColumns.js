@@ -134,6 +134,23 @@ export function useTableColumns(pageKey, columns) {
     return { ...p, order: mevcut };
   }), [yaz, columns]);
 
+  /**
+   * Surukle-birak sonrasi tam sirayi yazar.
+   * Panelde yalnizca yonetilebilir sutunlar listelendigi icin, sistem
+   * sutunlari (__sys_N) kendi yerlerinde birakilir; yonetilebilir olanlar
+   * kalan yuvalara yeni sirasiyla yerlestirilir.
+   */
+  const siraAyarla = useCallback((yeniYonetilirSira) => yaz(p => {
+    const tamSira = p.order.length
+      ? [...p.order]
+      : columns.map((c, i) => kolonAnahtari(c) ?? `__sys_${i}`);
+    let j = 0;
+    const sonuc = tamSira.map(k =>
+      String(k).startsWith('__sys_') ? k : (yeniYonetilirSira[j++] ?? k)
+    );
+    return { ...p, order: sonuc };
+  }), [yaz, columns]);
+
   const genislikAyarla = useCallback((key, px) => yaz(p => {
     const widths = { ...p.widths };
     if (!px) delete widths[key];
@@ -152,6 +169,7 @@ export function useTableColumns(pageKey, columns) {
     gizleAc,
     sabitle,
     tasi,
+    siraAyarla,
     genislikAyarla,
     sifirla,
   };

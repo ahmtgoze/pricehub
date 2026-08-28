@@ -1,8 +1,8 @@
 import React from 'react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Columns3, ChevronUp, ChevronDown, Eye, EyeOff, Pin, PinOff, RotateCcw } from 'lucide-react';
+import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
+import { Columns3, ChevronUp, ChevronDown, Eye, EyeOff, Pin, PinOff, RotateCcw, GripVertical } from 'lucide-react';
 import { kolonAnahtari } from '@/lib/useTableColumns';
 
 /**
@@ -16,6 +16,7 @@ export default function ColumnSettings({
   gizleAc,
   sabitle,
   tasi,
+  siraAyarla,
   genislikAyarla,
   sifirla,
   kaydediliyor,
@@ -39,6 +40,15 @@ export default function ColumnSettings({
   };
 
   const gizliSayisi = prefs.hidden.length;
+
+  // Surukle-birak bitince yeni sirayi kaydet
+  const suruklemeBitti = (sonuc) => {
+    if (!sonuc.destination || sonuc.destination.index === sonuc.source.index) return;
+    const anahtarlar = sirali.map(kolonAnahtari);
+    const [tasinan] = anahtarlar.splice(sonuc.source.index, 1);
+    anahtarlar.splice(sonuc.destination.index, 0, tasinan);
+    siraAyarla?.(anahtarlar);
+  };
 
   return (
     <Popover>
@@ -66,13 +76,33 @@ export default function ColumnSettings({
           </button>
         </div>
 
-        <div className="max-h-[380px] overflow-y-auto py-1">
+        <DragDropContext onDragEnd={suruklemeBitti}>
+        <Droppable droppableId="sutunlar">
+        {(alan) => (
+        <div
+          ref={alan.innerRef}
+          {...alan.droppableProps}
+          className="max-h-[380px] overflow-y-auto py-1"
+        >
           {sirali.map((col, i) => {
             const k = kolonAnahtari(col);
             const gizli = prefs.hidden.includes(k);
             const sabit = prefs.pinned.includes(k);
             return (
-              <div key={k} className="flex items-center gap-1.5 px-3 py-1.5 hover:bg-secondary">
+            <Draggable key={k} draggableId={String(k)} index={i}>
+            {(tut, durum) => (
+              <div
+                ref={tut.innerRef}
+                {...tut.draggableProps}
+                className={`flex items-center gap-1.5 px-3 py-1.5 hover:bg-secondary ${durum.isDragging ? 'bg-secondary rounded-lg shadow-md' : ''}`}
+              >
+                <span
+                  {...tut.dragHandleProps}
+                  title="Sürükleyerek sırala"
+                  className="text-muted-foreground/60 hover:text-foreground cursor-grab active:cursor-grabbing"
+                >
+                  <GripVertical className="h-4 w-4" />
+                </span>
                 <button
                   onClick={() => gizleAc(k)}
                   className="text-muted-foreground hover:text-foreground p-1 rounded"
@@ -85,14 +115,14 @@ export default function ColumnSettings({
                   {basligiYaz(col)}
                 </span>
 
-                <Input
-                  type="number"
-                  value={prefs.widths[k] ?? ''}
-                  onChange={(e) => genislikAyarla(k, e.target.value)}
-                  placeholder="oto"
-                  className="h-7 w-[62px] text-xs px-2"
-                  title="Genişlik (piksel)"
-                />
+                <button
+                  onClick={() => genislikAyarla(k, null)}
+                  disabled={!prefs.widths[k]}
+                  title={prefs.widths[k] ? 'Genişliği otomatiğe döndür' : 'Genişlik otomatik'}
+                  className="h-7 w-[58px] shrink-0 rounded-lg border border-border text-[11px] text-muted-foreground hover:text-foreground hover:bg-secondary disabled:hover:bg-transparent disabled:cursor-default transition-colors"
+                >
+                  {prefs.widths[k] ? `${prefs.widths[k]}px` : 'oto'}
+                </button>
 
                 <button
                   onClick={() => sabitle(k)}
@@ -121,11 +151,19 @@ export default function ColumnSettings({
                   </button>
                 </div>
               </div>
+            )}
+            </Draggable>
             );
           })}
+          {alan.placeholder}
         </div>
+        )}
+        </Droppable>
+        </DragDropContext>
 
         <p className="px-4 py-2.5 border-t border-border text-[11px] leading-relaxed text-muted-foreground">
+          Sırayı soldaki tutamaktan sürükleyerek, genişliği tablo başlığının sağ
+          kenarından sürükleyerek ayarla.
           Ayarlar yalnızca sana özeldir ve otomatik kaydedilir.
         </p>
       </PopoverContent>
