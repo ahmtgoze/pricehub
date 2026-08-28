@@ -701,7 +701,7 @@ export default function MarketplaceProducts() {
             <div className="px-5 pb-4 border-t border-border">
               <ol className="mt-3 space-y-1.5">
                 {HEPSIBURADA_YUKLE_ADIMLARI.map((adim, i) => (
-                  <li key={i} className={`text-sm flex gap-2 ${adim.startsWith('⚠️') ? 'text-red-700 font-medium' : 'text-muted-foreground'}`}>
+                  <li key={i} className={`text-sm flex gap-2 ${adim.startsWith('⚠️') ? 'text-destructive font-medium' : 'text-muted-foreground'}`}>
                     {!adim.startsWith('⚠️') && <span className="font-bold text-muted-foreground shrink-0">{i + 1}.</span>}
                     <span>{adim}</span>
                   </li>
@@ -720,8 +720,8 @@ export default function MarketplaceProducts() {
             <div className="px-5 pb-4 border-t border-border">
               <ol className="mt-3 space-y-1.5">
                 {TRENDYOL_YUKLE_ADIMLARI.map((adim, i) => (
-                  <li key={i} className={`text-sm flex gap-2 ${adim.startsWith('⚠️') ? 'text-red-700 font-medium' : 'text-amber-900'}`}>
-                    {!adim.startsWith('⚠️') && <span className="font-bold text-amber-600 shrink-0">{i + 1}.</span>}
+                  <li key={i} className={`text-sm flex gap-2 ${adim.startsWith('⚠️') ? 'text-destructive font-medium' : 'text-muted-foreground'}`}>
+                    {!adim.startsWith('⚠️') && <span className="font-bold text-muted-foreground shrink-0">{i + 1}.</span>}
                     <span>{adim}</span>
                   </li>
                 ))}
@@ -739,7 +739,7 @@ export default function MarketplaceProducts() {
             <div className="px-5 pb-4 border-t border-border">
               <ol className="mt-3 space-y-1.5">
                 {WEBSITE_YUKLE_ADIMLARI.map((adim, i) => (
-                  <li key={i} className={`text-sm flex gap-2 ${adim.startsWith('⚠️') ? 'text-red-700 font-medium' : 'text-muted-foreground'}`}>
+                  <li key={i} className={`text-sm flex gap-2 ${adim.startsWith('⚠️') ? 'text-destructive font-medium' : 'text-muted-foreground'}`}>
                     {!adim.startsWith('⚠️') && <span className="font-bold text-muted-foreground shrink-0">{i + 1}.</span>}
                     <span>{adim}</span>
                   </li>

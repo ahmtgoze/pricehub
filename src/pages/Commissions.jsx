@@ -597,20 +597,18 @@ export default function Commissions() {
           </div>
         </div>
 
-        <div className="rounded-[18px] border border-border bg-card overflow-hidden">
-          <div className="overflow-x-auto">
-            <DataTable
-              columns={columns}
-              data={paginatedCommissions}
-              isLoading={isLoading}
-              page={page}
-              pageSize={pageSize}
-              totalItems={filteredCommissions.length}
-              onPageChange={setPage}
-              emptyMessage="Komisyon kaydı bulunamadı"
-            />
-          </div>
-        </div>
+        {/* Kart ve yatay kaydirma DataTable'in kendi icinde; disariya
+            ikinci bir kart sarmak cift kenarlik olusturuyordu. */}
+        <DataTable
+          columns={columns}
+          data={paginatedCommissions}
+          isLoading={isLoading}
+          page={page}
+          pageSize={pageSize}
+          totalItems={filteredCommissions.length}
+          onPageChange={setPage}
+          emptyMessage="Komisyon kaydı bulunamadı"
+        />
 
         <CommissionModal
           open={modalOpen}

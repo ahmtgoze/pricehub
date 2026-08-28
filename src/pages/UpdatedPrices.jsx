@@ -312,17 +312,17 @@ export default function UpdatedPrices() {
         </div>
 
         {/* HepsiBurada Kılavuz */}
-        <div className="mb-4 rounded-xl border border-purple-200 bg-purple-50 overflow-hidden">
+        <div className="mb-4 rounded-xl border border-border bg-secondary overflow-hidden">
           <button onClick={() => setShowHepsiGuide(!showHepsiGuide)} className="w-full flex items-center justify-between px-5 py-3 text-left">
-            <span className="font-semibold text-purple-800 text-sm">📦 HepsiBurada — Fiyat Güncelleme Nasıl Yapılır?</span>
-            {showHepsiGuide ? <ChevronUp className="w-4 h-4 text-purple-600" /> : <ChevronDown className="w-4 h-4 text-purple-600" />}
+            <span className="font-semibold text-foreground text-sm">📦 HepsiBurada — Fiyat Güncelleme Nasıl Yapılır?</span>
+            {showHepsiGuide ? <ChevronUp className="w-4 h-4 text-muted-foreground/70" /> : <ChevronDown className="w-4 h-4 text-muted-foreground/70" />}
           </button>
           {showHepsiGuide && (
-            <div className="px-5 pb-4 border-t border-purple-200">
+            <div className="px-5 pb-4 border-t border-border">
               <ol className="mt-3 space-y-1.5">
                 {HEPSIBURADA_FIYAT_ADIMLARI.map((adim, i) => (
-                  <li key={i} className="text-sm flex gap-2 text-purple-900">
-                    <span className="font-bold text-purple-600 shrink-0">{i + 1}.</span>
+                  <li key={i} className="text-sm flex gap-2 text-muted-foreground">
+                    <span className="font-bold text-muted-foreground shrink-0">{i + 1}.</span>
                     <span>{adim}</span>
                   </li>
                 ))}
@@ -332,17 +332,17 @@ export default function UpdatedPrices() {
         </div>
 
         {/* Trendyol Kılavuz */}
-        <div className="mb-4 rounded-xl border border-amber-300 bg-amber-50 overflow-hidden">
+        <div className="mb-4 rounded-xl border border-border bg-secondary overflow-hidden">
           <button onClick={() => setShowTrendyolGuide(!showTrendyolGuide)} className="w-full flex items-center justify-between px-5 py-3 text-left">
-            <span className="font-semibold text-amber-800 text-sm">🛒 Trendyol — Fiyat Güncelleme Nasıl Yapılır?</span>
-            {showTrendyolGuide ? <ChevronUp className="w-4 h-4 text-amber-600" /> : <ChevronDown className="w-4 h-4 text-amber-600" />}
+            <span className="font-semibold text-foreground text-sm">🛒 Trendyol — Fiyat Güncelleme Nasıl Yapılır?</span>
+            {showTrendyolGuide ? <ChevronUp className="w-4 h-4 text-muted-foreground/70" /> : <ChevronDown className="w-4 h-4 text-muted-foreground/70" />}
           </button>
           {showTrendyolGuide && (
-            <div className="px-5 pb-4 border-t border-amber-200">
+            <div className="px-5 pb-4 border-t border-border">
               <ol className="mt-3 space-y-1.5">
                 {TRENDYOL_FIYAT_ADIMLARI.map((adim, i) => (
-                  <li key={i} className="text-sm flex gap-2 text-amber-900">
-                    <span className="font-bold text-amber-600 shrink-0">{i + 1}.</span>
+                  <li key={i} className="text-sm flex gap-2 text-muted-foreground">
+                    <span className="font-bold text-muted-foreground shrink-0">{i + 1}.</span>
                     <span>{adim}</span>
                   </li>
                 ))}
@@ -361,7 +361,7 @@ export default function UpdatedPrices() {
             <div className="px-5 pb-4 border-t border-border">
               <ol className="mt-3 space-y-1.5">
                 {WEBSITE_FIYAT_ADIMLARI.map((adim, i) => (
-                  <li key={i} className={`text-sm flex gap-2 ${adim.startsWith('⚠️') ? 'text-red-700 font-medium' : 'text-foreground'}`}>
+                  <li key={i} className={`text-sm flex gap-2 ${adim.startsWith('⚠️') ? 'text-destructive font-medium' : 'text-foreground'}`}>
                     {!adim.startsWith('⚠️') && <span className="font-bold text-muted-foreground shrink-0">{i + 1}.</span>}
                     <span>{adim}</span>
                   </li>

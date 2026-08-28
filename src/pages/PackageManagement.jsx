@@ -179,13 +179,13 @@ export default function PackageManagement() {
         </Button>
       </div>
 
-      <div className="rounded-[18px] border border-border bg-card">
-        <div className="p-6 border-b border-border">
-          <h2 className="text-lg font-semibold text-foreground">Paketler</h2>
-        </div>
-        <DataTable 
-          columns={packageColumns} 
-          data={packages} 
+      {/* DataTable kendi kartini (ph-panel) ciziyor; ayrica kart icine
+          sarilirsa kart-icinde-kart gorunumu olusuyordu. */}
+      <div className="space-y-4">
+        <h2 className="text-lg font-semibold text-foreground">Paketler</h2>
+        <DataTable
+          columns={packageColumns}
+          data={packages}
           isLoading={packagesLoading}
         />
       </div>
