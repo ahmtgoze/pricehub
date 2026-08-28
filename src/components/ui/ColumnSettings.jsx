@@ -23,8 +23,9 @@ export default function ColumnSettings({
 }) {
   // Panelde sutunlar kayitli sirayla listelenir
   const sirali = React.useMemo(() => {
-    if (!prefs.order.length) return yonetilebilir;
-    return [...yonetilebilir].sort((a, b) => {
+    const temel = yonetilebilir.filter(c => !c.optional);
+    if (!prefs.order.length) return temel;
+    return [...temel].sort((a, b) => {
       const ia = prefs.order.indexOf(kolonAnahtari(a));
       const ib = prefs.order.indexOf(kolonAnahtari(b));
       if (ia === -1 && ib === -1) return 0;
@@ -40,6 +41,8 @@ export default function ColumnSettings({
   };
 
   const gizliSayisi = prefs.hidden.length;
+  // Ek sutunlar ayri bolumde listelenir: varsayilanda kapali, acilabilir.
+  const ekSutunlar = yonetilebilir.filter(c => c.optional);
 
   // Surukle-birak bitince yeni sirayi kaydet
   const suruklemeBitti = (sonuc) => {
@@ -160,6 +163,31 @@ export default function ColumnSettings({
         )}
         </Droppable>
         </DragDropContext>
+
+        {ekSutunlar.length > 0 && (
+          <div className="border-t border-border">
+            <p className="px-4 pt-3 pb-1 text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">
+              Eklenebilir sütunlar
+            </p>
+            <div className="pb-1">
+              {ekSutunlar.map(col => {
+                const k = kolonAnahtari(col);
+                const acik = prefs.shown.includes(k);
+                return (
+                  <label key={k} className="flex items-center gap-2 px-3 py-1.5 text-[13px] cursor-pointer hover:bg-secondary">
+                    <input
+                      type="checkbox"
+                      checked={acik}
+                      onChange={() => gizleAc(k, true)}
+                      className="rounded border-input"
+                    />
+                    <span className={acik ? 'text-foreground' : 'text-muted-foreground'}>{basligiYaz(col)}</span>
+                  </label>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         <p className="px-4 py-2.5 border-t border-border text-[11px] leading-relaxed text-muted-foreground">
           Sırayı soldaki tutamaktan sürükleyerek, genişliği tablo başlığının sağ

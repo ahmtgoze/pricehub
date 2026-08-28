@@ -850,7 +850,13 @@ export default function Products() {
           </Button>
         </div>
       )
-    }
+    },
+    // ── Eklenebilir sutunlar: varsayilanda gizli, panelden acilir ──
+    { id: 'barcode', header: 'Barkod', optional: true, cell: (row) => row.barcode || '-' },
+    { id: 'unit_quantity', header: 'Birim Adet', optional: true, cell: (row) => row.unit_quantity ?? '-' },
+    { id: 'base_cost', header: 'Baz Maliyet', optional: true, cell: (row) => row.base_cost > 0 ? `₺${Number(row.base_cost).toFixed(2)}` : '-' },
+    { id: 'notes', header: 'Notlar', optional: true, cell: (row) => row.notes || '-' },
+    { id: 'created_at', header: 'Eklenme Tarihi', optional: true, cell: (row) => row.created_at ? new Date(row.created_at).toLocaleDateString('tr-TR') : '-' },
   ];
 
   const exportData = filteredProducts.map(p => {
