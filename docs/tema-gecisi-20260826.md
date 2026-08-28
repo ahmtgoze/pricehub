@@ -245,12 +245,30 @@ Menü içeriği de birebir aynı; tek fark daha önce çıkarılan
 Düzeltme: gruplar açık başlıyor, başlık kontrastı artırıldı, aktif sayfayı
 içeren grup artık kapatılabiliyor.
 
-### Not: menüde hiç olmayan iki sayfa (eskiden beri)
+### Silinen iki ölü sayfa
 
 `Maliyet Senkronizasyonu` (`/CostSynchronization`) ve
-`Fiyat Senkronizasyonu` (`/PriceSynchronization`) sayfaları çalışıyor ama
-hiçbir menüde linkleri yok — eski temada da yoktu. Sadece adres yazılarak
-açılıyorlar. İstenirse menüye eklenebilir.
+`Fiyat Senkronizasyonu` (`/PriceSynchronization`) **silindi** (28 Ağustos).
+
+Sebep: ikisi de 18 Mayıs'taki ilk versiyondan (Base44 taşıması) kalmaydı ve
+tüm git geçmişi boyunca **hiçbir menüye eklenmemişti** — sadece adres elle
+yazılarak açılabiliyorlardı. Dahası platform açılır listeleri koda sabit
+yazılmıştı ("Trendyol SVS", "Trendyol GözePack", "HepsiBurada SVS",
+"Web Sitesi - SVS", "Web Sitesi - Gözepack") ve bu değerlerin **hiçbiri**
+veritabanındaki gerçek değerlerle ("Trendyol", "HepsiBurada", "Web Sitesi")
+eşleşmiyordu; yani platform filtresi her zaman sıfır kayıt buluyordu.
+
+Ayrıca o sabit isimler hesap sahibinin firma adlarıydı — sayfa menüye
+alınsaydı başka müşteriler kendi ekranlarında bu adları görecekti.
+
+İşlevleri zaten menüdeki sayfalarda karşılanıyor: eşleştirme
+**Pazaryeri Ürünleri**'nde, fiyat indirme **Düzenlenen Fiyatlar**'da.
+
+Geri getirmek gerekirse (git'te duruyorlar):
+```bash
+git checkout ad97a06 -- src/pages/PriceSynchronization.jsx src/pages/CostSynchronization.jsx
+```
+ve `src/pages.config.js`'e import + kayıt satırlarını geri ekle.
 
 ### Madde 7 — Bildirimler tıklanabilir
 

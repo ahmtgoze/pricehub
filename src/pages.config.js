@@ -51,7 +51,6 @@ import AdvantageProductTag from './pages/AdvantageProductTag';
 import Calculator from './pages/Calculator';
 import Categories from './pages/Categories';
 import Commissions from './pages/Commissions';
-import CostSynchronization from './pages/CostSynchronization';
 import Dashboard from './pages/Dashboard';
 import FlashProducts from './pages/FlashProducts';
 import HBAdvantageOffers from './pages/HBAdvantageOffers';
@@ -61,7 +60,6 @@ import Help from './pages/Help';
 import MarketplaceProducts from './pages/MarketplaceProducts';
 import PackageManagement from './pages/PackageManagement';
 import Platforms from './pages/Platforms';
-import PriceSynchronization from './pages/PriceSynchronization';
 import Prices from './pages/Prices';
 import Products from './pages/Products';
 import ShippingRates from './pages/ShippingRates';
@@ -79,7 +77,6 @@ export const PAGES = {
     "Calculator": Calculator,
     "Categories": Categories,
     "Commissions": Commissions,
-    "CostSynchronization": CostSynchronization,
     "Dashboard": Dashboard,
     "FlashProducts": FlashProducts,
     "HBAdvantageOffers": HBAdvantageOffers,
@@ -89,7 +86,6 @@ export const PAGES = {
     "MarketplaceProducts": MarketplaceProducts,
     "PackageManagement": PackageManagement,
     "Platforms": Platforms,
-    "PriceSynchronization": PriceSynchronization,
     "Prices": Prices,
     "Products": Products,
     "ShippingRates": ShippingRates,
