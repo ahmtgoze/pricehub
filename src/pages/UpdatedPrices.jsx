@@ -4,7 +4,7 @@ import { getAdapter, downloadFile } from '@/lib/platformAdapters';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import DataTable from '@/components/ui/DataTable';
 import { Download, Trash2, RefreshCw, ChevronDown, ChevronUp } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -287,21 +287,53 @@ export default function UpdatedPrices() {
     toast.success('Excel indirildi');
   };
 
-  const changeOranCell = (row) => (
-    <TableCell className="text-sm">
-      <span className={`font-medium ${row.price_change_percent > 0 ? 'text-green-600' : row.price_change_percent < 0 ? 'text-red-600' : 'text-muted-foreground'}`}>
-        {row.price_change_percent > 0 ? '+' : ''}{row.price_change_percent?.toFixed(2)}%
-      </span>
-    </TableCell>
+  const changeOranIcerik = (row) => (
+    <span className={`font-medium ${row.price_change_percent > 0 ? 'text-green-600' : row.price_change_percent < 0 ? 'text-red-600' : 'text-muted-foreground'}`}>
+      {row.price_change_percent > 0 ? '+' : ''}{row.price_change_percent?.toFixed(2)}%
+    </span>
   );
 
-  const changeTutarCell = (row) => (
-    <TableCell className="text-sm">
-      <span className={`font-medium ${row.price_diff > 0 ? 'text-green-600' : row.price_diff < 0 ? 'text-red-600' : 'text-muted-foreground'}`}>
-        {row.price_diff > 0 ? '+' : ''}₺{row.price_diff?.toFixed(2)}
-      </span>
-    </TableCell>
+  const changeTutarIcerik = (row) => (
+    <span className={`font-medium ${row.price_diff > 0 ? 'text-green-600' : row.price_diff < 0 ? 'text-red-600' : 'text-muted-foreground'}`}>
+      {row.price_diff > 0 ? '+' : ''}₺{row.price_diff?.toFixed(2)}
+    </span>
   );
+
+  // Platforma gore degisen sutun kumesi. DataTable bunlarla calisiyor;
+  // kullanici gizleyebilir, siralayabilir, genisletebilir, sabitleyebilir.
+  const ortakFiyatKolonlari = [
+    { id: 'market_price', header: 'Eski Fiyat', cell: (row) => <span className="font-medium text-muted-foreground">₺{row.market_price?.toFixed(2)}</span> },
+    { id: 'system_price', header: isWebsite ? 'Yeni Fiyat (Sistem)' : 'Yeni Fiyat', cell: (row) => <span className="font-bold text-green-700">₺{row.system_price?.toFixed(2)}</span> },
+    { id: 'price_change_percent', header: 'Değişim Oranı', cell: changeOranIcerik },
+    { id: 'price_diff', header: 'Değişim Tutarı', cell: changeTutarIcerik },
+  ];
+
+  const fiyatKolonlari = [
+    {
+      id: '__select',
+      header: <Checkbox checked={selectedRows.size === updatedPrices.length && updatedPrices.length > 0} onCheckedChange={handleSelectAll} />,
+      cell: (row) => <Checkbox checked={selectedRows.has(row.id)} onCheckedChange={() => handleSelectRow(row.id)} />,
+    },
+    ...(isWebsite
+      ? [
+          { id: 'platform_product_name', header: 'Platform Ürün Adı', cell: (row) => <p className="font-medium">{row.platform_product_name}</p> },
+          { id: 'product_name', header: 'Sistem Ürünü', cell: (row) => (<><p>{row.product_name}</p><p className="text-xs text-muted-foreground/70">{row.product_sku}</p></>) },
+          ...ortakFiyatKolonlari,
+        ]
+      : isHepsiburada
+        ? [
+            { id: 'hb_sku', header: 'SKU', cell: (row) => row.hb_sku || '' },
+            { id: 'platform_product_name', header: 'Ürün Adı', accessor: 'platform_product_name' },
+            ...ortakFiyatKolonlari,
+            { id: 'stock_quantity', header: 'Stok', cell: (row) => row.stock_quantity || 0 },
+          ]
+        : [
+            { id: 'barkod', header: 'Barkod', accessor: 'barkod' },
+            { id: 'platform_product_name', header: 'Ürün Adı', accessor: 'platform_product_name' },
+            ...ortakFiyatKolonlari,
+            { id: 'stock_quantity', header: 'Stok', cell: (row) => row.stock_quantity || 0 },
+          ]),
+  ];
 
   return (
     <div className="min-h-screen bg-secondary p-6">
@@ -436,83 +468,13 @@ export default function UpdatedPrices() {
               )}
             </div>
 
-            <div className="rounded-[18px] border border-border bg-card overflow-x-auto">
-              <Table>
-                <TableHeader className="bg-secondary">
-                  <TableRow>
-                    <TableHead className="w-12">
-                      <Checkbox checked={selectedRows.size === updatedPrices.length && updatedPrices.length > 0} onCheckedChange={handleSelectAll} />
-                    </TableHead>
-                    {isWebsite && <>
-                      <TableHead>Platform Ürün Adı</TableHead>
-                      <TableHead>Sistem Ürünü</TableHead>
-                      <TableHead>Eski Fiyat</TableHead>
-                      <TableHead>Yeni Fiyat (Sistem)</TableHead>
-                      <TableHead>Değişim Oranı</TableHead>
-                      <TableHead>Değişim Tutarı</TableHead>
-                    </>}
-                    {isHepsiburada && <>
-                      <TableHead>SKU</TableHead>
-                      <TableHead>Ürün Adı</TableHead>
-                      <TableHead>Eski Fiyat</TableHead>
-                      <TableHead>Yeni Fiyat</TableHead>
-                      <TableHead>Değişim Oranı</TableHead>
-                      <TableHead>Değişim Tutarı</TableHead>
-                      <TableHead>Stok</TableHead>
-                    </>}
-                    {!isHepsiburada && !isWebsite && <>
-                      <TableHead>Barkod</TableHead>
-                      <TableHead>Ürün Adı</TableHead>
-                      <TableHead>Eski Fiyat</TableHead>
-                      <TableHead>Yeni Fiyat</TableHead>
-                      <TableHead>Değişim Oranı</TableHead>
-                      <TableHead>Değişim Tutarı</TableHead>
-                      <TableHead>Stok</TableHead>
-                    </>}
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {updatedPrices.map((row) => (
-                    <TableRow key={row.id} className={selectedRows.has(row.id) ? 'bg-secondary' : ''}>
-                      <TableCell>
-                        <Checkbox checked={selectedRows.has(row.id)} onCheckedChange={() => handleSelectRow(row.id)} />
-                      </TableCell>
-                      {isWebsite && <>
-                        <TableCell className="text-sm">
-                          <p className="font-medium">{row.platform_product_name}</p>
-                        </TableCell>
-                        <TableCell className="text-sm">
-                          <p>{row.product_name}</p>
-                          <p className="text-xs text-muted-foreground/70">{row.product_sku}</p>
-                        </TableCell>
-                        <TableCell className="text-sm font-medium text-muted-foreground">₺{row.market_price?.toFixed(2)}</TableCell>
-                        <TableCell className="text-sm font-bold text-green-700">₺{row.system_price?.toFixed(2)}</TableCell>
-                        {changeOranCell(row)}
-                        {changeTutarCell(row)}
-                      </>}
-                      {isHepsiburada && <>
-                        <TableCell className="text-sm">{row.hb_sku || ''}</TableCell>
-                        <TableCell className="text-sm">{row.platform_product_name}</TableCell>
-                        <TableCell className="text-sm font-medium text-muted-foreground">₺{row.market_price?.toFixed(2)}</TableCell>
-                        <TableCell className="text-sm font-bold text-green-700">₺{row.system_price?.toFixed(2)}</TableCell>
-                        {changeOranCell(row)}
-                        {changeTutarCell(row)}
-                        <TableCell className="text-sm">{row.stock_quantity || 0}</TableCell>
-                      </>}
-                      {!isHepsiburada && !isWebsite && <>
-                        <TableCell className="text-sm">{row.barkod}</TableCell>
-                        <TableCell className="text-sm">{row.platform_product_name}</TableCell>
-                        <TableCell className="text-sm font-medium text-muted-foreground">₺{row.market_price?.toFixed(2)}</TableCell>
-                        <TableCell className="text-sm font-bold text-green-700">₺{row.system_price?.toFixed(2)}</TableCell>
-                        {changeOranCell(row)}
-                        {changeTutarCell(row)}
-                        <TableCell className="text-sm">{row.stock_quantity || 0}</TableCell>
-                      </>}
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
+            <DataTable
+              pageKey="duzenlenen-fiyatlar"
+              columns={fiyatKolonlari}
+              data={updatedPrices}
+              rowClassName={(row) => selectedRows.has(row.id) ? 'bg-secondary' : 'hover:bg-secondary/60'}
+              emptyMessage="Gösterilecek fiyat yok"
+            />
           </>
         )}
 

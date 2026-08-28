@@ -3,7 +3,7 @@ import { db } from '@/api/db';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import DataTable from '@/components/ui/DataTable';
 import { Download, Trash2, RefreshCw, Search, PackageOpen } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -202,6 +202,52 @@ export default function UpdatedCosts() {
 
   const isHB = activePlatforms.find(p => p.name === selectedPlatform)?.platform_type === 'hepsiburada';
 
+  // Sutun tanimlari — DataTable bunlarla calisiyor; kullanici gizleyebilir,
+  // siralayabilir, genisletebilir ve sola sabitleyebilir.
+  // Not: '__select' sistem sutunu sayilir (gizlenemez).
+  const maliyetKolonlari = [
+    {
+      id: '__select',
+      header: (
+        <Checkbox
+          checked={selectedRows.size === updatedCosts.length && updatedCosts.length > 0}
+          onCheckedChange={handleSelectAll}
+        />
+      ),
+      cell: (row) => (
+        <Checkbox
+          checked={selectedRows.has(row.id)}
+          onCheckedChange={() => handleSelectRow(row.id)}
+        />
+      ),
+    },
+    ...(isHB
+      ? [
+          { id: 'hb_sku', header: 'HB Sku', accessor: 'hb_sku' },
+          { id: 'barkod', header: 'Barkod', accessor: 'barkod' },
+          { id: 'merchant_sku', header: 'Merchant Sku', accessor: 'merchant_sku' },
+        ]
+      : [
+          { id: 'barkod', header: 'Barkod', accessor: 'barkod' },
+          { id: 'model_code', header: 'Model Kodu', accessor: 'model_code' },
+          { id: 'merchant_sku', header: 'Stok Kodu', accessor: 'merchant_sku' },
+        ]),
+    { id: 'category', header: 'Kategori', accessor: 'category' },
+    { id: 'product_name', header: 'Ürün Adı', accessor: 'product_name', width: '180px' },
+    {
+      id: 'sale_price',
+      header: isHB ? 'HB Satış Fiyatı' : 'Trendyol Satış Fiyatı',
+      cell: (row) => <span className="font-medium">₺{row.sale_price?.toFixed(2)}</span>,
+    },
+    { id: 'stock', header: 'Stok', accessor: 'stock' },
+    { id: 'cost', header: 'Maliyet (KDV Dahil)', cell: (row) => <span className="font-medium">₺{row.cost?.toFixed(2)}</span> },
+    { id: 'vat_rate', header: 'KDV Oranı', cell: (row) => `%${row.vat_rate}` },
+    { id: 'currency', header: 'Para Birimi', accessor: 'currency' },
+    { id: 'desi', header: 'Desi', accessor: 'desi' },
+    { id: 'extra_cost_pct', header: 'Ekstra Maliyet (%)', cell: () => '' },
+    { id: 'extra_cost', header: 'Ekstra Maliyet (TL)', cell: (row) => (row.extra_cost > 0 ? row.extra_cost.toFixed(2) : '') },
+  ];
+
   return (
     <div className="min-h-screen bg-secondary">
       <div className="max-w-[1400px] mx-auto px-3 sm:px-6 py-5 sm:py-8">
@@ -298,78 +344,13 @@ export default function UpdatedCosts() {
 
         {/* Tablo */}
         {updatedCosts.length > 0 ? (
-          <div className="rounded-[18px] border border-border bg-card overflow-x-auto">
-            <Table>
-              <TableHeader className="bg-secondary">
-                <TableRow>
-                  <TableHead className="w-12">
-                    <Checkbox
-                      checked={selectedRows.size === updatedCosts.length && updatedCosts.length > 0}
-                      onCheckedChange={handleSelectAll}
-                    />
-                  </TableHead>
-                  {isHB ? (
-                    <>
-                      <TableHead>HB Sku</TableHead>
-                      <TableHead>Barkod</TableHead>
-                      <TableHead>Merchant Sku</TableHead>
-                    </>
-                  ) : (
-                    <>
-                      <TableHead>Barkod</TableHead>
-                      <TableHead>Model Kodu</TableHead>
-                      <TableHead>Stok Kodu</TableHead>
-                    </>
-                  )}
-                  <TableHead>Kategori</TableHead>
-                  <TableHead className="min-w-[180px]">Ürün Adı</TableHead>
-                  <TableHead>{isHB ? 'HB Satış Fiyatı' : 'Trendyol Satış Fiyatı'}</TableHead>
-                  <TableHead>Stok</TableHead>
-                  <TableHead className="bg-yellow-50">Maliyet (KDV Dahil)</TableHead>
-                  <TableHead className="bg-yellow-50">KDV Oranı</TableHead>
-                  <TableHead className="bg-yellow-50">Para Birimi</TableHead>
-                  <TableHead className="bg-yellow-50">Desi</TableHead>
-                  <TableHead className="bg-yellow-50">Ekstra Maliyet (%)</TableHead>
-                  <TableHead className="bg-yellow-50">Ekstra Maliyet (TL)</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {updatedCosts.map((row) => (
-                  <TableRow key={row.id} className={selectedRows.has(row.id) ? 'bg-secondary' : ''}>
-                    <TableCell>
-                      <Checkbox
-                        checked={selectedRows.has(row.id)}
-                        onCheckedChange={() => handleSelectRow(row.id)}
-                      />
-                    </TableCell>
-                    {isHB ? (
-                      <>
-                        <TableCell className="text-sm">{row.hb_sku}</TableCell>
-                        <TableCell className="text-sm">{row.barkod}</TableCell>
-                        <TableCell className="text-sm">{row.merchant_sku}</TableCell>
-                      </>
-                    ) : (
-                      <>
-                        <TableCell className="text-sm">{row.barkod}</TableCell>
-                        <TableCell className="text-sm">{row.model_code}</TableCell>
-                        <TableCell className="text-sm">{row.merchant_sku}</TableCell>
-                      </>
-                    )}
-                    <TableCell className="text-sm">{row.category}</TableCell>
-                    <TableCell className="text-sm">{row.product_name}</TableCell>
-                    <TableCell className="text-sm font-medium">₺{row.sale_price?.toFixed(2)}</TableCell>
-                    <TableCell className="text-sm">{row.stock}</TableCell>
-                    <TableCell className="text-sm font-medium bg-yellow-50">₺{row.cost?.toFixed(2)}</TableCell>
-                    <TableCell className="text-sm bg-yellow-50">%{row.vat_rate}</TableCell>
-                    <TableCell className="text-sm bg-yellow-50">{row.currency}</TableCell>
-                    <TableCell className="text-sm bg-yellow-50">{row.desi}</TableCell>
-                    <TableCell className="text-sm bg-yellow-50"></TableCell>
-                    <TableCell className="text-sm bg-yellow-50">{row.extra_cost > 0 ? row.extra_cost.toFixed(2) : ''}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+          <DataTable
+            pageKey="duzenlenen-maliyetler"
+            columns={maliyetKolonlari}
+            data={updatedCosts}
+            rowClassName={(row) => selectedRows.has(row.id) ? 'bg-secondary' : 'hover:bg-secondary/60'}
+            emptyMessage="Gösterilecek ürün yok"
+          />
         ) : (
           <div className="rounded-[18px] border border-border bg-card p-16 text-center">
             <PackageOpen className="h-12 w-12 text-muted-foreground/50 mx-auto mb-3" />
