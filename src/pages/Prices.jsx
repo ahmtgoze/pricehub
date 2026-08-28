@@ -8,7 +8,6 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { downloadCSV } from '@/components/ImportExport';
 import { calculateAllPlatformPrices } from '@/components/PriceCalculationEngine';
@@ -19,6 +18,7 @@ import PriceDetailModal from '@/components/modals/PriceDetailModal';
 import ProductHistoryModal from '@/components/modals/ProductHistoryModal';
 import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import DataTable from '@/components/ui/DataTable';
 
 export default function Prices() {
   const [userEmail, setUserEmail] = React.useState(null);
@@ -563,6 +563,103 @@ export default function Prices() {
 
   const platformColors = { trendyol: 'bg-orange-100 text-orange-700 border-orange-200', hepsiburada: 'bg-purple-100 text-purple-700 border-purple-200', website: 'bg-border text-muted-foreground border-input' };
 
+  // ── Sutun tanimlari ──
+  // Her gorunum kendi sutun tercihini ayri saklar (fiyatlar-platform /
+  // fiyatlar-satir). '__select' sistem sutunudur: gizlenemez.
+  const platformKolonlari = [
+    {
+      id: '__select',
+      header: (
+        <input
+          type="checkbox"
+          checked={isAllSelected}
+          ref={el => { if (el) el.indeterminate = isPartialSelected; }}
+          onChange={toggleSelectAll}
+          className="rounded border-input text-foreground"
+        />
+      ),
+      cell: (product) => (
+        <input
+          type="checkbox"
+          checked={selectedIds.has(product.id)}
+          onChange={() => toggleSelect(product.id)}
+          className="rounded border-input text-foreground"
+        />
+      ),
+    },
+    {
+      id: 'sku',
+      header: <span className="cursor-pointer hover:text-foreground" onClick={() => handleSort('sku')}>SKU <SortIcon field="sku" /></span>,
+      cell: (product) => (
+        <div className="flex items-center gap-2 font-mono text-muted-foreground">
+          <span>{product.sku || '-'}</span>
+          <Button variant="ghost" size="sm" className="h-6 px-2 text-xs" onClick={() => handleCalculateSingleProduct(product)} disabled={calculating || calculatingSingle === product.id}>
+            <RefreshCw className={`h-3 w-3 ${calculatingSingle === product.id ? 'animate-spin' : ''}`} />
+          </Button>
+          <Button variant="ghost" size="sm" className="h-6 px-2 text-xs text-muted-foreground hover:text-foreground hover:bg-secondary" onClick={() => setHistoryModal({ open: true, productId: product.id, productName: product.name })} title="Geçmiş Analizi">📈</Button>
+        </div>
+      ),
+    },
+    {
+      id: 'name',
+      header: <span className="cursor-pointer hover:text-foreground" onClick={() => handleSort('name')}>Ürün Adı <SortIcon field="name" /></span>,
+      cell: (product) => (<div><p className="font-medium text-foreground">{product.name}</p><p className="text-xs text-muted-foreground">{product.category_name}</p></div>),
+    },
+    {
+      id: 'cost',
+      header: <span className="cursor-pointer hover:text-foreground" onClick={() => handleSort('cost')}>Maliyet <SortIcon field="cost" /></span>,
+      cell: (product) => <span className="font-semibold">₺{formatTurkishCurrency(product.cost)}</span>,
+    },
+    { id: 'printing_cost', header: 'Baskı', cell: (p) => p.printing_cost > 0 ? <span className="text-muted-foreground font-medium">₺{formatTurkishCurrency(p.printing_cost)}</span> : '-' },
+    { id: 'extra_cost', header: 'Ek Maliyet', cell: (p) => p.extra_cost > 0 ? <span className="text-rose-600 font-medium">₺{formatTurkishCurrency(p.extra_cost)}</span> : '-' },
+    ...[0, 1, 2, 3, 4].map(idx => ({
+      id: `desi_${idx + 1}`,
+      header: `Desi ${idx + 1}`,
+      cell: (product) => getDesiValue(product, idx),
+    })),
+    ...visiblePlatformList.map(platform => ({
+      id: `platform_${platform.id}`,
+      header: <span className="cursor-pointer hover:text-foreground" onClick={() => handleSort(`platform_${platform.id}`)}>{platform.name} <SortIcon field={`platform_${platform.id}`} /></span>,
+      width: '160px',
+      cell: (product) => {
+        const price = product.prices[platform.id];
+        if (!price) return <span className="text-muted-foreground/70">-</span>;
+        const commission = commissions.find(c => c.category_id === product.category_id && c.platform_id === platform.id && c.is_active !== false);
+        const { amount: profitAmount, rate: profitRateDisplay } = getDisplayProfit(price, product, commission);
+        return (
+          <div className="space-y-1 text-center">
+            <p className="font-bold text-foreground">₺{formatTurkishCurrency(price.sale_price)}</p>
+            <div className="flex items-center justify-center gap-1">
+              <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${getProfitColor(profitRateDisplay)}`}>{formatTurkishPercent(profitRateDisplay)}</span>
+              {getBaremBadge(price.barem_used)}
+            </div>
+            <p className="text-xs text-muted-foreground">Kâr: ₺{formatTurkishCurrency(profitAmount)}{showBeforeTax && <span className="text-muted-foreground/70"> (vergi öncesi)</span>}</p>
+            {price.packaging_cost > 0 && <p className="text-xs text-muted-foreground">Paket: ₺{formatTurkishCurrency(price.packaging_cost)}</p>}
+            <Button variant="ghost" size="sm" className="h-7 text-xs mt-1" onClick={() => handleShowDetail(product, platform)}>
+              <Info className="h-3 w-3 mr-1" />Detay
+            </Button>
+          </div>
+        );
+      },
+    })),
+  ];
+
+  const satirKolonlari = [
+    { id: 'sku', header: 'SKU', cell: (r) => <span className="font-mono text-muted-foreground">{r.product.sku || '-'}</span> },
+    { id: 'name', header: 'Ürün Adı', cell: (r) => (<div><p className="font-medium text-foreground">{r.product.name}</p><p className="text-xs text-muted-foreground">{r.product.category_name}</p></div>) },
+    { id: 'platform', header: 'Platform', cell: (r) => <span className="font-medium text-foreground">{r.platform.name}</span> },
+    { id: 'cost', header: 'Maliyet', cell: (r) => `₺${formatTurkishCurrency(r.product.cost)}` },
+    { id: 'sale_price', header: 'Satış Fiyatı', cell: (r) => <span className="font-bold text-foreground">₺{formatTurkishCurrency(r.price.sale_price)}</span> },
+    { id: 'profit', header: 'Kâr', cell: (r) => (<>₺{formatTurkishCurrency(r.profitAmount)}{showBeforeTax && <span className="text-muted-foreground/70 text-xs"> (vergi öncesi)</span>}</>) },
+    { id: 'profit_rate', header: 'Kâr Oranı', cell: (r) => <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${getProfitColor(r.profitRate)}`}>{formatTurkishPercent(r.profitRate)}</span> },
+    { id: 'barem', header: 'Barem', cell: (r) => getBaremBadge(r.price.barem_used) || <span className="text-muted-foreground/70">—</span> },
+    { id: 'detay', header: 'Detay', cell: (r) => (
+      <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => handleShowDetail(r.product, r.platform)}>
+        <Info className="h-3 w-3 mr-1" />Detay
+      </Button>
+    ) },
+  ];
+
   return (
     <div className="min-h-screen">
       <div className="ph-page mx-auto">
@@ -779,142 +876,28 @@ export default function Prices() {
 
         {/* Gorunum 1: platform sutun bazli (varsayilan) */}
         {viewMode === 'platform' && (
-        <div className="hidden sm:block rounded-[18px] border border-border bg-card overflow-hidden">
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-secondary hover:bg-secondary">
-                  <TableHead className="w-10">
-                    <input type="checkbox" checked={isAllSelected} ref={el => { if (el) el.indeterminate = isPartialSelected; }} onChange={toggleSelectAll} className="rounded border-input text-foreground" />
-                  </TableHead>
-                  <TableHead className="font-semibold cursor-pointer hover:text-foreground" onClick={() => handleSort('sku')}>SKU <SortIcon field="sku" /></TableHead>
-                  <TableHead className="font-semibold cursor-pointer hover:text-foreground" onClick={() => handleSort('name')}>Ürün Adı <SortIcon field="name" /></TableHead>
-                  <TableHead className="font-semibold cursor-pointer hover:text-foreground text-right" onClick={() => handleSort('cost')}>Maliyet <SortIcon field="cost" /></TableHead>
-                  <TableHead className="font-semibold">Baskı</TableHead>
-                  <TableHead className="font-semibold">Ek Maliyet</TableHead>
-                  <TableHead className="font-semibold">Desi 1</TableHead>
-                  <TableHead className="font-semibold">Desi 2</TableHead>
-                  <TableHead className="font-semibold">Desi 3</TableHead>
-                  <TableHead className="font-semibold">Desi 4</TableHead>
-                  <TableHead className="font-semibold">Desi 5</TableHead>
-                  {visiblePlatformList.map(p => (
-                    <TableHead key={p.id} className="font-semibold text-center min-w-[160px] cursor-pointer hover:text-foreground" onClick={() => handleSort(`platform_${p.id}`)}>{p.name} <SortIcon field={`platform_${p.id}`} /></TableHead>
-                  ))}
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {isLoading ? (
-                  [...Array(5)].map((_, i) => (
-                    <TableRow key={i}>{[...Array(11 + visiblePlatformList.length)].map((_, j) => <TableCell key={j}><Skeleton className="h-5 w-20" /></TableCell>)}</TableRow>
-                  ))
-                ) : filteredProducts.length === 0 ? (
-                  <TableRow><TableCell colSpan={11 + visiblePlatformList.length} className="h-32 text-center text-muted-foreground">Ürün bulunamadı</TableCell></TableRow>
-                ) : (
-                  filteredProducts.map(product => (
-                    <TableRow key={product.id} className={`hover:bg-secondary/50 ${selectedIds.has(product.id) ? 'bg-secondary/60' : ''}`}>
-                      <TableCell>
-                        <input type="checkbox" checked={selectedIds.has(product.id)} onChange={() => toggleSelect(product.id)} className="rounded border-input text-foreground" />
-                      </TableCell>
-                      <TableCell className="font-mono text-sm text-muted-foreground">
-                        <div className="flex items-center gap-2">
-                          <span>{product.sku || '-'}</span>
-                          <Button variant="ghost" size="sm" className="h-6 px-2 text-xs" onClick={() => handleCalculateSingleProduct(product)} disabled={calculating || calculatingSingle === product.id}>
-                            <RefreshCw className={`h-3 w-3 ${calculatingSingle === product.id ? 'animate-spin' : ''}`} />
-                          </Button>
-                          <Button variant="ghost" size="sm" className="h-6 px-2 text-xs text-muted-foreground hover:text-foreground hover:bg-secondary" onClick={() => setHistoryModal({ open: true, productId: product.id, productName: product.name })} title="Geçmiş Analizi">📈</Button>
-                        </div>
-                      </TableCell>
-                      <TableCell><div><p className="font-medium text-foreground">{product.name}</p><p className="text-xs text-muted-foreground">{product.category_name}</p></div></TableCell>
-                      <TableCell className="font-semibold">₺{formatTurkishCurrency(product.cost)}</TableCell>
-                      <TableCell className="text-sm">{product.printing_cost > 0 ? <span className="text-muted-foreground font-medium">₺{formatTurkishCurrency(product.printing_cost)}</span> : '-'}</TableCell>
-                      <TableCell className="text-sm">{product.extra_cost > 0 ? <span className="text-rose-600 font-medium">₺{formatTurkishCurrency(product.extra_cost)}</span> : '-'}</TableCell>
-                      {[0, 1, 2, 3, 4].map(idx => <TableCell key={idx}>{getDesiValue(product, idx)}</TableCell>)}
-                      {visiblePlatformList.map(platform => {
-                        const price = product.prices[platform.id];
-                        if (!price) return <TableCell key={platform.id} className="text-center text-muted-foreground/70">-</TableCell>;
-                        const commission = commissions.find(c => c.category_id === product.category_id && c.platform_id === platform.id && c.is_active !== false);
-                        const { amount: profitAmount, rate: profitRateDisplay } = getDisplayProfit(price, product, commission);
-                        return (
-                          <TableCell key={platform.id} className="text-center">
-                            <div className="space-y-1">
-                              <p className="font-bold text-foreground">₺{formatTurkishCurrency(price.sale_price)}</p>
-                              <div className="flex items-center justify-center gap-1">
-                                <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${getProfitColor(profitRateDisplay)}`}>{formatTurkishPercent(profitRateDisplay)}</span>
-                                {getBaremBadge(price.barem_used)}
-                              </div>
-                              <p className="text-xs text-muted-foreground">Kâr: ₺{formatTurkishCurrency(profitAmount)}{showBeforeTax && <span className="text-muted-foreground/70"> (vergi öncesi)</span>}</p>
-                              {price.packaging_cost > 0 && <p className="text-xs text-amber-600 font-medium">📦 Paket: ₺{formatTurkishCurrency(price.packaging_cost)}</p>}
-                              <Button variant="ghost" size="sm" className="h-7 text-xs mt-1" onClick={() => handleShowDetail(product, platform)}>
-                                <Info className="h-3 w-3 mr-1" />Detay
-                              </Button>
-                            </div>
-                          </TableCell>
-                        );
-                      })}
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
+          <div className="hidden sm:block">
+            <DataTable
+              pageKey="fiyatlar-platform"
+              columns={platformKolonlari}
+              data={filteredProducts}
+              isLoading={isLoading}
+              rowClassName={(row) => selectedIds.has(row.id) ? 'bg-secondary/60' : 'hover:bg-secondary/50'}
+              emptyMessage="Ürün bulunamadı"
+            />
           </div>
-        </div>
         )}
 
         {/* Gorunum 2: satir bazli — her urun x platform bir satir */}
         {viewMode === 'satir' && (
-          <div className="hidden sm:block rounded-[18px] border border-border bg-card overflow-hidden">
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-secondary hover:bg-secondary">
-                    <TableHead className="font-semibold">SKU</TableHead>
-                    <TableHead className="font-semibold">Ürün Adı</TableHead>
-                    <TableHead className="font-semibold">Platform</TableHead>
-                    <TableHead className="font-semibold text-right">Maliyet</TableHead>
-                    <TableHead className="font-semibold text-right">Satış Fiyatı</TableHead>
-                    <TableHead className="font-semibold text-right">Kâr</TableHead>
-                    <TableHead className="font-semibold text-center">Kâr Oranı</TableHead>
-                    <TableHead className="font-semibold text-center">Barem</TableHead>
-                    <TableHead className="font-semibold text-center">Detay</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {isLoading ? (
-                    [...Array(6)].map((_, i) => (
-                      <TableRow key={i}>{[...Array(9)].map((_, j) => <TableCell key={j}><Skeleton className="h-5 w-20" /></TableCell>)}</TableRow>
-                    ))
-                  ) : satirBazliVeri.length === 0 ? (
-                    <TableRow><TableCell colSpan={9} className="h-32 text-center text-muted-foreground">Gösterilecek fiyat yok</TableCell></TableRow>
-                  ) : (
-                    satirBazliVeri.map(({ product, platform, price, profitAmount, profitRate }) => (
-                      <TableRow key={`${product.id}-${platform.id}`} className="hover:bg-secondary/50">
-                        <TableCell className="font-mono text-sm text-muted-foreground">{product.sku || '-'}</TableCell>
-                        <TableCell>
-                          <p className="font-medium text-foreground">{product.name}</p>
-                          <p className="text-xs text-muted-foreground">{product.category_name}</p>
-                        </TableCell>
-                        <TableCell className="text-[13px] font-medium text-foreground">{platform.name}</TableCell>
-                        <TableCell className="text-right">₺{formatTurkishCurrency(product.cost)}</TableCell>
-                        <TableCell className="text-right font-bold text-foreground">₺{formatTurkishCurrency(price.sale_price)}</TableCell>
-                        <TableCell className="text-right">
-                          ₺{formatTurkishCurrency(profitAmount)}
-                          {showBeforeTax && <span className="text-muted-foreground/70 text-xs"> (vergi öncesi)</span>}
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${getProfitColor(profitRate)}`}>{formatTurkishPercent(profitRate)}</span>
-                        </TableCell>
-                        <TableCell className="text-center">{getBaremBadge(price.barem_used) || <span className="text-muted-foreground/70">—</span>}</TableCell>
-                        <TableCell className="text-center">
-                          <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => handleShowDetail(product, platform)}>
-                            <Info className="h-3 w-3 mr-1" />Detay
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </div>
+          <div className="hidden sm:block">
+            <DataTable
+              pageKey="fiyatlar-satir"
+              columns={satirKolonlari}
+              data={satirBazliVeri}
+              isLoading={isLoading}
+              emptyMessage="Gösterilecek fiyat yok"
+            />
           </div>
         )}
 

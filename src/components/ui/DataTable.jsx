@@ -49,7 +49,14 @@ export default function DataTable({
   // pageKey verilirse sutun ayarlari (gizle/sirala/sabitle/genislik)
   // kullaniciya ozel kaydedilir. Verilmezse davranis eskisiyle aynidir.
   pageKey,
+  // Hucre icinde acilir menu/arama kutusu varsa kartin kirpmamasi icin.
+  overflowVisible = false,
 }) {
+  // ph-panel overflow-hidden icerir; kirpma istenmeyen tablolarda ayni
+  // gorunumu overflow olmadan veriyoruz.
+  const panelSinifi = overflowVisible
+    ? 'rounded-[18px] border border-border bg-card'
+    : 'ph-panel';
   const {
     gorunenKolonlar,
     yonetilebilir,
@@ -164,7 +171,7 @@ export default function DataTable({
         </div>
       )}
 
-      <div className="ph-panel">
+      <div className={panelSinifi}>
         <Table>
           <TableHeader>
             <TableRow className="hover:bg-transparent">
