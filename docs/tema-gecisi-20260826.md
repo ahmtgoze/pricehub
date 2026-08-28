@@ -226,3 +226,70 @@ düzeltilmesi gereken iki hata tespit edildi:
    → her kayıt hata verirdi.
 2. Vurgu rengi `#1d1d1f` (hex) olarak yazılıyor, ama Tailwind `hsl(...)` bekliyor
    → renkler bozulurdu.
+
+---
+
+## 6. Faz 2 — yapılanlar (28 Ağustos 2026)
+
+### Önce: "sayfalar kayıp" sorunu çözüldü
+
+Yeni temada sol menüdeki gruplar (Tanımlar / Fiyat / Raporlar / Promosyonlar)
+**kapalı** başlıyordu. Başlıklar soluk gri olduğu için tıklanabilir oldukları
+anlaşılmıyor, sayfalar silinmiş gibi görünüyordu.
+
+Ölçüm yapıldı: eski ve yeni sürümdeki tüm sayfa/bileşen etiketleri
+karşılaştırıldı — **783 etiketten 0 tanesi kaybolmuş, 7 tanesi eklenmiş.**
+Menü içeriği de birebir aynı; tek fark daha önce çıkarılan
+"Düzenlenen Maliyetler".
+
+Düzeltme: gruplar açık başlıyor, başlık kontrastı artırıldı, aktif sayfayı
+içeren grup artık kapatılabiliyor.
+
+### Not: menüde hiç olmayan iki sayfa (eskiden beri)
+
+`Maliyet Senkronizasyonu` (`/CostSynchronization`) ve
+`Fiyat Senkronizasyonu` (`/PriceSynchronization`) sayfaları çalışıyor ama
+hiçbir menüde linkleri yok — eski temada da yoktu. Sadece adres yazılarak
+açılıyorlar. İstenirse menüye eklenebilir.
+
+### Madde 7 — Bildirimler tıklanabilir
+
+Duyuruya tıklayınca ilgili sayfaya gidiyor.
+
+Veritabanı değişikliği (**sadece ekleme**, migration
+`duyurulara_ilgili_sayfa_alani_ekle`):
+
+```sql
+alter table public.announcements add column if not exists link_page text;
+```
+
+Mevcut satırlar değişmedi, veri silinmedi. Eski duyurularda kolon boş kaldığı
+için davranışları aynı. Duyuru yazarken açılır listeden sayfa seçiliyor;
+seçilmezse duyuru eskisi gibi tıklanmaz kalır.
+
+Geri alma: `alter table public.announcements drop column link_page;`
+
+### Madde 8 — Sayfa içi "Nasıl kullanılır?"
+
+Üst bardaki **(?)** düğmesi, bulunduğun sayfanın özetini, detayını ve sıkça
+sorulanlarını sağdan açılan panelde gösterir. Esc ile kapanır.
+
+Kullanım Kılavuzu'ndaki metinler `src/lib/helpContent.js`'e taşındı; hem
+kılavuz sayfası hem panel oradan okuyor (tek doğru kaynak). Yeni sayfa
+eklenince yardım metnini tek yere yazmak yeterli.
+
+### Madde 10 — Koyu tema anahtarı
+
+Üst bardaki **ay/güneş** düğmesi. Tercih tarayıcıda saklanıyor
+(`localStorage`), **veritabanına dokunmuyor**. `index.css`'teki `.dark`
+token'ları tema geçişinde zaten hazırlanmıştı; yeni renk tanımlanmadı.
+`index.html`'e küçük bir betik eklendi: tema React yüklenmeden uygulanıyor,
+böylece koyu temada açılışta beyaz parlama olmuyor.
+
+### Henüz yapılmayanlar (Faz 2'nin kalanı)
+
+1. Fiyatlar: üç görünüm · 2. Sütun sabitleme + Görünümü Özelleştir ·
+3. Excel şablonları · 4. Rapor arşivleme · 5. POS hizmet bedeli ·
+6. Promosyon toplu seçim/barem önerisi · 9. Rol sadeleştirme
+
+Bunların 2, 3, 4, 5 ve 9'u için Supabase'e yeni tablo/kolon gerekiyor.
