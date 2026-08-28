@@ -293,3 +293,61 @@ böylece koyu temada açılışta beyaz parlama olmuyor.
 6. Promosyon toplu seçim/barem önerisi · 9. Rol sadeleştirme
 
 Bunların 2, 3, 4, 5 ve 9'u için Supabase'e yeni tablo/kolon gerekiyor.
+
+---
+
+## 7. Faz 2 — kalan maddeler (28 Ağustos 2026)
+
+### Madde 1 — Fiyatlar: üç görünüm ✅
+Platform sütunlu (varsayılan) / Satır bazlı / Detaylı. Seçim tarayıcıda
+saklanıyor, veritabanına dokunulmuyor.
+
+### Madde 2 — Sütun özelleştirme ✅
+Yeni tablo `user_view_preferences` (RLS açık, `created_by = auth.email()`).
+Her tablonun sağ üstündeki **Sütunlar** düğmesi: gizle/göster, sırala,
+piksel genişlik, sola sabitle, sıfırla. 6 tabloda aktif. Yeni sayfa:
+**Görünümü Özelleştir** (menüde).
+
+### Madde 3 — Excel şablonları ✅
+Yeni tablo `export_templates` (RLS açık, aynı desen).
+Excel (.xlsx) formatı eklendi, dosya adı artık `Sayfa_2026-08-28_14-05`,
+içe aktarmada başlıklar büyük/küçük harf ve boşluk farkı gözetmeden
+eşleşiyor, zorunlu alan boşsa satır numarasıyla hata veriliyor
+(Ürünler'de SKU / Ürün Adı / Maliyet zorunlu), kendi şablonunu
+kaydedebiliyorsun.
+
+### Madde 4 — Rapor arşivleme ✅ (zaten vardı)
+`archived` ve `change_type` kolonları ile arşiv sekmeleri hazırdı.
+Düzeltilen: motor `chain_inconsistency` tipiyle kayıt yazıyordu (canlıda
+33 kayıt) ama bu tip listede tanımlı olmadığı için hepsi yanlışlıkla
+"Manuel" görünüyordu.
+
+### Madde 5 — POS hizmet bedeli ✅
+Kolonlar zaten vardı ama yalnızca HepsiBurada'da işliyordu. Artık Web
+Sitesi platformunda da açılabiliyor. **Canlıya etkisi yok** — hiçbir web
+platformunda bu anahtar açık değil, kapalıyken oran 0.
+
+### Madde 6 — Promosyonlarda toplu seçim ✅
+5 sayfaya maksimum kâr oranı/tutarı filtresi eklendi (önceden yalnızca
+minimum vardı). Boş bırakılırsa sınır yok. Avantajlı Ürün Etiketi'nde
+fiyat kutusunda artık B1/B2/Desi barem rozeti görünüyor.
+"İndirimli hedefe uyan ucuz barem tercihi" zaten vardı.
+
+### Madde 9 — Rol/kullanıcı sınırı ✅
+1 yönetici + en fazla 3 kullanıcı. Sayaç Genel Ayarlar > Kullanıcılar'da.
+Sınır dolunca aktife alma engelleniyor. Yeni: kullanıcı kendi rolünü
+değiştiremiyor, kendi hesabını pasife alamıyor.
+RLS'e dokunulmadı — sistem tarifeleri/stopaj/hizmet bedelleri zaten
+sahiplik (`created_by = auth.email()`) ile korunuyor.
+
+### Ayrıca düzeltilen kritik hata
+`AuthContext` oturum yokken `authError` set etmiyordu; girişsiz ziyaretçi
+uygulamanın tamamını açabiliyor, Dashboard sıfır gösteriyor ve Platformlar
+sonsuza kadar dönüyordu. Artık giriş ekranına yönlendiriliyor.
+
+### Yeni tabloların geri alınması (gerekirse)
+```sql
+drop table if exists public.user_view_preferences;
+drop table if exists public.export_templates;
+alter table public.announcements drop column if exists link_page;
+```
