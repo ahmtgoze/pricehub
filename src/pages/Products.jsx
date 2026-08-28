@@ -634,7 +634,9 @@ export default function Products() {
     if (!searchText.trim()) return true;
     const searchWords = searchText.trim().split(/\s+/).map(word => normalizeText(word)).filter(word => word.length > 0);
     if (searchWords.length === 0) return true;
-    const productText = normalizeText(`${product.name || ''} ${product.sku || ''}`);
+    // Barkod da aranabilir olmali: urunun barkodu var, prototipteki arama
+    // kutusu da barkod vaat ediyor; yalnizca ad ve SKU taraniyordu.
+    const productText = normalizeText(`${product.name || ''} ${product.sku || ''} ${product.barcode || ''}`);
     return searchWords.every(word => productText.includes(word));
   };
 
@@ -995,7 +997,7 @@ export default function Products() {
 
         <div className="rounded-[18px] border border-border bg-card p-5 mb-6">
           <div className="flex flex-col sm:flex-row gap-4">
-            <SearchInput value={search} onChange={setSearch} placeholder="Ürün adı veya SKU ara..." className="flex-1" />
+            <SearchInput value={search} onChange={setSearch} placeholder="Ürün adı, SKU veya barkod ara..." className="flex-1" />
             <FiltreEtiketi ad="Kategori">
             <Select value={categoryFilter} onValueChange={setCategoryFilter}>
               <SelectTrigger className="w-full sm:w-48"><SelectValue placeholder="Kategori" /></SelectTrigger>

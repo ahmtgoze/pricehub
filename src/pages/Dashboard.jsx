@@ -306,7 +306,7 @@ if (filteredByRange) {
                   <div className="flex items-center justify-between mb-4">
                     <h2 className="text-[15px] font-semibold tracking-[-0.2px]">Kâr Oranı Dağılımı</h2>
                     <Button variant="outline" size="sm" onClick={() => setShowCustomFilter(!showCustomFilter)} className="text-xs">
-                      {filteredByRange ? '✓ Filtre Aktif' : 'Özel Aralık Seç'}
+                      {filteredByRange ? '✓ Filtre Aktif' : 'Tarih Aralığı Seç'}
                     </Button>
                   </div>
                   {showCustomFilter && (

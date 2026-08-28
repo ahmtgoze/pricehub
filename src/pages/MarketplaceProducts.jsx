@@ -882,7 +882,7 @@ export default function MarketplaceProducts() {
                 {selectedRows.size > 0 && <span className="text-sm text-muted-foreground">{selectedRows.size} seçildi</span>}
               </div>
               <div className="flex-1 max-w-md">
-                <Input placeholder="Ürün adı ara..." value={tableSearchQuery} onChange={(e) => setTableSearchQuery(e.target.value)} className="w-full" />
+                <Input placeholder="Ürün adı veya barkod ara..." value={tableSearchQuery} onChange={(e) => setTableSearchQuery(e.target.value)} className="w-full" />
               </div>
               <FiltreEtiketi ad="Eşleşme">
                 <Select value={filterStatus} onValueChange={setFilterStatus}>
