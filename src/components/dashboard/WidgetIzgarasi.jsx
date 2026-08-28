@@ -105,8 +105,13 @@ export default function WidgetIzgarasi({ pageKey, tanimlar }) {
               )}
             </Button>
           </PopoverTrigger>
-          <PopoverContent align="end" className="w-[320px] p-0">
-            <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+          <PopoverContent
+            align="end"
+            collisionPadding={12}
+            className="w-[320px] p-0 flex flex-col
+                       max-h-[var(--radix-popover-content-available-height,80vh)]"
+          >
+            <div className="shrink-0 flex items-center justify-between px-4 py-3 border-b border-border">
               <p className="text-[13px] font-semibold text-foreground">Dashboard düzeni</p>
               <button
                 onClick={sifirla}
@@ -118,7 +123,7 @@ export default function WidgetIzgarasi({ pageKey, tanimlar }) {
               </button>
             </div>
 
-            <label className="flex items-center gap-2 px-4 py-2.5 border-b border-border text-[13px] cursor-pointer hover:bg-secondary">
+            <label className="shrink-0 flex items-center gap-2 px-4 py-2.5 border-b border-border text-[13px] cursor-pointer hover:bg-secondary">
               <input
                 type="checkbox"
                 checked={duzenModu}
@@ -129,7 +134,7 @@ export default function WidgetIzgarasi({ pageKey, tanimlar }) {
               <span className="text-xs text-muted-foreground">— taşı ve boyutlandır</span>
             </label>
 
-            <div className="max-h-[300px] overflow-y-auto py-1">
+            <div className="flex-1 min-h-0 overflow-y-auto py-1">
               {yonetilebilir.map(w => {
                 const gizli = prefs.hidden.includes(w.id);
                 return (
@@ -149,7 +154,7 @@ export default function WidgetIzgarasi({ pageKey, tanimlar }) {
               })}
             </div>
 
-            <p className="px-4 py-2.5 border-t border-border text-[11px] leading-relaxed text-muted-foreground">
+            <p className="shrink-0 px-4 py-2.5 border-t border-border text-[11px] leading-relaxed text-muted-foreground">
               Düzenleme modunda kutuları sürükleyerek taşı, Dar/Orta/Geniş ile boyutlandır.
               Düzen yalnızca sana özeldir.
             </p>

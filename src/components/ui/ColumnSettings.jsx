@@ -66,8 +66,13 @@ export default function ColumnSettings({
           )}
         </Button>
       </PopoverTrigger>
-      <PopoverContent align="end" className="w-[340px] p-0">
-        <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+      <PopoverContent
+        align="end"
+        collisionPadding={12}
+        className="w-[340px] p-0 flex flex-col
+                   max-h-[var(--radix-popover-content-available-height,80vh)]"
+      >
+        <div className="shrink-0 flex items-center justify-between px-4 py-3 border-b border-border">
           <p className="text-[13px] font-semibold text-foreground">Sütun ayarları</p>
           <button
             onClick={sifirla}
@@ -85,7 +90,7 @@ export default function ColumnSettings({
         <div
           ref={alan.innerRef}
           {...alan.droppableProps}
-          className="max-h-[380px] overflow-y-auto py-1"
+          className="flex-1 min-h-0 overflow-y-auto py-1"
         >
           {sirali.map((col, i) => {
             const k = kolonAnahtari(col);
@@ -165,7 +170,7 @@ export default function ColumnSettings({
         </DragDropContext>
 
         {ekSutunlar.length > 0 && (
-          <div className="border-t border-border">
+          <div className="shrink-0 border-t border-border max-h-[190px] overflow-y-auto">
             <p className="px-4 pt-3 pb-1 text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">
               Eklenebilir sütunlar
             </p>
@@ -189,7 +194,7 @@ export default function ColumnSettings({
           </div>
         )}
 
-        <p className="px-4 py-2.5 border-t border-border text-[11px] leading-relaxed text-muted-foreground">
+        <p className="shrink-0 px-4 py-2.5 border-t border-border text-[11px] leading-relaxed text-muted-foreground">
           Sırayı soldaki tutamaktan sürükleyerek, genişliği tablo başlığının sağ
           kenarından sürükleyerek ayarla.
           Ayarlar yalnızca sana özeldir ve otomatik kaydedilir.
