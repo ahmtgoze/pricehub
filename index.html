@@ -6,6 +6,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="manifest" href="/manifest.json" />
     <title>PriceHub</title>
+    <script>
+      // Tema tercihini React yuklenmeden once uygula: aksi halde koyu tema
+      // secili kullanicida sayfa bir an beyaz parliyor.
+      (function () {
+        try {
+          var t = localStorage.getItem('pricehub-tema');
+          if (t === 'koyu' || (t === 'sistem' &&
+              window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
+          }
+        } catch (e) { /* localStorage kapaliysa acik tema */ }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

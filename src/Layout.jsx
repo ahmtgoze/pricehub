@@ -24,9 +24,14 @@ import {
   Settings,
   ChevronDown,
   ChevronRight,
+  HelpCircle as HelpIcon,
+  Sun,
+  Moon,
 } from 'lucide-react';
 import NotificationCenter from '@/components/notifications/NotificationCenter';
 import BackgroundTaskWidget from '@/components/BackgroundTaskWidget';
+import HelpPanel from '@/components/HelpPanel';
+import { useTheme } from '@/lib/useTheme';
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Toaster } from "@/components/ui/sonner";
@@ -99,6 +104,20 @@ const BOTTOM_ITEMS = [
   { name: 'Genel Ayarlar', page: 'Settings', icon: Settings },
 ];
 
+// Ust bardaki yardim / tema dugmeleri (mobil ve masaustunde ayni gorunum)
+function BarButton({ onClick, title, children }) {
+  return (
+    <button
+      onClick={onClick}
+      title={title}
+      aria-label={title}
+      className="flex items-center justify-center w-9 h-9 rounded-xl text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
+    >
+      {children}
+    </button>
+  );
+}
+
 function NavLink({ item, isActive, color, onClick }) {
   const colorStyle = color ? { color: isActive ? '#fff' : color } : {};
   const bgStyle = color && !isActive ? { backgroundColor: color + '15' } : {};
@@ -144,6 +163,8 @@ function GroupHeader({ label, isOpen, onToggle, hasActive }) {
 
 export default function Layout({ children, currentPageName }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
+  const { degistir: temaDegistir, koyuMu } = useTheme();
 
   const { data: platforms = [] } = useQuery({
     queryKey: ['platforms'],
@@ -334,8 +355,14 @@ export default function Layout({ children, currentPageName }) {
             <Menu className="h-6 w-6" />
           </Button>
           <span className="font-semibold text-foreground flex-1 ml-3">{MARKA_ADI}</span>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1">
             <NotificationCenter />
+            <BarButton onClick={() => setHelpOpen(true)} title="Nasıl kullanılır?">
+              <HelpIcon className="h-5 w-5" />
+            </BarButton>
+            <BarButton onClick={temaDegistir} title={koyuMu ? 'Açık temaya geç' : 'Koyu temaya geç'}>
+              {koyuMu ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+            </BarButton>
             <Button
               variant="ghost"
               size="icon"
@@ -348,8 +375,14 @@ export default function Layout({ children, currentPageName }) {
         </header>
 
         {/* Masaüstü üst bar */}
-        <div className="hidden lg:flex items-center justify-end gap-2 h-[52px] px-6 border-b border-border bg-card/70 backdrop-blur-xl backdrop-saturate-150 flex-shrink-0">
+        <div className="hidden lg:flex items-center justify-end gap-1 h-[52px] px-6 border-b border-border bg-card/70 backdrop-blur-xl backdrop-saturate-150 flex-shrink-0">
           <NotificationCenter />
+          <BarButton onClick={() => setHelpOpen(true)} title="Nasıl kullanılır?">
+            <HelpIcon className="h-5 w-5" />
+          </BarButton>
+          <BarButton onClick={temaDegistir} title={koyuMu ? 'Açık temaya geç' : 'Koyu temaya geç'}>
+            {koyuMu ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+          </BarButton>
           <button
             onClick={async () => { await db.auth.logout(); window.location.href = '/login'; }}
             className="flex items-center justify-center w-9 h-9 rounded-xl text-destructive hover:bg-destructive/10 transition-colors"
@@ -368,6 +401,12 @@ export default function Layout({ children, currentPageName }) {
       </div>
 
       <BackgroundTaskWidget />
+
+      <HelpPanel
+        pageName={currentPageName}
+        open={helpOpen}
+        onClose={() => setHelpOpen(false)}
+      />
     </div>
   );
 }
