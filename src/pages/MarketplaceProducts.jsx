@@ -17,6 +17,7 @@ import StockSyncModal from '@/components/marketplace/StockSyncModal';
 import UploadSummaryModal from '@/components/marketplace/UploadSummaryModal';
 import MissingProductsModal from '@/components/marketplace/MissingProductsModal';
 import DataTable from '@/components/ui/DataTable';
+import FiltreEtiketi from '@/components/ui/FiltreEtiketi';
 
 const HEPSIBURADA_YUKLE_ADIMLARI = [
   'HepsiBurada paneline girin.',
@@ -883,8 +884,7 @@ export default function MarketplaceProducts() {
               <div className="flex-1 max-w-md">
                 <Input placeholder="Ürün adı ara..." value={tableSearchQuery} onChange={(e) => setTableSearchQuery(e.target.value)} className="w-full" />
               </div>
-              <div className="flex items-center gap-2">
-                <Label className="text-sm">Filtre:</Label>
+              <FiltreEtiketi ad="Eşleşme">
                 <Select value={filterStatus} onValueChange={setFilterStatus}>
                   <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
                   <SelectContent>
@@ -893,18 +893,17 @@ export default function MarketplaceProducts() {
                     <SelectItem value="not_matched">Eşleşmemiş</SelectItem>
                   </SelectContent>
                 </Select>
-              </div>
-              <div className="flex items-center gap-2 ml-auto">
-                <Label className="text-sm">Sırala:</Label>
+              </FiltreEtiketi>
+              <FiltreEtiketi ad="Sırala" className="ml-auto">
                 <Select value={sortBy} onValueChange={setSortBy}>
                   <SelectTrigger className="w-48"><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="name">Alfabetik (A-Z)</SelectItem>
-                    <SelectItem value="price">Fiyata (Düşükten Yükseğe)</SelectItem>
-                    <SelectItem value="date">Tarihte (Yeni)</SelectItem>
+                    <SelectItem value="name">Ürün adı: A → Z</SelectItem>
+                    <SelectItem value="price">Fiyat: düşük → yüksek</SelectItem>
+                    <SelectItem value="date">Tarih: yeni → eski</SelectItem>
                   </SelectContent>
                 </Select>
-              </div>
+              </FiltreEtiketi>
               {selectedRows.size > 0 && (
                 <>
                   <Button variant="secondary" size="sm" onClick={handleUnmatchSelected}>
