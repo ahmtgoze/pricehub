@@ -300,7 +300,7 @@ if (filteredByRange) {
     {
       id: 'kar-dagilimi',
       baslik: 'Kâr Oranı Dağılımı',
-      varsayilanSpan: 2,
+      varsayilanSpan: 3,
       icerik: (
       <div className="ph-card">
                   <div className="flex items-center justify-between mb-4">

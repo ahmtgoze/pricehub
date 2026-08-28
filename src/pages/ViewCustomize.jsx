@@ -41,7 +41,7 @@ const DASHBOARD_KUTULARI = [
   { id: 'kpi-fiyat', baslik: 'Hesaplanan Fiyat', varsayilanSpan: 1 },
   { id: 'kpi-fiyatlanmamis', baslik: 'Fiyatlanmamış', varsayilanSpan: 1 },
   { id: 'kar-ozeti', baslik: 'Kâr Özeti', varsayilanSpan: 1 },
-  { id: 'kar-dagilimi', baslik: 'Kâr Oranı Dağılımı', varsayilanSpan: 2 },
+  { id: 'kar-dagilimi', baslik: 'Kâr Oranı Dağılımı', varsayilanSpan: 3 },
   { id: 'platform-ozeti', baslik: 'Platform Bazlı Kâr Özeti', varsayilanSpan: 4 },
   { id: 'tarihe-gore', baslik: 'Tarihe Göre Eklenen Ürünler', varsayilanSpan: 1 },
   { id: 'listelenmeyen', baslik: 'Platformda Listelenmeyen Ürünler', varsayilanSpan: 1 },
