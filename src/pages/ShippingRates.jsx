@@ -335,7 +335,7 @@ export default function ShippingRates() {
                 <Trash2 className="h-4 w-4" />Seçilenleri Sil ({selectedIds.length})
               </Button>
             )}
-            <ImportExport data={filteredRates} columns={exportColumns} templateColumns={templateColumns} templateInfoData={templateInfoData} filename="kargo_tarifeleri" onImport={handleImport} />
+            <ImportExport pageKey="kargo-tarifeleri" data={filteredRates} columns={exportColumns} templateColumns={templateColumns} templateInfoData={templateInfoData} filename="kargo_tarifeleri" onImport={handleImport} />
             {userRole === 'admin' && (
               <Button onClick={() => { setEditingRate(null); setIsSystemRate(true); setModalOpen(true); }} variant="outline" className="gap-2 border-input text-muted-foreground hover:bg-secondary">
                 <Plus className="h-4 w-4" />Sistem Tarifesi Ekle

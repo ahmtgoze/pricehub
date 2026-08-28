@@ -301,7 +301,7 @@ export default function UpdateReports() {
                 </Button>
               </>
             )}
-            <ImportExport
+            <ImportExport pageKey="guncelleme-raporlari"
               data={filteredReports}
               columns={exportColumns}
               filename="guncelleme_raporlari"

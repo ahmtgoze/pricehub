@@ -885,9 +885,9 @@ export default function Products() {
   ];
 
   const templateColumns = [
-    { key: 'SKU', label: 'SKU', example: 'SKU-001' },
-    { key: 'Ürün Adı', label: 'Ürün Adı', example: 'Örnek Ürün' },
-    { key: 'Maliyet', label: 'Maliyet', example: '100' },
+    { key: 'SKU', label: 'SKU', example: 'SKU-001', required: true },
+    { key: 'Ürün Adı', label: 'Ürün Adı', example: 'Örnek Ürün', required: true },
+    { key: 'Maliyet', label: 'Maliyet', example: '100', required: true },
     { key: 'Baskı Maliyeti', label: 'Baskı Maliyeti', example: '0' },
     { key: 'Ek Maliyet', label: 'Ek Maliyet', example: '0' },
     { key: 'Desi 1', label: 'Desi 1', example: '2.5' },
@@ -940,7 +940,7 @@ export default function Products() {
                 </Button>
               </>
             )}
-            <ImportExport
+            <ImportExport pageKey="urunler"
               data={exportData}
               columns={exportColumns}
               templateColumns={templateColumns}

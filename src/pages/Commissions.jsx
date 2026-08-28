@@ -541,7 +541,7 @@ export default function Commissions() {
                 Seçilenleri Sil ({selectedIds.length})
               </Button>
             )}
-            <ImportExport
+            <ImportExport pageKey="komisyonlar"
               data={filteredCommissions}
               columns={exportColumns}
               templateColumns={templateColumns}

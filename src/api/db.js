@@ -24,6 +24,8 @@ const TABLE_MAP = {
   User: 'user_profiles',
   // Kullanici bazli tablo gorunum tercihleri (sutun gizleme/sira/genislik/sabitleme)
   UserViewPreference: 'user_view_preferences',
+  // Kullaniciya ozel Excel/CSV disa aktarma sablonlari
+  ExportTemplate: 'export_templates',
 };
 
 function applyConditions(query, conditions) {
