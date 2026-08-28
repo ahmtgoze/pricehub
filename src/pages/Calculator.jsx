@@ -509,32 +509,6 @@ export default function Calculator() {
                </div>
               )}
 
-              {/* Bugün Kapında - sadece Trendyol/Hepsiburada için */}
-              {(() => {
-                const selectedPlatformObj = platforms.find(p => p.id === selectedPlatform);
-                const isMarketplace = selectedPlatformObj?.platform_type === 'trendyol' || selectedPlatformObj?.platform_type === 'hepsiburada';
-                if (!isMarketplace) return null;
-                return (
-                  <div className={`border rounded-xl p-4 transition-all ${isSameDayDelivery ? 'border-amber-300 bg-amber-50/50' : 'border-border bg-secondary/50'}`}>
-                    <div className="flex items-center space-x-3">
-                      <input
-                        type="checkbox"
-                        id="sameDayDelivery"
-                        checked={isSameDayDelivery}
-                        onChange={(e) => setIsSameDayDelivery(e.target.checked)}
-                        className="h-4 w-4 rounded border-input text-amber-600 focus:ring-amber-500"
-                      />
-                      <div className="flex-1">
-                        <Label htmlFor="sameDayDelivery" className="cursor-pointer font-medium text-muted-foreground">
-                          Bugün Kapında
-                        </Label>
-                        <p className="text-xs text-muted-foreground mt-0.5">İndirimli hizmet bedeli ve Bugün Kapında barem/desi tarifeleri kullanılır</p>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })()}
-
               <div className="space-y-4">
                <div className={`border rounded-xl p-4 transition-all ${
                  isMultiPackage ? 'border-primary bg-secondary' : 'border-border bg-secondary/50'
@@ -622,6 +596,32 @@ export default function Calculator() {
                    )}
                    </div>
                    </div>
+
+              {/* Bugün Kapında - sadece Trendyol/Hepsiburada için */}
+              {(() => {
+                const selectedPlatformObj = platforms.find(p => p.id === selectedPlatform);
+                const isMarketplace = selectedPlatformObj?.platform_type === 'trendyol' || selectedPlatformObj?.platform_type === 'hepsiburada';
+                if (!isMarketplace) return null;
+                return (
+                  <div className={`border rounded-xl p-4 transition-all ${isSameDayDelivery ? 'border-amber-300 bg-amber-50/50' : 'border-border bg-secondary/50'}`}>
+                    <div className="flex items-center space-x-3">
+                      <input
+                        type="checkbox"
+                        id="sameDayDelivery"
+                        checked={isSameDayDelivery}
+                        onChange={(e) => setIsSameDayDelivery(e.target.checked)}
+                        className="h-4 w-4 rounded border-input text-amber-600 focus:ring-amber-500"
+                      />
+                      <div className="flex-1">
+                        <Label htmlFor="sameDayDelivery" className="cursor-pointer font-medium text-muted-foreground">
+                          Bugün Kapında
+                        </Label>
+                        <p className="text-xs text-muted-foreground mt-0.5">İndirimli hizmet bedeli ve Bugün Kapında barem/desi tarifeleri kullanılır</p>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
