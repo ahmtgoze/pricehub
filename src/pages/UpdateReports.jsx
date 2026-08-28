@@ -347,11 +347,11 @@ export default function UpdateReports() {
         </div>
 
         <div className="rounded-[18px] border border-border bg-card p-5 mb-6">
-          <div className="flex flex-col sm:flex-row sm:flex-wrap gap-4">
-            <SearchInput value={search} onChange={setSearch} placeholder="Ürün, SKU veya neden ara..." className="flex-1 sm:min-w-[240px]" />
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+            <SearchInput value={search} onChange={setSearch} placeholder="Ürün, SKU veya neden ara..." className="sm:col-span-2 lg:col-span-1" />
             <FiltreEtiketi ad="Platform">
               <Select value={platformFilter} onValueChange={setPlatformFilter}>
-                <SelectTrigger className="w-full sm:w-48"><SelectValue placeholder="Platform" /></SelectTrigger>
+                <SelectTrigger className="w-full"><SelectValue placeholder="Platform" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Tüm Platformlar</SelectItem>
                   {platforms.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
@@ -360,7 +360,7 @@ export default function UpdateReports() {
             </FiltreEtiketi>
             <FiltreEtiketi ad="Değişim Sebebi">
               <Select value={typeFilter} onValueChange={setTypeFilter}>
-                <SelectTrigger className="w-full sm:w-48"><SelectValue placeholder="Tüm Sebepler" /></SelectTrigger>
+                <SelectTrigger className="w-full"><SelectValue placeholder="Tüm Sebepler" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Tüm Sebepler</SelectItem>
                   <SelectItem value="cost_update">Maliyet</SelectItem>
@@ -374,7 +374,7 @@ export default function UpdateReports() {
             </FiltreEtiketi>
             <FiltreEtiketi ad="Kaynak">
               <Select value={sourceFilter} onValueChange={setSourceFilter}>
-                <SelectTrigger className="w-full sm:w-44"><SelectValue placeholder="Tümü" /></SelectTrigger>
+                <SelectTrigger className="w-full"><SelectValue placeholder="Tümü" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Tümü</SelectItem>
                   <SelectItem value="system">Sistem (otomatik)</SelectItem>
@@ -384,7 +384,7 @@ export default function UpdateReports() {
             </FiltreEtiketi>
             <FiltreEtiketi ad="Sırala">
               <Select value={sortFilter} onValueChange={setSortFilter}>
-                <SelectTrigger className="w-full sm:w-48"><SelectValue placeholder="Sırala" /></SelectTrigger>
+                <SelectTrigger className="w-full"><SelectValue placeholder="Sırala" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="date_desc">Tarih: yeni → eski</SelectItem>
                   <SelectItem value="date_asc">Tarih: eski → yeni</SelectItem>

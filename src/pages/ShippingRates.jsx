@@ -424,11 +424,11 @@ export default function ShippingRates() {
         )}
 
         <div className="rounded-[18px] border border-border bg-card p-5 mb-6">
-          <div className="flex flex-col sm:flex-row sm:flex-wrap gap-4">
-            <SearchInput value={search} onChange={setSearch} placeholder="Platform, firma veya desi ara (örn: 4, 4 desi)..." className="flex-1 sm:min-w-[240px]" />
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <SearchInput value={search} onChange={setSearch} placeholder="Platform, firma veya desi ara (örn: 4, 4 desi)..." className="sm:col-span-2" />
             <FiltreEtiketi ad="Platform">
               <Select value={platformFilter} onValueChange={setPlatformFilter}>
-                <SelectTrigger className="w-full sm:w-48"><SelectValue placeholder="Platform" /></SelectTrigger>
+                <SelectTrigger className="w-full"><SelectValue placeholder="Platform" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Tüm Platformlar</SelectItem>
                   <SelectItem value="trendyol">Trendyol</SelectItem>
@@ -439,7 +439,7 @@ export default function ShippingRates() {
             </FiltreEtiketi>
             <FiltreEtiketi ad="Tarife Tipi">
               <Select value={typeFilter} onValueChange={setTypeFilter}>
-                <SelectTrigger className="w-full sm:w-40"><SelectValue placeholder="Tip" /></SelectTrigger>
+                <SelectTrigger className="w-full"><SelectValue placeholder="Tip" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Tüm Tipler</SelectItem>
                   <SelectItem value="barem1">Barem 1</SelectItem>
@@ -450,7 +450,7 @@ export default function ShippingRates() {
             </FiltreEtiketi>
             <FiltreEtiketi ad="Kargo Firması">
               <Select value={companyFilter} onValueChange={(v) => { setCompanyFilter(v); setSourceFilter('all'); }}>
-                <SelectTrigger className="w-full sm:w-48"><SelectValue placeholder="Kargo Firması" /></SelectTrigger>
+                <SelectTrigger className="w-full"><SelectValue placeholder="Kargo Firması" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Tüm Firmalar</SelectItem>
                   {[...new Set(shippingRates.map(r => r.shipping_company).filter(Boolean))].sort().map(company => (
@@ -461,7 +461,7 @@ export default function ShippingRates() {
             </FiltreEtiketi>
             <FiltreEtiketi ad="Kaynak">
               <Select value={sourceFilter} onValueChange={(v) => { setSourceFilter(v); setCompanyFilter('all'); }}>
-                <SelectTrigger className="w-full sm:w-52"><SelectValue placeholder="Kaynak" /></SelectTrigger>
+                <SelectTrigger className="w-full"><SelectValue placeholder="Kaynak" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Tüm Tarifeler</SelectItem>
                   <SelectItem value="manual">📋 Manuel Anlaşmalı Fiyatlar</SelectItem>
@@ -471,7 +471,7 @@ export default function ShippingRates() {
             </FiltreEtiketi>
             <FiltreEtiketi ad="Bugün Kargoda">
               <Select value={sameDayFilter} onValueChange={setSameDayFilter}>
-                <SelectTrigger className="w-full sm:w-40"><SelectValue placeholder="Bugün Kargoda" /></SelectTrigger>
+                <SelectTrigger className="w-full"><SelectValue placeholder="Bugün Kargoda" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Tümü</SelectItem>
                   <SelectItem value="yes">Evet</SelectItem>
@@ -481,7 +481,7 @@ export default function ShippingRates() {
             </FiltreEtiketi>
             <FiltreEtiketi ad="Durum">
               <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-full sm:w-36"><SelectValue placeholder="Durum" /></SelectTrigger>
+                <SelectTrigger className="w-full"><SelectValue placeholder="Durum" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Tümü</SelectItem>
                   <SelectItem value="active">Aktif</SelectItem>
@@ -491,7 +491,7 @@ export default function ShippingRates() {
             </FiltreEtiketi>
             <FiltreEtiketi ad="Sırala">
               <Select value={sortFilter} onValueChange={setSortFilter}>
-                <SelectTrigger className="w-full sm:w-52"><SelectValue placeholder="Sırala" /></SelectTrigger>
+                <SelectTrigger className="w-full"><SelectValue placeholder="Sırala" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="default">Varsayılan</SelectItem>
                   <SelectItem value="desi_asc">Desi: küçük → büyük</SelectItem>
