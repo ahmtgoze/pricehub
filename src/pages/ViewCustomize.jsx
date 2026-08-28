@@ -14,6 +14,7 @@ import { TABLO_KAYITLARI, kayitBul } from '@/lib/tabloKayitlari';
 import { useTableColumns, ASGARI_GENISLIK, AZAMI_GENISLIK, SABIT_GENISLIK } from '@/lib/useTableColumns';
 import { useWidgetLayout } from '@/lib/useWidgetLayout';
 import { useTheme } from '@/lib/useTheme';
+import { useVurguRengi, VURGU_RENKLERI } from '@/lib/useVurguRengi';
 
 /**
  * Görünümü Özelleştir — tasarım prototipindeki merkezi panel.
@@ -554,6 +555,7 @@ function ExcelSekmesi() {
 
 function TemaSekmesi() {
   const { tema, setTema } = useTheme();
+  const { vurgu, setVurgu } = useVurguRengi();
   const qc = useQueryClient();
 
   const { data: kayitlar = [] } = useQuery({
@@ -599,6 +601,37 @@ function TemaSekmesi() {
               {s.ad}
             </button>
           ))}
+        </div>
+      </div>
+
+      <div className="ph-card space-y-3">
+        <div>
+          <p className="text-[15px] font-semibold text-foreground">Vurgu rengi</p>
+          <p className="mt-[3px] text-[13px] text-muted-foreground">
+            Butonlar ve seçili alanlarda kullanılır. Tercih bu tarayıcıda saklanır.
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {VURGU_RENKLERI.map(r => {
+            const secili = vurgu === r.id;
+            return (
+              <button
+                key={r.id}
+                onClick={() => setVurgu(r.id)}
+                title={r.ad}
+                aria-pressed={secili}
+                className={`flex items-center gap-2 h-9 pl-2 pr-3 rounded-[10px] border text-[13px] font-medium transition-colors ${
+                  secili ? 'border-foreground bg-secondary text-foreground' : 'border-border text-muted-foreground hover:bg-secondary/60'
+                }`}
+              >
+                <span
+                  className="w-4 h-4 rounded-[5px] border border-black/10 shrink-0"
+                  style={{ background: r.hex }}
+                />
+                {r.ad}
+              </button>
+            );
+          })}
         </div>
       </div>
 
