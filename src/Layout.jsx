@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from './utils';
 import { useQuery } from '@tanstack/react-query';
@@ -129,7 +129,8 @@ function GroupHeader({ label, isOpen, onToggle, hasActive }) {
       onClick={onToggle}
       className={cn(
         "w-full flex items-center justify-between px-3 py-2 rounded-lg text-[11.5px] font-semibold uppercase tracking-[0.07em] transition-colors",
-        hasActive ? "text-foreground" : "text-muted-foreground/70 hover:text-muted-foreground"
+        "hover:bg-secondary",
+        hasActive ? "text-foreground" : "text-muted-foreground hover:text-foreground"
       )}
     >
       <span>{label}</span>
@@ -152,27 +153,16 @@ export default function Layout({ children, currentPageName }) {
   const hasTrendyol = platforms.some(p => p.platform_type === 'trendyol' && p.is_active !== false);
   const hasHepsiburada = platforms.some(p => p.platform_type === 'hepsiburada' && p.is_active !== false);
 
-  const activeGroupId = useMemo(() => {
-    for (const g of NAV_GROUPS) {
-      if (g.type === 'group') {
-        if (g.items.some(i => i.page === currentPageName)) return g.id;
-      }
-      if (g.type === 'promo') {
-        const allItems = [...g.trendyol, ...g.hepsiburada];
-        if (allItems.some(i => i.page === currentPageName)) return g.id;
-      }
-    }
-    return null;
-  }, [currentPageName]);
-
+  // Gruplar acik baslar: kapali baslarsa sayfalar menude yokmus gibi gorunuyor.
+  // Kullanici istedigi grubu kapatabilir; secimi o oturum boyunca korunur.
   const [openGroups, setOpenGroups] = useState(() => {
     const init = {};
-    NAV_GROUPS.forEach(g => { if (g.id) init[g.id] = false; });
+    NAV_GROUPS.forEach(g => { if (g.id) init[g.id] = true; });
     return init;
   });
 
-  const effectiveOpen = (id) => openGroups[id] || activeGroupId === id;
-  const toggleGroup = (id) => setOpenGroups(prev => ({ ...prev, [id]: !effectiveOpen(id) }));
+  const effectiveOpen = (id) => openGroups[id];
+  const toggleGroup = (id) => setOpenGroups(prev => ({ ...prev, [id]: !prev[id] }));
   const closeSidebar = () => setSidebarOpen(false);
 
   const filterItems = (items) => items
