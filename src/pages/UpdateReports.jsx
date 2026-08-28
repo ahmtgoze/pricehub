@@ -23,6 +23,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import SearchInput from '@/components/ui/SearchInput';
+import FiltreEtiketi from '@/components/ui/FiltreEtiketi';
 import DataTable from '@/components/ui/DataTable';
 import ImportExport from '@/components/ImportExport';
 import { format } from 'date-fns';
@@ -39,6 +40,8 @@ export default function UpdateReports() {
   const [search, setSearch] = useState('');
   const [platformFilter, setPlatformFilter] = useState('all');
   const [typeFilter, setTypeFilter] = useState('all');
+  const [sourceFilter, setSourceFilter] = useState('all');
+  const [sortFilter, setSortFilter] = useState('date_desc');
   const [tab, setTab] = useState('aktif');
   const [selectedIds, setSelectedIds] = useState([]);
   const [page, setPage] = useState(1);
@@ -107,8 +110,15 @@ export default function UpdateReports() {
     if (typeFilter !== 'all') {
       result = result.filter(r => r.change_type === typeFilter);
     }
-    return result;
-  }, [reports, search, platformFilter, typeFilter, tab]);
+    // Kaynak: update_type sutunu veritabaninda tamamen bos oldugu icin
+    // gercek ayrim change_type uzerinden yapiliyor - 'manual' kullanicinin
+    // kendi degisikligi, digerleri sistemin otomatik tespiti.
+    if (sourceFilter === 'user') result = result.filter(r => r.change_type === 'manual');
+    if (sourceFilter === 'system') result = result.filter(r => r.change_type !== 'manual');
+
+    const tarih = (r) => new Date(r.updated_date || r.created_date || 0).getTime();
+    return result.sort((a, b) => sortFilter === 'date_asc' ? tarih(a) - tarih(b) : tarih(b) - tarih(a));
+  }, [reports, search, platformFilter, typeFilter, tab, sourceFilter, sortFilter]);
 
   const paginatedReports = filteredReports.slice((page - 1) * pageSize, page * pageSize);
 
@@ -337,27 +347,50 @@ export default function UpdateReports() {
         </div>
 
         <div className="rounded-[18px] border border-border bg-card p-5 mb-6">
-          <div className="flex flex-col sm:flex-row gap-4">
-            <SearchInput value={search} onChange={setSearch} placeholder="Ürün adı veya SKU ara..." className="flex-1" />
-            <Select value={platformFilter} onValueChange={setPlatformFilter}>
-              <SelectTrigger className="w-full sm:w-48"><SelectValue placeholder="Platform" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Tüm Platformlar</SelectItem>
-                {platforms.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
-              </SelectContent>
-            </Select>
-            <Select value={typeFilter} onValueChange={setTypeFilter}>
-              <SelectTrigger className="w-full sm:w-40"><SelectValue placeholder="Tip" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Tüm Tipler</SelectItem>
-                <SelectItem value="cost_update">Maliyet</SelectItem>
-                <SelectItem value="shipping_update">Kargo</SelectItem>
-                <SelectItem value="commission_update">Komisyon</SelectItem>
-                <SelectItem value="platform_update">Platform</SelectItem>
-                <SelectItem value="chain_inconsistency">Zincir Tutarsızlığı</SelectItem>
-                <SelectItem value="manual">Manuel</SelectItem>
-              </SelectContent>
-            </Select>
+          <div className="flex flex-col sm:flex-row sm:flex-wrap gap-4">
+            <SearchInput value={search} onChange={setSearch} placeholder="Ürün, SKU veya neden ara..." className="flex-1 sm:min-w-[240px]" />
+            <FiltreEtiketi ad="Platform">
+              <Select value={platformFilter} onValueChange={setPlatformFilter}>
+                <SelectTrigger className="w-full sm:w-48"><SelectValue placeholder="Platform" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tüm Platformlar</SelectItem>
+                  {platforms.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </FiltreEtiketi>
+            <FiltreEtiketi ad="Değişim Sebebi">
+              <Select value={typeFilter} onValueChange={setTypeFilter}>
+                <SelectTrigger className="w-full sm:w-48"><SelectValue placeholder="Tüm Sebepler" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tüm Sebepler</SelectItem>
+                  <SelectItem value="cost_update">Maliyet</SelectItem>
+                  <SelectItem value="shipping_update">Kargo</SelectItem>
+                  <SelectItem value="commission_update">Komisyon</SelectItem>
+                  <SelectItem value="platform_update">Platform</SelectItem>
+                  <SelectItem value="chain_inconsistency">Zincir Tutarsızlığı</SelectItem>
+                  <SelectItem value="manual">Manuel</SelectItem>
+                </SelectContent>
+              </Select>
+            </FiltreEtiketi>
+            <FiltreEtiketi ad="Kaynak">
+              <Select value={sourceFilter} onValueChange={setSourceFilter}>
+                <SelectTrigger className="w-full sm:w-44"><SelectValue placeholder="Tümü" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tümü</SelectItem>
+                  <SelectItem value="system">Sistem (otomatik)</SelectItem>
+                  <SelectItem value="user">Kullanıcı</SelectItem>
+                </SelectContent>
+              </Select>
+            </FiltreEtiketi>
+            <FiltreEtiketi ad="Sırala">
+              <Select value={sortFilter} onValueChange={setSortFilter}>
+                <SelectTrigger className="w-full sm:w-48"><SelectValue placeholder="Sırala" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="date_desc">Tarih: yeni → eski</SelectItem>
+                  <SelectItem value="date_asc">Tarih: eski → yeni</SelectItem>
+                </SelectContent>
+              </Select>
+            </FiltreEtiketi>
           </div>
         </div>
 
