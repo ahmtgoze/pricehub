@@ -13,6 +13,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
+import { tariheGoreSuz } from '@/lib/tarihAraligi';
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -151,11 +152,7 @@ if (filteredByRange) {
 
   const handleShowProducts = () => {
     if (!startDate || !endDate) return;
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-    end.setHours(23, 59, 59, 999);
-    const filtered = products.filter(p => p.created_date && new Date(p.created_date) >= start && new Date(p.created_date) <= end).sort((a, b) => new Date(b.created_date) - new Date(a.created_date));
-    setNewProductsList(filtered);
+    setNewProductsList(tariheGoreSuz(products, startDate, endDate));
     setShowProductsList(true);
   };
 
