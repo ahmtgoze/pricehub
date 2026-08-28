@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { supabase } from '@/api/supabaseClient';
 import { useNavigate } from 'react-router-dom';
 import { MARKA_ADI } from '@/config/marka';
@@ -11,6 +11,15 @@ export default function Login() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+
+  // Oturum zaten aciksa giris ekraninda bekletme, uygulamaya al.
+  useEffect(() => {
+    let iptal = false;
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!iptal && session?.user) window.location.replace('/');
+    });
+    return () => { iptal = true; };
+  }, []);
 
   // 1. Adım: e-postaya tek seferlik kod gönder
   const handleSendCode = async (e) => {
@@ -44,7 +53,11 @@ export default function Login() {
     if (error) {
       setError('Kod hatalı veya süresi dolmuş. Tekrar dene.');
     } else {
-      navigate('/');
+      // Tam yenileme: uygulama oturum ELDEYKEN basliyor. navigate() ile
+      // istemci tarafi gecis yapilirsa profil yuklenmeden once "oturum yok"
+      // sanilip /login'e geri donuluyordu.
+      window.location.href = '/';
+      return;
     }
     setIsLoading(false);
   };

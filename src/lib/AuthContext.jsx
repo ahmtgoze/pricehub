@@ -40,6 +40,10 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const loadUserProfile = async (authUser) => {
+    // Oturum ELDE: profil sorgusu beklenmeden auth_required temizlenir.
+    // Aksi halde giris hemen sonrasinda App.jsx hala "oturum yok" gorup
+    // kullaniciyi /login'e geri atiyordu.
+    setAuthError(null);
     try {
       const { data: profile } = await supabase
         .from('user_profiles')
