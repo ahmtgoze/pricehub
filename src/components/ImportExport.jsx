@@ -9,7 +9,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Download, Upload, FileSpreadsheet, X } from "lucide-react";
+import { Download, Upload, FileSpreadsheet, X, Plus } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { toast } from 'sonner';
 import { db } from '@/api/db';
 import * as XLSX from 'xlsx';
@@ -355,6 +356,21 @@ export default function ImportExport({
   const fileInputRef = useRef(null);
   const qc = useQueryClient();
   const [sablonAdi, setSablonAdi] = useState('');
+  const [sablonAcik, setSablonAcik] = useState(false);
+  const [seciliAlanlar, setSeciliAlanlar] = useState([]);
+  const [sablonFormat, setSablonFormat] = useState('xlsx');
+
+  // Dialog acilirken tum sutunlar secili gelir; kullanici istemedigini kaldirir.
+  const sablonDialogAc = () => {
+    setSeciliAlanlar(columns.map(c => c.key));
+    setSablonAdi('');
+    setSablonFormat('xlsx');
+    setSablonAcik(true);
+  };
+
+  const alanDegistir = (key) => setSeciliAlanlar(p =>
+    p.includes(key) ? p.filter(k => k !== key) : [...p, key]
+  );
 
   // Kullaniciya ozel disa aktarma sablonlari (RLS ile izole)
   const { data: sablonlar = [] } = useQuery({
@@ -367,12 +383,13 @@ export default function ImportExport({
     mutationFn: (ad) => db.entities.ExportTemplate.create({
       page_key: pageKey,
       name: ad,
-      fields: columns.map(c => c.key),
-      format: 'xlsx',
+      fields: seciliAlanlar,
+      format: sablonFormat,
     }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['exportTemplates', pageKey] });
       setSablonAdi('');
+      setSablonAcik(false);
       toast.success('Şablon kaydedildi');
     },
     onError: (e) => toast.error(e?.message || 'Şablon kaydedilemedi'),
@@ -514,26 +531,13 @@ export default function ImportExport({
                   </button>
                 </DropdownMenuItem>
               ))}
-              <div
-                className="flex items-center gap-1 px-2 py-1.5"
-                onClick={(e) => e.stopPropagation()}
-                onKeyDown={(e) => e.stopPropagation()}
+              <DropdownMenuItem
+                onSelect={(e) => { e.preventDefault(); sablonDialogAc(); }}
+                className="gap-2 cursor-pointer"
               >
-                <Input
-                  value={sablonAdi}
-                  onChange={(e) => setSablonAdi(e.target.value)}
-                  placeholder="Yeni şablon adı"
-                  className="h-8 text-xs"
-                />
-                <Button
-                  size="sm"
-                  className="h-8 px-2"
-                  disabled={!sablonAdi.trim() || sablonKaydet.isPending}
-                  onClick={() => sablonKaydet.mutate(sablonAdi.trim())}
-                >
-                  Kaydet
-                </Button>
-              </div>
+                <Plus className="h-4 w-4" />
+                Şablon oluştur…
+              </DropdownMenuItem>
             </>
           )}
         </DropdownMenuContent>
@@ -548,6 +552,79 @@ export default function ImportExport({
         <Upload className="h-4 w-4" />
         İçe Aktar
       </Button>
+
+      {/* Kendi Excel sablonunu olustur: hangi sutunlar, hangi format */}
+      <Dialog open={sablonAcik} onOpenChange={setSablonAcik}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Şablon oluştur</DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-muted-foreground">Şablon adı</label>
+              <Input
+                value={sablonAdi}
+                onChange={(e) => setSablonAdi(e.target.value)}
+                placeholder="Örn: Muhasebe için"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-muted-foreground">Biçim</label>
+              <div className="flex gap-1 rounded-[11px] bg-secondary p-1">
+                {[{ id: 'xlsx', ad: 'Excel (.xlsx)' }, { id: 'csv', ad: 'CSV' }].map(f => (
+                  <button
+                    key={f.id}
+                    type="button"
+                    onClick={() => setSablonFormat(f.id)}
+                    className={`flex-1 h-[30px] rounded-[9px] text-[12.5px] font-medium transition-colors ${
+                      sablonFormat === f.id ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    {f.ad}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-semibold text-muted-foreground">
+                  Sütunlar ({seciliAlanlar.length}/{columns.length})
+                </label>
+                <div className="flex gap-2 text-xs">
+                  <button type="button" className="text-muted-foreground hover:text-foreground" onClick={() => setSeciliAlanlar(columns.map(c => c.key))}>Tümü</button>
+                  <button type="button" className="text-muted-foreground hover:text-foreground" onClick={() => setSeciliAlanlar([])}>Hiçbiri</button>
+                </div>
+              </div>
+              <div className="max-h-[240px] overflow-y-auto rounded-[11px] border border-border divide-y divide-border">
+                {columns.map(c => (
+                  <label key={c.key} className="flex items-center gap-2 px-3 py-2 text-[13px] cursor-pointer hover:bg-secondary">
+                    <input
+                      type="checkbox"
+                      checked={seciliAlanlar.includes(c.key)}
+                      onChange={() => alanDegistir(c.key)}
+                      className="rounded border-input"
+                    />
+                    <span className="text-foreground">{c.label}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSablonAcik(false)}>İptal</Button>
+            <Button
+              disabled={!sablonAdi.trim() || seciliAlanlar.length === 0 || sablonKaydet.isPending}
+              onClick={() => sablonKaydet.mutate(sablonAdi.trim())}
+            >
+              Kaydet
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

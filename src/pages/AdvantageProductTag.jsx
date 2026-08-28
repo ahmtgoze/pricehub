@@ -684,6 +684,68 @@ export default function AdvantageProductTag() {
   const uniqueCategories = [...new Set(uploadedData.map(item => item.category).filter(Boolean))].sort();
   const uniqueBrands = [...new Set(uploadedData.map(item => item.brand).filter(Boolean))].sort();
 
+  // Barem siniri: bu sayfanin kendi calculateProfit'i de ayni esikleri kullaniyor.
+  const BAREM1_UST = 149.99;
+  const BAREM2_UST = 299.99;
+
+  /**
+   * Barem onerisi: secili fiyat desi tarifesine dusuyorsa, fiyati barem
+   * esigine cekmenin kari artirip artirmadigini hesaplar. Yalnizca EKRANDA
+   * gosterilir — sabit Excel sablonuna dahil DEGILDIR.
+   */
+  const renderBaremSuggestionCell = (item, index) => {
+    const seciliFiyat = Number(item.selected_price) || 0;
+    if (!seciliFiyat) return <div className="text-center text-muted-foreground/70 text-xs">-</div>;
+
+    const mevcutKomisyon = getDynamicCommissionForPrice(item, seciliFiyat);
+    const mevcut = calculateProfit(seciliFiyat, mevcutKomisyon, item);
+
+    // Zaten bir barem tarifesindeyse onerilecek bir sey yok
+    if (mevcut.baremUsed === 'barem1' || mevcut.baremUsed === 'barem2') {
+      return <div className="text-center text-muted-foreground/70 text-xs">-</div>;
+    }
+
+    let oneri = null;
+    if (seciliFiyat > BAREM2_UST) {
+      const c = calculateProfit(BAREM2_UST, mevcutKomisyon, item);
+      if (c.baremUsed === 'barem2' && c.profitRate > mevcut.profitRate) {
+        oneri = { price: BAREM2_UST, profit: c.profit, profitRate: c.profitRate, baremType: 'Barem 2' };
+      }
+    }
+    if (seciliFiyat > BAREM1_UST) {
+      const c = calculateProfit(BAREM1_UST, mevcutKomisyon, item);
+      if (c.baremUsed === 'barem1' && c.profitRate > mevcut.profitRate) {
+        if (!oneri || c.profitRate > oneri.profitRate) {
+          oneri = { price: BAREM1_UST, profit: c.profit, profitRate: c.profitRate, baremType: 'Barem 1' };
+        }
+      }
+    }
+
+    if (!oneri) return <div className="text-center text-muted-foreground/70 text-xs">-</div>;
+
+    const karArtisi = oneri.profitRate - mevcut.profitRate;
+
+    return (
+      <div className="border border-border rounded-lg p-2 bg-secondary">
+        <div className="text-xs font-semibold text-foreground mb-1">{oneri.baremType} Önerisi</div>
+        <div className="text-xs text-muted-foreground">Fiyat: ₺{oneri.price.toFixed(2)}</div>
+        <div className="text-xs text-muted-foreground">Kom: %{mevcutKomisyon}</div>
+        <div className="text-xs font-semibold text-green-600 mt-1">
+          +₺{oneri.profit.toFixed(2)} (%{oneri.profitRate.toFixed(1)})
+        </div>
+        <div className="text-xs font-medium text-foreground mt-1">+%{karArtisi.toFixed(1)} kâr artışı</div>
+        <Button
+          size="sm"
+          variant="outline"
+          className="w-full mt-2 h-7 text-xs"
+          onClick={() => handlePriceSelect(index, 'manual', oneri.price)}
+        >
+          Uygula
+        </Button>
+      </div>
+    );
+  };
+
   const renderRangeCell = (item, index, rangeType, minPrice, maxPrice, excelCommission, label) => {
     if (!minPrice || minPrice <= 0) return <div className="text-center text-muted-foreground/70 text-xs">-</div>;
 
@@ -965,6 +1027,7 @@ export default function AdvantageProductTag() {
                         <th className="p-3 text-center font-semibold min-w-[150px]">Avantaj</th>
                         <th className="p-3 text-center font-semibold min-w-[150px]">Çok Avantaj</th>
                         <th className="p-3 text-center font-semibold min-w-[150px]">Süper Avantaj</th>
+                        <th className="p-3 text-center font-semibold min-w-[150px]">Barem Önerisi</th>
                         <th className="p-3 text-center font-semibold min-w-[160px]">Manuel</th>
                       </tr>
                     </thead>
@@ -997,6 +1060,7 @@ export default function AdvantageProductTag() {
                             <td className="p-3">{renderRangeCell(item, index, 'advantage', item.advantage_min, item.advantage_max, item.advantage_commission, 'Avantaj')}</td>
                             <td className="p-3">{renderRangeCell(item, index, 'super_advantage', item.super_advantage_min, item.super_advantage_max, item.super_advantage_commission, 'Çok Avantaj')}</td>
                             <td className="p-3">{renderRangeCell(item, index, 'mega_advantage', item.mega_advantage_min, item.mega_advantage_max, item.mega_advantage_commission, 'Süper Avantaj')}</td>
+                            <td className="p-3">{renderBaremSuggestionCell(item, index)}</td>
                             <td className="p-3">
                               <div className={`border rounded-lg p-2 ${item.selected_range === 'manual' ? 'border-primary bg-secondary' : 'border-border'}`}>
                                 <div className="text-xs font-semibold text-muted-foreground mb-2">Manuel Fiyat</div>
