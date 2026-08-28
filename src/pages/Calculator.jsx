@@ -403,7 +403,7 @@ export default function Calculator() {
       <div className="max-w-[1200px] mx-auto px-6 py-8">
         <div className="mb-8">
           <h1 className="ph-title">Fiyat Hesaplayıcı</h1>
-          <p className="text-muted-foreground mt-1">Ürün fiyatını ve kârını hesaplayın (kaydetmez)</p>
+          <p className="text-muted-foreground mt-1">Fiyat çalışması yapın — bu sayfada hiçbir şey kaydedilmez</p>
         </div>
 
         <div className="grid lg:grid-cols-2 gap-8">
@@ -473,6 +473,9 @@ export default function Calculator() {
 
               <Separator />
 
+              <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground pt-2">
+                Maliyet Kalemleri
+              </p>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Maliyet (KDV Dahil) *</Label>
@@ -505,6 +508,12 @@ export default function Calculator() {
                   />
                 </div>
                </div>
+
+{selectedPlatform && (
+                <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground pt-2">
+                  Kargo ve Paketleme
+                </p>
+              )}
 
 {selectedPlatform && (() => {
                const selectedPlatformObj = platforms.find(p => p.id === selectedPlatform);
