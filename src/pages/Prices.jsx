@@ -589,6 +589,7 @@ export default function Prices() {
     },
     {
       id: 'sku',
+      etiket: 'SKU',
       header: <span className="cursor-pointer hover:text-foreground" onClick={() => handleSort('sku')}>SKU <SortIcon field="sku" /></span>,
       cell: (product) => (
         <div className="flex items-center gap-2 font-mono text-muted-foreground">
@@ -602,11 +603,13 @@ export default function Prices() {
     },
     {
       id: 'name',
+      etiket: 'Ürün Adı',
       header: <span className="cursor-pointer hover:text-foreground" onClick={() => handleSort('name')}>Ürün Adı <SortIcon field="name" /></span>,
       cell: (product) => (<div><p className="font-medium text-foreground">{product.name}</p><p className="text-xs text-muted-foreground">{product.category_name}</p></div>),
     },
     {
       id: 'cost',
+      etiket: 'Maliyet',
       header: <span className="cursor-pointer hover:text-foreground" onClick={() => handleSort('cost')}>Maliyet <SortIcon field="cost" /></span>,
       cell: (product) => <span className="font-semibold">₺{formatTurkishCurrency(product.cost)}</span>,
     },
@@ -619,6 +622,7 @@ export default function Prices() {
     })),
     ...visiblePlatformList.map(platform => ({
       id: `platform_${platform.id}`,
+      etiket: platform.name,
       header: <span className="cursor-pointer hover:text-foreground" onClick={() => handleSort(`platform_${platform.id}`)}>{platform.name} <SortIcon field={`platform_${platform.id}`} /></span>,
       width: '160px',
       cell: (product) => {

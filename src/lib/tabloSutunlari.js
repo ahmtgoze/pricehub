@@ -17,6 +17,10 @@ export const AZAMI_GENISLIK = 600;
  * Satir secim kutusu (__select) bilerek sistem sutunu sayilir; gizlenmesi
  * toplu islemleri kullanilamaz hale getirirdi.
  */
+/** Satir secim kutusu sutunu mu? Bu sutun her zaman en solda durur. */
+export const secimSutunuMu = (col) =>
+  String(col?.id ?? col?.accessor ?? '').startsWith('__select');
+
 export const kolonAnahtari = (col) => {
   const k = col?.id ?? col?.accessor ?? null;
   if (k == null) return null;
@@ -63,7 +67,12 @@ export function hesaplaGorunenKolonlar(columns, prefs, aktif = true) {
   const sabitler = sirali.filter(x => x.yonetilir && p.pinned.includes(x.key));
   const digerleri = sirali.filter(x => !(x.yonetilir && p.pinned.includes(x.key)));
 
-  const gorunenKolonlar = [...sabitler, ...digerleri]
+  // Satir secim kutusu HER ZAMAN en solda kalir — siralamadan, sabitlemeden
+  // ve ok tuslariyla tasimadan etkilenmez. Toplu islemler icin referans nokta.
+  const secim = sirali.filter(x => secimSutunuMu(x.col));
+  const secimDisi = [...sabitler, ...digerleri].filter(x => !secimSutunuMu(x.col));
+
+  const gorunenKolonlar = [...secim, ...secimDisi]
     .filter(x => {
       if (!x.yonetilir) return true;
       if (x.col.optional) return p.shown.includes(x.key);

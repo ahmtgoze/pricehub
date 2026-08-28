@@ -701,6 +701,7 @@ export default function Products() {
 
   const columns = [
     {
+      id: '__select',
       header: (
         <input
           type="checkbox"
@@ -749,6 +750,7 @@ export default function Products() {
       cell: (row) => row.extra_cost ? <span className="font-semibold">₺{row.extra_cost?.toFixed(2)}</span> : <span className="text-muted-foreground/70">-</span>
     },
     {
+      id: 'desi',
       header: 'Desi',
       cell: (row) => {
         if (row.multi_package && row.packages) {
@@ -790,6 +792,7 @@ export default function Products() {
       )
     },
     {
+      id: 'paket',
       header: 'Paket',
       cell: (row) => {
         const autoPackageId = getAutoPackageId(row.desi);
@@ -839,6 +842,7 @@ export default function Products() {
       )
     },
     {
+      id: 'islemler',
       header: 'İşlemler',
       cell: (row) => (
         <div className="flex items-center gap-2">

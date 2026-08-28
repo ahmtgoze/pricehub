@@ -178,6 +178,7 @@ export default function UpdateReports() {
 
   const columns = [
     {
+      id: '__select',
       header: (
         <input
           type="checkbox"
@@ -205,6 +206,7 @@ export default function UpdateReports() {
       )
     },
     {
+      id: 'urun',
       header: 'Ürün',
       cell: (row) => (
         <div>
@@ -230,6 +232,7 @@ export default function UpdateReports() {
       cell: (row) => <span className="font-mono font-semibold">₺{row.new_sale_price?.toFixed(2)}</span>
     },
     {
+      id: 'degisim',
       header: 'Değişim',
       cell: (row) => getPriceChange(row.old_sale_price || 0, row.new_sale_price || 0)
     },

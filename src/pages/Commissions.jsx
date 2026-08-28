@@ -340,6 +340,7 @@ export default function Commissions() {
 
   const columns = [
     {
+      id: '__select',
       header: () => (
         <input
           type="checkbox"
@@ -396,6 +397,8 @@ export default function Commissions() {
       cell: (row) => `%${row.commission_vat_rate || 20}`
     },
     {
+      id: 'target_profit_amount_sort',
+      etiket: 'Kâr Hedefleri',
       header: (
         <button
           onClick={() => {
@@ -422,6 +425,8 @@ export default function Commissions() {
       )
     },
     {
+      id: 'discounted_target_profit_amount_sort',
+      etiket: 'İndirimli Kâr Hedefleri',
       header: (
         <button
           onClick={() => {
@@ -448,6 +453,7 @@ export default function Commissions() {
       )
     },
     {
+      id: 'durum',
       header: 'Durum',
       cell: (row) => (
         <Badge variant={row.is_active !== false ? 'default' : 'secondary'}>
@@ -456,6 +462,7 @@ export default function Commissions() {
       )
     },
     {
+      id: 'islemler',
       header: 'İşlemler',
       cell: (row) => (
         <div className="flex items-center gap-2">

@@ -264,6 +264,7 @@ export default function Categories() {
       )
     },
     {
+      id: 'islemler',
       header: 'İşlemler',
       cell: (row) => (
         <div className="flex items-center gap-2">

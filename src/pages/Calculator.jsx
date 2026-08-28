@@ -238,11 +238,11 @@ export default function Calculator() {
       id: 'manual',
       name: 'Manuel Hesaplama',
       sku: '-',
-      cost: parseFloat(cost) || 0,
-      desi: parseFloat(desi) || 1,
-      vat_rate: parseFloat(vatRate) || 20,
-      printing_cost: parseFloat(printingCost) || 0,
-      extra_cost: parseFloat(extraCost) || 0,
+      cost: pozitif(cost),
+      desi: pozitif(desi, 1) || 1,
+      vat_rate: pozitif(vatRate, 20),
+      printing_cost: pozitif(printingCost),
+      extra_cost: pozitif(extraCost),
       multi_package: isMultiPackage,
       special_shipping: false,
       packages: isMultiPackage ? JSON.stringify(packages.map(p => ({ desi: parseFloat(p.desi) || 0, package_id: p.package_id }))) : null,
@@ -251,9 +251,9 @@ export default function Calculator() {
 
     // Fake komisyon oluştur
     const fakeCommission = {
-      commission_rate: parseFloat(commissionRate) || 0,
+      commission_rate: pozitif(commissionRate),
       commission_vat_rate: 20,
-      target_profit_rate: parseFloat(targetProfit) || 30
+      target_profit_rate: pozitif(targetProfit, 30)
     };
 
     const calcResult = calculateProductPrice({
@@ -262,15 +262,35 @@ export default function Calculator() {
       shippingRates,
       commission: fakeCommission,
       packagingCost: getTotalPackagingCost(),
-      printingCost: parseFloat(printingCost) || 0,
-      extraCost: parseFloat(extraCost) || 0,
+      printingCost: pozitif(printingCost),
+      extraCost: pozitif(extraCost),
       isSameDayDelivery,
       settings,
-      overrideShippingCost: shippingMode === 'manual' ? (parseFloat(manualShippingCost) || 0) : null,
+      overrideShippingCost: shippingMode === 'manual' ? pozitif(manualShippingCost) : null,
       overrideShippingCompany: shippingMode === 'company' ? selectedShippingCompany : null,
     });
 
-    setResult(calcResult);
+    // POS hizmet bedeli motorun ust duzey ciktisinda yok (o nesne dogrudan
+    // product_prices'a yaziliyor, tabloda boyle bir kolon yok). Motorun kendi
+    // hesapladigi degeri calculation_details icinden okuyup ekrana tasiyoruz.
+    let posBedeli = 0;
+    try {
+      const detay = JSON.parse(calcResult.calculation_details || '{}');
+      posBedeli = detay.posServiceFee || 0;
+    } catch { posBedeli = 0; }
+
+    setResult({
+      ...calcResult,
+      pos_service_fee: posBedeli,
+      pos_service_fee_rate: platform?.has_pos_service_fee ? (platform.pos_service_fee_rate || 0) : 0,
+    });
+  };
+
+  // Negatif deger yasak: elle eksi yazilsa bile hesaba 0 olarak girer.
+  const pozitif = (deger, varsayilan = 0) => {
+    const n = parseFloat(deger);
+    if (!Number.isFinite(n)) return varsayilan;
+    return n < 0 ? 0 : n;
   };
 
   const handleReset = () => {
@@ -390,7 +410,7 @@ export default function Calculator() {
                 <div className="space-y-2">
                   <Label>Maliyet (KDV Dahil) *</Label>
                   <Input
-                    type="number"
+                    type="number" min="0"
                     step="0.01"
                     value={cost}
                     onChange={(e) => setCost(e.target.value)}
@@ -400,7 +420,7 @@ export default function Calculator() {
                 <div className="space-y-2">
                   <Label>Baskı Maliyeti (KDV Dahil)</Label>
                   <Input
-                    type="number"
+                    type="number" min="0"
                     step="0.01"
                     value={printingCost}
                     onChange={(e) => setPrintingCost(e.target.value)}
@@ -410,7 +430,7 @@ export default function Calculator() {
                 <div className="space-y-2">
                   <Label>Ek Maliyet (KDV Dahil)</Label>
                   <Input
-                    type="number"
+                    type="number" min="0"
                     step="0.01"
                     value={extraCost}
                     onChange={(e) => setExtraCost(e.target.value)}
@@ -463,7 +483,7 @@ export default function Calculator() {
                        </Select>
                      ) : (
                        <Input
-                         type="number"
+                         type="number" min="0"
                          step="0.01"
                          value={manualShippingCost}
                          onChange={(e) => setManualShippingCost(e.target.value)}
@@ -480,7 +500,7 @@ export default function Calculator() {
                <div className="space-y-2">
                 <Label>Desi *</Label>
                 <Input
-                  type="number"
+                  type="number" min="0"
                   step="0.1"
                   value={desi}
                   onChange={(e) => setDesi(e.target.value)}
@@ -557,7 +577,7 @@ export default function Calculator() {
                              <div className="flex-1">
                                <Label className="text-xs text-muted-foreground">Desi</Label>
                                <Input
-                                 type="number"
+                                 type="number" min="0"
                                  step="0.1"
                                  value={pkg.desi}
                                  onChange={(e) => updatePackage(index, 'desi', e.target.value)}
@@ -620,7 +640,7 @@ export default function Calculator() {
                 <div className="space-y-2">
                   <Label>Komisyon Oranı (%)</Label>
                   <Input
-                    type="number"
+                    type="number" min="0"
                     step="0.01"
                     value={commissionRate}
                     onChange={(e) => setCommissionRate(e.target.value)}
@@ -644,7 +664,7 @@ export default function Calculator() {
                   </TooltipProvider>
                 </Label>
                 <Input
-                  type="number"
+                  type="number" min="0"
                   step="0.01"
                   value={targetProfit}
                   onChange={(e) => setTargetProfit(e.target.value)}
@@ -680,7 +700,7 @@ export default function Calculator() {
                       </Select>
                     ) : (
                       <Input
-                        type="number"
+                        type="number" min="0"
                         step="0.01"
                         value={packagingCost}
                         onChange={(e) => setPackagingCost(e.target.value)}
@@ -789,6 +809,15 @@ export default function Calculator() {
                       <div className="flex justify-between py-2 pl-6 border-b border-border">
                         <span className="text-muted-foreground">- Hizmet Bedeli (KDV Dahil)</span>
                         <span className="font-medium text-red-600">-₺{(result.service_fee || 0)?.toFixed(2)}</span>
+                      </div>
+                      )}
+                      {(result.pos_service_fee || 0) > 0 && (
+                      <div className="flex justify-between py-2 pl-6 border-b border-border">
+                        <span className="text-muted-foreground">
+                          - POS Hizmet Bedeli (KDV Dahil)
+                          {result.pos_service_fee_rate ? ` (%${result.pos_service_fee_rate})` : ''}
+                        </span>
+                        <span className="font-medium text-red-600">-₺{(result.pos_service_fee || 0).toFixed(2)}</span>
                       </div>
                       )}
                       <div className="flex justify-between py-2 pl-6 border-b-2 border-border">

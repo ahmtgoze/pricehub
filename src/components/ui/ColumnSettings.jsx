@@ -35,9 +35,14 @@ export default function ColumnSettings({
     });
   }, [yonetilebilir, prefs.order]);
 
+  // Panelde gosterilecek ad. Basligi JSX olan sutunlar (siralanabilir baslik,
+  // platform sutunu vb.) icin tanimda `etiket` verilir; yoksa duz metin baslik
+  // kullanilir. Ikisi de yoksa anahtar yerine "—" gosterilir (ham id sizmaz).
   const basligiYaz = (col) => {
+    if (col.etiket) return col.etiket;
     const h = typeof col.header === 'function' ? col.header() : col.header;
-    return typeof h === 'string' ? h : (kolonAnahtari(col) || '—');
+    if (typeof h === 'string') return h;
+    return '—';
   };
 
   const gizliSayisi = prefs.hidden.length;

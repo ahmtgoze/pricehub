@@ -42,6 +42,7 @@ export default function PackageManagement() {
       setEditingPackage(null);
       toast.success('Paket kaydedildi');
     },
+    onError: (e) => toast.error(e?.message || 'İşlem başarısız'),
   });
 
   const updatePackageMutation = useMutation({
@@ -52,6 +53,7 @@ export default function PackageManagement() {
       setEditingPackage(null);
       toast.success('Paket güncellendi');
     },
+    onError: (e) => toast.error(e?.message || 'İşlem başarısız'),
   });
 
   const deletePackageMutation = useMutation({
@@ -60,6 +62,7 @@ export default function PackageManagement() {
       queryClient.invalidateQueries({ queryKey: ['packages'] });
       toast.success('Paket silindi');
     },
+    onError: (e) => toast.error(e?.message || 'İşlem başarısız'),
   });
 
   const createItemMutation = useMutation({
@@ -71,6 +74,7 @@ export default function PackageManagement() {
       setEditingItem(null);
       toast.success('Kalem kaydedildi');
     },
+    onError: (e) => toast.error(e?.message || 'İşlem başarısız'),
   });
 
   const updateItemMutation = useMutation({
@@ -82,6 +86,7 @@ export default function PackageManagement() {
       setEditingItem(null);
       toast.success('Kalem güncellendi');
     },
+    onError: (e) => toast.error(e?.message || 'İşlem başarısız'),
   });
 
   const deleteItemMutation = useMutation({
@@ -91,6 +96,7 @@ export default function PackageManagement() {
       queryClient.invalidateQueries({ queryKey: ['packages'] });
       toast.success('Kalem silindi');
     },
+    onError: (e) => toast.error(e?.message || 'İşlem başarısız'),
   });
 
   const getPackageItems = (packageId) => {
@@ -120,13 +126,15 @@ export default function PackageManagement() {
   const packageColumns = [
     { header: 'Paket Adı', accessor: 'name' },
     { header: 'Grup', accessor: 'group' },
-    { header: 'Desi Aralığı', cell: (row) => row.desi_min && row.desi_max ? `${row.desi_min} - ${row.desi_max}` : '-' },
-    { header: 'Toplam Maliyet', cell: (row) => `${getPackageTotal(row.id).toFixed(2)} TL` },
+    { id: 'desi_araligi', header: 'Desi Aralığı', cell: (row) => row.desi_min && row.desi_max ? `${row.desi_min} - ${row.desi_max}` : '-' },
+    { id: 'toplam_maliyet', header: 'Toplam Maliyet', cell: (row) => `${getPackageTotal(row.id).toFixed(2)} TL` },
     { 
+      id: 'aktif',
       header: 'Aktif', 
       cell: (row) => <span className={row.is_active ? 'text-green-600' : 'text-red-600'}>{row.is_active ? 'Evet' : 'Hayır'}</span>
     },
     {
+      id: 'islemler',
       header: 'İşlemler',
       cell: (row) => (
         <div className="flex gap-2">

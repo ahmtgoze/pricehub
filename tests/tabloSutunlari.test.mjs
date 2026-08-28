@@ -66,12 +66,14 @@ console.log('\n5) Siralama uygulanir, sistem sutunu yerini korur');
     adlar(r), ['__select', 'cost', 'sku', 'name', 'islemler']);
 }
 
-console.log('\n6) Sabitleme en sola alir ve isaretler');
+console.log('\n6) Sabitleme sola alir ve isaretler (secim kutusundan SONRA)');
 {
   const r = hesaplaGorunenKolonlar(kolonlar, { pinned: ['name'] });
-  esit('name en basa gecti', adlar(r), ['name', '__select', 'sku', 'cost', 'islemler']);
-  esit('__pinned isareti var', r.gorunenKolonlar[0].__pinned, true);
-  esit('sabit sutuna varsayilan genislik verildi', r.gorunenKolonlar[0].width, '160px');
+  // Secim kutusu her zaman ilk; sabitlenen sutun ondan hemen sonra gelir.
+  esit('name secimden sonra basa gecti', adlar(r), ['__select', 'name', 'sku', 'cost', 'islemler']);
+  const n = r.gorunenKolonlar.find(c => c.id === 'name');
+  esit('__pinned isareti var', n.__pinned, true);
+  esit('sabit sutuna varsayilan genislik verildi', n.width, '160px');
 }
 
 console.log('\n7) Genislik uygulanir');
@@ -92,6 +94,29 @@ console.log('\n9) pageKey yoksa (aktif=false) hicbir sey degismez');
 {
   const r = hesaplaGorunenKolonlar(kolonlar, { hidden: ['cost'], shown: ['barcode'] }, false);
   esit('cikti girdiyle ayni', r.gorunenKolonlar.length, kolonlar.length);
+}
+
+console.log('\n11) Satir secim kutusu HER ZAMAN en solda');
+{
+  // Kayitli sira secim sutununu sona atsa bile en basa gelmeli
+  const r = hesaplaGorunenKolonlar(kolonlar, { order: ['sku', 'name', 'cost', 'islemler', '__select'] });
+  esit('siralama secim sutununu kaydiramaz', adlar(r)[0], '__select');
+}
+{
+  // Baska bir sutun sabitlense bile secim sutunu onun de solunda kalir
+  const r = hesaplaGorunenKolonlar(kolonlar, { pinned: ['name'] });
+  esit('sabitlenen sutun bile secimin sagina duser', adlar(r), ['__select', 'name', 'sku', 'cost', 'islemler']);
+}
+{
+  // Kimliksiz (sentetik) sutunlar varken de kural gecerli
+  const kimliksiz = [
+    { header: 'Tarife Tipi', accessor: 'rate_type' },
+    { id: '__select', header: 'sec' },
+    { header: 'Platform', accessor: 'platform_name' },
+  ];
+  const r = hesaplaGorunenKolonlar(kimliksiz, {});
+  esit('ikinci sirada tanimlansa bile basa alinir',
+    r.gorunenKolonlar.map(c => c.id ?? c.accessor), ['__select', 'rate_type', 'platform_name']);
 }
 
 console.log('\n10) kolonAnahtari kurallari');

@@ -237,6 +237,7 @@ export default function ShippingRates() {
 
   const columns = [
     {
+      id: '__select',
       header: <input type="checkbox" checked={selectedIds.length === paginatedRates.length && paginatedRates.length > 0} onChange={toggleSelectAll} className="rounded border-input" />,
       cell: (row) => <input type="checkbox" checked={selectedIds.includes(row.id)} onChange={() => toggleSelect(row.id)} className="rounded border-input" />
     },
@@ -255,11 +256,12 @@ export default function ShippingRates() {
         </div>
       )
     },
-    { header: 'Desi', cell: (row) => row.rate_type === 'desi' ? `${row.desi || 0} desi` : '-' },
+    { id: 'desi', header: 'Desi', cell: (row) => row.rate_type === 'desi' ? `${row.desi || 0} desi` : '-' },
     { header: 'Ücret', accessor: 'price', cell: (row) => <span className="font-semibold">₺{row.price?.toFixed(2)}</span> },
     { header: 'KDV', accessor: 'vat_rate', cell: (row) => `%${row.vat_rate || 20}` },
-    { header: 'Durum', cell: (row) => <Badge variant={row.is_active !== false ? 'default' : 'secondary'}>{row.is_active !== false ? 'Aktif' : 'Pasif'}</Badge> },
+    { id: 'durum', header: 'Durum', cell: (row) => <Badge variant={row.is_active !== false ? 'default' : 'secondary'}>{row.is_active !== false ? 'Aktif' : 'Pasif'}</Badge> },
     {
+      id: 'islemler',
       header: 'İşlemler',
       cell: (row) => {
         const canEdit = userRole === 'admin' || (row.created_by === userEmail && row.is_manual);
@@ -282,7 +284,7 @@ export default function ShippingRates() {
     // ── Eklenebilir sutunlar: varsayilanda gizli, panelden acilir ──
     { id: 'same_day_delivery', header: 'Bugün Kargoda', optional: true, cell: (row) => row.same_day_delivery ? 'Evet' : 'Hayır' },
     { id: 'is_manual', header: 'Kaynak', optional: true, cell: (row) => row.is_manual ? 'Manuel' : 'Sistem' },
-    { id: 'created_at', header: 'Eklenme Tarihi', optional: true, cell: (row) => row.created_at ? new Date(row.created_at).toLocaleDateString('tr-TR') : '-' },
+    { id: 'updated_date', header: 'Güncellenme Tarihi', optional: true, cell: (row) => row.updated_date ? new Date(row.updated_date).toLocaleDateString('tr-TR') : '-' },
   ];
 
   const exportColumns = [
