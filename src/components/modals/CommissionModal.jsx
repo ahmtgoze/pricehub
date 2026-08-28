@@ -195,12 +195,12 @@ export default function CommissionModal({
                   <p className="text-xs text-muted-foreground">Sabit kâr tutarı</p>
                 </div>
               </div>
-              <p className="text-xs text-amber-600 bg-amber-50 p-2 rounded border border-amber-100">
+              <p className="text-xs text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 p-2 rounded border border-amber-100">
                 * En az bir kâr değeri (oran veya tutar) girmelisiniz
               </p>
             </div>
 
-            <div className="space-y-3 border border-orange-200 rounded-xl p-4 bg-orange-50/40">
+            <div className="space-y-3 border border-orange-200 dark:border-orange-900/50 rounded-xl p-4 bg-orange-50 dark:bg-orange-950/30/40">
               <div className="flex items-center gap-2">
                 <Tag className="h-4 w-4 text-orange-600" />
                 <p className="text-sm font-semibold text-orange-700">İndirimli Kâr Hedefleri</p>

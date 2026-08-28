@@ -658,7 +658,7 @@ export default function PlusProductCommissionTariff() {
         </div>
 
         {!hasTrendyol && (
-          <div className="mb-6 flex items-start gap-4 bg-amber-50 border border-amber-200 rounded-xl p-5">
+          <div className="mb-6 flex items-start gap-4 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50 rounded-xl p-5">
             <div className="flex-shrink-0 w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center">
               <AlertCircle className="h-5 w-5 text-amber-600" />
             </div>
@@ -708,7 +708,7 @@ export default function PlusProductCommissionTariff() {
               {uploadedData.length > 0 && (
                 <>
                   <Button onClick={handleSmartAutoSelect} className="bg-primary hover:bg-black dark:hover:bg-white/90 text-primary-foreground gap-2"><Sparkles className="h-4 w-4" />Akıllı Otomatik Seç</Button>
-                  <Button variant="outline" onClick={handleDeleteExcel} className="text-red-600 hover:text-red-700 hover:bg-red-50"><Trash2 className="mr-2 h-4 w-4" />Excel'i Sil</Button>
+                  <Button variant="outline" onClick={handleDeleteExcel} className="text-red-600 dark:text-red-400 hover:text-red-700 dark:text-red-300 hover:bg-red-50 dark:bg-red-950/30"><Trash2 className="mr-2 h-4 w-4" />Excel'i Sil</Button>
                   <Button variant="outline" onClick={handleSave}><Check className="mr-2 h-4 w-4" />Seçimleri Kaydet ({selectedCount})</Button>
                   <Button variant="outline" onClick={() => { setUploadedData(uploadedData.map(item => ({ ...item, selected_type: 'none', selected_price: 0 }))); toast.success('Tüm seçimler kaldırıldı'); }}>Seçimleri Kaldır</Button>
                   <Button variant="outline" onClick={handleExport}><Download className="mr-2 h-4 w-4" />Excel İndir</Button>
@@ -847,7 +847,7 @@ export default function PlusProductCommissionTariff() {
                                 }
                                 if (!best) return <div className="text-center text-muted-foreground/70 text-xs">-</div>;
                                 return (
-                                  <div className="border rounded-lg p-2 border-amber-300 bg-amber-50">
+                                  <div className="border rounded-lg p-2 border-amber-300 bg-amber-50 dark:bg-amber-950/30">
                                     <div className="text-xs font-semibold text-amber-800 mb-1">{best.baremType} Önerisi</div>
                                     <div className="text-xs text-muted-foreground">Fiyat: ₺{best.price.toFixed(2)}</div>
                                     <div className="flex items-center justify-between mt-1">

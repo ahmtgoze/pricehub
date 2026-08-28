@@ -227,7 +227,7 @@ export default function ShippingRateModal({
 
           {/* Bugün Kargoda: sadece website olmayan platformlarda göster */}
           {formData.platform_type !== 'website' && (
-            <div className="flex items-center justify-between border border-amber-200 bg-amber-50 rounded-lg px-3 py-2">
+            <div className="flex items-center justify-between border border-amber-200 dark:border-amber-900/50 bg-amber-50 dark:bg-amber-950/30 rounded-lg px-3 py-2">
               <div className="flex items-center gap-2">
                 <Package className="h-4 w-4 text-amber-600" />
                 <Label className="text-sm font-medium text-amber-900 cursor-pointer">Bugün Kapında Seçeneği</Label>

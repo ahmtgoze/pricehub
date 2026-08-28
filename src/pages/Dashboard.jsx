@@ -220,7 +220,7 @@ if (filteredByRange) {
     return '#1d1d1f';
   };
 
-  const platformColors = { trendyol: 'border-orange-200 bg-orange-50', hepsiburada: 'border-purple-200 bg-purple-50', website: 'border-border bg-secondary' };
+  const platformColors = { trendyol: 'border-orange-200 dark:border-orange-900/50 bg-orange-50 dark:bg-orange-950/30', hepsiburada: 'border-purple-200 dark:border-purple-900/50 bg-purple-50 dark:bg-purple-950/30', website: 'border-border bg-secondary' };
   const platformTextColors = { trendyol: 'text-orange-700', hepsiburada: 'text-purple-700', website: 'text-foreground' };
   const platformBadgeColors = { trendyol: 'bg-orange-100 text-orange-800', hepsiburada: 'bg-purple-100 text-purple-800', website: 'bg-secondary text-muted-foreground' };
 

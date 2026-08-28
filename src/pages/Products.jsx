@@ -990,7 +990,7 @@ export default function Products() {
               <span className="sm:hidden">Ekle</span>
             </Button>
             <Button onClick={() => cleanupDuplicatesMutation.mutate()} variant="outline" size="sm" className="gap-2 hidden sm:flex">
-              Duplicate Temizle
+              Tekrarları Temizle
             </Button>
           </div>
         </div>

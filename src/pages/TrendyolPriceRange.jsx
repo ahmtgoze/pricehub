@@ -868,7 +868,7 @@ export default function TrendyolPriceRange() {
         </div>
 
         {!hasTrendyol && (
-          <div className="mb-6 flex items-start gap-4 bg-amber-50 border border-amber-200 rounded-xl p-5">
+          <div className="mb-6 flex items-start gap-4 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50 rounded-xl p-5">
             <div className="flex-shrink-0 w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center">
               <AlertCircle className="h-5 w-5 text-amber-600" />
             </div>
@@ -943,7 +943,7 @@ export default function TrendyolPriceRange() {
                     <Sparkles className="h-4 w-4" />
                     Akıllı Otomatik Seç
                   </Button>
-                  <Button variant="outline" onClick={() => { setUploadedData([]); toast.success('Excel silindi'); }} className="text-red-600 hover:text-red-700 hover:bg-red-50">
+                  <Button variant="outline" onClick={() => { setUploadedData([]); toast.success('Excel silindi'); }} className="text-red-600 dark:text-red-400 hover:text-red-700 dark:text-red-300 hover:bg-red-50 dark:bg-red-950/30">
                     <Trash2 className="mr-2 h-4 w-4" />Excel'i Sil
                   </Button>
                   <Button variant="outline" onClick={handleSave}>
@@ -1176,7 +1176,7 @@ export default function TrendyolPriceRange() {
                                 const profitIncrease = bestBaremSuggestion.profitRate - currentProfitRate;
 
                                 return (
-                                  <div className="border rounded-lg p-2 border-amber-300 bg-amber-50">
+                                  <div className="border rounded-lg p-2 border-amber-300 bg-amber-50 dark:bg-amber-950/30">
                                     <div className="text-xs font-semibold text-amber-800 mb-1">{bestBaremSuggestion.baremType} Önerisi</div>
                                     <div className="text-xs text-muted-foreground">Fiyat: ₺{bestBaremSuggestion.price.toFixed(2)}</div>
                                     <div className="text-xs text-muted-foreground">Kom: %{bestBaremSuggestion.commission}</div>

@@ -218,7 +218,7 @@ export default function HBOwnCampaign() {
         </div>
 
         {!hasHepsiburada && (
-          <div className="mb-6 flex items-start gap-4 bg-amber-50 border border-amber-200 rounded-xl p-5">
+          <div className="mb-6 flex items-start gap-4 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50 rounded-xl p-5">
             <div className="flex-shrink-0 w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center"><AlertCircle className="h-5 w-5 text-amber-600" /></div>
             <div>
               <h3 className="font-semibold text-amber-900 text-base mb-1">Hepsiburada Platformu Aktif Değil</h3>
@@ -308,7 +308,7 @@ export default function HBOwnCampaign() {
                       {siraliRows.map((r, i) => {
                         const diff = r.campaign.profit - r.current.profit;
                         return (
-                          <tr key={i} className={`border-b hover:bg-secondary ${r.campaign.profit < 0 ? 'bg-rose-50/50' : ''}`}>
+                          <tr key={i} className={`border-b hover:bg-secondary ${r.campaign.profit < 0 ? 'bg-rose-50 dark:bg-rose-950/30/50' : ''}`}>
                             <td className="p-3">
                               <div className="font-medium text-foreground">{r.product.name}</div>
                               <div className="text-xs text-muted-foreground font-mono">{r.product.sku}</div>

@@ -25,7 +25,7 @@ export default function MissingProductsModal({ items = [], onClose }) {
         </div>
 
         {/* Açıklama */}
-        <div className="px-5 py-3 bg-red-50 border-b border-red-100">
+        <div className="px-5 py-3 bg-red-50 dark:bg-red-950/30 border-b border-red-100">
           <p className="text-sm text-red-700">
             Bu ürünler sistemde kayıtlı ancak yüklediğiniz Excel'de bulunmuyor. Pazaryerinden kaldırılmış olabilirler.
           </p>

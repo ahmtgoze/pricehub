@@ -109,7 +109,7 @@ export default function StockSyncModal({ zeroStockItems, onDelete, onPassive, on
               <div
                 key={item.id}
                 className={`flex items-center gap-3 rounded-lg border px-3 py-2.5 cursor-pointer transition-colors ${
-                  selected.has(item.id) ? 'border-amber-300 bg-amber-50' : 'border-border bg-secondary'
+                  selected.has(item.id) ? 'border-amber-300 bg-amber-50 dark:bg-amber-950/30' : 'border-border bg-secondary'
                 }`}
                 onClick={() => toggleItem(item.id)}
               >
@@ -147,7 +147,7 @@ export default function StockSyncModal({ zeroStockItems, onDelete, onPassive, on
                 size="sm"
                 onClick={() => handlePassive(Array.from(selected))}
                 disabled={selected.size === 0 || loading}
-                className="border-yellow-300 text-yellow-700 hover:bg-yellow-50"
+                className="border-yellow-300 text-yellow-700 dark:text-yellow-300 hover:bg-yellow-50 dark:bg-yellow-950/30"
               >
                 <EyeOff className="w-4 h-4 mr-1" />
                 Pasife Al ({selected.size})

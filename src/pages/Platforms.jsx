@@ -15,7 +15,7 @@ const PLATFORM_DEFAULTS = [
     name: 'Trendyol',
     code: 'trendyol',
     color: 'from-orange-500 to-orange-600',
-    bgColor: 'bg-orange-50',
+    bgColor: 'bg-orange-50 dark:bg-orange-950/30',
     borderColor: 'border-orange-200',
     badgeColor: 'bg-orange-100 text-orange-700',
   },
@@ -24,7 +24,7 @@ const PLATFORM_DEFAULTS = [
     name: 'HepsiBurada',
     code: 'hepsiburada',
     color: 'from-purple-500 to-purple-600',
-    bgColor: 'bg-purple-50',
+    bgColor: 'bg-purple-50 dark:bg-purple-950/30',
     borderColor: 'border-purple-200',
     badgeColor: 'bg-purple-100 text-purple-700',
   },
@@ -376,7 +376,7 @@ export default function Platforms() {
           })}
         </div>
 
-        <div className="mt-8 bg-amber-50 border border-amber-200 rounded-2xl px-5 py-4 flex items-start gap-3">
+        <div className="mt-8 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50 rounded-2xl px-5 py-4 flex items-start gap-3">
           <Settings2 className="h-5 w-5 text-amber-600 mt-0.5 flex-shrink-0" />
           <div className="text-sm text-amber-800 space-y-2">
             <p className="font-semibold">Pazaryeri Platformları Hakkında</p>

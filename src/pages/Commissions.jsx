@@ -542,7 +542,7 @@ export default function Commissions() {
   return (
     <div className="min-h-screen bg-secondary">
       <div className="max-w-[1400px] mx-auto px-3 sm:px-6 py-5 sm:py-8">
-        <div className="flex flex-col gap-4 mb-8">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
           <div>
             <h1 className="ph-title">Komisyon & Hedef Kâr</h1>
             <p className="ph-subtitle">Platform ve kategori bazlı komisyon oranları</p>
@@ -604,14 +604,20 @@ export default function Commissions() {
                   </SelectContent>
                 </Select>
               </FiltreEtiketi>
-              <Button
-                variant={showMissingOnly ? 'default' : 'outline'}
-                onClick={() => { setShowMissingOnly(v => !v); setPage(1); }}
-                className={`gap-2 w-full ${showMissingOnly ? 'bg-red-600 hover:bg-red-700' : 'border-red-200 text-red-600 hover:bg-red-50'}`}
-              >
-                <AlertCircle className="h-4 w-4" />
-                Eksik Oranlar {missingRateIds.size > 0 && `(${missingRateIds.size})`}
-              </Button>
+              <FiltreEtiketi ad="Eksik Oranlar">
+                <Select
+                  value={showMissingOnly ? 'missing' : 'all'}
+                  onValueChange={(v) => { setShowMissingOnly(v === 'missing'); setPage(1); }}
+                >
+                  <SelectTrigger><SelectValue placeholder="Tümü" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Tümü</SelectItem>
+                    <SelectItem value="missing">
+                      Yalnız eksik oranlar{missingRateIds.size > 0 ? ` (${missingRateIds.size})` : ''}
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </FiltreEtiketi>
             </div>
           </div>
         </div>

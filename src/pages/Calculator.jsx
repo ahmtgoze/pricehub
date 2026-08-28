@@ -661,7 +661,7 @@ export default function Calculator() {
                              size="icon"
                              variant="ghost"
                              onClick={() => removePackage(index)}
-                             className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50 mt-5"
+                             className="h-8 w-8 text-red-500 hover:text-red-700 dark:text-red-300 hover:bg-red-50 dark:bg-red-950/30 mt-5"
                            >
                              <X className="h-4 w-4" />
                            </Button>
@@ -679,7 +679,7 @@ export default function Calculator() {
                 const isMarketplace = selectedPlatformObj?.platform_type === 'trendyol' || selectedPlatformObj?.platform_type === 'hepsiburada';
                 if (!isMarketplace) return null;
                 return (
-                  <div className={`border rounded-xl p-4 transition-all ${isSameDayDelivery ? 'border-amber-300 bg-amber-50/50' : 'border-border bg-secondary/50'}`}>
+                  <div className={`border rounded-xl p-4 transition-all ${isSameDayDelivery ? 'border-amber-300 bg-amber-50 dark:bg-amber-950/30/50' : 'border-border bg-secondary/50'}`}>
                     <div className="flex items-center space-x-3">
                       <input
                         type="checkbox"
@@ -917,7 +917,7 @@ export default function Calculator() {
                         <span className="font-medium text-red-600">-₺{result.net_vat?.toFixed(2)}</span>
                       </div>
 
-                      <div className="flex justify-between py-3 bg-green-50 rounded-lg px-3 mt-3 border-2 border-green-200">
+                      <div className="flex justify-between py-3 bg-green-50 dark:bg-green-950/30 rounded-lg px-3 mt-3 border-2 border-green-200 dark:border-green-900/50">
                         <span className="font-semibold text-green-700 text-base">= NET KÂR</span>
                         <span className="font-bold text-green-700 text-lg">₺{result.net_profit?.toFixed(2)}</span>
                       </div>

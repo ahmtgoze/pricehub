@@ -247,7 +247,7 @@ export default function AnnouncementPanel({ user, isAdmin, onReplyToAnnouncement
                                 </button>
                                 <button
                                   onClick={(e) => { e.stopPropagation(); deleteReadMutation.mutate(announcement.id); }}
-                                  className="flex items-center gap-1 text-xs text-red-600 hover:text-red-700 hover:bg-red-50 px-2.5 py-1 rounded-lg transition-colors"
+                                  className="flex items-center gap-1 text-xs text-red-600 dark:text-red-400 hover:text-red-700 dark:text-red-300 hover:bg-red-50 dark:bg-red-950/30 px-2.5 py-1 rounded-lg transition-colors"
                                 >
                                   <Trash2 className="h-3.5 w-3.5" /> Sil
                                 </button>
@@ -258,7 +258,7 @@ export default function AnnouncementPanel({ user, isAdmin, onReplyToAnnouncement
                         {isAdmin && (
                           <button
                             onClick={(e) => { e.stopPropagation(); adminDeleteMutation.mutate(announcement.id); }}
-                            className="flex items-center gap-1 text-xs text-red-600 hover:text-red-700 hover:bg-red-50 px-2.5 py-1 rounded-lg transition-colors ml-auto"
+                            className="flex items-center gap-1 text-xs text-red-600 dark:text-red-400 hover:text-red-700 dark:text-red-300 hover:bg-red-50 dark:bg-red-950/30 px-2.5 py-1 rounded-lg transition-colors ml-auto"
                           >
                             <X className="h-3.5 w-3.5" /> Geri çek
                           </button>

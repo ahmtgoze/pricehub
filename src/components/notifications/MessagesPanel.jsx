@@ -270,7 +270,7 @@ export default function MessagesPanel({ user, isAdmin, replyRef, onReplyRefConsu
             <div className="relative">
               <button
                 onClick={(e) => { e.stopPropagation(); setDeleteConvPopup(deleteConvPopup ? null : { email: selectedContact }); }}
-                className="p-2 rounded-lg text-muted-foreground/70 hover:text-red-500 hover:bg-red-50 transition-colors"
+                className="p-2 rounded-lg text-muted-foreground/70 hover:text-red-500 hover:bg-red-50 dark:bg-red-950/30 transition-colors"
                 title="Sohbeti sil"
               >
                 <Trash2 className="h-4 w-4" />
@@ -284,7 +284,7 @@ export default function MessagesPanel({ user, isAdmin, replyRef, onReplyRefConsu
                   <button onClick={() => handleDeleteConversation(selectedContact, 'me')} className="w-full text-left px-3 py-2 text-sm text-muted-foreground hover:bg-secondary transition-colors">
                     Sadece benden sil
                   </button>
-                  <button onClick={() => handleDeleteConversation(selectedContact, 'all')} className="w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors">
+                  <button onClick={() => handleDeleteConversation(selectedContact, 'all')} className="w-full text-left px-3 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:bg-red-950/30 transition-colors">
                     Müşteriden de sil
                   </button>
                 </div>
@@ -344,7 +344,7 @@ export default function MessagesPanel({ user, isAdmin, replyRef, onReplyRefConsu
                       <div className="relative">
                         <button
                           onClick={(e) => { e.stopPropagation(); setDeletePopup(deletePopup?.messageId === m.id ? null : { messageId: m.id }); }}
-                          className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-lg text-muted-foreground/70 hover:text-red-500 hover:bg-red-50"
+                          className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-lg text-muted-foreground/70 hover:text-red-500 hover:bg-red-50 dark:bg-red-950/30"
                         >
                           <Trash2 className="h-3.5 w-3.5" />
                         </button>
@@ -360,7 +360,7 @@ export default function MessagesPanel({ user, isAdmin, replyRef, onReplyRefConsu
                             <button onClick={() => handleDeleteOnlyMe(m.id)} className="w-full text-left px-3 py-2 text-sm text-muted-foreground hover:bg-secondary transition-colors">
                               Sadece benden sil
                             </button>
-                            <button onClick={() => handleDeleteForEveryone(m.id)} className="w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors">
+                            <button onClick={() => handleDeleteForEveryone(m.id)} className="w-full text-left px-3 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:bg-red-950/30 transition-colors">
                               Müşteriden de sil
                             </button>
                           </div>

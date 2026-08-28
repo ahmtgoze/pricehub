@@ -236,7 +236,7 @@ export default function PlatformSettingsModal({
             {platform?.name} Ayarları
           </DialogTitle>
           {isMarketplace && !isAdmin && (
-            <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mt-2 text-xs text-amber-800">
+            <div className="flex items-start gap-2 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50 rounded-lg px-3 py-2 mt-2 text-xs text-amber-800 dark:text-amber-200">
               <Info className="h-3.5 w-3.5 mt-0.5 flex-shrink-0" />
               <span>Barem ücretleri, stopaj oranı ve hizmet bedelleri yalnızca sistem yöneticisi tarafından düzenlenebilir.</span>
             </div>
@@ -655,7 +655,7 @@ export default function PlatformSettingsModal({
                     <h4 className="font-semibold text-muted-foreground">Entegrasyon Bilgileri</h4>
                     <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-medium">Yakında Aktif</span>
                   </div>
-                  <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-xs text-amber-800">
+                  <div className="flex items-start gap-2 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50 rounded-lg px-3 py-2 text-xs text-amber-800 dark:text-amber-200">
                     <Info className="h-3.5 w-3.5 mt-0.5 flex-shrink-0" />
                     <span>Bu bölüm şu an aktif değildir. Entegrasyon özelliği yakında devreye girecektir.</span>
                   </div>

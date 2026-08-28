@@ -1177,7 +1177,7 @@ export default function FlashProducts() {
         </div>
 
         {!hasTrendyol && (
-          <div className="mb-6 flex items-start gap-4 bg-amber-50 border border-amber-200 rounded-xl p-5">
+          <div className="mb-6 flex items-start gap-4 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50 rounded-xl p-5">
             <div className="flex-shrink-0 w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center">
               <AlertCircle className="h-5 w-5 text-amber-600" />
             </div>
@@ -1312,7 +1312,7 @@ export default function FlashProducts() {
                         toast.error('Silme hatası (arka plan): ' + error.message);
                       }
                     }}
-                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                    className="text-red-600 dark:text-red-400 hover:text-red-700 dark:text-red-300 hover:bg-red-50 dark:bg-red-950/30"
                   >
                     <Trash2 className="mr-2 h-4 w-4" />
                     Excel'i Sil
@@ -1345,7 +1345,7 @@ export default function FlashProducts() {
           <>
             {/* Info Banner */}
             {excludedCount > 0 && (
-              <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+              <div className="mb-6 p-4 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50 rounded-lg">
                 <div className="flex items-center gap-2 text-amber-800">
                   <AlertCircle className="h-5 w-5" />
                   <span className="font-medium">{excludedCount} ürün tarih aralığı dışında olduğu için gösterilmiyor</span>
@@ -1763,7 +1763,7 @@ export default function FlashProducts() {
                                 const profitIncrease = bestBaremSuggestion.profitRate - currentProfitRate;
 
                                 return (
-                                  <div className="border rounded-lg p-2 border-amber-300 bg-amber-50">
+                                  <div className="border rounded-lg p-2 border-amber-300 bg-amber-50 dark:bg-amber-950/30">
                                     <div className="text-xs font-semibold text-amber-800 mb-1">
                                       {bestBaremSuggestion.baremType} Önerisi
                                     </div>
@@ -1842,7 +1842,7 @@ export default function FlashProducts() {
                                     {item.manual_price > 0 && (
                                      <>
                                        {item.manual_time_range_error ? (
-                                         <div className="mb-2 p-2 bg-red-50 border border-red-200 rounded">
+                                         <div className="mb-2 p-2 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/50 rounded">
                                            <div className="text-xs text-red-700 font-medium">
                                              ⚠ Fiyat hem 3 hem 24 saatlik fiyattan büyük olamaz
                                            </div>

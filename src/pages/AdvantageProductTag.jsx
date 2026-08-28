@@ -834,7 +834,7 @@ export default function AdvantageProductTag() {
         </div>
 
         {!hasTrendyol && (
-          <div className="mb-6 flex items-start gap-4 bg-amber-50 border border-amber-200 rounded-xl p-5">
+          <div className="mb-6 flex items-start gap-4 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50 rounded-xl p-5">
             <div className="flex-shrink-0 w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center">
               <AlertCircle className="h-5 w-5 text-amber-600" />
             </div>
@@ -926,7 +926,7 @@ export default function AdvantageProductTag() {
                       }
                       queryClient.invalidateQueries(['advantageProductTags']);
                     } catch (error) { toast.error('Silme hatası (arka plan): ' + error.message); }
-                  }} className="text-red-600 hover:text-red-700 hover:bg-red-50">
+                  }} className="text-red-600 dark:text-red-400 hover:text-red-700 dark:text-red-300 hover:bg-red-50 dark:bg-red-950/30">
                     <Trash2 className="mr-2 h-4 w-4" />Excel'i Sil
                   </Button>
                   <Button variant="outline" onClick={handleSave}>

@@ -222,7 +222,7 @@ function BrandSection() {
               {save.isPending ? 'Kaydediliyor…' : 'Kaydet'}
             </Button>
           </div>
-          <div className="rounded-xl bg-amber-50 border border-amber-100 px-4 py-3">
+          <div className="rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-100 px-4 py-3">
             <p className="text-xs text-amber-700">Değişiklik kaydedildikten sonra tüm kullanıcılar sayfayı yenilediklerinde yeni adı görecek.</p>
           </div>
         </div>

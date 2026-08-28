@@ -200,7 +200,7 @@ export default function PriceDetailModal({ open, onClose, product, platform, pri
                   )}
 
                   {/* Net Kâr */}
-                  <div className="flex justify-between py-3 bg-emerald-50 rounded-lg px-3 mt-3 border-2 border-emerald-200">
+                  <div className="flex justify-between py-3 bg-emerald-50 dark:bg-emerald-950/30 rounded-lg px-3 mt-3 border-2 border-emerald-200 dark:border-emerald-900/50">
                     <span className="font-semibold text-emerald-700 text-base">= NET KÂR</span>
                     <span className="font-bold text-emerald-700 text-lg">₺{(priceData.net_profit || 0)?.toFixed(2)}</span>
                   </div>

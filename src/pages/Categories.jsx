@@ -387,7 +387,7 @@ export default function Categories() {
         </div>
 
         {validSelectedIds.length > 0 && (
-          <div className="flex items-center justify-between gap-3 bg-red-50 border border-red-200 rounded-xl px-4 py-3 mb-4">
+          <div className="flex items-center justify-between gap-3 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/50 rounded-xl px-4 py-3 mb-4">
             <span className="text-sm text-red-700 font-medium">
               {validSelectedIds.length} kategori seçildi
             </span>
