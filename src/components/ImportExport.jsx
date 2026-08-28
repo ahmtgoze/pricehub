@@ -6,6 +6,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
@@ -486,7 +487,10 @@ export default function ImportExport({
             Dışa Aktar
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
+        <DropdownMenuContent align="end" className="w-[260px]">
+          <DropdownMenuLabel className="text-[11px] uppercase tracking-[0.06em] text-muted-foreground">
+            Standart şablon
+          </DropdownMenuLabel>
           <DropdownMenuItem
             onClick={() => downloadExcel(data, columns, dosyaAdiUret(filename))}
             className="gap-2 cursor-pointer"
@@ -514,6 +518,12 @@ export default function ImportExport({
           {pageKey && (
             <>
               <DropdownMenuSeparator />
+              <DropdownMenuLabel className="text-[11px] uppercase tracking-[0.06em] text-muted-foreground">
+                Kendi şablonların
+              </DropdownMenuLabel>
+              {sablonlar.length === 0 && (
+                <p className="px-2 py-1.5 text-xs text-muted-foreground/70">Henüz şablon yok</p>
+              )}
               {sablonlar.map(sb => (
                 <DropdownMenuItem
                   key={sb.id}
@@ -522,8 +532,14 @@ export default function ImportExport({
                 >
                   <FileSpreadsheet className="h-4 w-4" />
                   <span className="flex-1 truncate">{sb.name}</span>
+                  <span className="text-[10px] text-muted-foreground/70 uppercase">{sb.format}</span>
                   <button
-                    onClick={(e) => { e.stopPropagation(); sablonSil.mutate(sb.id); }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (window.confirm(`"${sb.name}" şablonu silinsin mi? Standart şablon etkilenmez.`)) {
+                        sablonSil.mutate(sb.id);
+                      }
+                    }}
                     className="text-muted-foreground hover:text-destructive"
                     title="Şablonu sil"
                   >

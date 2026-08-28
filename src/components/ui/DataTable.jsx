@@ -10,7 +10,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useTableColumns, SABIT_GENISLIK } from "@/lib/useTableColumns";
+import { useTableColumns, SABIT_GENISLIK, ASGARI_GENISLIK, AZAMI_GENISLIK } from "@/lib/useTableColumns";
 import ColumnSettings from "@/components/ui/ColumnSettings";
 
 const SISTEM_KOLON_GENISLIK = 48; // secim kutusu gibi anahtarsiz sutunlar
@@ -76,7 +76,7 @@ export default function DataTable({
     let sonPx = Math.round(baslangicGenislik);
 
     const hareket = (ev) => {
-      sonPx = Math.max(60, Math.min(600, Math.round(baslangicGenislik + (ev.clientX - baslangicX))));
+      sonPx = Math.max(ASGARI_GENISLIK, Math.min(AZAMI_GENISLIK, Math.round(baslangicGenislik + (ev.clientX - baslangicX))));
       setSurukle({ key, px: sonPx });
     };
     const bitir = () => {
@@ -171,7 +171,7 @@ export default function DataTable({
               {kolonlar.map((col, idx) => (
                 <TableHead
                   key={idx}
-                  className={hucreSinifi(idx, "px-5 [&_button]:uppercase [&_button]:tracking-[0.06em]")}
+                  className={hucreSinifi(idx, "px-5 whitespace-normal break-words [&_button]:uppercase [&_button]:tracking-[0.06em]")}
                   style={hucreStili(idx)}
                 >
                   {typeof col.header === 'function' ? col.header() : col.header}
@@ -209,7 +209,7 @@ export default function DataTable({
                   {kolonlar.map((col, colIdx) => (
                     <TableCell
                       key={colIdx}
-                      className={hucreSinifi(colIdx, "px-5 text-[13.5px]")}
+                      className={hucreSinifi(colIdx, "px-5 text-[13.5px] whitespace-normal break-words")}
                       style={hucreStili(colIdx)}
                     >
                       {col.cell ? col.cell(row) : row[col.accessor]}

@@ -17,6 +17,10 @@ import { db } from '@/api/db';
  */
 
 export const SABIT_GENISLIK = 160; // sabitlenmis sutun icin varsayilan px
+// Asgari genislik: bundan dar yapilamaz. Daralinca metin kirpilmaz,
+// alt satira kayar (DataTable'daki whitespace-normal + break-words).
+export const ASGARI_GENISLIK = 90;
+export const AZAMI_GENISLIK = 600;
 
 /**
  * Sutun kimligi. null donerse sutun "sistem sutunu"dur: gizlenemez,
@@ -154,7 +158,7 @@ export function useTableColumns(pageKey, columns) {
   const genislikAyarla = useCallback((key, px) => yaz(p => {
     const widths = { ...p.widths };
     if (!px) delete widths[key];
-    else widths[key] = Math.max(60, Math.min(600, Number(px) || 0));
+    else widths[key] = Math.max(ASGARI_GENISLIK, Math.min(AZAMI_GENISLIK, Number(px) || 0));
     return { ...p, widths };
   }), [yaz]);
 
