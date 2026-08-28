@@ -54,7 +54,7 @@ export default function FlashProducts() {
     enabled: !!userEmail
   });
 
-  const { data: platforms = [] } = useQuery({
+  const { data: platforms = [], isFetched: platformlarYuklendi } = useQuery({
     queryKey: ['platforms', userEmail],
     queryFn: () => db.entities.Platform.filter({ created_by: userEmail }),
     enabled: !!userEmail
@@ -1176,7 +1176,9 @@ export default function FlashProducts() {
           <p className="text-muted-foreground mt-1">Flaş ürün fiyatlarını yükleyip kârlılık analizi yapın</p>
         </div>
 
-        {!hasTrendyol && (
+        {/* Uyari platform sorgusu cozulmeden gosterilirse sayfa acilirken
+            bir an cakip kayboluyordu; artik veri geldikten sonra kalici. */}
+        {platformlarYuklendi && !hasTrendyol && (
           <div className="mb-6 flex items-start gap-4 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50 rounded-xl p-5">
             <div className="flex-shrink-0 w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center">
               <AlertCircle className="h-5 w-5 text-amber-600" />
@@ -1544,15 +1546,15 @@ export default function FlashProducts() {
                                   )}
                                   {commissionRate24h !== null ? (
                                     <>
-                                      <div className="flex items-center justify-between gap-1">
-                                        <span className="text-xs text-muted-foreground">Kom: %{commissionRate24h}</span>
-                                        <BaremBadge barem={baremUsed} />
-                                      </div>
                                       {(() => {
                                         const { profit, profitRate, baremUsed } = calculateProfit(item.price_24h, commissionRate24h, item);
                                         const isProfitable = profit > 0;
                                         return (
                                           <>
+                                          <div className="flex items-center justify-between gap-1">
+                                            <span className="text-xs text-muted-foreground">Kom: %{commissionRate24h}</span>
+                                            <BaremBadge barem={baremUsed} />
+                                          </div>
                                             <div className="flex items-center justify-between mt-1">
                                               <div className={`text-xs font-semibold ${isProfitable ? 'text-green-600' : 'text-red-600'}`}>
                                                 {isProfitable ? '+' : ''}₺{profit.toFixed(2)} (%{profitRate.toFixed(1)})

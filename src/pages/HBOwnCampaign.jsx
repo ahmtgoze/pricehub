@@ -16,8 +16,9 @@ const Platform = db.entities.Platform;
 const Commission = db.entities.Commission;
 const ShippingRate = db.entities.ShippingRate;
 
-const withVatRate = (rate) => Math.round((rate || 0) * 1.2 * 100) / 100;
-const commLabel = (rate) => `%${rate || 0} (KDV'li %${withVatRate(rate)})`;
+// HepsiBurada komisyonlari sisteme zaten KDV DAHIL giriliyor;
+// etikette bir daha KDV eklemek yaniltiyordu.
+const commLabel = (rate) => `%${rate || 0}`;
 
 const CAMPAIGN_TYPES = [
   { value: 'cart_percent', label: 'Sepette % indirim' },
@@ -46,7 +47,7 @@ export default function HBOwnCampaign() {
     db.auth.me().then((u) => setUserEmail(u.email)).catch(() => {});
   }, []);
 
-  const { data: platforms = [] } = useQuery({ queryKey: ['platforms', userEmail], queryFn: () => Platform.filter({ created_by: userEmail }), enabled: !!userEmail });
+  const { data: platforms = [], isFetched: platformlarYuklendi } = useQuery({ queryKey: ['platforms', userEmail], queryFn: () => Platform.filter({ created_by: userEmail }), enabled: !!userEmail });
   const { data: products = [] } = useQuery({ queryKey: ['products', userEmail], queryFn: () => Product.filter({ created_by: userEmail }), enabled: !!userEmail });
   const { data: commissions = [] } = useQuery({ queryKey: ['commissions', userEmail], queryFn: () => Commission.filter({ created_by: userEmail }), enabled: !!userEmail });
   const { data: shippingRates = [] } = useQuery({ queryKey: ['shippingRates'], queryFn: () => ShippingRate.list('-id', 10000), enabled: !!userEmail });
@@ -217,7 +218,9 @@ export default function HBOwnCampaign() {
           <p className="text-muted-foreground mt-1">Bir sepet kampanyası kurgulayıp, ürünlerinde kâr etkisini görün (Hepsiburada)</p>
         </div>
 
-        {!hasHepsiburada && (
+        {/* Uyari platform sorgusu cozulmeden gosterilirse sayfa acilirken
+            bir an cakip kayboluyordu; artik veri geldikten sonra kalici. */}
+        {platformlarYuklendi && !hasHepsiburada && (
           <div className="mb-6 flex items-start gap-4 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50 rounded-xl p-5">
             <div className="flex-shrink-0 w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center"><AlertCircle className="h-5 w-5 text-amber-600" /></div>
             <div>

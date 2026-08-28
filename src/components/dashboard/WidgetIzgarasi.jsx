@@ -30,7 +30,7 @@ const SPAN_SINIFI = {
   4: 'lg:col-span-4',
 };
 
-export default function WidgetIzgarasi({ pageKey, tanimlar }) {
+export default function WidgetIzgarasi({ pageKey, tanimlar, baslik = null }) {
   const {
     gorunenWidgetlar,
     yonetilebilir,
@@ -94,7 +94,10 @@ export default function WidgetIzgarasi({ pageKey, tanimlar }) {
       {/* Sabit kutular (ust ozet satiri) — duzenlenmez */}
       {sabitler.map(w => <React.Fragment key={w.id}>{w.icerik}</React.Fragment>)}
 
-      <div className="flex justify-end">
+      {/* Duzen butonu kendi satirindaydi ve kutulari asagi itiyordu;
+          diger sayfalardaki gibi baslikla ayni hizaya alindi. */}
+      <div className={baslik ? 'ph-head' : 'flex justify-end'}>
+        {baslik}
         <Popover>
           <PopoverTrigger asChild>
             <Button variant="outline" size="sm" className="gap-2">

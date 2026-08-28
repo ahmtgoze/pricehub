@@ -60,7 +60,7 @@ export default function TrendyolPriceRange() {
     db.auth.me().then(user => setUserEmail(user.email)).catch(() => {});
   }, []);
 
-  const { data: platforms = [] } = useQuery({
+  const { data: platforms = [], isFetched: platformlarYuklendi } = useQuery({
     queryKey: ['platforms', userEmail],
     queryFn: () => Platform.filter({ created_by: userEmail }),
     enabled: !!userEmail
@@ -867,7 +867,9 @@ export default function TrendyolPriceRange() {
           <p className="ph-subtitle">Trendyol fiyat aralıklarını yükleyip kârlılık analizi yapın</p>
         </div>
 
-        {!hasTrendyol && (
+        {/* Uyari platform sorgusu cozulmeden gosterilirse sayfa acilirken
+            bir an cakip kayboluyordu; artik veri geldikten sonra kalici. */}
+        {platformlarYuklendi && !hasTrendyol && (
           <div className="mb-6 flex items-start gap-4 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50 rounded-xl p-5">
             <div className="flex-shrink-0 w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center">
               <AlertCircle className="h-5 w-5 text-amber-600" />

@@ -461,12 +461,16 @@ if (filteredByRange) {
 
   return (
     <div className="ph-page mx-auto">
-      <div>
-        <h1 className="ph-title">Dashboard</h1>
-        <p className="ph-subtitle">Ürün, platform ve kâr özeti</p>
-      </div>
-
-            <WidgetIzgarasi pageKey="dashboard" tanimlar={widgetTanimlari} />
+      <WidgetIzgarasi
+        pageKey="dashboard"
+        tanimlar={widgetTanimlari}
+        baslik={(
+          <div>
+            <h1 className="ph-title">Dashboard</h1>
+            <p className="ph-subtitle">Ürün, platform ve kâr özeti</p>
+          </div>
+        )}
+      />
     </div>
   );
 }
