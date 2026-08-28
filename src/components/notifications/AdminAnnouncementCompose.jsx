@@ -3,17 +3,22 @@ import { db } from '@/api/db';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Plus, Megaphone, Zap, X } from 'lucide-react';
+import { PAGES as HELP_PAGES } from '@/lib/helpContent';
 
 export default function AdminAnnouncementCompose({ onClose }) {
   const qc = useQueryClient();
-  const [form, setForm] = useState({ title: '', content: '', type: 'announcement' });
+  const [form, setForm] = useState({ title: '', content: '', type: 'announcement', link_page: '' });
   const [open, setOpen] = useState(false);
 
   const createMutation = useMutation({
-    mutationFn: () => db.entities.Announcement.create({ ...form, is_active: true }),
+    mutationFn: () => db.entities.Announcement.create({
+      ...form,
+      link_page: form.link_page || null,
+      is_active: true,
+    }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['announcements'] });
-      setForm({ title: '', content: '', type: 'announcement' });
+      setForm({ title: '', content: '', type: 'announcement', link_page: '' });
       setOpen(false);
     },
   });
@@ -69,6 +74,26 @@ export default function AdminAnnouncementCompose({ onClose }) {
         rows={3}
         className="w-full text-sm border border-border rounded-xl px-3.5 py-2.5 resize-none focus:outline-none focus:ring-2 focus:ring-gray-400 focus:border-transparent bg-card"
       />
+      {/* Duyuruya tiklayinca gidilecek sayfa — bos birakilabilir */}
+      <div className="space-y-1.5">
+        <label className="text-xs font-semibold text-muted-foreground">
+          İlgili sayfa <span className="font-normal">(isteğe bağlı)</span>
+        </label>
+        <select
+          value={form.link_page}
+          onChange={e => setForm(f => ({ ...f, link_page: e.target.value }))}
+          className="w-full text-sm border border-border rounded-xl px-3.5 py-2.5 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:border-transparent bg-card"
+        >
+          <option value="">Sayfa yok — duyuru tıklanmaz</option>
+          {HELP_PAGES.map(p => (
+            <option key={p.page} value={p.page}>{p.title}</option>
+          ))}
+        </select>
+        <p className="text-[11px] text-muted-foreground">
+          Sayfa seçersen kullanıcı duyuruya tıklayınca doğrudan oraya gider.
+        </p>
+      </div>
+
       <div className="flex justify-between items-center pt-2">
         <Button
           size="sm"

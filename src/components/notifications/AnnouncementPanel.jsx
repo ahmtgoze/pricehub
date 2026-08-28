@@ -1,14 +1,26 @@
 import React, { useState } from 'react';
 import { db } from '@/api/db';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Bell, Archive, ArchiveRestore, Trash2, Megaphone, Zap, Reply, X } from 'lucide-react';
+import { Bell, Archive, ArchiveRestore, Trash2, Megaphone, Zap, Reply, X, ArrowRight } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { createPageUrl } from '@/utils';
+import { getHelpForPage } from '@/lib/helpContent';
 import { format, addDays, differenceInDays } from 'date-fns';
 import { tr } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 
 export default function AnnouncementPanel({ user, isAdmin, onReplyToAnnouncement }) {
   const qc = useQueryClient();
+  const navigate = useNavigate();
   const [showArchived, setShowArchived] = useState(false);
+
+  // Duyuruya tiklaninca: okundu isaretle, link_page varsa o sayfaya git.
+  const acDuyuru = (announcement, isRead) => {
+    if (!isRead) markReadMutation.mutate(announcement.id);
+    if (announcement.link_page) {
+      navigate(createPageUrl(announcement.link_page));
+    }
+  };
 
   const { data: announcements = [] } = useQuery({
     queryKey: ['announcements'],
@@ -182,7 +194,8 @@ export default function AnnouncementPanel({ user, isAdmin, onReplyToAnnouncement
                   className={cn("px-4 py-3.5 hover:bg-secondary transition-colors border-l-4 cursor-pointer",
                     !isRead ? "bg-secondary border-primary" : "border-transparent"
                   )}
-                  onClick={() => !isRead && markReadMutation.mutate(announcement.id)}
+                  onClick={() => acDuyuru(announcement, isRead)}
+                  title={announcement.link_page ? 'Tıkla — ilgili sayfaya git' : undefined}
                 >
                   <div className="flex items-start gap-3">
                     <div className="flex-1 min-w-0">
@@ -192,6 +205,12 @@ export default function AnnouncementPanel({ user, isAdmin, onReplyToAnnouncement
                         {!isRead && <span className="text-[10px] bg-primary text-primary-foreground px-2 py-0.5 rounded-full font-bold flex-shrink-0">YENİ</span>}
                       </div>
                       <p className="text-sm text-muted-foreground leading-relaxed mb-2">{announcement.content}</p>
+                      {announcement.link_page && (
+                        <span className="inline-flex items-center gap-1 mb-2 text-xs font-semibold text-foreground">
+                          {getHelpForPage(announcement.link_page)?.title || announcement.link_page} sayfasına git
+                          <ArrowRight className="h-3.5 w-3.5" />
+                        </span>
+                      )}
                       <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground mb-2.5">
                         <span>{format(new Date(announcement.created_date), 'd MMM HH:mm', { locale: tr })}</span>
                         {rec?.read_at && daysLeft !== null && daysLeft <= 7 && !rec?.is_archived && (
