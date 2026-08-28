@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { db } from '@/api/db';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Download, ChevronDown, ChevronUp, RefreshCw, Info, Filter, Eye, EyeOff, X } from 'lucide-react';
+import { Download, ChevronDown, ChevronUp, RefreshCw, Info, Filter, Eye, EyeOff, X, Trash2 } from 'lucide-react';
 import { formatTurkishCurrency, formatTurkishPercent } from '@/utils/formatters';
 import SearchInput from '@/components/ui/SearchInput';
 import { Button } from '@/components/ui/button';
@@ -19,6 +19,7 @@ import ProductHistoryModal from '@/components/modals/ProductHistoryModal';
 import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import DataTable from '@/components/ui/DataTable';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 export default function Prices() {
   const [userEmail, setUserEmail] = React.useState(null);
@@ -638,7 +639,6 @@ export default function Prices() {
               {getBaremBadge(price.barem_used)}
             </div>
             <p className="text-xs text-muted-foreground">Kâr: ₺{formatTurkishCurrency(profitAmount)}{showBeforeTax && <span className="text-muted-foreground/70"> (vergi öncesi)</span>}</p>
-            {price.packaging_cost > 0 && <p className="text-xs text-muted-foreground">Paket: ₺{formatTurkishCurrency(price.packaging_cost)}</p>}
             <Button variant="ghost" size="sm" className="h-7 text-xs mt-1" onClick={() => handleShowDetail(product, platform)}>
               <Info className="h-3 w-3 mr-1" />Detay
             </Button>
@@ -674,7 +674,9 @@ export default function Prices() {
       <div className="ph-page mx-auto">
         <div className="mb-6 sm:mb-8">
           <h1 className="ph-title">Fiyatlar</h1>
-          <p className="ph-subtitle">Tüm ürünlerin platform bazlı fiyat ve kâr tablosu</p>
+          <p className="ph-subtitle">
+            {products.length} ürün · {productPrices.length} fiyat kaydı · {platforms.length} platform
+          </p>
         </div>
 
         <div className="rounded-[18px] border border-border bg-card p-4 sm:p-6 mb-6">
@@ -685,41 +687,57 @@ export default function Prices() {
                 <span className="hidden sm:inline ml-1">Fiyatları Hesapla</span>
                 <span className="sm:hidden ml-1">Hesapla</span>
               </Button>
-              <Button onClick={handleRecalculateFailed} variant="outline" disabled={calculating || failedProducts.length === 0} className="gap-2 border-amber-200 text-amber-700 hover:bg-amber-50" size="sm">
-                <RefreshCw className={`h-4 w-4 ${calculating ? 'animate-spin' : ''}`} />
-                <span className="hidden sm:inline">Hesaplanamayan Ürünleri Hesapla</span>
-                <span className="sm:hidden">Hesaplanamayan</span>
-              </Button>
-              <Button onClick={handleResetPrices} variant="destructive" disabled={calculating} size="sm">
-                <span className="hidden sm:inline">Tüm Fiyatları Sıfırla</span>
-                <span className="sm:hidden">Sıfırla</span>
-              </Button>
-
               <Button onClick={handleExportFiltered} variant="outline" className="gap-2" size="sm">
                 <Download className="h-4 w-4" />
-                <span className="hidden sm:inline">Filtrelenenleri İndir</span>
+                <span className="hidden sm:inline">Dışa Aktar</span>
                 <span className="sm:hidden">İndir</span>
               </Button>
-              {selectedIds.size > 0 && (
-                <Button onClick={handleExportSelected} variant="outline" className="gap-2 border-input text-muted-foreground hover:bg-secondary" size="sm">
-                  <Download className="h-4 w-4" />
-                  <span>Seçilileri İndir ({selectedIds.size})</span>
-                </Button>
-              )}
 
-              <Button
-                onClick={() => setShowBeforeTax(v => !v)}
-                variant={showBeforeTax ? 'default' : 'outline'}
-                className="gap-2 ml-auto"
-                size="sm"
-                title="Kurumlar/gelir vergisi düşülmeden önceki kâr tutarı ve oranını göster"
-              >
-                {showBeforeTax ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                <span className="hidden sm:inline">{showBeforeTax ? 'Vergi Sonrası Kârı Göster' : 'Vergi Öncesi Kârı Göster'}</span>
-                <span className="sm:hidden">{showBeforeTax ? 'Vergi Sonrası' : 'Vergi Öncesi'}</span>
-              </Button>
+              {/* Ikincil islemler tek bir menude — prototipte ust satirda
+                  yalnizca Disa Aktar / Daha fazla / Fiyatlari Hesapla var. */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" className="gap-1.5">
+                    Daha fazla
+                    <ChevronDown className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="w-[260px]">
+                  <DropdownMenuItem
+                    onClick={handleRecalculateFailed}
+                    disabled={calculating || failedProducts.length === 0}
+                    className="gap-2 cursor-pointer"
+                  >
+                    <RefreshCw className="h-4 w-4" />
+                    Hesaplanamayan Ürünleri Hesapla
+                    {failedProducts.length > 0 && (
+                      <span className="ml-auto text-xs text-muted-foreground">{failedProducts.length}</span>
+                    )}
+                  </DropdownMenuItem>
+                  {selectedIds.size > 0 && (
+                    <DropdownMenuItem onClick={handleExportSelected} className="gap-2 cursor-pointer">
+                      <Download className="h-4 w-4" />
+                      Seçilileri İndir
+                      <span className="ml-auto text-xs text-muted-foreground">{selectedIds.size}</span>
+                    </DropdownMenuItem>
+                  )}
+                  <DropdownMenuItem onClick={() => setShowBeforeTax(v => !v)} className="gap-2 cursor-pointer">
+                    {showBeforeTax ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    {showBeforeTax ? 'Vergi Sonrası Kârı Göster' : 'Vergi Öncesi Kârı Göster'}
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={handleResetPrices}
+                    disabled={calculating}
+                    className="gap-2 cursor-pointer text-destructive focus:text-destructive"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    Tüm Fiyatları Sıfırla
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
 
-              <Button onClick={() => setShowFilters(!showFilters)} variant={showFilters ? 'default' : 'outline'} className="gap-2" size="sm">
+              <Button onClick={() => setShowFilters(!showFilters)} variant={showFilters ? 'default' : 'outline'} className="gap-2 ml-auto" size="sm">
                 <Filter className="h-4 w-4" />
                 <span>Filtrele</span>
                 {hasActiveFilters && <span className="bg-red-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">!</span>}
@@ -973,9 +991,6 @@ export default function Prices() {
                           <p className="mt-1 text-[12px] text-muted-foreground">
                             Kâr: ₺{formatTurkishCurrency(profitAmount)}{showBeforeTax && ' (vergi öncesi)'}
                           </p>
-                          {price.packaging_cost > 0 && (
-                            <p className="text-[12px] text-muted-foreground">Paket: ₺{formatTurkishCurrency(price.packaging_cost)}</p>
-                          )}
                         </div>
                       );
                     })}

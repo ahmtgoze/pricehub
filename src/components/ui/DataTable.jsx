@@ -156,7 +156,15 @@ export default function DataTable({
   return (
     <div className="space-y-4">
       {pageKey && (
-        <div className="flex justify-end">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          {/* Prototipteki ozet satiri: kayit / sutun / sabit sayilari + ipucu */}
+          <p className="text-[12.5px] text-muted-foreground">
+            {(totalItems || data.length)} kayıt · {kolonlar.filter(c => c.__key).length} sütun
+            {prefs.pinned.length > 0 && ` · ${prefs.pinned.length} sabit`}
+            <span className="ml-2 text-muted-foreground/70">
+              Sütun kenarından sürükleyerek genişlet
+            </span>
+          </p>
           <ColumnSettings
             yonetilebilir={yonetilebilir}
             prefs={prefs}

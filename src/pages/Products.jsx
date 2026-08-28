@@ -992,6 +992,7 @@ export default function Products() {
         <div className="rounded-[18px] border border-border bg-card p-5 mb-6">
           <div className="flex flex-col sm:flex-row gap-4">
             <SearchInput value={search} onChange={setSearch} placeholder="Ürün adı veya SKU ara..." className="flex-1" />
+            <FiltreEtiketi ad="Kategori">
             <Select value={categoryFilter} onValueChange={setCategoryFilter}>
               <SelectTrigger className="w-full sm:w-48"><SelectValue placeholder="Kategori" /></SelectTrigger>
               <SelectContent>
@@ -999,6 +1000,8 @@ export default function Products() {
                 {categories.map(cat => <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>)}
               </SelectContent>
             </Select>
+            </FiltreEtiketi>
+            <FiltreEtiketi ad="Durum">
             <Select value={activeFilter} onValueChange={setActiveFilter}>
               <SelectTrigger className="w-full sm:w-36"><SelectValue placeholder="Durum" /></SelectTrigger>
               <SelectContent>
@@ -1007,6 +1010,8 @@ export default function Products() {
                 <SelectItem value="inactive">Pasif</SelectItem>
               </SelectContent>
             </Select>
+            </FiltreEtiketi>
+            <FiltreEtiketi ad="Paket">
             <Select value={multiPackageFilter} onValueChange={setMultiPackageFilter}>
               <SelectTrigger className="w-full sm:w-40"><SelectValue placeholder="Paket Tipi" /></SelectTrigger>
               <SelectContent>
@@ -1015,6 +1020,8 @@ export default function Products() {
                 <SelectItem value="single">Tek Paket</SelectItem>
               </SelectContent>
             </Select>
+            </FiltreEtiketi>
+            <FiltreEtiketi ad="Sırala">
             <Select value={sortType} onValueChange={setSortType}>
               <SelectTrigger className="w-full sm:w-48"><SelectValue placeholder="Sıralama" /></SelectTrigger>
               <SelectContent>
@@ -1028,6 +1035,7 @@ export default function Products() {
                 <SelectItem value="desi_azalan">Desi (Azalan)</SelectItem>
               </SelectContent>
             </Select>
+            </FiltreEtiketi>
           </div>
         </div>
 
@@ -1164,6 +1172,19 @@ export default function Products() {
           </AlertDialogContent>
         </AlertDialog>
       </div>
+    </div>
+  );
+}
+
+/**
+ * Filtrenin ustunde kucuk etiket — tasarim prototipinde filtreler
+ * "Kategori: Tüm Kategoriler" seklinde adlandirilmis.
+ */
+function FiltreEtiketi({ ad, children }) {
+  return (
+    <div className="flex flex-col gap-1">
+      <span className="text-[11px] font-medium text-muted-foreground">{ad}</span>
+      {children}
     </div>
   );
 }
