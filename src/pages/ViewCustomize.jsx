@@ -10,12 +10,18 @@ import { Columns3, Eye, Pin, ArrowRight, RotateCcw } from 'lucide-react';
 
 // pageKey -> gorunen ad + gidilecek sayfa. DataTable'a verilen anahtarlarla ayni.
 const SAYFALAR = [
+  { key: 'dashboard', ad: 'Dashboard (kutu düzeni)', page: 'Dashboard' },
   { key: 'urunler', ad: 'Ürünler', page: 'Products' },
   { key: 'kategoriler', ad: 'Kategoriler', page: 'Categories' },
   { key: 'komisyonlar', ad: 'Komisyonlar', page: 'Commissions' },
   { key: 'kargo-tarifeleri', ad: 'Kargo Tarifeleri', page: 'ShippingRates' },
   { key: 'paketleme', ad: 'Paketleme', page: 'PackageManagement' },
   { key: 'guncelleme-raporlari', ad: 'Güncelleme Raporları', page: 'UpdateReports' },
+  { key: 'duzenlenen-maliyetler', ad: 'Düzenlenen Maliyetler', page: 'UpdatedCosts' },
+  { key: 'duzenlenen-fiyatlar', ad: 'Düzenlenen Fiyatlar', page: 'UpdatedPrices' },
+  { key: 'pazaryeri-urunleri', ad: 'Pazaryeri Ürünleri', page: 'MarketplaceProducts' },
+  { key: 'fiyatlar-platform', ad: 'Fiyatlar — Platform sütunlu', page: 'Prices' },
+  { key: 'fiyatlar-satir', ad: 'Fiyatlar — Satır bazlı', page: 'Prices' },
 ];
 
 export default function ViewCustomize() {
@@ -49,8 +55,10 @@ export default function ViewCustomize() {
       <div className="ph-card">
         <p className="text-[13.5px] leading-relaxed text-muted-foreground">
           Her tablonun sağ üstündeki <strong className="text-foreground">Sütunlar</strong> düğmesiyle
-          o tablodaki sütunları gizleyebilir, sıralayabilir, genişliğini değiştirebilir ve
-          sola sabitleyebilirsin. Ayarlar <strong className="text-foreground">yalnızca sana özeldir</strong> ve
+          o tablodaki sütunları gizleyebilir, sürükleyerek sıralayabilir, başlık kenarından
+          çekerek genişletebilir, sola sabitleyebilir ve "Eklenebilir sütunlar"dan yeni veri
+          sütunları açabilirsin. Dashboard'da ise <strong className="text-foreground">Düzen</strong> düğmesiyle
+          kutuları taşıyıp boyutlandırabilirsin. Ayarlar <strong className="text-foreground">yalnızca sana özeldir</strong> ve
           otomatik kaydedilir. Bu sayfada hangi tabloları özelleştirdiğini görür,
           istediğini varsayılana döndürebilirsin.
         </p>
@@ -74,7 +82,9 @@ export default function ViewCustomize() {
               const sabit = prefs.pinned?.length || 0;
               const siralanmis = (prefs.order?.length || 0) > 0;
               const genislik = Object.keys(prefs.widths || {}).length;
-              const ozellestirilmis = gizli || sabit || siralanmis || genislik;
+              const boyut = Object.keys(prefs.spans || {}).length;   // Dashboard kutu boyutlari
+              const ekSutun = prefs.shown?.length || 0;              // acilan ek sutunlar
+              const ozellestirilmis = gizli || sabit || siralanmis || genislik || boyut || ekSutun;
 
               return (
                 <div key={s.key} className="flex flex-wrap items-center justify-between gap-3 px-5 py-[13px]">
@@ -86,6 +96,8 @@ export default function ViewCustomize() {
                         {sabit > 0 && <span className="inline-flex items-center gap-1"><Pin className="h-3.5 w-3.5" />{sabit} sabit</span>}
                         {siralanmis && <span className="inline-flex items-center gap-1"><Columns3 className="h-3.5 w-3.5" />sıra değişti</span>}
                         {genislik > 0 && <span>{genislik} genişlik ayarı</span>}
+                        {boyut > 0 && <span>{boyut} boyut ayarı</span>}
+                        {ekSutun > 0 && <span>{ekSutun} ek sütun açık</span>}
                       </div>
                     ) : (
                       <p className="mt-1 text-xs text-muted-foreground">Varsayılan görünüm</p>
