@@ -66,7 +66,7 @@ export const TABLO_KAYITLARI = [
       { id: 'profit', etiket: "Kâr" },
       { id: 'profit_rate', etiket: "Kâr Oranı" },
       { id: 'barem', etiket: "Barem" },
-      { id: 'detay', etiket: "Detay" },
+      { id: 'detay', etiket: "Kırılım" },
     ],
   },
   {

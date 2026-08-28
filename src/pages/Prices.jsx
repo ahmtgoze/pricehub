@@ -624,24 +624,54 @@ export default function Prices() {
     ...visiblePlatformList.map(platform => ({
       id: `platform_${platform.id}`,
       etiket: platform.name,
-      header: <span className="cursor-pointer hover:text-foreground" onClick={() => handleSort(`platform_${platform.id}`)}>{platform.name} <SortIcon field={`platform_${platform.id}`} /></span>,
-      width: '160px',
+      // Tasarim prototipi: platform sutunu ad + hizali uc alt baslik
+      // (Fiyat / Net Kar / Kar %). Degerler satirlar arasinda ayni
+      // sutunda hizalandigi icin goz kolayca tarayabiliyor.
+      header: (
+        <div className="min-w-0">
+          <div
+            className="flex items-center gap-2 cursor-pointer hover:text-foreground"
+            onClick={() => handleSort(`platform_${platform.id}`)}
+          >
+            <span className="truncate">{platform.name}</span>
+            <SortIcon field={`platform_${platform.id}`} />
+          </div>
+          <div className="grid grid-cols-3 gap-x-2 mt-1 text-[10.5px] font-semibold uppercase tracking-wider text-muted-foreground/70">
+            <span>Fiyat</span>
+            <span className="text-right">Net Kâr</span>
+            <span className="text-right">Kâr %</span>
+          </div>
+        </div>
+      ),
+      width: '290px',
       cell: (product) => {
         const price = product.prices[platform.id];
         if (!price) return <span className="text-muted-foreground/70">-</span>;
         const commission = commissions.find(c => c.category_id === product.category_id && c.platform_id === platform.id && c.is_active !== false);
         const { amount: profitAmount, rate: profitRateDisplay } = getDisplayProfit(price, product, commission);
         return (
-          <div className="space-y-1 text-center">
-            <p className="font-bold text-foreground">₺{formatTurkishCurrency(price.sale_price)}</p>
-            <div className="flex items-center justify-center gap-1">
-              <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${getProfitColor(profitRateDisplay)}`}>{formatTurkishPercent(profitRateDisplay)}</span>
+          <div className="grid grid-cols-3 gap-x-2 gap-y-1.5 items-baseline">
+            <span className="font-medium text-foreground">₺{formatTurkishCurrency(price.sale_price)}</span>
+            <span className="text-right text-muted-foreground">
+              ₺{formatTurkishCurrency(profitAmount)}
+            </span>
+            <span className={`text-right text-xs font-semibold px-1.5 py-0.5 rounded-full justify-self-end ${getProfitColor(profitRateDisplay)}`}>
+              {formatTurkishPercent(profitRateDisplay)}
+            </span>
+            <span className="col-span-3 flex items-center gap-1.5">
               {getBaremBadge(price.barem_used)}
-            </div>
-            <p className="text-xs text-muted-foreground">Kâr: ₺{formatTurkishCurrency(profitAmount)}{showBeforeTax && <span className="text-muted-foreground/70"> (vergi öncesi)</span>}</p>
-            <Button variant="ghost" size="sm" className="h-7 text-xs mt-1" onClick={() => handleShowDetail(product, platform)}>
-              <Info className="h-3 w-3 mr-1" />Detay
-            </Button>
+              {showBeforeTax && (
+                <span className="text-[10.5px] text-muted-foreground/70">vergi öncesi</span>
+              )}
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-6 px-1.5 text-[11px] ml-auto"
+                onClick={() => handleShowDetail(product, platform)}
+              >
+                <Info className="h-3 w-3 mr-1" />Kırılım
+              </Button>
+            </span>
           </div>
         );
       },
@@ -662,9 +692,9 @@ export default function Prices() {
     { id: 'profit', header: 'Kâr', cell: (r) => (<>₺{formatTurkishCurrency(r.profitAmount)}{showBeforeTax && <span className="text-muted-foreground/70 text-xs"> (vergi öncesi)</span>}</>) },
     { id: 'profit_rate', header: 'Kâr Oranı', cell: (r) => <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${getProfitColor(r.profitRate)}`}>{formatTurkishPercent(r.profitRate)}</span> },
     { id: 'barem', header: 'Barem', cell: (r) => getBaremBadge(r.price.barem_used) || <span className="text-muted-foreground/70">—</span> },
-    { id: 'detay', header: 'Detay', cell: (r) => (
+    { id: 'detay', header: 'Kırılım', cell: (r) => (
       <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => handleShowDetail(r.product, r.platform)}>
-        <Info className="h-3 w-3 mr-1" />Detay
+        <Info className="h-3 w-3 mr-1" />Kırılım
       </Button>
     ) },
   ];
