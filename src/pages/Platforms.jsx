@@ -106,6 +106,36 @@ export default function Platforms() {
     enabled: !!userEmail,
   });
 
+  // Prototipteki "Fiyat kaydı" ve "Ortalama komisyon" satirlari.
+  // Komisyon orani calculation_details icinde JSON METNI olarak duruyor
+  // (ust seviye commission_rate sutunu doldurulmuyor), bu yuzden cozup
+  // okuyoruz. Sadece bu iki sutunu cekiyoruz — tum satiri degil.
+  const { data: fiyatKayitlari = [] } = useQuery({
+    queryKey: ['platformIstatistik', userEmail],
+    queryFn: () => db.entities.ProductPrice.filter(
+      { created_by: userEmail }, '-created_at', 10000, 'platform_name, calculation_details'
+    ),
+    enabled: !!userEmail,
+    staleTime: 60_000,
+  });
+
+  const platformIstatistigi = React.useMemo(() => {
+    const harita = {};
+    for (const satir of fiyatKayitlari) {
+      const ad = (satir.platform_name || '').toLowerCase();
+      if (!ad) continue;
+      const kutu = harita[ad] || (harita[ad] = { adet: 0, komisyonToplam: 0, komisyonAdet: 0 });
+      kutu.adet += 1;
+      let detay = satir.calculation_details;
+      if (typeof detay === 'string') {
+        try { detay = JSON.parse(detay); } catch { detay = null; }
+      }
+      const oran = Number(detay?.commissionRate);
+      if (Number.isFinite(oran)) { kutu.komisyonToplam += oran; kutu.komisyonAdet += 1; }
+    }
+    return harita;
+  }, [fiyatKayitlari]);
+
   const [initialized, setInitialized] = useState(false);
 
   useEffect(() => {
@@ -277,6 +307,31 @@ export default function Platforms() {
                   </div>
 
                   <div className="space-y-3 mb-5">
+                    {(() => {
+                      const ist = platformIstatistigi[def.name.toLowerCase()];
+                      const ortalama = ist?.komisyonAdet
+                        ? (ist.komisyonToplam / ist.komisyonAdet)
+                        : null;
+                      return (
+                        <>
+                          <div className="flex items-center justify-between gap-3 text-sm">
+                            <span className="text-muted-foreground/80">Fiyat kaydı</span>
+                            <span className="font-medium text-foreground tabular-nums">
+                              {ist ? ist.adet.toLocaleString('tr-TR') : '—'}
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-between gap-3 text-sm">
+                            <span className="text-muted-foreground/80">Ortalama komisyon</span>
+                            <span className="font-medium text-foreground tabular-nums">
+                              {ortalama === null
+                                ? '—'
+                                : `%${ortalama.toLocaleString('tr-TR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}`}
+                            </span>
+                          </div>
+                        </>
+                      );
+                    })()}
+
                     <div className="flex items-center gap-2 text-sm">
                       <Truck className="h-4 w-4 text-muted-foreground/70 flex-shrink-0" />
                       {hasShipping ? (
