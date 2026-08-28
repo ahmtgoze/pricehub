@@ -232,8 +232,14 @@ function BrandSection() {
 }
 
 /* ─── Kullanıcılar (admin) ─── */
+
+// Hesap yapisi: 1 yonetici (hesap sahibi) + en fazla 3 kullanici.
+// Sinir burada tanimli; degistirmek icin tek yer.
+const MAKS_KULLANICI = 3;
+
 function UsersSection() {
   const queryClient = useQueryClient();
+  const { user: oturumKullanicisi } = useAuth();
 
   const { data: users = [], isLoading } = useQuery({
     queryKey: ['user_profiles_all'],
@@ -243,6 +249,10 @@ function UsersSection() {
       return data || [];
     },
   });
+
+  // Yonetici disindaki aktif kullanicilar
+  const aktifKullanicilar = users.filter(u => u.role !== 'admin' && u.is_active !== false);
+  const sinirDoldu = aktifKullanicilar.length >= MAKS_KULLANICI;
 
   const toggleActive = useMutation({
     mutationFn: async ({ id, is_active }) => {
@@ -264,6 +274,19 @@ function UsersSection() {
 
   return (
     <Card title="Kullanıcı Yönetimi">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-xl bg-secondary px-4 py-3">
+        <p className="text-[13px] text-muted-foreground">
+          Hesap yapısı: <strong className="text-foreground">1 yönetici</strong> (hesap sahibi) +
+          en fazla <strong className="text-foreground">{MAKS_KULLANICI} kullanıcı</strong>.
+        </p>
+        <span className={cn(
+          'text-xs font-semibold px-2.5 py-1 rounded-full',
+          sinirDoldu ? 'bg-destructive/10 text-destructive' : 'bg-card text-muted-foreground'
+        )}>
+          {aktifKullanicilar.length} / {MAKS_KULLANICI} aktif kullanıcı
+        </span>
+      </div>
+
       {isLoading ? (
         <div className="flex justify-center py-8">
           <div className="w-6 h-6 border-2 border-border border-t-gray-800 rounded-full animate-spin" />
@@ -279,16 +302,33 @@ function UsersSection() {
               <div className="flex items-center gap-2 flex-shrink-0">
                 <select
                   value={u.role || 'user'}
+                  disabled={u.id === oturumKullanicisi?.id}
+                  title={u.id === oturumKullanicisi?.id ? 'Kendi rolünü değiştiremezsin' : undefined}
                   onChange={e => setRole.mutate({ id: u.id, role: e.target.value })}
-                  className="text-xs border border-border rounded-lg px-2 py-1.5 bg-card text-muted-foreground focus:outline-none focus:ring-1 focus:ring-gray-400"
+                  className="text-xs border border-border rounded-lg px-2 py-1.5 bg-card text-muted-foreground focus:outline-none focus:ring-1 focus:ring-gray-400 disabled:opacity-50"
                 >
                   <option value="user">Kullanıcı</option>
                   <option value="admin">Yönetici</option>
                 </select>
                 <button
-                  onClick={() => toggleActive.mutate({ id: u.id, is_active: !u.is_active })}
+                  disabled={u.id === oturumKullanicisi?.id}
+                  title={
+                    u.id === oturumKullanicisi?.id
+                      ? 'Kendi hesabını pasife alamazsın'
+                      : (u.is_active === false && u.role !== 'admin' && sinirDoldu
+                          ? `En fazla ${MAKS_KULLANICI} aktif kullanıcı olabilir`
+                          : undefined)
+                  }
+                  onClick={() => {
+                    // Pasiften aktife alirken siniri kontrol et
+                    if (u.is_active === false && u.role !== 'admin' && sinirDoldu) {
+                      toast.error(`En fazla ${MAKS_KULLANICI} aktif kullanıcı olabilir. Önce birini pasife al.`);
+                      return;
+                    }
+                    toggleActive.mutate({ id: u.id, is_active: !u.is_active });
+                  }}
                   className={cn(
-                    'flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg font-medium transition-colors',
+                    'flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg font-medium transition-colors disabled:opacity-50',
                     u.is_active !== false ? 'bg-green-100 text-green-700 hover:bg-green-200' : 'bg-red-100 text-red-600 hover:bg-red-200'
                   )}
                 >
