@@ -17,7 +17,7 @@
 import {
   LayoutDashboard, Package, FolderTree, Store, Truck, Percent,
   Calculator, FileText, BadgeDollarSign, Tag,
-  BadgePercent, Sparkles, Zap, Settings, Layers
+  BadgePercent, Sparkles, Zap, Settings, Layers, Columns3
 } from 'lucide-react';
 
 export const PAGES = [
@@ -163,6 +163,15 @@ export const PAGES = [
     short: 'HepsiBurada\'nın satıcı tarafından oluşturulan kampanya teklifini yönetir.',
     detail: 'HepsiBurada\'dan indirilen kampanya Excel\'i yüklenir. HB\'nin belirlediği indirim oranıyla kampanya fiyatı otomatik hesaplanır, kampanya komisyonuyla kâr görüntülenir. "Akıllı Seç" hedef kârı karşılayan ürünleri seçer. Dışa aktarılan Excel HB paneline yüklenir.',
     faq: [],
+  },
+  {
+    id: 'gorunum', title: 'Görünümü Özelleştir', page: 'ViewCustomize', icon: Columns3,
+    short: 'Tablolardaki sütunları gizle, sırala, genişliğini ayarla ve sola sabitle.',
+    detail: 'Her tablonun sağ üstündeki "Sütunlar" düğmesi o tablonun sütun ayarlarını açar. Bir sütunu gizleyebilir, yukarı/aşağı taşıyarak sırasını değiştirebilir, piksel cinsinden genişlik verebilir veya sola sabitleyerek yatay kaydırmada sabit kalmasını sağlayabilirsin.\n\nAyarlar yalnızca senin hesabına kaydedilir; diğer kullanıcılar kendi düzenlerini görür. Bu sayfa hangi tabloları özelleştirdiğini listeler ve istediğini varsayılana döndürmeni sağlar.',
+    faq: [
+      { q: 'Ayarlarım başka kullanıcıyı etkiler mi?', a: 'Hayır. Her kullanıcının sütun düzeni yalnızca kendisine özeldir.' },
+      { q: 'Varsayılana nasıl dönerim?', a: 'Tablodaki "Sütunlar" panelinde Sıfırla\'ya basabilir veya bu sayfadan ilgili tablonun Sıfırla düğmesini kullanabilirsin.' },
+    ],
   },
   {
     id: 'ayarlar', title: 'Genel Ayarlar', page: 'Settings', icon: Settings,

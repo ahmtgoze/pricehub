@@ -599,7 +599,7 @@ export default function Commissions() {
 
         {/* Kart ve yatay kaydirma DataTable'in kendi icinde; disariya
             ikinci bir kart sarmak cift kenarlik olusturuyordu. */}
-        <DataTable
+        <DataTable pageKey="komisyonlar"
           columns={columns}
           data={paginatedCommissions}
           isLoading={isLoading}

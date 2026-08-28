@@ -183,7 +183,7 @@ export default function PackageManagement() {
           sarilirsa kart-icinde-kart gorunumu olusuyordu. */}
       <div className="space-y-4">
         <h2 className="text-lg font-semibold text-foreground">Paketler</h2>
-        <DataTable
+        <DataTable pageKey="paketleme"
           columns={packageColumns}
           data={packages}
           isLoading={packagesLoading}

@@ -368,7 +368,7 @@ export default function UpdateReports() {
           </div>
         )}
 
-        <DataTable
+        <DataTable pageKey="guncelleme-raporlari"
           columns={columns}
           data={paginatedReports}
           isLoading={isLoading}

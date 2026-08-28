@@ -1054,7 +1054,7 @@ export default function Products() {
           </div>
         )}
 
-        <DataTable
+        <DataTable pageKey="urunler"
           columns={columns}
           data={paginatedProducts}
           isLoading={isLoading}

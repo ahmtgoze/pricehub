@@ -24,6 +24,7 @@ import {
   Settings,
   ChevronDown,
   ChevronRight,
+  Columns3,
   HelpCircle as HelpIcon,
   Sun,
   Moon,
@@ -100,6 +101,7 @@ const NAV_GROUPS = [
 ];
 
 const BOTTOM_ITEMS = [
+  { name: 'Görünümü Özelleştir', page: 'ViewCustomize', icon: Columns3 },
   { name: 'Kullanım Kılavuzu', page: 'Help', icon: HelpCircle },
   { name: 'Genel Ayarlar', page: 'Settings', icon: Settings },
 ];

@@ -351,7 +351,7 @@ export default function Categories() {
           </div>
         )}
 
-        <DataTable
+        <DataTable pageKey="kategoriler"
           columns={columns}
           data={paginatedCategories}
           isLoading={isLoading}

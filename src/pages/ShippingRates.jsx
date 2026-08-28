@@ -394,7 +394,7 @@ export default function ShippingRates() {
           </div>
         </div>
 
-        <DataTable columns={columns} data={paginatedRates} isLoading={isLoading} page={page} pageSize={pageSize} totalItems={filteredRates.length} onPageChange={setPage} emptyMessage="Kargo tarifesi bulunamadı" rowClassName={(row) => row.is_manual ? "bg-amber-50 hover:bg-amber-100/70" : "hover:bg-secondary/50"} />
+        <DataTable pageKey="kargo-tarifeleri" columns={columns} data={paginatedRates} isLoading={isLoading} page={page} pageSize={pageSize} totalItems={filteredRates.length} onPageChange={setPage} emptyMessage="Kargo tarifesi bulunamadı" rowClassName={(row) => row.is_manual ? "bg-amber-50 hover:bg-amber-100/70" : "hover:bg-secondary/50"} />
 
         <ShippingRateModal open={modalOpen} onOpenChange={(open) => { setModalOpen(open); if (!open) setIsSystemRate(false); }} shippingRate={editingRate} platforms={platforms} onSave={(data) => saveMutation.mutate({ ...data, is_admin_created: isSystemRate, is_manual: !isSystemRate })} isSaving={saveMutation.isPending} isAdmin={userRole === 'admin'} isSystemRate={isSystemRate} />
 

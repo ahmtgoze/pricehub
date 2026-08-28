@@ -70,6 +70,7 @@ import UpdateReports from './pages/UpdateReports';
 import UpdatedCosts from './pages/UpdatedCosts';
 import UpdatedPrices from './pages/UpdatedPrices';
 import Settings from './pages/Settings';
+import ViewCustomize from './pages/ViewCustomize';
 import __Layout from './Layout.jsx';
 
 
@@ -97,6 +98,7 @@ export const PAGES = {
     "UpdatedCosts": UpdatedCosts,
     "UpdatedPrices": UpdatedPrices,
     "Settings": Settings,
+    "ViewCustomize": ViewCustomize,
 }
 
 export const pagesConfig = {

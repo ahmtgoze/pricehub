@@ -22,6 +22,8 @@ const TABLE_MAP = {
   Message: 'messages',
   Settings: 'settings',
   User: 'user_profiles',
+  // Kullanici bazli tablo gorunum tercihleri (sutun gizleme/sira/genislik/sabitleme)
+  UserViewPreference: 'user_view_preferences',
 };
 
 function applyConditions(query, conditions) {
