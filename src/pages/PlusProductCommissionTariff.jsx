@@ -15,6 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { toast } from 'sonner';
 import * as XLSX from 'xlsx';
 import PriceDetailModal from '@/components/modals/PriceDetailModal';
+import BaremBadge from '@/components/ui/BaremBadge';
 
 const PlusEntity = db.entities.PlusProductCommissionTariff;
 const Product = db.entities.Product;
@@ -816,7 +817,10 @@ export default function PlusProductCommissionTariff() {
                               {plusPrice > 0 ? (
                                 <div className={`border rounded-lg p-2 ${isPlusSelected ? 'border-primary bg-secondary' : 'border-border'}`}>
                                   <div className="text-xs font-semibold text-muted-foreground mb-1">₺{plusPrice.toFixed(2)} ve altı</div>
-                                  <div className="text-xs text-muted-foreground">Plus Kom: %{plusComm}</div>
+                                  <div className="flex items-center justify-between gap-1">
+                                    <span className="text-xs text-muted-foreground">Plus Kom: %{plusComm}</span>
+                                    <BaremBadge barem={plusCalc.baremUsed} />
+                                  </div>
                                   <div className="flex items-center justify-between mt-1">
                                     <div className={`text-xs font-semibold ${plusCalc.profit > 0 ? 'text-green-600' : 'text-red-600'}`}>{plusCalc.profit > 0 ? '+' : ''}₺{plusCalc.profit.toFixed(2)} (%{plusCalc.profitRate.toFixed(1)})</div>
                                     <Button size="sm" variant="ghost" className="h-5 w-5 p-0" onClick={() => openDetailModal(plusPrice, plusComm, item)}><Info className="h-3 w-3" /></Button>

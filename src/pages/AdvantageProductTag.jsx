@@ -16,6 +16,7 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import * as XLSX from 'xlsx';
+import BaremBadge from '@/components/ui/BaremBadge';
 
 export default function AdvantageProductTag() {
   const [userEmail, setUserEmail] = useState(null);
@@ -690,9 +691,6 @@ export default function AdvantageProductTag() {
     const { profit, profitRate, baremUsed } = calculateProfit(maxPrice, dynamicCommission, item);
     const isProfitable = profit > 0;
     const isSelected = item.selected_range === rangeType;
-    // Barem onerisi: bu fiyatta hangi kargo tarifesinin gecerli oldugunu satirda goster,
-    // boylece kaydetmeden once hangi baremle hesaplandigi anlasilir.
-    const baremEtiketi = { barem1: 'B1', barem2: 'B2', desi: 'Desi' }[baremUsed] || null;
 
     return (
       <div className={`border rounded-lg p-2 ${isSelected ? 'border-primary bg-secondary' : 'border-border'}`}>
@@ -705,11 +703,7 @@ export default function AdvantageProductTag() {
         )}
         <div className="flex items-center justify-between gap-1">
           <span className="text-xs text-muted-foreground">Kom: %{dynamicCommission}</span>
-          {baremEtiketi && (
-            <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-secondary text-muted-foreground" title="Bu fiyatta geçerli kargo baremi">
-              {baremEtiketi}
-            </span>
-          )}
+          <BaremBadge barem={baremUsed} />
         </div>
         <div className="flex items-center justify-between mt-1">
           <div className={`text-xs font-semibold ${isProfitable ? 'text-green-600' : 'text-red-600'}`}>

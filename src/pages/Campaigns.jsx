@@ -16,6 +16,7 @@ import { tr } from 'date-fns/locale';
 import { toast } from 'sonner';
 import * as XLSX from 'xlsx';
 import PriceDetailModal from '@/components/modals/PriceDetailModal';
+import BaremBadge from '@/components/ui/BaremBadge';
 
 const Campaign = db.entities.Campaign;
 let CampaignProduct;
@@ -798,6 +799,7 @@ export default function Campaigns() {
                             <td className={`p-3 text-right font-semibold ${below ? 'text-red-600' : 'text-green-600'}`}>{matched ? `${calc.profit.toFixed(2)} ₺` : '-'}</td>
                             <td className={`p-3 text-right font-semibold ${below ? 'text-red-600' : 'text-green-600'}`}>
                               {matched ? `%${calc.profitRate.toFixed(1)}` : '-'}
+                              {matched && <BaremBadge barem={calc.baremUsed} className="ml-1" />}
                               {below && <div className="text-[10px] text-red-500">taban altı</div>}
                             </td>
                             <td className="p-3 text-center"><Button size="sm" variant="ghost" onClick={() => openDetailModal(item)} disabled={!matched}><Info className="h-4 w-4" /></Button></td>

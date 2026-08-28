@@ -16,6 +16,7 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import * as XLSX from 'xlsx';
+import BaremBadge from '@/components/ui/BaremBadge';
 
 export default function FlashProducts() {
   const [userEmail, setUserEmail] = useState(null);
@@ -1543,11 +1544,12 @@ export default function FlashProducts() {
                                   )}
                                   {commissionRate24h !== null ? (
                                     <>
-                                      <div className="text-xs text-muted-foreground">
-                                        Kom: %{commissionRate24h}
+                                      <div className="flex items-center justify-between gap-1">
+                                        <span className="text-xs text-muted-foreground">Kom: %{commissionRate24h}</span>
+                                        <BaremBadge barem={baremUsed} />
                                       </div>
                                       {(() => {
-                                        const { profit, profitRate } = calculateProfit(item.price_24h, commissionRate24h, item);
+                                        const { profit, profitRate, baremUsed } = calculateProfit(item.price_24h, commissionRate24h, item);
                                         const isProfitable = profit > 0;
                                         return (
                                           <>

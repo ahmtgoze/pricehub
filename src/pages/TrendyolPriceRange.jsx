@@ -16,6 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { toast } from 'sonner';
 import * as XLSX from 'xlsx';
 import PriceDetailModal from '@/components/modals/PriceDetailModal';
+import BaremBadge from '@/components/ui/BaremBadge';
 
 const TrendyolPriceRangeEntity = db.entities.TrendyolPriceRange;
 const Product = db.entities.Product;
@@ -1097,7 +1098,7 @@ export default function TrendyolPriceRange() {
                                  headerLabel = `₺${maxPrice?.toFixed(2)} ve altı`;
                                }
 
-                               const { profit, profitRate } = calculateProfit(priceToUse, commission, item);
+                               const { profit, profitRate, baremUsed } = calculateProfit(priceToUse, commission, item);
                                const isProfitable = profit > 0;
                                const isSelected = item.selected_range === `range_${rangeNum}`;
 
@@ -1109,7 +1110,10 @@ export default function TrendyolPriceRange() {
                                       <div className="text-xs text-muted-foreground">
                                         Fiyat: ₺{rangeNum === 1 && systemPrice ? systemPrice.sale_price?.toFixed(2) : priceToUse.toFixed(2)}
                                       </div>
-                                      <div className="text-xs text-muted-foreground">Kom: %{commission}</div>
+                                      <div className="flex items-center justify-between gap-1">
+                                        <span className="text-xs text-muted-foreground">Kom: %{commission}</span>
+                                        <BaremBadge barem={baremUsed} />
+                                      </div>
                                       <div className="flex items-center justify-between mt-1">
                                         <div className={`text-xs font-semibold ${isProfitable ? 'text-green-600' : 'text-red-600'}`}>
                                           {isProfitable ? '+' : ''}₺{profit.toFixed(2)} (%{profitRate.toFixed(1)})
