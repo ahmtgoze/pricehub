@@ -48,6 +48,18 @@ export default function Prices() {
   const [maxTargetAmount, setMaxTargetAmount] = useState('');
   const [visiblePlatforms, setVisiblePlatforms] = useState({});
   const [showBeforeTax, setShowBeforeTax] = useState(false);
+  // Uc gorunum: platform sutun bazli | satir bazli | detayli.
+  // Tercih tarayicida saklanir (localStorage) — veritabanina dokunmaz.
+  const [viewMode, setViewMode] = useState(() => {
+    try {
+      const v = localStorage.getItem('pricehub-fiyat-gorunum');
+      return ['platform', 'satir', 'detay'].includes(v) ? v : 'platform';
+    } catch { return 'platform'; }
+  });
+  const changeViewMode = (v) => {
+    setViewMode(v);
+    try { localStorage.setItem('pricehub-fiyat-gorunum', v); } catch { /* yoksay */ }
+  };
 
   // Seçim
   const [selectedIds, setSelectedIds] = useState(new Set());
@@ -504,6 +516,26 @@ export default function Prices() {
     return { amount: beforeTaxAmount, rate: beforeTaxRate };
   };
 
+  // Satir bazli gorunum icin duzlestirilmis liste: her urun x platform bir satir.
+  // Ayni filtreli urun kumesini ve ayni kar hesabini kullanir; yeni veri cekmez.
+  const satirBazliVeri = useMemo(() => {
+    if (viewMode !== 'satir') return [];
+    const satirlar = [];
+    for (const product of filteredProducts) {
+      for (const platform of visiblePlatformList) {
+        const price = product.prices[platform.id];
+        if (!price) continue;
+        const commission = commissions.find(
+          c => c.category_id === product.category_id && c.platform_id === platform.id && c.is_active !== false
+        );
+        const { amount: profitAmount, rate: profitRate } = getDisplayProfit(price, product, commission);
+        satirlar.push({ product, platform, price, profitAmount, profitRate });
+      }
+    }
+    return satirlar;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [viewMode, filteredProducts, visiblePlatformList, commissions, showBeforeTax]);
+
   const getBaremBadge = (barem) => {
     if (barem === 'barem1') return <Badge className="bg-red-100 text-red-700 text-xs">B1</Badge>;
     if (barem === 'barem2') return <Badge className="bg-border text-muted-foreground text-xs">B2</Badge>;
@@ -588,8 +620,29 @@ export default function Prices() {
               </Button>
             </div>
 
-            <div className="flex flex-col sm:flex-row gap-3">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3">
               <SearchInput value={search} onChange={setSearch} placeholder="Ürün adı veya SKU ara..." className="w-full sm:w-72" />
+
+              {/* Gorunum secici — yalnizca masaustunde; mobilde zaten kart gorunumu var */}
+              <div className="hidden sm:flex items-center gap-1 rounded-[11px] bg-secondary p-1 sm:ml-auto">
+                {[
+                  { id: 'platform', etiket: 'Platform sütunlu' },
+                  { id: 'satir', etiket: 'Satır bazlı' },
+                  { id: 'detay', etiket: 'Detaylı' },
+                ].map(g => (
+                  <button
+                    key={g.id}
+                    onClick={() => changeViewMode(g.id)}
+                    className={`px-3 h-[30px] rounded-[9px] text-[12.5px] font-medium transition-colors ${
+                      viewMode === g.id
+                        ? 'bg-card text-foreground shadow-sm'
+                        : 'text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    {g.etiket}
+                  </button>
+                ))}
+              </div>
             </div>
 
             {showFilters && (
@@ -724,7 +777,8 @@ export default function Prices() {
           )}
         </div>
 
-        {/* Desktop Table */}
+        {/* Gorunum 1: platform sutun bazli (varsayilan) */}
+        {viewMode === 'platform' && (
         <div className="hidden sm:block rounded-[18px] border border-border bg-card overflow-hidden">
           <div className="overflow-x-auto">
             <Table>
@@ -804,6 +858,141 @@ export default function Prices() {
             </Table>
           </div>
         </div>
+        )}
+
+        {/* Gorunum 2: satir bazli — her urun x platform bir satir */}
+        {viewMode === 'satir' && (
+          <div className="hidden sm:block rounded-[18px] border border-border bg-card overflow-hidden">
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-secondary hover:bg-secondary">
+                    <TableHead className="font-semibold">SKU</TableHead>
+                    <TableHead className="font-semibold">Ürün Adı</TableHead>
+                    <TableHead className="font-semibold">Platform</TableHead>
+                    <TableHead className="font-semibold text-right">Maliyet</TableHead>
+                    <TableHead className="font-semibold text-right">Satış Fiyatı</TableHead>
+                    <TableHead className="font-semibold text-right">Kâr</TableHead>
+                    <TableHead className="font-semibold text-center">Kâr Oranı</TableHead>
+                    <TableHead className="font-semibold text-center">Barem</TableHead>
+                    <TableHead className="font-semibold text-center">Detay</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {isLoading ? (
+                    [...Array(6)].map((_, i) => (
+                      <TableRow key={i}>{[...Array(9)].map((_, j) => <TableCell key={j}><Skeleton className="h-5 w-20" /></TableCell>)}</TableRow>
+                    ))
+                  ) : satirBazliVeri.length === 0 ? (
+                    <TableRow><TableCell colSpan={9} className="h-32 text-center text-muted-foreground">Gösterilecek fiyat yok</TableCell></TableRow>
+                  ) : (
+                    satirBazliVeri.map(({ product, platform, price, profitAmount, profitRate }) => (
+                      <TableRow key={`${product.id}-${platform.id}`} className="hover:bg-secondary/50">
+                        <TableCell className="font-mono text-sm text-muted-foreground">{product.sku || '-'}</TableCell>
+                        <TableCell>
+                          <p className="font-medium text-foreground">{product.name}</p>
+                          <p className="text-xs text-muted-foreground">{product.category_name}</p>
+                        </TableCell>
+                        <TableCell className="text-[13px] font-medium text-foreground">{platform.name}</TableCell>
+                        <TableCell className="text-right">₺{formatTurkishCurrency(product.cost)}</TableCell>
+                        <TableCell className="text-right font-bold text-foreground">₺{formatTurkishCurrency(price.sale_price)}</TableCell>
+                        <TableCell className="text-right">
+                          ₺{formatTurkishCurrency(profitAmount)}
+                          {showBeforeTax && <span className="text-muted-foreground/70 text-xs"> (vergi öncesi)</span>}
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${getProfitColor(profitRate)}`}>{formatTurkishPercent(profitRate)}</span>
+                        </TableCell>
+                        <TableCell className="text-center">{getBaremBadge(price.barem_used) || <span className="text-muted-foreground/70">—</span>}</TableCell>
+                        <TableCell className="text-center">
+                          <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => handleShowDetail(product, platform)}>
+                            <Info className="h-3 w-3 mr-1" />Detay
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </div>
+        )}
+
+        {/* Gorunum 3: detayli — urun basina kart, maliyet kalemleri + platformlar */}
+        {viewMode === 'detay' && (
+          <div className="hidden sm:block space-y-4">
+            {isLoading ? (
+              [...Array(3)].map((_, i) => <Skeleton key={i} className="h-40 w-full rounded-[18px]" />)
+            ) : filteredProducts.length === 0 ? (
+              <div className="ph-panel"><p className="ph-empty">Ürün bulunamadı</p></div>
+            ) : (
+              filteredProducts.map(product => (
+                <div key={product.id} className="ph-card">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                      <p className="text-[15px] font-semibold text-foreground">{product.name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {product.sku || '-'} · {product.category_name}
+                      </p>
+                    </div>
+                    <Button variant="ghost" size="sm" onClick={() => handleCalculateSingleProduct(product)} disabled={calculating || calculatingSingle === product.id}>
+                      <RefreshCw className={`h-3.5 w-3.5 mr-1 ${calculatingSingle === product.id ? 'animate-spin' : ''}`} />
+                      Yeniden hesapla
+                    </Button>
+                  </div>
+
+                  {/* Maliyet kalemleri */}
+                  <div className="mt-4 flex flex-wrap gap-x-6 gap-y-2 text-[13px]">
+                    <span className="text-muted-foreground">Maliyet: <strong className="text-foreground">₺{formatTurkishCurrency(product.cost)}</strong></span>
+                    {product.printing_cost > 0 && <span className="text-muted-foreground">Baskı: <strong className="text-foreground">₺{formatTurkishCurrency(product.printing_cost)}</strong></span>}
+                    {product.extra_cost > 0 && <span className="text-muted-foreground">Ek maliyet: <strong className="text-foreground">₺{formatTurkishCurrency(product.extra_cost)}</strong></span>}
+                    <span className="text-muted-foreground">
+                      Desi: <strong className="text-foreground">{[0, 1, 2, 3, 4].map(i => getDesiValue(product, i)).filter(v => v && v !== '-').join(' · ') || '-'}</strong>
+                    </span>
+                  </div>
+
+                  {/* Platform kirilimi */}
+                  <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+                    {visiblePlatformList.map(platform => {
+                      const price = product.prices[platform.id];
+                      if (!price) {
+                        return (
+                          <div key={platform.id} className="rounded-[14px] bg-secondary px-4 py-3">
+                            <p className="text-xs font-medium text-muted-foreground">{platform.name}</p>
+                            <p className="mt-1 text-[13px] text-muted-foreground/70">Fiyat hesaplanmamış</p>
+                          </div>
+                        );
+                      }
+                      const commission = commissions.find(c => c.category_id === product.category_id && c.platform_id === platform.id && c.is_active !== false);
+                      const { amount: profitAmount, rate: profitRate } = getDisplayProfit(price, product, commission);
+                      return (
+                        <div key={platform.id} className="rounded-[14px] bg-secondary px-4 py-3">
+                          <div className="flex items-center justify-between">
+                            <p className="text-xs font-medium text-muted-foreground">{platform.name}</p>
+                            <button onClick={() => handleShowDetail(product, platform)} className="text-muted-foreground/70 hover:text-foreground" title="Detay">
+                              <Info className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                          <div className="mt-1 flex items-center gap-2">
+                            <span className="text-[17px] font-semibold text-foreground">₺{formatTurkishCurrency(price.sale_price)}</span>
+                            <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${getProfitColor(profitRate)}`}>{formatTurkishPercent(profitRate)}</span>
+                            {getBaremBadge(price.barem_used)}
+                          </div>
+                          <p className="mt-1 text-[12px] text-muted-foreground">
+                            Kâr: ₺{formatTurkishCurrency(profitAmount)}{showBeforeTax && ' (vergi öncesi)'}
+                          </p>
+                          {price.packaging_cost > 0 && (
+                            <p className="text-[12px] text-muted-foreground">Paket: ₺{formatTurkishCurrency(price.packaging_cost)}</p>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        )}
 
         <PriceDetailModal open={detailModal.open} onClose={() => setDetailModal({ open: false, product: null, platform: null })} product={detailModal.product} platform={detailModal.platform} productPrices={productPrices} commissions={commissions} />
         <ProductHistoryModal open={historyModal.open} onClose={() => setHistoryModal({ open: false, productId: null, productName: '' })} productId={historyModal.productId} productName={historyModal.productName} />
