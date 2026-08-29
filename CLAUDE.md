@@ -16,6 +16,13 @@ PriceHub: Trendyol & Hepsiburada odaklı **fiyatlama / kâr yönetim sistemi** (
 - `src/components/PriceCalculationEngine.jsx` = **sistemin kalbi.** `calculatePriceBreakdown` fiyat/komisyon/kargo/barem/KDV/kâr hesaplar. Buna DOKUNURKEN ÇOK DİKKAT.
 - `src/pages/` sayfalar, `src/Layout.jsx` menü/kabuk, `src/pages.config.js` sayfa kaydı (yeni sayfa burada + Layout nav'a eklenir).
 
+## 📖 ÖNCE BUNU OKU: docs/00-sistem/is-kurallari.md
+Bir istek geldiğinde **önce** `docs/00-sistem/is-kurallari.md` dosyasına bak.
+Fiyat/kâr hesabı, komisyon KDV'si, barem koşulları, promosyon mantığı, Excel
+kuralları, roller — hepsi orada ve **koddan doğrulanmıştır**. Oradaki bir kuralı
+tahminle değiştirme. Kural eksikse koddan doğrula ve **oraya ekle**; uydurma.
+Kural ile kod çelişirse kod doğrudur, dosya düzeltilir.
+
 ## ⛔ ASLA BOZULMAYACAK KURALLAR
 1. **Çok kiracılılık / izolasyon:** Hiçbir kullanıcı diğerinin verisini GÖREMEZ. Her kullanıcı-verisi tablosu RLS ile `created_by = auth.email()` izoleli. Yeni tablo eklerken RLS + owner-scoped policy ZORUNLU. Bunu asla gevşetme.
 2. **Veri ≠ Kod.** Kod değişikliği veriye dokunmaz. Veriyi DELETE/UPDATE eden migration'lardan kaçın; mecbursan önce yedek.

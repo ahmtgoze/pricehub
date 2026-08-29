@@ -12,6 +12,7 @@ Bu klasör projenin **bilgi katmanı**dır. Kod değil, Türkçe açıklamalard�
 | `bilgilendirme/` | Her sayfa için Türkçe kullanım açıklaması (23 sayfa) |
 
 ## Nereden başlamalı
+0. **İŞ KURALLARI (tek doğru kaynak)** → `00-sistem/is-kurallari.md` — bir istek gelmeden önce buraya bakılır
 1. Proje genel kuralları → `00-sistem/kurallar.md`
 2. Güvenlik / kullanıcı izolasyonu → `00-sistem/guvenlik.md`
 3. Sistemin kalbi (fiyat/kâr hesabı) → `calisma-prensibi/fiyat-hesabi.md`
