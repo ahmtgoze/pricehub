@@ -269,6 +269,11 @@ Net KDV = Satış KDV'si
 
 Net KDV bir **gider** olarak kârdan düşülür (devlete ödenen fark).
 
+> **Vergilerin KDV'si olmaz.** Stopaj ve kurumlar vergisi birer vergidir;
+> üzerlerine KDV eklenmez ve yukarıdaki Net KDV formülüne girmezler. KDV
+> ayrıştırması yalnızca **maliyet ve bedeller** için yapılır (komisyon,
+> hizmet bedeli, işlem bedeli, POS, kargo, paketleme...).
+
 ---
 
 ## 5. Platform ayarları
@@ -280,7 +285,7 @@ kullanıcı yalnızca görür. Kullanıcı kendi web sitesi platformunu düzenle
 |---|---|
 | Hizmet bedeli | `fixed_per_order` (sabit) veya `percent_of_sale` (yüzde). **Platformdan platforma değişir; web sitesinde yoktur.** |
 | Bugün Kargoda hizmet bedeli | Bugün Kargoda açıksa **standart yerine** bu uygulanır |
-| Stopaj | **KDV'siz satış tutarı üzerinden %1.** Yalnız pazaryerlerinde; **web sitesinde her zaman 0** (kodda ayrıca zorlanır) |
+| Stopaj | Bir **vergidir** — üzerine KDV eklenmez, Net KDV hesabına da girmez. Matrahı KDV'siz satış tutarıdır, oran %1. Yalnız pazaryerlerinde; **web sitesinde her zaman 0** (kodda ayrıca zorlanır) |
 | Kurumlar vergisi | Yalnız **kâr pozitifse**. Limited şirket için **%25** varsayılan; kullanıcı değiştirebilir |
 | POS hizmet bedeli | Yalnız HepsiBurada ve Web Sitesi'nde, `has_pos_service_fee` açıksa |
 

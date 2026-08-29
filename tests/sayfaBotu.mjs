@@ -22,7 +22,9 @@ import { mkdirSync, existsSync } from 'node:fs';
 import { setTimeout as bekle } from 'node:timers/promises';
 
 const CHROME = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
-const PROFIL = '/tmp/pricehub-bot-profili';
+// Ev dizininde: /tmp yeniden baslatmada silinir, giris her seferinde
+// tekrar istenirdi.
+const PROFIL = `${process.env.HOME}/.pricehub-bot-profili`;
 const PORT = 9333;
 
 const ONIZLEME = 'https://pricehub-git-tema-apple-v2-ahmet-s-projects7.vercel.app';
