@@ -247,8 +247,10 @@ değerlendirmeye girer.
   müşteriye gider — yani fazladan yol kat eder.
 - **Çift kargo:** üretimden depoya, depodan müşteriye giden ürünler için
   işaretlenir; hesaplanan kargo bedeli **×2** olur.
-- **Paketleme maliyeti:** seçilen paketin `total_cost` değeridir. Çoklu pakette
-  her paketin kendi maliyeti **toplanır**.
+- **Paketleme maliyeti:** paket, içindeki **malzemeler tek tek girilerek**
+  oluşturulur (Paketleme sayfası); paketin maliyeti malzeme maliyetlerinin
+  toplamıdır. Çoklu pakette her paketin kendi maliyeti ayrıca toplanır.
+- **Desi elle girilir.** Ürünün fiziksel ölçüsünden otomatik hesaplanmaz.
 - **Çift kargo** (`double_shipping`): hesaplanan kargo bedeli **×2**
 
 ---
@@ -284,7 +286,8 @@ kullanıcı yalnızca görür. Kullanıcı kendi web sitesi platformunu düzenle
 
 ### Bugün Kargoda
 
-Hem **platform ayarında** hem **ürün bazında** açıksa devreye girer:
+Ürün **aynı gün kargoya veriliyorsa** işaretlenir (satıcının o gün gönderim
+taahhüdü). Hem **platform ayarında** hem **ürün bazında** açıksa devreye girer:
 - indirimli barem/desi tarifesi kullanılır
 - standart hizmet bedeli yerine indirimli hizmet bedeli uygulanır
 
@@ -443,6 +446,27 @@ Raporlar arşivlenebilir.
 `change_type = 'manual'` ile yapılır.
 
 ---
+
+## 11b. Ürün zinciri ve "zincir tutarsızlığı"
+
+Aynı ürünün farklı **adetli** versiyonları (100'lük, 500'lük, 1000'lik gibi)
+bir **zincire** bağlanır (`chain_group_id`). Zincir üyelerinin birim maliyeti
+tutarlı olmalıdır:
+
+```
+birim maliyet = ürün maliyeti ÷ birim adet
+```
+
+Bir üyenin maliyeti güncellendiğinde diğer üyelerin maliyeti aynı oranda
+güncellenir. Buna rağmen bir üyenin birim maliyeti diğerlerinden **%2'den
+fazla** sapıyorsa, Güncelleme Raporları'na **"Zincir Tutarsızlığı"** kaydı
+düşer ve hangi üyenin ne kadar saptığı yazılır.
+
+> Amaç: 100'lük paket birim 1,20 ₺ iken 500'lük paketin birim 1,80 ₺ olması
+> gibi durumların gözden kaçmaması.
+
+Referanslı üründe **baz maliyet** ürün maliyetinden yüksekse hesaplamada baz
+maliyet kullanılır.
 
 ## 12. Bilinen sınırlar
 
