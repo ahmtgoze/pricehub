@@ -45,19 +45,19 @@ export default function StockSyncModal({ zeroStockItems, onDelete, onPassive, on
   if (undoItems) {
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
+        <div className="bg-card rounded-2xl shadow-2xl w-full max-w-md p-6">
           <div className="flex items-center gap-3 mb-4">
             <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center">
               <Trash2 className="w-5 h-5 text-green-600" />
             </div>
             <div>
-              <h3 className="font-bold text-gray-900">{undoItems.items.length} ürün silindi</h3>
-              <p className="text-sm text-gray-500">İşlem tamamlandı</p>
+              <h3 className="font-bold text-foreground">{undoItems.items.length} ürün silindi</h3>
+              <p className="text-sm text-muted-foreground">İşlem tamamlandı</p>
             </div>
           </div>
           <div className="max-h-40 overflow-y-auto mb-4 space-y-1">
             {undoItems.items.map(item => (
-              <div key={item.id} className="text-xs text-gray-600 bg-gray-50 rounded px-3 py-1.5 truncate">
+              <div key={item.id} className="text-xs text-muted-foreground bg-secondary rounded px-3 py-1.5 truncate">
                 {item.platform_product_name}
               </div>
             ))}
@@ -74,16 +74,16 @@ export default function StockSyncModal({ zeroStockItems, onDelete, onPassive, on
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col">
+      <div className="bg-card rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col">
         {/* Header */}
-        <div className="p-6 border-b border-gray-100">
+        <div className="p-6 border-b border-border">
           <div className="flex items-start gap-3">
             <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center shrink-0 mt-0.5">
               <AlertTriangle className="w-5 h-5 text-amber-600" />
             </div>
             <div>
-              <h2 className="text-lg font-bold text-gray-900">Stokta Olmayan Ürünler Tespit Edildi</h2>
-              <p className="text-sm text-gray-500 mt-1">
+              <h2 className="text-lg font-bold text-foreground">Stokta Olmayan Ürünler Tespit Edildi</h2>
+              <p className="text-sm text-muted-foreground mt-1">
                 Yeni yüklenen Excel dosyasında <strong>{zeroStockItems.length} eşleşmiş ürünün</strong> stoğu 0 görünüyor.
                 Bu ürünleri pazaryeri ürün listesinden kaldırmak ister misiniz?
               </p>
@@ -94,12 +94,12 @@ export default function StockSyncModal({ zeroStockItems, onDelete, onPassive, on
         {/* Ürün Listesi */}
         <div className="flex-1 overflow-y-auto p-4">
           {/* Tümünü seç */}
-          <div className="flex items-center gap-2 mb-3 pb-2 border-b border-gray-100">
+          <div className="flex items-center gap-2 mb-3 pb-2 border-b border-border">
             <Checkbox
               checked={selected.size === zeroStockItems.length && zeroStockItems.length > 0}
               onCheckedChange={toggleAll}
             />
-            <span className="text-sm font-medium text-gray-700">
+            <span className="text-sm font-medium text-muted-foreground">
               Tümünü Seç ({selected.size}/{zeroStockItems.length})
             </span>
           </div>
@@ -109,7 +109,7 @@ export default function StockSyncModal({ zeroStockItems, onDelete, onPassive, on
               <div
                 key={item.id}
                 className={`flex items-center gap-3 rounded-lg border px-3 py-2.5 cursor-pointer transition-colors ${
-                  selected.has(item.id) ? 'border-amber-300 bg-amber-50' : 'border-gray-100 bg-gray-50'
+                  selected.has(item.id) ? 'border-amber-300 bg-amber-50 dark:bg-amber-950/30' : 'border-border bg-secondary'
                 }`}
                 onClick={() => toggleItem(item.id)}
               >
@@ -119,15 +119,15 @@ export default function StockSyncModal({ zeroStockItems, onDelete, onPassive, on
                   onClick={e => e.stopPropagation()}
                 />
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-gray-800 truncate">{item.platform_product_name}</p>
-                  <p className="text-xs text-gray-400">{item.barkod || item.variant_sku || '-'}</p>
+                  <p className="text-sm font-medium text-foreground truncate">{item.platform_product_name}</p>
+                  <p className="text-xs text-muted-foreground/70">{item.barkod || item.variant_sku || '-'}</p>
                 </div>
                 <div className="text-right shrink-0">
-                  <span className="text-xs text-gray-500">Mevcut Durum</span>
+                  <span className="text-xs text-muted-foreground">Mevcut Durum</span>
                   <p className="text-xs font-semibold text-green-600">Eşleşmiş</p>
                 </div>
                 <div className="text-right shrink-0">
-                  <span className="text-xs text-gray-500">Yeni Stok</span>
+                  <span className="text-xs text-muted-foreground">Yeni Stok</span>
                   <p className="text-xs font-bold text-red-600">0</p>
                 </div>
               </div>
@@ -136,7 +136,7 @@ export default function StockSyncModal({ zeroStockItems, onDelete, onPassive, on
         </div>
 
         {/* Butonlar */}
-        <div className="p-4 border-t border-gray-100 bg-gray-50 rounded-b-2xl">
+        <div className="p-4 border-t border-border bg-secondary rounded-b-2xl">
           <div className="flex flex-wrap gap-2 justify-between">
             <Button variant="outline" size="sm" onClick={onDismiss} disabled={loading}>
               <X className="w-4 h-4 mr-1" />Vazgeç
@@ -147,7 +147,7 @@ export default function StockSyncModal({ zeroStockItems, onDelete, onPassive, on
                 size="sm"
                 onClick={() => handlePassive(Array.from(selected))}
                 disabled={selected.size === 0 || loading}
-                className="border-yellow-300 text-yellow-700 hover:bg-yellow-50"
+                className="border-yellow-300 text-yellow-700 dark:text-yellow-300 hover:bg-yellow-50 dark:bg-yellow-950/30"
               >
                 <EyeOff className="w-4 h-4 mr-1" />
                 Pasife Al ({selected.size})
@@ -171,7 +171,7 @@ export default function StockSyncModal({ zeroStockItems, onDelete, onPassive, on
               </Button>
             </div>
           </div>
-          <p className="text-xs text-gray-400 mt-2 text-center">
+          <p className="text-xs text-muted-foreground/70 mt-2 text-center">
             💡 Varsayılan öneri: Silmek yerine <strong>Pasife Al</strong> seçeneğini kullanın
           </p>
         </div>

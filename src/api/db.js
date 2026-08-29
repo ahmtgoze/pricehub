@@ -22,6 +22,10 @@ const TABLE_MAP = {
   Message: 'messages',
   Settings: 'settings',
   User: 'user_profiles',
+  // Kullanici bazli tablo gorunum tercihleri (sutun gizleme/sira/genislik/sabitleme)
+  UserViewPreference: 'user_view_preferences',
+  // Kullaniciya ozel Excel/CSV disa aktarma sablonlari
+  ExportTemplate: 'export_templates',
 };
 
 function applyConditions(query, conditions) {
@@ -63,8 +67,10 @@ function createEntity(entityName) {
   if (!tableName) throw new Error(`Bilinmeyen entity: ${entityName}`);
 
   return {
-    async filter(conditions = {}, orderBy = '-created_at', limit = 10000) {
-      let query = supabase.from(tableName).select('*');
+    // alanlar: yalnizca belirli sutunlari cekmek icin (ornek: 'id, platform_name').
+    // Varsayilan '*' — mevcut tum cagrilarin davranisi degismez.
+    async filter(conditions = {}, orderBy = '-created_at', limit = 10000, alanlar = '*') {
+      let query = supabase.from(tableName).select(alanlar);
       query = applyConditions(query, conditions);
       const order = parseOrderBy(orderBy);
       if (order) query = query.order(order.column, { ascending: order.ascending });

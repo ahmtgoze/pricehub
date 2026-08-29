@@ -8,7 +8,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Upload, X, Search, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
@@ -17,6 +16,8 @@ import { toast } from 'sonner';
 import StockSyncModal from '@/components/marketplace/StockSyncModal';
 import UploadSummaryModal from '@/components/marketplace/UploadSummaryModal';
 import MissingProductsModal from '@/components/marketplace/MissingProductsModal';
+import DataTable from '@/components/ui/DataTable';
+import FiltreEtiketi from '@/components/ui/FiltreEtiketi';
 
 const HEPSIBURADA_YUKLE_ADIMLARI = [
   'HepsiBurada paneline girin.',
@@ -196,12 +197,14 @@ export default function MarketplaceProducts() {
   // Website duplicate: ürün adı aynı VE (SKU / Barkod / Model Kodu'ndan en az biri aynı)
   const isWebsiteDuplicate = (excelRow, existing) => {
     if (!normEq(excelRow.platform_product_name, existing.platform_product_name)) return false;
+
     return (
       normEq(excelRow.variant_sku, existing.variant_sku) ||
       normEq(excelRow.barkod, existing.barkod) ||
       normEq(excelRow.model_code, existing.model_code)
     );
   };
+
 
   const handleFileUpload = async (e) => {
     if (!selectedPlatform) { toast.error('Platform seçiniz'); return; }
@@ -600,6 +603,7 @@ export default function MarketplaceProducts() {
     else setSelectedRows(new Set(filtered.map(p => p.id)));
   };
 
+
   const handleDelete = async () => {
     await deleteMutation.mutateAsync(Array.from(selectedRows));
     setSelectedRows(new Set());
@@ -684,25 +688,119 @@ export default function MarketplaceProducts() {
   const selectedPlatformObj = activePlatforms.find(p => p.name === selectedPlatform);
   const isSelectedWebsite = selectedPlatformObj?.platform_type === 'website';
 
+  // Sutun tanimlari. '__select' sistem sutunudur (gizlenemez).
+  // "Bağlı Ürün" hucresi acilir arama icerdigi icin tablo overflowVisible.
+  const pazaryeriKolonlari = [
+    {
+      id: '__select',
+      header: <Checkbox checked={selectedRows.size === filtered.length && filtered.length > 0} onCheckedChange={handleSelectAll} />,
+      cell: (row) => <Checkbox checked={selectedRows.has(row.id)} onCheckedChange={() => handleSelectRow(row.id)} />,
+    },
+    { id: 'platform_account', header: 'Platform', accessor: 'platform_account' },
+    ...(!isSelectedWebsite ? [
+      { id: 'barkod', header: 'Barkod', accessor: 'barkod' },
+      { id: 'model_code', header: 'Model Kodu', accessor: 'model_code' },
+    ] : []),
+    { id: 'platform_product_name', header: 'Ürün Adı', cell: (row) => <p className="font-medium">{row.platform_product_name}</p> },
+    {
+      id: 'matched_product',
+      header: 'Bağlı Ürün',
+      width: '280px',
+      cell: (row) => {
+        const matchedProduct = products.find(p => p.id === row.matched_product_id);
+        return (
+                              <div className="flex items-center gap-2">
+                                {matchedProduct ? (
+                                  <div className="flex-1">
+                                    <p className="text-sm font-medium">{matchedProduct.name}</p>
+                                    <p className="text-xs text-muted-foreground">{matchedProduct.sku}</p>
+                                  </div>
+                                ) : (
+                                  <div className="flex-1 space-y-1">
+                                    {activeSearchRow !== row.id && (() => {
+                                      const suggestion = getAutoSuggestion(row);
+                                      if (suggestion) {
+                                        return (
+                                          <div className="flex items-center gap-1">
+                                            <span className="text-xs text-muted-foreground bg-secondary border border-border rounded px-1.5 py-0.5">Öneri</span>
+                                            <button onClick={() => handleMatchProduct(row.id, suggestion.id)} className="text-xs text-foreground hover:underline">{suggestion.name}</button>
+                                          </div>
+                                        );
+                                      }
+                                      // Yüksek güvenli öneri yoksa top-3 aday göster
+                                      const topMatches = getTopSuggestions(row);
+                                      if (topMatches.length === 0) return null;
+                                      return (
+                                        <div className="space-y-0.5">
+                                          <span className="text-xs text-muted-foreground/70">Adaylar:</span>
+                                          {topMatches.map(({ product: p, score: s }) => (
+                                            <div key={p.id} className="flex items-center gap-1">
+                                              <span className="text-xs text-muted-foreground/70 shrink-0">%{s}</span>
+                                              <button onClick={() => handleMatchProduct(row.id, p.id)} className="text-xs text-muted-foreground hover:underline">{p.name}</button>                                            </div>
+                                          ))}
+                                        </div>
+                                      );
+                                    })()}
+                                    {activeSearchRow === row.id ? (
+                                      <div className="flex gap-1">
+                                        <select value={searchCriteria} onChange={e => setSearchCriteria(e.target.value)} className="text-xs border border-border rounded px-1 py-1 bg-card">
+                                          <option value="name">Ad</option>
+                                          <option value="sku">SKU</option>
+                                        </select>
+                                        <Input ref={inputRef} placeholder={searchCriteria === 'sku' ? 'SKU ara...' : 'Ürün adı ara...'} value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="text-xs" autoFocus />
+                                      </div>
+                                    ) : (
+                                      <button onClick={() => { setActiveSearchRow(row.id); setSearchQuery(''); }} className="text-xs text-muted-foreground/70 hover:text-muted-foreground flex items-center gap-1 border border-dashed border-border rounded px-2 py-1 w-full">
+                                        <Search className="w-3 h-3" />Ürün bul
+                                      </button>
+                                    )}
+                                  </div>
+                                )}
+                                {matchedProduct && (
+                                  <Button size="icon" variant="ghost" onClick={() => updateMutation.mutate({ id: row.id, data: { matched_product_id: null, status: 'not_matched' } })} className="h-6 w-6">
+                                    <X className="w-4 h-4" />
+                                  </Button>
+                                )}
+                              </div>
+        );
+      },
+    },
+    {
+      id: 'status',
+      header: 'Durum',
+      cell: (row) => (
+        <span className={`text-xs px-2 py-1 rounded ${row.status === 'matched' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+          {row.status === 'matched' ? 'Eşleştirildi' : 'Eşleşmedi'}
+        </span>
+      ),
+    },
+    // ── Eklenebilir sutunlar: varsayilanda gizli, panelden acilir ──
+    { id: 'brand', header: 'Marka', optional: true, cell: (row) => row.brand || '-' },
+    { id: 'category', header: 'Kategori', optional: true, cell: (row) => row.category || '-' },
+    { id: 'marketplace_sale_price', header: 'Satış Fiyatı', cell: (row) => row.marketplace_sale_price != null ? `₺${Number(row.marketplace_sale_price).toFixed(2)}` : '-' },
+    { id: 'stock_quantity', header: 'Stok', optional: true, cell: (row) => row.stock_quantity ?? '-' },
+    { id: 'variant_sku', header: 'Varyant SKU', optional: true, cell: (row) => row.variant_sku || '-' },
+  ];
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-100 via-gray-50 to-purple-50 p-6">
-      <div className="max-w-7xl mx-auto">
+    <div className="min-h-screen bg-secondary">
+      <div className="ph-page-flow mx-auto">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Pazaryeri Ürünleri</h1>
-          <p className="text-gray-600">Pazaryeri ürünlerini sisteme yükleyin ve ana ürünlere bağlayın</p>
+          <h1 className="ph-title">Pazaryeri Ürünleri</h1>
+          <p className="text-muted-foreground">Pazaryeri ürünlerini sisteme yükleyin ve ana ürünlere bağlayın</p>
         </div>
 
-        <div className="mb-4 rounded-xl border border-orange-200 bg-orange-50 overflow-hidden">
+        <div className="mb-4 rounded-xl border border-border bg-secondary overflow-hidden">
           <button onClick={() => setShowHepsiGuide(!showHepsiGuide)} className="w-full flex items-center justify-between px-5 py-3 text-left">
-            <span className="font-semibold text-orange-800 text-sm">📦 HepsiBurada — Ürün Listesi Nasıl Yüklenir?</span>
-            {showHepsiGuide ? <ChevronUp className="w-4 h-4 text-orange-600" /> : <ChevronDown className="w-4 h-4 text-orange-600" />}
+            <span className="font-semibold text-foreground text-sm">📦 HepsiBurada — Ürün Listesi Nasıl Yüklenir?</span>
+            {showHepsiGuide ? <ChevronUp className="w-4 h-4 text-muted-foreground/70" /> : <ChevronDown className="w-4 h-4 text-muted-foreground/70" />}
           </button>
           {showHepsiGuide && (
-            <div className="px-5 pb-4 border-t border-orange-200">
+            <div className="px-5 pb-4 border-t border-border">
               <ol className="mt-3 space-y-1.5">
                 {HEPSIBURADA_YUKLE_ADIMLARI.map((adim, i) => (
-                  <li key={i} className={`text-sm flex gap-2 ${adim.startsWith('⚠️') ? 'text-red-700 font-medium' : 'text-orange-900'}`}>
-                    {!adim.startsWith('⚠️') && <span className="font-bold text-orange-600 shrink-0">{i + 1}.</span>}
+                  <li key={i} className={`text-sm flex gap-2 ${adim.startsWith('⚠️') ? 'text-destructive font-medium' : 'text-muted-foreground'}`}>
+                    {!adim.startsWith('⚠️') && <span className="font-bold text-muted-foreground shrink-0">{i + 1}.</span>}
                     <span>{adim}</span>
                   </li>
                 ))}
@@ -711,17 +809,17 @@ export default function MarketplaceProducts() {
           )}
         </div>
 
-        <div className="mb-4 rounded-xl border border-orange-300 bg-amber-50 overflow-hidden">
+        <div className="mb-4 rounded-xl border border-border bg-secondary overflow-hidden">
           <button onClick={() => setShowTrendyolGuide(!showTrendyolGuide)} className="w-full flex items-center justify-between px-5 py-3 text-left">
-            <span className="font-semibold text-amber-800 text-sm">🛒 Trendyol — Ürün Listesi Nasıl Yüklenir?</span>
-            {showTrendyolGuide ? <ChevronUp className="w-4 h-4 text-amber-600" /> : <ChevronDown className="w-4 h-4 text-amber-600" />}
+            <span className="font-semibold text-foreground text-sm">🛒 Trendyol — Ürün Listesi Nasıl Yüklenir?</span>
+            {showTrendyolGuide ? <ChevronUp className="w-4 h-4 text-muted-foreground/70" /> : <ChevronDown className="w-4 h-4 text-muted-foreground/70" />}
           </button>
           {showTrendyolGuide && (
-            <div className="px-5 pb-4 border-t border-amber-200">
+            <div className="px-5 pb-4 border-t border-border">
               <ol className="mt-3 space-y-1.5">
                 {TRENDYOL_YUKLE_ADIMLARI.map((adim, i) => (
-                  <li key={i} className={`text-sm flex gap-2 ${adim.startsWith('⚠️') ? 'text-red-700 font-medium' : 'text-amber-900'}`}>
-                    {!adim.startsWith('⚠️') && <span className="font-bold text-amber-600 shrink-0">{i + 1}.</span>}
+                  <li key={i} className={`text-sm flex gap-2 ${adim.startsWith('⚠️') ? 'text-destructive font-medium' : 'text-muted-foreground'}`}>
+                    {!adim.startsWith('⚠️') && <span className="font-bold text-muted-foreground shrink-0">{i + 1}.</span>}
                     <span>{adim}</span>
                   </li>
                 ))}
@@ -730,17 +828,17 @@ export default function MarketplaceProducts() {
           )}
         </div>
 
-        <div className="mb-6 rounded-xl border border-indigo-200 bg-indigo-50 overflow-hidden">
+        <div className="mb-6 rounded-xl border border-border bg-secondary overflow-hidden">
           <button onClick={() => setShowWebsiteGuide(!showWebsiteGuide)} className="w-full flex items-center justify-between px-5 py-3 text-left">
-            <span className="font-semibold text-indigo-800 text-sm">🌐 Web Sitesi (Shopify) — Ürün Listesi Nasıl Yüklenir?</span>
-            {showWebsiteGuide ? <ChevronUp className="w-4 h-4 text-indigo-600" /> : <ChevronDown className="w-4 h-4 text-indigo-600" />}
+            <span className="font-semibold text-foreground text-sm">🌐 Web Sitesi (Shopify) — Ürün Listesi Nasıl Yüklenir?</span>
+            {showWebsiteGuide ? <ChevronUp className="w-4 h-4 text-muted-foreground/70" /> : <ChevronDown className="w-4 h-4 text-muted-foreground/70" />}
           </button>
           {showWebsiteGuide && (
-            <div className="px-5 pb-4 border-t border-indigo-200">
+            <div className="px-5 pb-4 border-t border-border">
               <ol className="mt-3 space-y-1.5">
                 {WEBSITE_YUKLE_ADIMLARI.map((adim, i) => (
-                  <li key={i} className={`text-sm flex gap-2 ${adim.startsWith('⚠️') ? 'text-red-700 font-medium' : 'text-indigo-900'}`}>
-                    {!adim.startsWith('⚠️') && <span className="font-bold text-indigo-600 shrink-0">{i + 1}.</span>}
+                  <li key={i} className={`text-sm flex gap-2 ${adim.startsWith('⚠️') ? 'text-destructive font-medium' : 'text-muted-foreground'}`}>
+                    {!adim.startsWith('⚠️') && <span className="font-bold text-muted-foreground shrink-0">{i + 1}.</span>}
                     <span>{adim}</span>
                   </li>
                 ))}
@@ -749,7 +847,7 @@ export default function MarketplaceProducts() {
           )}
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-6">
+        <div className="rounded-[18px] border border-border bg-card p-6 mb-6">
           <Label className="text-sm mb-3 block font-semibold">Platform Seçiniz</Label>
           <div className="flex gap-4 items-end flex-wrap">
             <Select value={selectedPlatform} onValueChange={setSelectedPlatform}>
@@ -772,7 +870,7 @@ export default function MarketplaceProducts() {
               </Button>
             </label>
             {isSelectedWebsite && (
-              <div className="text-xs text-indigo-600 bg-indigo-50 border border-indigo-200 rounded-lg px-3 py-2">
+              <div className="text-xs text-muted-foreground bg-secondary border border-border rounded-lg px-3 py-2">
                 📋 Shopify Admin'den standart ürün export CSV'sini yükleyin. <strong>Title + Option Values</strong> birleştirilerek gösterilir. Eşleştirme <strong>Variant SKU</strong> üzerinden yapılır.
               </div>
             )}
@@ -781,16 +879,15 @@ export default function MarketplaceProducts() {
 
         {selectedPlatform && (
           <>
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 mb-4 flex flex-wrap items-center gap-4">
+            <div className="rounded-[18px] border border-border bg-card p-4 mb-4 flex flex-wrap items-center gap-4">
               <div className="flex items-center gap-4">
-                <span className="text-sm font-semibold text-gray-900">Toplam: {filtered.length} ürün</span>
-                {selectedRows.size > 0 && <span className="text-sm text-gray-600">{selectedRows.size} seçildi</span>}
+                <span className="text-sm font-semibold text-foreground">Toplam: {filtered.length} ürün</span>
+                {selectedRows.size > 0 && <span className="text-sm text-muted-foreground">{selectedRows.size} seçildi</span>}
               </div>
               <div className="flex-1 max-w-md">
-                <Input placeholder="Ürün adı ara..." value={tableSearchQuery} onChange={(e) => setTableSearchQuery(e.target.value)} className="w-full" />
+                <Input placeholder="Ürün adı veya barkod ara..." value={tableSearchQuery} onChange={(e) => setTableSearchQuery(e.target.value)} className="w-full" />
               </div>
-              <div className="flex items-center gap-2">
-                <Label className="text-sm">Filtre:</Label>
+              <FiltreEtiketi ad="Eşleşme">
                 <Select value={filterStatus} onValueChange={setFilterStatus}>
                   <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
                   <SelectContent>
@@ -799,18 +896,17 @@ export default function MarketplaceProducts() {
                     <SelectItem value="not_matched">Eşleşmemiş</SelectItem>
                   </SelectContent>
                 </Select>
-              </div>
-              <div className="flex items-center gap-2 ml-auto">
-                <Label className="text-sm">Sırala:</Label>
+              </FiltreEtiketi>
+              <FiltreEtiketi ad="Sırala" className="ml-auto">
                 <Select value={sortBy} onValueChange={setSortBy}>
                   <SelectTrigger className="w-48"><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="name">Alfabetik (A-Z)</SelectItem>
-                    <SelectItem value="price">Fiyata (Düşükten Yükseğe)</SelectItem>
-                    <SelectItem value="date">Tarihte (Yeni)</SelectItem>
+                    <SelectItem value="name">Ürün adı: A → Z</SelectItem>
+                    <SelectItem value="price">Fiyat: düşük → yüksek</SelectItem>
+                    <SelectItem value="date">Tarih: yeni → eski</SelectItem>
                   </SelectContent>
                 </Select>
-              </div>
+              </FiltreEtiketi>
               {selectedRows.size > 0 && (
                 <>
                   <Button variant="secondary" size="sm" onClick={handleUnmatchSelected}>
@@ -827,139 +923,42 @@ export default function MarketplaceProducts() {
               <Button size="sm" variant="outline" onClick={() => queryClient.invalidateQueries({ queryKey: ['marketplaceProducts', userEmail] })}>Güncelle</Button>
             </div>
 
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-visible">
-              <div className="overflow-x-auto overflow-y-visible">
-                <Table className="relative">
-                  <TableHeader className="bg-gray-50">
-                    <TableRow>
-                      <TableHead className="w-12">
-                        <Checkbox checked={selectedRows.size === filtered.length && filtered.length > 0} onCheckedChange={handleSelectAll} />
-                      </TableHead>
-                      <TableHead>Platform</TableHead>
-                      {!isSelectedWebsite && <TableHead>Barkod</TableHead>}
-                      {!isSelectedWebsite && <TableHead>Model Kodu</TableHead>}
-                      <TableHead>Ürün Adı</TableHead>
-                      <TableHead>Bağlı Ürün</TableHead>
-                      <TableHead>Durum</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filtered.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={isSelectedWebsite ? 5 : 7} className="text-center text-gray-500 py-8">
-                          {isSelectedWebsite ? 'Henüz ürün yüklenmemiş. CSV Yükle butonunu kullanın.' : 'Ürün bulunamadı'}
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      filtered.map((row) => {
-                        const matchedProduct = products.find(p => p.id === row.matched_product_id);
-                        return (
-                          <TableRow key={row.id} className={`${selectedRows.has(row.id) ? 'bg-blue-50' : ''} relative`}>
-                            <TableCell>
-                              <Checkbox checked={selectedRows.has(row.id)} onCheckedChange={() => handleSelectRow(row.id)} />
-                            </TableCell>
-                            <TableCell className="text-sm">{row.platform_account}</TableCell>
-                            {!isSelectedWebsite && <TableCell className="text-sm">{row.barkod}</TableCell>}
-                            {!isSelectedWebsite && <TableCell className="text-sm">{row.model_code}</TableCell>}
-                            <TableCell className="text-sm">
-                              <p className="font-medium">{row.platform_product_name}</p>
-                            </TableCell>
-                            <TableCell className="relative overflow-visible">
-                              <div className="flex items-center gap-2">
-                                {matchedProduct ? (
-                                  <div className="flex-1">
-                                    <p className="text-sm font-medium">{matchedProduct.name}</p>
-                                    <p className="text-xs text-gray-500">{matchedProduct.sku}</p>
-                                  </div>
-                                ) : (
-                                  <div className="flex-1 space-y-1">
-                                    {activeSearchRow !== row.id && (() => {
-                                      const suggestion = getAutoSuggestion(row);
-                                      if (suggestion) {
-                                        return (
-                                          <div className="flex items-center gap-1">
-                                            <span className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded px-1.5 py-0.5">Öneri</span>
-                                            <button onClick={() => handleMatchProduct(row.id, suggestion.id)} className="text-xs text-blue-600 hover:underline">{suggestion.name}</button>
-                                          </div>
-                                        );
-                                      }
-                                      // Yüksek güvenli öneri yoksa top-3 aday göster
-                                      const topMatches = getTopSuggestions(row);
-                                      if (topMatches.length === 0) return null;
-                                      return (
-                                        <div className="space-y-0.5">
-                                          <span className="text-xs text-gray-400">Adaylar:</span>
-                                          {topMatches.map(({ product: p, score: s }) => (
-                                            <div key={p.id} className="flex items-center gap-1">
-                                              <span className="text-xs text-gray-400 shrink-0">%{s}</span>
-                                              <button onClick={() => handleMatchProduct(row.id, p.id)} className="text-xs text-indigo-600 hover:underline">{p.name}</button>                                            </div>
-                                          ))}
-                                        </div>
-                                      );
-                                    })()}
-                                    {activeSearchRow === row.id ? (
-                                      <div className="flex gap-1">
-                                        <select value={searchCriteria} onChange={e => setSearchCriteria(e.target.value)} className="text-xs border border-gray-200 rounded px-1 py-1 bg-white">
-                                          <option value="name">Ad</option>
-                                          <option value="sku">SKU</option>
-                                        </select>
-                                        <Input ref={inputRef} placeholder={searchCriteria === 'sku' ? 'SKU ara...' : 'Ürün adı ara...'} value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="text-xs" autoFocus />
-                                      </div>
-                                    ) : (
-                                      <button onClick={() => { setActiveSearchRow(row.id); setSearchQuery(''); }} className="text-xs text-gray-400 hover:text-gray-700 flex items-center gap-1 border border-dashed border-gray-200 rounded px-2 py-1 w-full">
-                                        <Search className="w-3 h-3" />Ürün bul
-                                      </button>
-                                    )}
-                                  </div>
-                                )}
-                                {matchedProduct && (
-                                  <Button size="icon" variant="ghost" onClick={() => updateMutation.mutate({ id: row.id, data: { matched_product_id: null, status: 'not_matched' } })} className="h-6 w-6">
-                                    <X className="w-4 h-4" />
-                                  </Button>
-                                )}
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              <span className={`text-xs px-2 py-1 rounded ${row.status === 'matched' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-                                {row.status === 'matched' ? 'Eşleştirildi' : 'Eşleşmedi'}
-                              </span>
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
-            </div>
+            <DataTable
+              pageKey="pazaryeri-urunleri"
+              columns={pazaryeriKolonlari}
+              data={filtered}
+              overflowVisible
+              rowClassName={(row) => `${selectedRows.has(row.id) ? 'bg-secondary' : 'hover:bg-secondary/60'} relative`}
+              emptyMessage={isSelectedWebsite ? 'Henüz ürün yüklenmemiş. CSV Yükle butonunu kullanın.' : 'Ürün bulunamadı'}
+            />
           </>
         )}
 
         {!selectedPlatform && (
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-12 text-center">
-            <p className="text-gray-500">Platform seçerek başlayın</p>
+          <div className="rounded-[18px] border border-border bg-card p-12 text-center">
+            <p className="text-muted-foreground">Platform seçerek başlayın</p>
           </div>
         )}
 
         {/* İlerleme Popup */}
         {progressPopup && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-            <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md mx-4">
-              <h3 className="text-lg font-bold text-gray-900 mb-1">{progressPopup.title}</h3>
-              <p className="text-sm text-gray-500 mb-4">Lütfen bekleyin, işlem devam ediyor...</p>
+            <div className="bg-card rounded-2xl shadow-2xl p-8 w-full max-w-md mx-4">
+              <h3 className="text-lg font-bold text-foreground mb-1">{progressPopup.title}</h3>
+              <p className="text-sm text-muted-foreground mb-4">Lütfen bekleyin, işlem devam ediyor...</p>
               <div className="mb-3">
-                <div className="flex justify-between text-xs text-gray-600 mb-1">
+                <div className="flex justify-between text-xs text-muted-foreground mb-1">
                   <span className="truncate max-w-xs">{progressPopup.currentItemName}</span>
                   <span className="shrink-0 ml-2">{progressPopup.current} / {progressPopup.total}</span>
                 </div>
-                <div className="w-full bg-gray-100 rounded-full h-3 overflow-hidden">
+                <div className="w-full bg-secondary rounded-full h-3 overflow-hidden">
                   <div
-                    className="bg-blue-500 h-3 rounded-full transition-all duration-200"
+                    className="bg-primary h-3 rounded-full transition-all duration-200"
                     style={{ width: progressPopup.total > 0 ? `${(progressPopup.current / progressPopup.total) * 100}%` : '0%' }}
                   />
                 </div>
               </div>
-              <p className="text-xs text-gray-400 text-center">%{progressPopup.total > 0 ? Math.round((progressPopup.current / progressPopup.total) * 100) : 0} tamamlandı</p>
+              <p className="text-xs text-muted-foreground/70 text-center">%{progressPopup.total > 0 ? Math.round((progressPopup.current / progressPopup.total) * 100) : 0} tamamlandı</p>
             </div>
           </div>
         )}
@@ -1006,11 +1005,11 @@ export default function MarketplaceProducts() {
         )}
 
         {activeSearchRow && dropdownPosition && searchResults.length > 0 && createPortal(
-          <div ref={dropdownRef} style={{ position: 'absolute', top: `${dropdownPosition.top}px`, left: `${dropdownPosition.left}px`, width: `${dropdownPosition.width}px`, zIndex: 9999 }} className="bg-white border border-gray-200 rounded-lg shadow-xl max-h-80 overflow-y-auto">
+          <div ref={dropdownRef} style={{ position: 'absolute', top: `${dropdownPosition.top}px`, left: `${dropdownPosition.left}px`, width: `${dropdownPosition.width}px`, zIndex: 9999 }} className="bg-card border border-border rounded-lg shadow-xl max-h-80 overflow-y-auto">
             {searchResults.map((p) => (
-              <button key={p.id} onClick={() => { handleMatchProduct(activeSearchRow, p.id); setSearchQuery(''); setActiveSearchRow(null); }} className="w-full text-left px-3 py-2 hover:bg-gray-100 text-xs border-b last:border-b-0">
+              <button key={p.id} onClick={() => { handleMatchProduct(activeSearchRow, p.id); setSearchQuery(''); setActiveSearchRow(null); }} className="w-full text-left px-3 py-2 hover:bg-secondary text-xs border-b last:border-b-0">
                 <p className="font-medium">{p.name}</p>
-                <p className="text-gray-500 text-xs">{p.sku}</p>
+                <p className="text-muted-foreground text-xs">{p.sku}</p>
               </button>
             ))}
           </div>,

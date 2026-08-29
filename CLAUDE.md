@@ -16,11 +16,25 @@ PriceHub: Trendyol & Hepsiburada odaklı **fiyatlama / kâr yönetim sistemi** (
 - `src/components/PriceCalculationEngine.jsx` = **sistemin kalbi.** `calculatePriceBreakdown` fiyat/komisyon/kargo/barem/KDV/kâr hesaplar. Buna DOKUNURKEN ÇOK DİKKAT.
 - `src/pages/` sayfalar, `src/Layout.jsx` menü/kabuk, `src/pages.config.js` sayfa kaydı (yeni sayfa burada + Layout nav'a eklenir).
 
+## 📖 ÖNCE BUNU OKU: docs/00-sistem/is-kurallari.md
+Bir istek geldiğinde **önce** `docs/00-sistem/is-kurallari.md` dosyasına bak.
+Fiyat/kâr hesabı, komisyon KDV'si, barem koşulları, promosyon mantığı, Excel
+kuralları, roller — hepsi orada ve **koddan doğrulanmıştır**. Oradaki bir kuralı
+tahminle değiştirme. Kural eksikse koddan doğrula ve **oraya ekle**; uydurma.
+Kural ile kod çelişirse kod doğrudur, dosya düzeltilir.
+
 ## ⛔ ASLA BOZULMAYACAK KURALLAR
 1. **Çok kiracılılık / izolasyon:** Hiçbir kullanıcı diğerinin verisini GÖREMEZ. Her kullanıcı-verisi tablosu RLS ile `created_by = auth.email()` izoleli. Yeni tablo eklerken RLS + owner-scoped policy ZORUNLU. Bunu asla gevşetme.
 2. **Veri ≠ Kod.** Kod değişikliği veriye dokunmaz. Veriyi DELETE/UPDATE eden migration'lardan kaçın; mecbursan önce yedek.
 3. **Fiyat/kâr hesabı bozulmamalı.** PriceCalculationEngine mantığı değişirse kârlar yanlış çıkar. Değiştirmeden önce iki kez düşün; ileride buraya otomatik test eklenecek.
-4. Her push öncesi `npm run build` ile derlemeyi DOĞRULA.
+4. **Her değişiklikten sonra `npm run kontrol` çalıştır.** Bu tek komut
+   lint + derleme + birim testler + Sayfa Botu'nu sırayla koşar.
+   - `npm run kontrol:hizli` → bot olmadan (bot oturum ister)
+   - Sayfa Botu her sayfayı gerçek kullanıcı gibi açar ve **beyaz ekran /
+     çalışma anı hatası** yakalar. `npm run build` bunları YAKALAMAZ:
+     bu projede sayfalar üç kez böyle bozuldu ve derleme temiz geçti.
+   - Bot bir kez `npm run bot:giris` ile giriş ister; oturum kalıcıdır.
+   - ESLint'te `no-undef` AÇIK — tanımsız değişkeni lint durdurur.
 
 ## Güvenli çalışma yöntemi (ZORUNLU)
 Büyük/riskli değişiklikler: **branch aç → Vercel önizleme linki (canlı dokunulmaz) → kullanıcı test edip ONAYLAR → main'e merge → canlı.** Sorun olursa Vercel tek-tık rollback. Doküman (.md) dosyaları uygulamaya dahil değildir → direkt main'e güvenle gidebilir, önizleme gerekmez.

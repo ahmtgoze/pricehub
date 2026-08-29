@@ -194,42 +194,42 @@ ${topProducts || 'Veri yok'}
       {/* ── Chat Penceresi ── */}
       {isOpen && (
         <div
-          className="fixed bottom-20 right-5 z-50 bg-white rounded-2xl shadow-2xl border border-slate-200 flex flex-col overflow-hidden"
+          className="fixed bottom-20 right-5 z-50 bg-card rounded-2xl shadow-2xl border border-border flex flex-col overflow-hidden"
           style={{ width: '360px', maxWidth: 'calc(100vw - 24px)', height: '500px' }}
         >
           {/* Header */}
-          <div className="flex items-center justify-between px-4 py-3 bg-indigo-600 flex-shrink-0">
+          <div className="flex items-center justify-between px-4 py-3 bg-primary flex-shrink-0">
             <div className="flex items-center gap-2.5">
-              <div className="w-7 h-7 rounded-full bg-white/20 flex items-center justify-center">
+              <div className="w-7 h-7 rounded-full bg-card/20 flex items-center justify-center">
                 <Bot className="h-4 w-4 text-white" />
               </div>
               <div>
                 <p className="text-sm font-semibold text-white leading-none">PriceHub Asistan</p>
-                <p className="text-xs text-indigo-200 mt-0.5">Sistem hakkında soru sor</p>
+                <p className="text-xs text-muted-foreground/50 mt-0.5">Sistem hakkında soru sor</p>
               </div>
             </div>
             <button
               onClick={() => setIsOpen(false)}
-              className="w-7 h-7 rounded-full hover:bg-white/20 flex items-center justify-center transition-colors"
+              className="w-7 h-7 rounded-full hover:bg-card/20 flex items-center justify-center transition-colors"
             >
               <X className="h-4 w-4 text-white" />
             </button>
           </div>
 
           {/* Mesajlar */}
-          <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3 bg-slate-50">
+          <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3 bg-secondary">
             {messages.map((msg, idx) => (
               <div key={idx} className={`flex gap-2 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                 {msg.role === 'assistant' && (
-                  <div className="w-6 h-6 rounded-full bg-indigo-100 flex items-center justify-center flex-shrink-0 mt-0.5">
-                    <Bot className="h-3.5 w-3.5 text-indigo-600" />
+                  <div className="w-6 h-6 rounded-full bg-secondary flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <Bot className="h-3.5 w-3.5 text-muted-foreground" />
                   </div>
                 )}
                 <div
                   className={`max-w-[80%] rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed whitespace-pre-wrap ${
                     msg.role === 'user'
-                      ? 'bg-indigo-600 text-white rounded-tr-sm'
-                      : 'bg-white text-slate-800 rounded-tl-sm border border-slate-200 shadow-sm'
+                      ? 'bg-primary text-primary-foreground rounded-tr-sm'
+                      : 'bg-card text-foreground rounded-tl-sm border border-border shadow-sm'
                   }`}
                 >
                   {msg.content}
@@ -240,14 +240,14 @@ ${topProducts || 'Veri yok'}
             {/* Yazıyor animasyonu */}
             {isLoading && (
               <div className="flex gap-2 justify-start">
-                <div className="w-6 h-6 rounded-full bg-indigo-100 flex items-center justify-center flex-shrink-0 mt-0.5">
-                  <Bot className="h-3.5 w-3.5 text-indigo-600" />
+                <div className="w-6 h-6 rounded-full bg-secondary flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <Bot className="h-3.5 w-3.5 text-muted-foreground" />
                 </div>
-                <div className="bg-white rounded-2xl rounded-tl-sm border border-slate-200 shadow-sm px-4 py-3">
+                <div className="bg-card rounded-2xl rounded-tl-sm border border-border shadow-sm px-4 py-3">
                   <div className="flex gap-1 items-center">
-                    <span className="w-1.5 h-1.5 rounded-full bg-slate-400 animate-bounce" style={{ animationDelay: '0ms' }} />
-                    <span className="w-1.5 h-1.5 rounded-full bg-slate-400 animate-bounce" style={{ animationDelay: '150ms' }} />
-                    <span className="w-1.5 h-1.5 rounded-full bg-slate-400 animate-bounce" style={{ animationDelay: '300ms' }} />
+                    <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground animate-bounce" style={{ animationDelay: '0ms' }} />
+                    <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground animate-bounce" style={{ animationDelay: '150ms' }} />
+                    <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground animate-bounce" style={{ animationDelay: '300ms' }} />
                   </div>
                 </div>
               </div>
@@ -257,14 +257,14 @@ ${topProducts || 'Veri yok'}
 
           {/* Hızlı sorular — sadece ilk açılışta */}
           {messages.length === 1 && (
-            <div className="px-4 py-2.5 bg-white border-t border-slate-100 flex-shrink-0">
-              <p className="text-xs text-slate-400 mb-2">Hızlı sorular:</p>
+            <div className="px-4 py-2.5 bg-card border-t border-border flex-shrink-0">
+              <p className="text-xs text-muted-foreground/70 mb-2">Hızlı sorular:</p>
               <div className="flex flex-wrap gap-1.5">
                 {QUICK_QUESTIONS.map(q => (
                   <button
                     key={q}
                     onClick={() => handleQuickQuestion(q)}
-                    className="text-xs px-2.5 py-1 rounded-full bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition-colors border border-indigo-100"
+                    className="text-xs px-2.5 py-1 rounded-full bg-secondary text-muted-foreground hover:bg-border transition-colors border border-border"
                   >
                     {q}
                   </button>
@@ -274,7 +274,7 @@ ${topProducts || 'Veri yok'}
           )}
 
           {/* Input alanı */}
-          <div className="px-3 py-3 bg-white border-t border-slate-100 flex-shrink-0">
+          <div className="px-3 py-3 bg-card border-t border-border flex-shrink-0">
             <div className="flex gap-2 items-end">
               <textarea
                 ref={(el) => { inputRef.current = el; textareaRef.current = el; }}
@@ -287,13 +287,13 @@ ${topProducts || 'Veri yok'}
                 onKeyDown={handleKeyDown}
                 placeholder="Bir şey sor..."
                 rows={1}
-                className="flex-1 resize-none text-sm border border-slate-200 rounded-xl px-3 py-2 outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-slate-50 transition-all"
+                className="flex-1 resize-none text-sm border border-border rounded-xl px-3 py-2 outline-none focus:ring-2 focus:ring-gray-400 focus:border-transparent bg-secondary transition-all"
                 style={{ maxHeight: '100px' }}
               />
               <button
                 onClick={sendMessage}
                 disabled={!input.trim() || isLoading}
-                className="w-9 h-9 rounded-xl bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center transition-colors flex-shrink-0"
+                className="w-9 h-9 rounded-xl bg-primary hover:bg-black dark:hover:bg-white/90 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center transition-colors flex-shrink-0"
               >
                 {isLoading
                   ? <Loader2 className="h-4 w-4 text-white animate-spin" />
@@ -301,7 +301,7 @@ ${topProducts || 'Veri yok'}
                 }
               </button>
             </div>
-            <p className="text-xs text-slate-400 mt-1.5 text-center">Enter ile gönder · Shift+Enter yeni satır</p>
+            <p className="text-xs text-muted-foreground/70 mt-1.5 text-center">Enter ile gönder · Shift+Enter yeni satır</p>
           </div>
         </div>
       )}
@@ -309,7 +309,7 @@ ${topProducts || 'Veri yok'}
       {/* ── Yüzen Buton ── */}
       <button
         onClick={() => setIsOpen(prev => !prev)}
-        className="fixed bottom-5 right-5 z-50 rounded-full bg-indigo-600 hover:bg-indigo-700 shadow-lg hover:shadow-xl transition-all flex items-center justify-center"
+        className="fixed bottom-5 right-5 z-50 rounded-full bg-primary hover:bg-black dark:hover:bg-white/90 shadow-lg hover:shadow-xl transition-all flex items-center justify-center"
         style={{ width: '52px', height: '52px' }}
         title="PriceHub Asistan"
       >

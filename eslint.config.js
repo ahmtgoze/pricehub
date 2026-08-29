@@ -35,6 +35,14 @@ export default [
       "unused-imports": pluginUnusedImports,
     },
     rules: {
+      // Tanimsiz degisken/import = calisma aninda ReferenceError, sayfa
+      // komple beyaz kalir. Derleme bunu YAKALAMIYOR; iki kez Flas Urunler
+      // sayfasi bu yuzden acilmadi. Bundan sonra lint durduruyor.
+      "no-undef": "error",
+      // no-undef JSX etiket adlarini GORMEZ (<Foo /> icin referans olusmaz).
+      // Fiyatlar sayfasi eksik AlertDialogCancel importu yuzunden beyaz
+      // kaldi ve lint bunu yakalamadi. Bu kural JSX tarafini kapatiyor.
+      "react/jsx-no-undef": "error",
       "no-unused-vars": "off",
       "react/jsx-uses-vars": "error",
       "react/jsx-uses-react": "error",

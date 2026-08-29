@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { db } from '@/api/db';
 import { useAuth } from '@/lib/AuthContext';
 import { supabase } from '@/api/supabaseClient';
+import { db } from '@/api/db';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   User, Lock, Users, ChevronRight, Check, Eye, EyeOff, Shield, Palette
-} from 'lucide-react';
+, Calculator } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -16,6 +16,7 @@ import { cn } from '@/lib/utils';
 const SECTIONS = [
   { id: 'account', label: 'Hesap', icon: User },
   { id: 'security', label: 'Güvenlik', icon: Lock },
+  { id: 'hesaplama', label: 'Hesaplama', icon: Calculator },
   { id: 'brand', label: 'Marka Ayarları', icon: Palette, adminOnly: true },
   { id: 'users', label: 'Kullanıcılar', icon: Users, adminOnly: true },
 ];
@@ -30,8 +31,8 @@ export default function Settings() {
   return (
     <div className="max-w-4xl mx-auto px-4 lg:px-8 py-8">
       <div className="mb-8">
-        <h1 className="text-2xl font-semibold text-gray-900">Genel Ayarlar</h1>
-        <p className="text-sm text-gray-500 mt-1">Hesap ve uygulama tercihlerinizi yönetin.</p>
+        <h1 className="ph-title">Genel Ayarlar</h1>
+        <p className="text-sm text-muted-foreground mt-1">Hesap ve uygulama tercihlerinizi yönetin.</p>
       </div>
 
       <div className="flex flex-col lg:flex-row gap-6">
@@ -48,11 +49,11 @@ export default function Settings() {
                     className={cn(
                       'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all text-left',
                       active
-                        ? 'bg-gray-900 text-white'
-                        : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                        ? 'bg-primary text-primary-foreground'
+                        : 'text-muted-foreground hover:bg-secondary hover:text-foreground'
                     )}
                   >
-                    <Icon className={cn('h-4 w-4', active ? 'text-white' : 'text-gray-400')} />
+                    <Icon className={cn('h-4 w-4', active ? 'text-white' : 'text-muted-foreground/70')} />
                     {s.label}
                     {active && <ChevronRight className="ml-auto h-4 w-4 opacity-50" />}
                   </button>
@@ -66,6 +67,7 @@ export default function Settings() {
         <div className="flex-1 min-w-0">
           {activeSection === 'account' && <AccountSection user={user} />}
           {activeSection === 'security' && <SecuritySection />}
+          {activeSection === 'hesaplama' && <HesaplamaSection />}
           {activeSection === 'brand' && isAdmin && <BrandSection />}
           {activeSection === 'users' && isAdmin && <UsersSection />}
         </div>
@@ -102,18 +104,18 @@ function AccountSection({ user }) {
           <Input value={fullName} onChange={e => setFullName(e.target.value)} placeholder="Adınızı girin" />
         </Field>
         <Field label="E-posta">
-          <Input value={user?.email || ''} disabled className="bg-gray-50 text-gray-500" />
-          <p className="text-xs text-gray-400 mt-1">E-posta adresi değiştirilemez.</p>
+          <Input value={user?.email || ''} disabled className="bg-secondary text-muted-foreground" />
+          <p className="text-xs text-muted-foreground/70 mt-1">E-posta adresi değiştirilemez.</p>
         </Field>
         <Field label="Rol">
           <div className="flex items-center gap-2 h-9">
-            <Badge className={user?.role === 'admin' ? 'bg-gray-900' : ''} variant={user?.role === 'admin' ? 'default' : 'secondary'}>
+            <Badge className={user?.role === 'admin' ? 'bg-primary' : ''} variant={user?.role === 'admin' ? 'default' : 'secondary'}>
               {user?.role === 'admin' ? 'Yönetici' : 'Kullanıcı'}
             </Badge>
           </div>
         </Field>
         <div className="pt-2">
-          <Button onClick={handleSave} disabled={saving} className="bg-gray-900 hover:bg-gray-800">
+          <Button onClick={handleSave} disabled={saving} className="bg-primary hover:bg-black dark:hover:bg-white/90">
             {saving ? 'Kaydediliyor…' : 'Kaydet'}
           </Button>
         </div>
@@ -150,12 +152,12 @@ function SecuritySection() {
   };
 
   return (
-    <Card title="Şifre Değiştir" icon={<Shield className="h-4 w-4 text-gray-400" />}>
+    <Card title="Şifre Değiştir" icon={<Shield className="h-4 w-4 text-muted-foreground/70" />}>
       <div className="space-y-5">
         <Field label="Mevcut Şifre">
           <div className="relative">
             <Input type={showPw ? 'text' : 'password'} value={currentPw} onChange={e => setCurrentPw(e.target.value)} placeholder="••••••••" />
-            <button type="button" onClick={() => setShowPw(v => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+            <button type="button" onClick={() => setShowPw(v => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground/70 hover:text-muted-foreground">
               {showPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
             </button>
           </div>
@@ -167,7 +169,7 @@ function SecuritySection() {
           <Input type={showPw ? 'text' : 'password'} value={confirmPw} onChange={e => setConfirmPw(e.target.value)} placeholder="••••••••" />
         </Field>
         <div className="pt-2">
-          <Button onClick={handleChange} disabled={loading || !currentPw || !newPw || !confirmPw} className="bg-gray-900 hover:bg-gray-800">
+          <Button onClick={handleChange} disabled={loading || !currentPw || !newPw || !confirmPw} className="bg-primary hover:bg-black dark:hover:bg-white/90">
             {loading ? 'Güncelleniyor…' : 'Şifreyi Güncelle'}
           </Button>
         </div>
@@ -207,23 +209,23 @@ function BrandSection() {
   });
 
   return (
-    <Card title="Marka Ayarları" icon={<Palette className="h-4 w-4 text-gray-400" />}>
+    <Card title="Marka Ayarları" icon={<Palette className="h-4 w-4 text-muted-foreground/70" />}>
       {isLoading ? (
         <div className="flex justify-center py-6">
-          <div className="w-6 h-6 border-2 border-gray-200 border-t-gray-800 rounded-full animate-spin" />
+          <div className="w-6 h-6 border-2 border-border border-t-gray-800 rounded-full animate-spin" />
         </div>
       ) : (
         <div className="space-y-5">
           <Field label="Uygulama Adı">
             <Input value={markaAdi} onChange={e => setMarkaAdi(e.target.value)} placeholder="PriceHub" />
-            <p className="text-xs text-gray-400 mt-1">Sidebar ve giriş ekranında görünen isim.</p>
+            <p className="text-xs text-muted-foreground/70 mt-1">Sidebar ve giriş ekranında görünen isim.</p>
           </Field>
           <div className="pt-2">
-            <Button onClick={() => save.mutate()} disabled={save.isPending || !markaAdi.trim()} className="bg-gray-900 hover:bg-gray-800">
+            <Button onClick={() => save.mutate()} disabled={save.isPending || !markaAdi.trim()} className="bg-primary hover:bg-black dark:hover:bg-white/90">
               {save.isPending ? 'Kaydediliyor…' : 'Kaydet'}
             </Button>
           </div>
-          <div className="rounded-xl bg-amber-50 border border-amber-100 px-4 py-3">
+          <div className="rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-100 px-4 py-3">
             <p className="text-xs text-amber-700">Değişiklik kaydedildikten sonra tüm kullanıcılar sayfayı yenilediklerinde yeni adı görecek.</p>
           </div>
         </div>
@@ -232,9 +234,80 @@ function BrandSection() {
   );
 }
 
+/* ─── Hesaplama ayarları ─── */
+
+// Ozel kargolu urunlerde paket basina eklenen iade payi. Senaryo:
+// musterinin deposundan uretime, uretimden depoya, depodan musteriye —
+// yani urun fazladan yol gidiyor. Tutar kullanicidan alinir; eskiden
+// koda gomulu 180,096 TL kullaniliyordu.
+const IADE_PAYI_ANAHTARI = 'return_cost_per_package';
+const IADE_PAYI_VARSAYILAN = 180.096;
+
+function HesaplamaSection() {
+  const queryClient = useQueryClient();
+  const [deger, setDeger] = useState('');
+
+  const { data: ayarlar = [], isLoading } = useQuery({
+    queryKey: ['settings'],
+    queryFn: () => db.entities.Settings.list('-created_at', 200),
+  });
+
+  const kayit = ayarlar.find((a) => a.setting_key === IADE_PAYI_ANAHTARI);
+
+  React.useEffect(() => {
+    setDeger(kayit ? String(kayit.setting_value) : String(IADE_PAYI_VARSAYILAN));
+  }, [kayit]);
+
+  const kaydet = useMutation({
+    mutationFn: async () => {
+      const sayi = parseFloat(String(deger).replace(',', '.'));
+      if (!Number.isFinite(sayi) || sayi < 0) throw new Error('Geçerli bir tutar gir (0 veya üzeri).');
+      if (kayit) return db.entities.Settings.update(kayit.id, { setting_value: String(sayi) });
+      return db.entities.Settings.create({
+        setting_key: IADE_PAYI_ANAHTARI,
+        setting_value: String(sayi),
+        description: 'Özel kargolu ürünlerde paket başına iade payı (₺)',
+      });
+    },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['settings'] }); toast.success('Kaydedildi.'); },
+    onError: (e) => toast.error(e.message || 'Kaydedilemedi.'),
+  });
+
+  return (
+    <Card title="Hesaplama Ayarları">
+      <div className="space-y-2 max-w-md">
+        <Label htmlFor="iade-payi">Özel kargo iade payı (paket başına, ₺)</Label>
+        <Input
+          id="iade-payi"
+          type="number"
+          min="0"
+          step="0.001"
+          value={deger}
+          onChange={(e) => setDeger(e.target.value)}
+          disabled={isLoading}
+        />
+        <p className="text-xs text-muted-foreground leading-relaxed">
+          Yalnızca <strong>özel kargo</strong> işaretli ürünlerde uygulanır. Ürün depodan üretime,
+          üretimden depoya, oradan müşteriye gittiği için paket başına bu tutar kargo maliyetine eklenir.
+          Boş bırakılırsa {IADE_PAYI_VARSAYILAN.toLocaleString('tr-TR')} ₺ kullanılır.
+        </p>
+        <Button onClick={() => kaydet.mutate()} disabled={kaydet.isPending || isLoading}>
+          {kaydet.isPending ? 'Kaydediliyor…' : 'Kaydet'}
+        </Button>
+      </div>
+    </Card>
+  );
+}
+
 /* ─── Kullanıcılar (admin) ─── */
+
+// Hesap yapisi: 1 yonetici (hesap sahibi) + en fazla 3 kullanici.
+// Sinir burada tanimli; degistirmek icin tek yer.
+const MAKS_KULLANICI = 3;
+
 function UsersSection() {
   const queryClient = useQueryClient();
+  const { user: oturumKullanicisi } = useAuth();
 
   const { data: users = [], isLoading } = useQuery({
     queryKey: ['user_profiles_all'],
@@ -244,6 +317,10 @@ function UsersSection() {
       return data || [];
     },
   });
+
+  // Yonetici disindaki aktif kullanicilar
+  const aktifKullanicilar = users.filter(u => u.role !== 'admin' && u.is_active !== false);
+  const sinirDoldu = aktifKullanicilar.length >= MAKS_KULLANICI;
 
   const toggleActive = useMutation({
     mutationFn: async ({ id, is_active }) => {
@@ -265,31 +342,61 @@ function UsersSection() {
 
   return (
     <Card title="Kullanıcı Yönetimi">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-xl bg-secondary px-4 py-3">
+        <p className="text-[13px] text-muted-foreground">
+          Hesap yapısı: <strong className="text-foreground">1 yönetici</strong> (hesap sahibi) +
+          en fazla <strong className="text-foreground">{MAKS_KULLANICI} kullanıcı</strong>.
+        </p>
+        <span className={cn(
+          'text-xs font-semibold px-2.5 py-1 rounded-full',
+          sinirDoldu ? 'bg-destructive/10 text-destructive' : 'bg-card text-muted-foreground'
+        )}>
+          {aktifKullanicilar.length} / {MAKS_KULLANICI} aktif kullanıcı
+        </span>
+      </div>
+
       {isLoading ? (
         <div className="flex justify-center py-8">
-          <div className="w-6 h-6 border-2 border-gray-200 border-t-gray-800 rounded-full animate-spin" />
+          <div className="w-6 h-6 border-2 border-border border-t-gray-800 rounded-full animate-spin" />
         </div>
       ) : (
         <div className="space-y-2">
           {users.map(u => (
-            <div key={u.id} className="flex items-center justify-between py-3 px-4 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors gap-3">
+            <div key={u.id} className="flex items-center justify-between py-3 px-4 rounded-xl bg-secondary hover:bg-secondary transition-colors gap-3">
               <div className="min-w-0">
-                <p className="text-sm font-medium text-gray-900 truncate">{u.full_name || '—'}</p>
-                <p className="text-xs text-gray-400 mt-0.5">{u.id.slice(0, 8)}…</p>
+                <p className="text-sm font-medium text-foreground truncate">{u.full_name || '—'}</p>
+                <p className="text-xs text-muted-foreground/70 mt-0.5">{u.id.slice(0, 8)}…</p>
               </div>
               <div className="flex items-center gap-2 flex-shrink-0">
                 <select
                   value={u.role || 'user'}
+                  disabled={u.id === oturumKullanicisi?.id}
+                  title={u.id === oturumKullanicisi?.id ? 'Kendi rolünü değiştiremezsin' : undefined}
                   onChange={e => setRole.mutate({ id: u.id, role: e.target.value })}
-                  className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 bg-white text-gray-700 focus:outline-none focus:ring-1 focus:ring-gray-400"
+                  className="text-xs border border-border rounded-lg px-2 py-1.5 bg-card text-muted-foreground focus:outline-none focus:ring-1 focus:ring-gray-400 disabled:opacity-50"
                 >
                   <option value="user">Kullanıcı</option>
                   <option value="admin">Yönetici</option>
                 </select>
                 <button
-                  onClick={() => toggleActive.mutate({ id: u.id, is_active: !u.is_active })}
+                  disabled={u.id === oturumKullanicisi?.id}
+                  title={
+                    u.id === oturumKullanicisi?.id
+                      ? 'Kendi hesabını pasife alamazsın'
+                      : (u.is_active === false && u.role !== 'admin' && sinirDoldu
+                          ? `En fazla ${MAKS_KULLANICI} aktif kullanıcı olabilir`
+                          : undefined)
+                  }
+                  onClick={() => {
+                    // Pasiften aktife alirken siniri kontrol et
+                    if (u.is_active === false && u.role !== 'admin' && sinirDoldu) {
+                      toast.error(`En fazla ${MAKS_KULLANICI} aktif kullanıcı olabilir. Önce birini pasife al.`);
+                      return;
+                    }
+                    toggleActive.mutate({ id: u.id, is_active: !u.is_active });
+                  }}
                   className={cn(
-                    'flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg font-medium transition-colors',
+                    'flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg font-medium transition-colors disabled:opacity-50',
                     u.is_active !== false ? 'bg-green-100 text-green-700 hover:bg-green-200' : 'bg-red-100 text-red-600 hover:bg-red-200'
                   )}
                 >
@@ -298,7 +405,7 @@ function UsersSection() {
               </div>
             </div>
           ))}
-          {users.length === 0 && <p className="text-sm text-gray-400 text-center py-6">Kayıtlı kullanıcı bulunamadı.</p>}
+          {users.length === 0 && <p className="text-sm text-muted-foreground/70 text-center py-6">Kayıtlı kullanıcı bulunamadı.</p>}
         </div>
       )}
     </Card>
@@ -308,10 +415,10 @@ function UsersSection() {
 /* ─── Yardımcı bileşenler ─── */
 function Card({ title, icon, children }) {
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+    <div className="rounded-[18px] border border-border bg-card p-6">
       <div className="flex items-center gap-2 mb-6">
         {icon}
-        <h2 className="text-base font-semibold text-gray-900">{title}</h2>
+        <h2 className="text-base font-semibold text-foreground">{title}</h2>
       </div>
       {children}
     </div>
@@ -321,7 +428,7 @@ function Card({ title, icon, children }) {
 function Field({ label, children }) {
   return (
     <div className="space-y-1.5">
-      <Label className="text-xs font-medium text-gray-500 uppercase tracking-wide">{label}</Label>
+      <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">{label}</Label>
       {children}
     </div>
   );

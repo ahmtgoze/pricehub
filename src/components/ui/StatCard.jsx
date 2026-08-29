@@ -12,15 +12,15 @@ export default function StatCard({
 }) {
   return (
     <div className={cn(
-      "bg-white rounded-2xl border border-slate-100 p-6 shadow-sm hover:shadow-md transition-shadow",
+      "bg-card rounded-[18px] border border-border p-[22px] transition-colors",
       className
     )}>
       <div className="flex items-start justify-between">
         <div className="space-y-1">
-          <p className="text-sm font-medium text-slate-500">{title}</p>
-          <p className="text-3xl font-bold text-slate-900 tracking-tight">{value}</p>
+          <p className="text-sm font-medium text-muted-foreground">{title}</p>
+          <p className="text-3xl font-bold text-foreground tracking-tight">{value}</p>
           {subtitle && (
-            <p className="text-sm text-slate-500">{subtitle}</p>
+            <p className="text-sm text-muted-foreground">{subtitle}</p>
           )}
           {trend !== undefined && (
             <p className={cn(
@@ -32,8 +32,8 @@ export default function StatCard({
           )}
         </div>
         {Icon && (
-          <div className="p-3 rounded-xl bg-slate-50">
-            <Icon className="h-6 w-6 text-slate-600" />
+          <div className="p-3 rounded-xl bg-secondary">
+            <Icon className="h-6 w-6 text-muted-foreground" />
           </div>
         )}
       </div>

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from './utils';
 import { useQuery } from '@tanstack/react-query';
@@ -24,9 +24,16 @@ import {
   Settings,
   ChevronDown,
   ChevronRight,
+  Columns3,
+  Megaphone,
+  HelpCircle as HelpIcon,
+  Sun,
+  Moon,
 } from 'lucide-react';
 import NotificationCenter from '@/components/notifications/NotificationCenter';
 import BackgroundTaskWidget from '@/components/BackgroundTaskWidget';
+import HelpPanel from '@/components/HelpPanel';
+import { useTheme } from '@/lib/useTheme';
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Toaster } from "@/components/ui/sonner";
@@ -35,7 +42,9 @@ import { MARKA_ADI } from '@/config/marka';
 const TRENDYOL_COLOR = '#F27A1B';
 const HB_COLOR = '#7B2D9B';
 
-// Navigation structure
+// Gezinme yapısı — sayfa anahtarları (page) pages.config.js ile birebir aynı.
+// NOT: "Düzenlenen Maliyetler" (UpdatedCosts) yeni temada menüden çıkarıldı;
+// rota hâlâ çalışır (/UpdatedCosts), istenirse aşağıya geri eklenir.
 const NAV_GROUPS = [
   {
     type: 'single',
@@ -71,7 +80,6 @@ const NAV_GROUPS = [
       { name: 'Güncelleme Raporları', page: 'UpdateReports', icon: FileText },
       { name: 'Pazaryeri Ürünleri', page: 'MarketplaceProducts', icon: Store },
       { name: 'Düzenlenen Fiyatlar', page: 'UpdatedPrices', icon: Tag },
-      { name: 'Düzenlenen Maliyetler', page: 'UpdatedCosts', icon: FileText },
     ],
   },
   {
@@ -96,25 +104,40 @@ const NAV_GROUPS = [
 const BOTTOM_ITEMS = [
   { name: 'Kullanım Kılavuzu', page: 'Help', icon: HelpCircle },
   { name: 'Genel Ayarlar', page: 'Settings', icon: Settings },
+  // Tasarim prototipindeki sira: Tanitim Sayfasi, en altta Gorunumu Ozellestir
+  { name: 'Tanıtım Sayfası', page: 'Landing', icon: Megaphone },
+  { name: 'Görünümü Özelleştir', page: 'ViewCustomize', icon: Columns3 },
 ];
+
+// Ust bardaki yardim / tema dugmeleri (mobil ve masaustunde ayni gorunum)
+function BarButton({ onClick, title, children }) {
+  return (
+    <button
+      onClick={onClick}
+      title={title}
+      aria-label={title}
+      className="flex items-center justify-center w-9 h-9 rounded-xl text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
+    >
+      {children}
+    </button>
+  );
+}
 
 function NavLink({ item, isActive, color, onClick }) {
   const colorStyle = color ? { color: isActive ? '#fff' : color } : {};
-  const bgStyle = color && !isActive ? {
-    backgroundColor: color + '15',
-  } : {};
+  const bgStyle = color && !isActive ? { backgroundColor: color + '15' } : {};
 
   return (
     <Link
       to={createPageUrl(item.page)}
       onClick={onClick}
       className={cn(
-        "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all",
+        "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors",
         isActive
-          ? "bg-gray-900 text-white shadow-md"
+          ? "bg-primary text-primary-foreground"
           : color
           ? "hover:opacity-80"
-          : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+          : "text-muted-foreground hover:bg-secondary hover:text-foreground"
       )}
       style={isActive ? {} : { ...bgStyle, ...colorStyle }}
     >
@@ -129,8 +152,9 @@ function GroupHeader({ label, isOpen, onToggle, hasActive }) {
     <button
       onClick={onToggle}
       className={cn(
-        "w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-semibold uppercase tracking-wider transition-colors",
-        hasActive ? "text-gray-900" : "text-gray-400 hover:text-gray-600"
+        "w-full flex items-center justify-between px-3 py-2 rounded-lg text-[11.5px] font-semibold uppercase tracking-[0.07em] transition-colors",
+        "hover:bg-secondary",
+        hasActive ? "text-foreground" : "text-muted-foreground hover:text-foreground"
       )}
     >
       <span>{label}</span>
@@ -144,6 +168,8 @@ function GroupHeader({ label, isOpen, onToggle, hasActive }) {
 
 export default function Layout({ children, currentPageName }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
+  const { degistir: temaDegistir, koyuMu } = useTheme();
 
   const { data: platforms = [] } = useQuery({
     queryKey: ['platforms'],
@@ -153,35 +179,16 @@ export default function Layout({ children, currentPageName }) {
   const hasTrendyol = platforms.some(p => p.platform_type === 'trendyol' && p.is_active !== false);
   const hasHepsiburada = platforms.some(p => p.platform_type === 'hepsiburada' && p.is_active !== false);
 
-  // Determine which group contains the current page (for auto-open)
-  const activeGroupId = useMemo(() => {
-    for (const g of NAV_GROUPS) {
-      if (g.type === 'group') {
-        if (g.items.some(i => i.page === currentPageName)) return g.id;
-      }
-      if (g.type === 'promo') {
-        const allItems = [...g.trendyol, ...g.hepsiburada];
-        if (allItems.some(i => i.page === currentPageName)) return g.id;
-      }
-    }
-    return null;
-  }, [currentPageName]);
-
+  // Gruplar acik baslar: kapali baslarsa sayfalar menude yokmus gibi gorunuyor.
+  // Kullanici istedigi grubu kapatabilir; secimi o oturum boyunca korunur.
   const [openGroups, setOpenGroups] = useState(() => {
     const init = {};
-    NAV_GROUPS.forEach(g => {
-      if (g.id) init[g.id] = false;
-    });
+    NAV_GROUPS.forEach(g => { if (g.id) init[g.id] = true; });
     return init;
   });
 
-  // Auto-open the group containing the active page
-  const effectiveOpen = (id) => openGroups[id] || activeGroupId === id;
-
-  const toggleGroup = (id) => {
-    setOpenGroups(prev => ({ ...prev, [id]: !effectiveOpen(id) }));
-  };
-
+  const effectiveOpen = (id) => openGroups[id];
+  const toggleGroup = (id) => setOpenGroups(prev => ({ ...prev, [id]: !prev[id] }));
   const closeSidebar = () => setSidebarOpen(false);
 
   const filterItems = (items) => items
@@ -189,10 +196,9 @@ export default function Layout({ children, currentPageName }) {
     .filter(i => !i.hepsiburadaOnly || hasHepsiburada);
 
   return (
-    <div className="overflow-hidden bg-gradient-to-br from-gray-100 via-gray-50 to-purple-50 flex flex-col lg:flex-row" style={{ height: '100dvh' }}>
+    <div className="overflow-hidden bg-background flex flex-col lg:flex-row" style={{ height: '100dvh' }}>
       <Toaster position="top-right" richColors />
 
-      {/* Mobile sidebar backdrop */}
       {sidebarOpen && (
         <div
           className="fixed inset-0 bg-black/30 backdrop-blur-sm z-40 lg:hidden"
@@ -200,25 +206,24 @@ export default function Layout({ children, currentPageName }) {
         />
       )}
 
-      {/* Sidebar */}
+      {/* Yan menü */}
       <aside className={cn(
-        "fixed top-0 left-0 z-50 h-full w-72 bg-white border-r border-gray-100 shadow-lg transition-transform duration-300 lg:translate-x-0",
+        "fixed top-0 left-0 z-50 h-full w-[272px] bg-card border-r border-border transition-transform duration-300 lg:translate-x-0",
         sidebarOpen ? "translate-x-0" : "-translate-x-full"
       )}>
         <div className="flex flex-col h-full">
-          {/* Logo */}
-          <div className="h-16 flex items-center justify-between px-4 border-b border-gray-50">
+          {/* Marka */}
+          <div className="h-16 flex items-center justify-between px-4 border-b border-border">
             <Link to={createPageUrl('Dashboard')} className="flex-1 flex items-center justify-center">
-              <span className="font-bold text-lg text-gray-900">{MARKA_ADI}</span>
+              <span className="font-semibold text-[18px] tracking-[-0.4px] text-foreground">{MARKA_ADI}</span>
             </Link>
             <Button variant="ghost" size="icon" className="lg:hidden shrink-0" onClick={closeSidebar}>
               <X className="h-5 w-5" />
             </Button>
           </div>
 
-          {/* Navigation */}
+          {/* Gezinme */}
           <nav className="flex-1 p-3 space-y-0.5 overflow-y-auto">
-
             {NAV_GROUPS.map((group) => {
               if (group.type === 'single') {
                 const item = group.item;
@@ -325,8 +330,7 @@ export default function Layout({ children, currentPageName }) {
               return null;
             })}
 
-            {/* Bottom items - always visible */}
-            <div className="pt-4 border-t border-gray-100 mt-2 space-y-0.5">
+            <div className="pt-4 border-t border-border mt-2 space-y-0.5">
               {BOTTOM_ITEMS.map(item => (
                 <NavLink
                   key={item.page}
@@ -338,30 +342,36 @@ export default function Layout({ children, currentPageName }) {
             </div>
           </nav>
 
-          {/* Footer */}
-          <div className="p-3 border-t border-gray-50">
-            <div className="px-3 py-2 rounded-xl bg-gray-50">
-              <p className="text-xs font-semibold text-gray-700">Merkezi Fiyat Yönetimi</p>
-              <p className="text-xs text-gray-500 mt-0.5">Trendyol • Hepsiburada • Web</p>
+          {/* Alt bilgi */}
+          <div className="p-3 border-t border-border">
+            <div className="px-[14px] py-[11px] rounded-[14px] bg-secondary">
+              <p className="text-[12.5px] font-semibold text-foreground">Merkezi Fiyat Yönetimi</p>
+              <p className="text-xs text-muted-foreground mt-[3px]">Trendyol · Hepsiburada · Web</p>
             </div>
           </div>
         </div>
       </aside>
 
-      {/* Main content */}
-      <div className="flex-1 flex flex-col min-w-0 lg:pl-72 overflow-hidden" style={{ height: '100dvh' }}>
-        {/* Mobile header */}
-        <header className="lg:hidden flex-shrink-0 z-30 h-16 bg-white/80 backdrop-blur-md border-b border-gray-100 flex items-center px-4 justify-between">
+      {/* Ana içerik */}
+      <div className="flex-1 flex flex-col min-w-0 lg:pl-[272px] overflow-hidden" style={{ height: '100dvh' }}>
+        {/* Mobil üst bar */}
+        <header className="lg:hidden flex-shrink-0 z-30 h-16 bg-card/85 backdrop-blur-xl backdrop-saturate-150 border-b border-border flex items-center px-4 justify-between">
           <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(true)}>
             <Menu className="h-6 w-6" />
           </Button>
-          <span className="font-semibold text-gray-800 flex-1 ml-3">{MARKA_ADI}</span>
-          <div className="flex items-center gap-2">
+          <span className="font-semibold text-foreground flex-1 ml-3">{MARKA_ADI}</span>
+          <div className="flex items-center gap-1">
             <NotificationCenter />
+            <BarButton onClick={() => setHelpOpen(true)} title="Nasıl kullanılır?">
+              <HelpIcon className="h-5 w-5" />
+            </BarButton>
+            <BarButton onClick={temaDegistir} title={koyuMu ? 'Açık temaya geç' : 'Koyu temaya geç'}>
+              {koyuMu ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+            </BarButton>
             <Button
               variant="ghost"
               size="icon"
-              className="text-red-600 hover:text-red-700 hover:bg-red-50"
+              className="text-destructive hover:text-destructive hover:bg-destructive/10"
               onClick={async () => { await db.auth.logout(); window.location.href = '/login'; }}
             >
               <LogOut className="h-5 w-5" />
@@ -369,19 +379,32 @@ export default function Layout({ children, currentPageName }) {
           </div>
         </header>
 
-        {/* Desktop notification bar */}
-        <div className="hidden lg:flex items-center justify-end gap-2 px-6 py-2 border-b border-gray-100 bg-white/60 backdrop-blur-sm flex-shrink-0">
+        {/* Masaüstü üst bar */}
+        <div className="hidden lg:flex items-center justify-end gap-1 h-[52px] px-6 border-b border-border bg-card/70 backdrop-blur-xl backdrop-saturate-150 flex-shrink-0">
           <NotificationCenter />
           <button
+            onClick={() => setHelpOpen(true)}
+            title="Nasıl kullanılır?"
+            className="flex items-center gap-1.5 h-8 px-3 rounded-[10px] border border-border bg-card
+                       text-[12.5px] font-medium text-muted-foreground
+                       hover:text-foreground hover:bg-secondary transition-colors"
+          >
+            <HelpIcon className="h-4 w-4" />
+            Nasıl kullanılır?
+          </button>
+          <BarButton onClick={temaDegistir} title={koyuMu ? 'Açık temaya geç' : 'Koyu temaya geç'}>
+            {koyuMu ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+          </BarButton>
+          <button
             onClick={async () => { await db.auth.logout(); window.location.href = '/login'; }}
-            className="flex items-center justify-center w-9 h-9 rounded-xl text-red-500 hover:bg-red-50 hover:text-red-600 transition-all"
+            className="flex items-center justify-center w-9 h-9 rounded-xl text-destructive hover:bg-destructive/10 transition-colors"
             title="Çıkış Yap"
           >
             <LogOut className="h-5 w-5" />
           </button>
         </div>
 
-        {/* Page content */}
+        {/* Sayfa içeriği */}
         <main className="flex-1 overflow-y-auto pt-4">
           <div className="pb-24 lg:pb-8">
             {children}
@@ -390,6 +413,12 @@ export default function Layout({ children, currentPageName }) {
       </div>
 
       <BackgroundTaskWidget />
+
+      <HelpPanel
+        pageName={currentPageName}
+        open={helpOpen}
+        onClose={() => setHelpOpen(false)}
+      />
     </div>
   );
 }

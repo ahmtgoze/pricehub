@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { db } from '@/api/db';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Pencil, Trash2, Percent, Trash, AlertCircle } from 'lucide-react';
+import { Plus, Pencil, Trash2, Trash, AlertCircle } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -28,6 +28,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import SearchInput from '@/components/ui/SearchInput';
+import FiltreEtiketi from '@/components/ui/FiltreEtiketi';
 import DataTable from '@/components/ui/DataTable';
 import CommissionModal from '@/components/modals/CommissionModal';
 import ImportExport from '@/components/ImportExport';
@@ -340,13 +341,14 @@ export default function Commissions() {
 
   const columns = [
     {
+      id: '__select',
       header: () => (
         <input
           type="checkbox"
           checked={allSelected}
           ref={input => input && (input.indeterminate = someSelected && !allSelected)}
           onChange={toggleAll}
-          className="rounded border-gray-300"
+          className="rounded border-input"
         />
       ),
       cell: (row) => (
@@ -355,7 +357,7 @@ export default function Commissions() {
           checked={selectedIds.includes(row.id)}
           onChange={() => toggleRow(row.id)}
           onClick={(e) => e.stopPropagation()}
-          className="rounded border-gray-300"
+          className="rounded border-input"
         />
       )
     },
@@ -396,6 +398,8 @@ export default function Commissions() {
       cell: (row) => `%${row.commission_vat_rate || 20}`
     },
     {
+      id: 'target_profit_amount_sort',
+      etiket: 'Kâr Hedefleri',
       header: (
         <button
           onClick={() => {
@@ -406,7 +410,7 @@ export default function Commissions() {
               setSortDir('asc');
             }
           }}
-          className="flex items-center gap-1 hover:text-blue-700"
+          className="flex items-center gap-1 hover:text-foreground"
         >
           Kâr Hedefleri
           {sortField === 'target_profit_amount' && (sortDir === 'asc' ? ' ↑' : ' ↓')}
@@ -414,14 +418,16 @@ export default function Commissions() {
       ),
       cell: (row) => (
         <div className="text-sm space-y-1">
-          {row.minimum_profit_amount != null && row.minimum_profit_amount !== '' && <div className="text-slate-600">Min: ₺{Number(row.minimum_profit_amount).toFixed(2)}</div>}
-          {row.target_profit_rate != null && row.target_profit_rate !== '' && <div className="font-medium text-emerald-600">Oran: %{Number(row.target_profit_rate).toFixed(1)}</div>}
-          {row.target_profit_amount != null && row.target_profit_amount !== '' && <div className="font-medium text-blue-600">Tutar: ₺{Number(row.target_profit_amount).toFixed(2)}</div>}
-          {(row.minimum_profit_amount == null || row.minimum_profit_amount === '') && (row.target_profit_rate == null || row.target_profit_rate === '') && (row.target_profit_amount == null || row.target_profit_amount === '') && <div className="text-slate-300 text-xs">-</div>}
+          {row.minimum_profit_amount != null && row.minimum_profit_amount !== '' && <div className="text-muted-foreground">Min: ₺{Number(row.minimum_profit_amount).toFixed(2)}</div>}
+          {row.target_profit_rate != null && row.target_profit_rate !== '' && <div className="font-medium text-green-600">Oran: %{Number(row.target_profit_rate).toFixed(1)}</div>}
+          {row.target_profit_amount != null && row.target_profit_amount !== '' && <div className="font-medium text-foreground">Tutar: ₺{Number(row.target_profit_amount).toFixed(2)}</div>}
+          {(row.minimum_profit_amount == null || row.minimum_profit_amount === '') && (row.target_profit_rate == null || row.target_profit_rate === '') && (row.target_profit_amount == null || row.target_profit_amount === '') && <div className="text-muted-foreground/50 text-xs">-</div>}
         </div>
       )
     },
     {
+      id: 'discounted_target_profit_amount_sort',
+      etiket: 'İndirimli Kâr Hedefleri',
       header: (
         <button
           onClick={() => {
@@ -432,7 +438,7 @@ export default function Commissions() {
               setSortDir('asc');
             }
           }}
-          className="flex items-center gap-1 hover:text-orange-700"
+          className="flex items-center gap-1 hover:text-foreground"
         >
           İndirimli Kâr Hedefleri
           {sortField === 'discounted_target_profit_amount' && (sortDir === 'asc' ? ' ↑' : ' ↓')}
@@ -440,14 +446,15 @@ export default function Commissions() {
       ),
       cell: (row) => (
         <div className="text-sm space-y-1">
-          {row.discounted_minimum_profit_amount != null && row.discounted_minimum_profit_amount !== '' && <div className="text-slate-600">Min: ₺{Number(row.discounted_minimum_profit_amount).toFixed(2)}</div>}
-          {row.discounted_target_profit_rate != null && row.discounted_target_profit_rate !== '' && <div className="font-medium text-orange-600">Oran: %{Number(row.discounted_target_profit_rate).toFixed(1)}</div>}
-          {row.discounted_target_profit_amount != null && row.discounted_target_profit_amount !== '' && <div className="font-medium text-orange-500">Tutar: ₺{Number(row.discounted_target_profit_amount).toFixed(2)}</div>}
-          {(row.discounted_minimum_profit_amount == null || row.discounted_minimum_profit_amount === '') && (row.discounted_target_profit_rate == null || row.discounted_target_profit_rate === '') && (row.discounted_target_profit_amount == null || row.discounted_target_profit_amount === '') && <div className="text-slate-300 text-xs">-</div>}
+          {row.discounted_minimum_profit_amount != null && row.discounted_minimum_profit_amount !== '' && <div className="text-muted-foreground">Min: ₺{Number(row.discounted_minimum_profit_amount).toFixed(2)}</div>}
+          {row.discounted_target_profit_rate != null && row.discounted_target_profit_rate !== '' && <div className="font-medium text-foreground">Oran: %{Number(row.discounted_target_profit_rate).toFixed(1)}</div>}
+          {row.discounted_target_profit_amount != null && row.discounted_target_profit_amount !== '' && <div className="font-medium text-muted-foreground">Tutar: ₺{Number(row.discounted_target_profit_amount).toFixed(2)}</div>}
+          {(row.discounted_minimum_profit_amount == null || row.discounted_minimum_profit_amount === '') && (row.discounted_target_profit_rate == null || row.discounted_target_profit_rate === '') && (row.discounted_target_profit_amount == null || row.discounted_target_profit_amount === '') && <div className="text-muted-foreground/50 text-xs">-</div>}
         </div>
       )
     },
     {
+      id: 'durum',
       header: 'Durum',
       cell: (row) => (
         <Badge variant={row.is_active !== false ? 'default' : 'secondary'}>
@@ -456,6 +463,7 @@ export default function Commissions() {
       )
     },
     {
+      id: 'islemler',
       header: 'İşlemler',
       cell: (row) => (
         <div className="flex items-center gap-2">
@@ -463,11 +471,16 @@ export default function Commissions() {
             <Pencil className="h-4 w-4" />
           </Button>
           <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); setDeleteId(row.id); }}>
-            <Trash2 className="h-4 w-4 text-rose-500" />
+            <Trash2 className="h-4 w-4 text-red-500" />
           </Button>
         </div>
       )
-    }
+    },
+    // ── Eklenebilir sutunlar: varsayilanda gizli, panelden acilir ──
+    { id: 'minimum_profit_amount', header: 'Minimum Kâr', optional: true, cell: (row) => row.minimum_profit_amount != null ? `₺${Number(row.minimum_profit_amount).toFixed(2)}` : '-' },
+    { id: 'target_profit_amount', header: 'Hedef Kâr Tutarı', optional: true, cell: (row) => row.target_profit_amount != null ? `₺${Number(row.target_profit_amount).toFixed(2)}` : '-' },
+    { id: 'discounted_target_profit_rate', header: 'İndirimli Hedef Kâr %', optional: true, cell: (row) => row.discounted_target_profit_rate != null ? `%${row.discounted_target_profit_rate}` : '-' },
+    { id: 'transaction_fee', header: 'İşlem Ücreti', optional: true, cell: (row) => row.transaction_fee != null ? `₺${Number(row.transaction_fee).toFixed(2)}` : '-' },
   ];
 
   const exportColumns = [
@@ -527,15 +540,12 @@ export default function Commissions() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-indigo-50/30">
-      <div className="max-w-[1400px] mx-auto px-3 sm:px-6 py-5 sm:py-8">
-        <div className="flex flex-col gap-4 mb-8">
+    <div className="min-h-screen bg-secondary">
+      <div className="ph-page-flow mx-auto">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
           <div>
-            <h1 className="text-3xl font-bold text-slate-900 tracking-tight flex items-center gap-3">
-              <Percent className="h-8 w-8 text-indigo-600" />
-              Komisyon & Hedef Kâr
-            </h1>
-            <p className="text-slate-500 mt-1">Platform ve kategori bazlı komisyon oranları</p>
+            <h1 className="ph-title">Komisyon & Hedef Kâr</h1>
+            <p className="ph-subtitle">Platform ve kategori bazlı komisyon oranları</p>
           </div>
           <div className="flex flex-col sm:flex-row gap-3">
             {selectedIds.length > 0 && (
@@ -544,7 +554,7 @@ export default function Commissions() {
                 Seçilenleri Sil ({selectedIds.length})
               </Button>
             )}
-            <ImportExport
+            <ImportExport pageKey="komisyonlar"
               data={filteredCommissions}
               columns={exportColumns}
               templateColumns={templateColumns}
@@ -552,68 +562,78 @@ export default function Commissions() {
               filename="komisyonlar"
               onImport={handleImport}
             />
-            <Button onClick={() => { setEditingCommission(null); setModalOpen(true); }} className="bg-indigo-600 hover:bg-indigo-700 gap-2 w-full sm:w-auto">
+            <Button onClick={() => { setEditingCommission(null); setModalOpen(true); }} className="bg-primary hover:bg-black dark:hover:bg-white/90 gap-2 w-full sm:w-auto">
               <Plus className="h-4 w-4" />
               Yeni Komisyon
             </Button>
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 sm:p-5 mb-6">
+        <div className="rounded-[18px] border border-border bg-card p-4 sm:p-5 mb-6">
           <div className="grid grid-cols-1 gap-3">
             <SearchInput value={search} onChange={setSearch} placeholder="Platform veya kategori ara..." />
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <Select value={platformFilter} onValueChange={setPlatformFilter}>
-                <SelectTrigger><SelectValue placeholder="Platform" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Tüm Platformlar</SelectItem>
-                  {platforms.map(p => <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>)}
-                </SelectContent>
-              </Select>
-              <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                <SelectTrigger><SelectValue placeholder="Kategori" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Tüm Kategoriler</SelectItem>
-                  {categories.map(c => <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>)}
-                </SelectContent>
-              </Select>
+              <FiltreEtiketi ad="Platform">
+                <Select value={platformFilter} onValueChange={setPlatformFilter}>
+                  <SelectTrigger><SelectValue placeholder="Platform" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Tüm Platformlar</SelectItem>
+                    {platforms.map(p => <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </FiltreEtiketi>
+              <FiltreEtiketi ad="Kategori">
+                <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                  <SelectTrigger><SelectValue placeholder="Kategori" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Tüm Kategoriler</SelectItem>
+                    {categories.map(c => <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </FiltreEtiketi>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <Select value={sortType} onValueChange={setSortType}>
-                <SelectTrigger><SelectValue placeholder="Sıralama" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="kategori_az">Kategori (A-Z)</SelectItem>
-                  <SelectItem value="kategori_za">Kategori (Z-A)</SelectItem>
-                  <SelectItem value="platform_az">Platform (A-Z)</SelectItem>
-                  <SelectItem value="platform_za">Platform (Z-A)</SelectItem>
-                </SelectContent>
-              </Select>
-              <Button
-                variant={showMissingOnly ? 'default' : 'outline'}
-                onClick={() => { setShowMissingOnly(v => !v); setPage(1); }}
-                className={`gap-2 w-full ${showMissingOnly ? 'bg-red-600 hover:bg-red-700' : 'border-red-200 text-red-600 hover:bg-red-50'}`}
-              >
-                <AlertCircle className="h-4 w-4" />
-                Eksik Oranlar {missingRateIds.size > 0 && `(${missingRateIds.size})`}
-              </Button>
+              <FiltreEtiketi ad="Sırala">
+                <Select value={sortType} onValueChange={setSortType}>
+                  <SelectTrigger><SelectValue placeholder="Sıralama" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="kategori_az">Kategori (A-Z)</SelectItem>
+                    <SelectItem value="kategori_za">Kategori (Z-A)</SelectItem>
+                    <SelectItem value="platform_az">Platform (A-Z)</SelectItem>
+                    <SelectItem value="platform_za">Platform (Z-A)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </FiltreEtiketi>
+              <FiltreEtiketi ad="Eksik Oranlar">
+                <Select
+                  value={showMissingOnly ? 'missing' : 'all'}
+                  onValueChange={(v) => { setShowMissingOnly(v === 'missing'); setPage(1); }}
+                >
+                  <SelectTrigger><SelectValue placeholder="Tümü" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Tümü</SelectItem>
+                    <SelectItem value="missing">
+                      Yalnız eksik oranlar{missingRateIds.size > 0 ? ` (${missingRateIds.size})` : ''}
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </FiltreEtiketi>
             </div>
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-          <div className="overflow-x-auto">
-            <DataTable
-              columns={columns}
-              data={paginatedCommissions}
-              isLoading={isLoading}
-              page={page}
-              pageSize={pageSize}
-              totalItems={filteredCommissions.length}
-              onPageChange={setPage}
-              emptyMessage="Komisyon kaydı bulunamadı"
-            />
-          </div>
-        </div>
+        {/* Kart ve yatay kaydirma DataTable'in kendi icinde; disariya
+            ikinci bir kart sarmak cift kenarlik olusturuyordu. */}
+        <DataTable pageKey="komisyonlar"
+          columns={columns}
+          data={paginatedCommissions}
+          isLoading={isLoading}
+          page={page}
+          pageSize={pageSize}
+          totalItems={filteredCommissions.length}
+          onPageChange={setPage}
+          emptyMessage="Komisyon kaydı bulunamadı"
+        />
 
         <CommissionModal
           open={modalOpen}
@@ -633,7 +653,7 @@ export default function Commissions() {
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel>İptal</AlertDialogCancel>
-              <AlertDialogAction onClick={() => deleteMutation.mutate(deleteId)} className="bg-rose-600 hover:bg-rose-700">Sil</AlertDialogAction>
+              <AlertDialogAction onClick={() => deleteMutation.mutate(deleteId)} className="bg-red-600 hover:bg-red-700">Sil</AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
@@ -645,13 +665,13 @@ export default function Commissions() {
             </DialogHeader>
             <div className="space-y-4">
               <div className="text-center py-4">
-                <p className="text-sm font-semibold text-slate-700 mb-2">{importProgress.current} / {importProgress.total} kayıt</p>
-                <p className="text-2xl font-bold text-indigo-600">%{Math.round((importProgress.current / (importProgress.total || 1)) * 100)}</p>
+                <p className="text-sm font-semibold text-muted-foreground mb-2">{importProgress.current} / {importProgress.total} kayıt</p>
+                <p className="text-2xl font-bold text-foreground">%{Math.round((importProgress.current / (importProgress.total || 1)) * 100)}</p>
               </div>
-              <div className="w-full bg-slate-200 rounded-full h-3 overflow-hidden">
-                <div className="bg-indigo-600 h-3 rounded-full transition-all duration-300" style={{ width: `${(importProgress.current / (importProgress.total || 1)) * 100}%` }} />
+              <div className="w-full bg-border rounded-full h-3 overflow-hidden">
+                <div className="bg-primary h-3 rounded-full transition-all duration-300" style={{ width: `${(importProgress.current / (importProgress.total || 1)) * 100}%` }} />
               </div>
-              <p className="text-xs text-slate-500 text-center">Lütfen bekleyin, veriler işleniyor...</p>
+              <p className="text-xs text-muted-foreground text-center">Lütfen bekleyin, veriler işleniyor...</p>
             </div>
           </DialogContent>
         </Dialog>
@@ -664,7 +684,7 @@ export default function Commissions() {
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel>İptal</AlertDialogCancel>
-              <AlertDialogAction onClick={() => bulkDeleteMutation.mutate(selectedIds)} className="bg-rose-600 hover:bg-rose-700">Sil</AlertDialogAction>
+              <AlertDialogAction onClick={() => bulkDeleteMutation.mutate(selectedIds)} className="bg-red-600 hover:bg-red-700">Sil</AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>

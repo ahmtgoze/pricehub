@@ -116,7 +116,7 @@ export default function BulkOperationsModal({
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
                 <Label>Bugün Kargoda</Label>
-                <p className="text-xs text-slate-500">Hızlı teslimat seçeneği</p>
+                <p className="text-xs text-muted-foreground">Hızlı teslimat seçeneği</p>
               </div>
               <Switch
                 checked={sameDayDelivery}
@@ -129,7 +129,7 @@ export default function BulkOperationsModal({
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
                 <Label>Çift Kargo</Label>
-                <p className="text-xs text-slate-500">Açık olursa kargo ücreti 2 katı hesaplanır (üretim→depo→müşteri)</p>
+                <p className="text-xs text-muted-foreground">Açık olursa kargo ücreti 2 katı hesaplanır (üretim→depo→müşteri)</p>
               </div>
               <Switch
                 checked={doubleShipping}

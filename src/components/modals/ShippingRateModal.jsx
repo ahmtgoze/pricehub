@@ -129,13 +129,13 @@ export default function ShippingRateModal({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg flex flex-col p-0 gap-0" style={{maxHeight: '90dvh'}}>
-        <DialogHeader className="px-6 pt-6 pb-4 border-b border-slate-100 flex-shrink-0">
+        <DialogHeader className="px-6 pt-6 pb-4 border-b border-border flex-shrink-0">
           <DialogTitle className="text-xl font-semibold flex items-center justify-between">
             <span>
               {shippingRate ? 'Kargo Tarifesi' : 'Yeni Kargo Tarifesi Ekle'}
             </span>
             {isAdminRate && (
-              <span className="text-xs font-medium px-2 py-1 rounded bg-slate-100 text-slate-700">
+              <span className="text-xs font-medium px-2 py-1 rounded bg-secondary text-muted-foreground">
                 {isAdmin ? '🔧 Sistem Tarifesi (Admin)' : '🔒 Sistem Tarifesi'}
               </span>
             )}
@@ -193,7 +193,7 @@ export default function ShippingRateModal({
             <div className="space-y-2">
               <Label>Tarife Tipi *</Label>
               {formData.platform_type === 'website' ? (
-                <div className="flex items-center h-10 px-3 rounded-md border border-slate-200 bg-slate-50 text-sm text-slate-600">
+                <div className="flex items-center h-10 px-3 rounded-md border border-border bg-secondary text-sm text-muted-foreground">
                   Desi Tarifesi (Web Sitesi için sabit)
                 </div>
               ) : (
@@ -227,7 +227,7 @@ export default function ShippingRateModal({
 
           {/* Bugün Kargoda: sadece website olmayan platformlarda göster */}
           {formData.platform_type !== 'website' && (
-            <div className="flex items-center justify-between border border-amber-200 bg-amber-50 rounded-lg px-3 py-2">
+            <div className="flex items-center justify-between border border-amber-200 dark:border-amber-900/50 bg-amber-50 dark:bg-amber-950/30 rounded-lg px-3 py-2">
               <div className="flex items-center gap-2">
                 <Package className="h-4 w-4 text-amber-600" />
                 <Label className="text-sm font-medium text-amber-900 cursor-pointer">Bugün Kapında Seçeneği</Label>
@@ -298,18 +298,18 @@ export default function ShippingRateModal({
           </div>
 
           {isReadOnly && (
-            <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 text-sm text-slate-600">
+            <div className="bg-secondary border border-border rounded-lg p-3 text-sm text-muted-foreground">
               💡 Sistem tarafından yüklenen tarifeler sadece okunabilir. Yöneticiye başvurunuz.
             </div>
           )}
           </div>
 
-          <div className="flex justify-end gap-3 px-6 py-4 border-t border-slate-100 flex-shrink-0">
+          <div className="flex justify-end gap-3 px-6 py-4 border-t border-border flex-shrink-0">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               İptal
             </Button>
             {!isReadOnly && (
-              <Button type="submit" disabled={isSaving} className="bg-indigo-600 hover:bg-indigo-700">
+              <Button type="submit" disabled={isSaving} className="bg-primary hover:bg-black dark:hover:bg-white/90">
                 {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 {shippingRate ? 'Güncelle' : 'Ekle'}
               </Button>

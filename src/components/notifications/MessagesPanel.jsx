@@ -255,22 +255,22 @@ export default function MessagesPanel({ user, isAdmin, replyRef, onReplyRefConsu
     return (
       <div className="flex flex-col h-full">
         {/* Header */}
-        <div className="flex items-center gap-3 px-4 py-4 border-b border-slate-100 flex-shrink-0 bg-gradient-to-r from-slate-50 to-indigo-50">
-          <button onClick={() => setSelectedContact(null)} className="text-slate-400 hover:text-slate-700 transition-colors">
+        <div className="flex items-center gap-3 px-4 py-4 border-b border-border flex-shrink-0 bg-secondary">
+          <button onClick={() => setSelectedContact(null)} className="text-muted-foreground/70 hover:text-muted-foreground transition-colors">
             <ChevronLeft className="h-5 w-5" />
           </button>
-          <div className="w-9 h-9 rounded-full bg-indigo-600 flex items-center justify-center flex-shrink-0">
-            <User className="h-4 w-4 text-white" />
+          <div className="w-9 h-9 rounded-full bg-primary flex items-center justify-center flex-shrink-0">
+            <User className="h-4 w-4 text-primary-foreground" />
           </div>
           <div className="flex-1">
-            <p className="text-sm font-semibold text-slate-900">{selectedContact === 'admin' ? 'Sistem Yöneticisi' : selectedContact}</p>
-            <p className="text-[11px] text-slate-500">{selectedContact === 'admin' ? 'Admin' : (isAdmin ? 'Müşteri' : 'Yönetici')}</p>
+            <p className="text-sm font-semibold text-foreground">{selectedContact === 'admin' ? 'Sistem Yöneticisi' : selectedContact}</p>
+            <p className="text-[11px] text-muted-foreground">{selectedContact === 'admin' ? 'Admin' : (isAdmin ? 'Müşteri' : 'Yönetici')}</p>
           </div>
           {isAdmin && (
             <div className="relative">
               <button
                 onClick={(e) => { e.stopPropagation(); setDeleteConvPopup(deleteConvPopup ? null : { email: selectedContact }); }}
-                className="p-2 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+                className="p-2 rounded-lg text-muted-foreground/70 hover:text-red-500 hover:bg-red-50 dark:bg-red-950/30 transition-colors"
                 title="Sohbeti sil"
               >
                 <Trash2 className="h-4 w-4" />
@@ -278,13 +278,13 @@ export default function MessagesPanel({ user, isAdmin, replyRef, onReplyRefConsu
               {deleteConvPopup?.email === selectedContact && (
                 <div
                   onClick={e => e.stopPropagation()}
-                  className="absolute top-full right-0 mt-1 z-20 bg-white border border-slate-200 rounded-xl shadow-lg overflow-hidden w-48"
+                  className="absolute top-full right-0 mt-1 z-20 bg-card border border-border rounded-xl shadow-lg overflow-hidden w-48"
                 >
-                  <p className="text-xs font-semibold text-slate-500 px-3 pt-2.5 pb-1">Sohbeti sil</p>
-                  <button onClick={() => handleDeleteConversation(selectedContact, 'me')} className="w-full text-left px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 transition-colors">
+                  <p className="text-xs font-semibold text-muted-foreground px-3 pt-2.5 pb-1">Sohbeti sil</p>
+                  <button onClick={() => handleDeleteConversation(selectedContact, 'me')} className="w-full text-left px-3 py-2 text-sm text-muted-foreground hover:bg-secondary transition-colors">
                     Sadece benden sil
                   </button>
-                  <button onClick={() => handleDeleteConversation(selectedContact, 'all')} className="w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors">
+                  <button onClick={() => handleDeleteConversation(selectedContact, 'all')} className="w-full text-left px-3 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:bg-red-950/30 transition-colors">
                     Müşteriden de sil
                   </button>
                 </div>
@@ -302,9 +302,9 @@ export default function MessagesPanel({ user, isAdmin, replyRef, onReplyRefConsu
             return (
               <div key={m.id} className={cn("flex group", isMine ? "justify-end" : "justify-start")}>
                 <div className="flex items-end gap-1.5 max-w-[80%]" style={{ flexDirection: isMine ? 'row-reverse' : 'row' }}>
-                  <div className={cn("rounded-2xl px-4 py-3 text-sm", isMine ? "bg-indigo-600 text-white rounded-br-none shadow-sm" : "bg-slate-100 text-slate-900 rounded-bl-none shadow-sm")}>
+                  <div className={cn("rounded-2xl px-4 py-3 text-sm", isMine ? "bg-primary text-primary-foreground rounded-br-none shadow-sm" : "bg-secondary text-foreground rounded-bl-none shadow-sm")}>
                     {m.announcement_ref_title && (
-                      <div className={cn("text-xs mb-2 px-3 py-2 rounded-lg border-l-2 font-medium", isMine ? "border-indigo-300 bg-indigo-500/20 text-indigo-100" : "border-indigo-400 bg-indigo-50 text-indigo-700")}>
+                      <div className={cn("text-xs mb-2 px-3 py-2 rounded-lg border-l-2 font-medium", isMine ? "border-white/30 bg-card/10 text-primary-foreground/80" : "border-input bg-border text-muted-foreground")}>
                         ↩️ Duyuru: {m.announcement_ref_title}
                       </div>
                     )}
@@ -316,7 +316,7 @@ export default function MessagesPanel({ user, isAdmin, replyRef, onReplyRefConsu
                           onChange={e => setEditingMessage(p => ({ ...p, content: e.target.value }))}
                           onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); updateMutation.mutate({ id: m.id, content: editingMessage.content }); } if (e.key === 'Escape') setEditingMessage(null); }}
                           rows={2}
-                          className="w-full text-sm bg-white/20 border border-white/40 rounded-lg px-2 py-1 resize-none focus:outline-none text-white placeholder-white/60"
+                          className="w-full text-sm bg-card/20 border border-white/40 rounded-lg px-2 py-1 resize-none focus:outline-none text-white placeholder-white/60"
                         />
                         <div className="flex gap-1 justify-end">
                           <button onClick={() => setEditingMessage(null)} className="p-1 rounded text-white/70 hover:text-white"><X className="h-3.5 w-3.5" /></button>
@@ -326,7 +326,7 @@ export default function MessagesPanel({ user, isAdmin, replyRef, onReplyRefConsu
                     ) : (
                       <p className="whitespace-pre-wrap leading-relaxed">{m.content.replace(/\[Duyuru yanıtı: ".+?"\]\n\n/, '')}</p>
                     )}
-                    <p className={cn("text-xs mt-2 text-right", isMine ? "text-indigo-100" : "text-slate-500")}>
+                    <p className={cn("text-xs mt-2 text-right", isMine ? "text-muted-foreground/50" : "text-muted-foreground")}>
                       {format(new Date(m.created_date), 'HH:mm', { locale: tr })}
                     </p>
                   </div>
@@ -335,7 +335,7 @@ export default function MessagesPanel({ user, isAdmin, replyRef, onReplyRefConsu
                     {editable && !isEditing && (
                       <button
                         onClick={(e) => { e.stopPropagation(); setEditingMessage({ id: m.id, content: m.content.replace(/\[Duyuru yanıtı: ".+?"\]\n\n/, '') }); }}
-                        className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-lg text-slate-400 hover:text-indigo-500 hover:bg-indigo-50"
+                        className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-lg text-muted-foreground/70 hover:text-foreground hover:bg-secondary"
                       >
                         <Pencil className="h-3.5 w-3.5" />
                       </button>
@@ -344,7 +344,7 @@ export default function MessagesPanel({ user, isAdmin, replyRef, onReplyRefConsu
                       <div className="relative">
                         <button
                           onClick={(e) => { e.stopPropagation(); setDeletePopup(deletePopup?.messageId === m.id ? null : { messageId: m.id }); }}
-                          className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50"
+                          className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-lg text-muted-foreground/70 hover:text-red-500 hover:bg-red-50 dark:bg-red-950/30"
                         >
                           <Trash2 className="h-3.5 w-3.5" />
                         </button>
@@ -352,15 +352,15 @@ export default function MessagesPanel({ user, isAdmin, replyRef, onReplyRefConsu
                           <div
                             onClick={e => e.stopPropagation()}
                             className={cn(
-                              "absolute bottom-full mb-1 z-20 bg-white border border-slate-200 rounded-xl shadow-lg overflow-hidden w-44",
+                              "absolute bottom-full mb-1 z-20 bg-card border border-border rounded-xl shadow-lg overflow-hidden w-44",
                               isMine ? "right-0" : "left-0"
                             )}
                           >
-                            <p className="text-xs font-semibold text-slate-500 px-3 pt-2.5 pb-1">Silme seçeneği</p>
-                            <button onClick={() => handleDeleteOnlyMe(m.id)} className="w-full text-left px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 transition-colors">
+                            <p className="text-xs font-semibold text-muted-foreground px-3 pt-2.5 pb-1">Silme seçeneği</p>
+                            <button onClick={() => handleDeleteOnlyMe(m.id)} className="w-full text-left px-3 py-2 text-sm text-muted-foreground hover:bg-secondary transition-colors">
                               Sadece benden sil
                             </button>
-                            <button onClick={() => handleDeleteForEveryone(m.id)} className="w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors">
+                            <button onClick={() => handleDeleteForEveryone(m.id)} className="w-full text-left px-3 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:bg-red-950/30 transition-colors">
                               Müşteriden de sil
                             </button>
                           </div>
@@ -377,16 +377,16 @@ export default function MessagesPanel({ user, isAdmin, replyRef, onReplyRefConsu
 
         {/* Input */}
         {!showArchived && (
-          <div className="flex items-end gap-2 px-4 py-3 border-t border-slate-100 flex-shrink-0 bg-gradient-to-r from-white to-indigo-50">
+          <div className="flex items-end gap-2 px-4 py-3 border-t border-border flex-shrink-0 bg-card">
             <textarea
               value={newMessage}
               onChange={(e) => setNewMessage(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
               placeholder="Mesaj yazın..."
               rows={2}
-              className="flex-1 text-sm border border-slate-200 rounded-xl px-3 py-2 resize-none focus:outline-none focus:ring-1 focus:ring-indigo-300 bg-white"
+              className="flex-1 text-sm border border-border rounded-xl px-3 py-2 resize-none focus:outline-none focus:ring-1 focus:ring-gray-400 bg-card"
             />
-            <Button size="icon" onClick={handleSend} disabled={!newMessage.trim()} className="flex-shrink-0 h-10 w-10 bg-indigo-600 hover:bg-indigo-700">
+            <Button size="icon" onClick={handleSend} disabled={!newMessage.trim()} className="flex-shrink-0 h-10 w-10 bg-primary hover:bg-black dark:hover:bg-white/90">
               <Send className="h-4 w-4" />
             </Button>
           </div>
@@ -396,19 +396,19 @@ export default function MessagesPanel({ user, isAdmin, replyRef, onReplyRefConsu
   }
 
   return (
-    <div className="flex flex-col h-full bg-white">
+    <div className="flex flex-col h-full bg-card">
       {/* Header */}
-      <div className="flex items-center gap-2 px-4 py-4 border-b border-slate-100 flex-shrink-0 bg-gradient-to-r from-slate-50 to-indigo-50">
+      <div className="flex items-center gap-2 px-4 py-4 border-b border-border flex-shrink-0 bg-secondary">
         <button
           onClick={() => setShowArchived(false)}
-          className={cn("text-xs font-semibold px-3 py-1.5 rounded-lg transition-all", !showArchived ? "bg-indigo-600 text-white" : "text-slate-500 hover:bg-slate-100")}
+          className={cn("text-xs font-semibold px-3 py-1.5 rounded-lg transition-all", !showArchived ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-secondary")}
         >
           Mesajlar
         </button>
         {isAdmin && (
           <button
             onClick={() => setShowArchived(true)}
-            className={cn("text-xs font-semibold px-3 py-1.5 rounded-lg transition-all", showArchived ? "bg-indigo-600 text-white" : "text-slate-500 hover:bg-slate-100")}
+            className={cn("text-xs font-semibold px-3 py-1.5 rounded-lg transition-all", showArchived ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-secondary")}
           >
             <Archive className="h-3.5 w-3.5 inline mr-1" />Arşiv
           </button>
@@ -416,7 +416,7 @@ export default function MessagesPanel({ user, isAdmin, replyRef, onReplyRefConsu
         {!showArchived && (
           <button
             onClick={() => { setShowNewConv(true); setSelectedContact(null); }}
-            className="ml-auto text-xs text-indigo-600 hover:text-indigo-700 font-semibold"
+            className="ml-auto text-xs text-foreground hover:text-muted-foreground font-semibold"
           >
             + Yeni
           </button>
@@ -424,34 +424,34 @@ export default function MessagesPanel({ user, isAdmin, replyRef, onReplyRefConsu
       </div>
 
       {showNewConv && !showArchived && (
-        <div className="px-4 py-3 border-b border-slate-100 bg-gradient-to-br from-indigo-50 to-white space-y-3">
+        <div className="px-4 py-3 border-b border-border bg-card space-y-3">
           {isAdmin ? (
             <>
-              <p className="text-xs font-medium text-slate-600">Müşteri seçin ve mesaj gönderin</p>
+              <p className="text-xs font-medium text-muted-foreground">Müşteri seçin ve mesaj gönderin</p>
               {/* Kullanıcı seçimi */}
               <div className="relative">
                 <button
                   onClick={() => setShowUserDropdown(p => !p)}
-                  className="w-full flex items-center justify-between text-sm border border-slate-200 rounded-xl px-3 py-2 bg-white hover:border-indigo-300 transition-colors"
+                  className="w-full flex items-center justify-between text-sm border border-border rounded-xl px-3 py-2 bg-card hover:border-input transition-colors"
                 >
-                  <span className={newConversationEmail ? 'text-slate-900' : 'text-slate-400'}>
+                  <span className={newConversationEmail ? 'text-foreground' : 'text-muted-foreground/70'}>
                     {newConversationEmail || 'Kullanıcı seçin...'}
                   </span>
-                  <ChevronDown className="h-4 w-4 text-slate-400" />
+                  <ChevronDown className="h-4 w-4 text-muted-foreground/70" />
                 </button>
                 {showUserDropdown && (
-                  <div className="absolute z-10 left-0 right-0 top-full mt-1 bg-white border border-slate-200 rounded-xl shadow-lg max-h-40 overflow-y-auto">
+                  <div className="absolute z-10 left-0 right-0 top-full mt-1 bg-card border border-border rounded-xl shadow-lg max-h-40 overflow-y-auto">
                     {allUsers.length === 0 ? (
-                      <p className="text-xs text-slate-400 p-3">Kullanıcı bulunamadı</p>
+                      <p className="text-xs text-muted-foreground/70 p-3">Kullanıcı bulunamadı</p>
                     ) : (
                       allUsers.map(u => (
                         <button
                           key={u.id}
                           onClick={() => { setNewConversationEmail(u.email); setShowUserDropdown(false); }}
-                          className="w-full text-left px-3 py-2 text-sm hover:bg-indigo-50 transition-colors"
+                          className="w-full text-left px-3 py-2 text-sm hover:bg-secondary transition-colors"
                         >
                           <span className="font-medium">{u.full_name || u.email}</span>
-                          {u.full_name && <span className="text-slate-400 text-xs ml-2">{u.email}</span>}
+                          {u.full_name && <span className="text-muted-foreground/70 text-xs ml-2">{u.email}</span>}
                         </button>
                       ))
                     )}
@@ -460,14 +460,14 @@ export default function MessagesPanel({ user, isAdmin, replyRef, onReplyRefConsu
               </div>
             </>
           ) : (
-            <p className="text-xs font-medium text-slate-600">Yöneticiye mesaj gönderin</p>
+            <p className="text-xs font-medium text-muted-foreground">Yöneticiye mesaj gönderin</p>
           )}
           <textarea
             value={newMessage}
             onChange={e => setNewMessage(e.target.value)}
             placeholder="Mesajınızı yazın..."
             rows={2}
-            className="w-full text-sm border border-slate-200 rounded-xl px-3 py-2 resize-none focus:outline-none focus:ring-1 focus:ring-indigo-300 bg-white"
+            className="w-full text-sm border border-border rounded-xl px-3 py-2 resize-none focus:outline-none focus:ring-1 focus:ring-gray-400 bg-card"
           />
           <div className="flex gap-2 justify-end">
             <Button size="sm" variant="outline" onClick={() => { setShowNewConv(false); setNewMessage(''); setNewConversationEmail(''); }}>İptal</Button>
@@ -497,7 +497,7 @@ export default function MessagesPanel({ user, isAdmin, replyRef, onReplyRefConsu
              setShowNewConv(false);
              setNewMessage('');
              setNewConversationEmail('');
-            }} disabled={isAdmin ? (!newConversationEmail || !newMessage.trim()) : (!newMessage.trim() || adminLoading)} className="bg-indigo-600 hover:bg-indigo-700">
+            }} disabled={isAdmin ? (!newConversationEmail || !newMessage.trim()) : (!newMessage.trim() || adminLoading)} className="bg-primary hover:bg-black dark:hover:bg-white/90">
               <Send className="h-3.5 w-3.5 mr-1" /> Gönder
             </Button>
           </div>
@@ -507,7 +507,7 @@ export default function MessagesPanel({ user, isAdmin, replyRef, onReplyRefConsu
       {/* Conversation list */}
       <div className="flex-1 overflow-y-auto">
         {conversations.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-32 text-slate-400 text-sm gap-2">
+          <div className="flex flex-col items-center justify-center h-32 text-muted-foreground/70 text-sm gap-2">
             <MessageSquare className="h-8 w-8 opacity-30" />
             <span>{showArchived ? 'Arşiv boş' : 'Henüz mesaj yok'}</span>
           </div>
@@ -517,22 +517,22 @@ export default function MessagesPanel({ user, isAdmin, replyRef, onReplyRefConsu
               <button
                 key={conv.email}
                 onClick={() => handleSelectContact(conv)}
-                className="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-indigo-50/50 text-left transition-colors border-l-4 border-transparent hover:border-indigo-400"
+                className="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-secondary text-left transition-colors border-l-4 border-transparent hover:border-input"
               >
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-400 to-indigo-600 flex items-center justify-center flex-shrink-0 text-white font-semibold">
+                <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center flex-shrink-0 text-primary-foreground font-semibold">
                   {conv.email.charAt(0).toUpperCase()}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between gap-2">
-                    <p className="text-sm font-semibold text-slate-900 truncate">{conv.email === 'admin' ? 'Sistem Yöneticisi' : conv.email}</p>
-                    <span className="text-xs text-slate-400 flex-shrink-0">
+                    <p className="text-sm font-semibold text-foreground truncate">{conv.email === 'admin' ? 'Sistem Yöneticisi' : conv.email}</p>
+                    <span className="text-xs text-muted-foreground/70 flex-shrink-0">
                       {format(new Date(conv.lastMessage.created_date), 'HH:mm')}
                     </span>
                   </div>
-                  <p className="text-xs text-slate-500 truncate mt-0.5">{conv.lastMessage.content.replace(/\[Duyuru yanıtı: ".+?"\]\n\n/, '')}</p>
+                  <p className="text-xs text-muted-foreground truncate mt-0.5">{conv.lastMessage.content.replace(/\[Duyuru yanıtı: ".+?"\]\n\n/, '')}</p>
                 </div>
                 {conv.unread > 0 && (
-                  <span className="w-6 h-6 rounded-full bg-indigo-600 text-white text-xs font-semibold flex items-center justify-center flex-shrink-0">
+                  <span className="w-6 h-6 rounded-full bg-primary text-primary-foreground text-xs font-semibold flex items-center justify-center flex-shrink-0">
                     {conv.unread}
                   </span>
                 )}

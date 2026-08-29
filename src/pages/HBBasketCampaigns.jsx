@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { toast } from 'sonner';
 import * as XLSX from 'xlsx';
 import PriceDetailModal from '@/components/modals/PriceDetailModal';
+import { baremSec, baremTarifesiSec } from '@/lib/baremKurali';
 
 const Product = db.entities.Product;
 const Platform = db.entities.Platform;
@@ -36,8 +37,9 @@ const parseNum = (v) => {
   return isNaN(n) ? 0 : n;
 };
 // HB komisyonları KDV hariç gelir; kasadan çıkan gerçek oran = ham × 1,20
-const withVatRate = (rate) => Math.round((rate || 0) * 1.2 * 100) / 100;
-const commLabel = (rate) => `%${rate || 0} (KDV'li %${withVatRate(rate)})`;
+// HepsiBurada komisyonlari sisteme zaten KDV DAHIL giriliyor;
+// etikette bir daha KDV eklemek yaniltiyordu.
+const commLabel = (rate) => `%${rate || 0}`;
 
 export default function HBBasketCampaigns() {
   const [userEmail, setUserEmail] = useState(null);
@@ -56,7 +58,7 @@ export default function HBBasketCampaigns() {
     db.auth.me().then((user) => setUserEmail(user.email)).catch(() => {});
   }, []);
 
-  const { data: platforms = [] } = useQuery({ queryKey: ['platforms', userEmail], queryFn: () => Platform.filter({ created_by: userEmail }), enabled: !!userEmail });
+  const { data: platforms = [], isFetched: platformlarYuklendi } = useQuery({ queryKey: ['platforms', userEmail], queryFn: () => Platform.filter({ created_by: userEmail }), enabled: !!userEmail });
   const { data: products = [] } = useQuery({ queryKey: ['products', userEmail], queryFn: () => Product.filter({ created_by: userEmail }), enabled: !!userEmail });
   const { data: commissions = [] } = useQuery({ queryKey: ['commissions', userEmail], queryFn: () => Commission.filter({ created_by: userEmail }), enabled: !!userEmail });
   const { data: shippingRates = [] } = useQuery({ queryKey: ['shippingRates'], queryFn: () => ShippingRate.list('-id', 10000), enabled: !!userEmail });
@@ -121,14 +123,17 @@ export default function HBBasketCampaigns() {
       let shippingCost = 0;
       let shippingVatRate = 20;
       let baremUsed = 'desi';
-      const canUseBarem = !matchedProduct.special_shipping && !matchedProduct.multi_package;
-      if (canUseBarem && price > 0) {
-        if (price <= 149.99) {
-          const r = platformShippingRates.find((r) => r.rate_type === 'barem1');
-          if (r) { shippingCost = r.price; shippingVatRate = r.vat_rate || 20; baremUsed = 'barem1'; }
-        } else if (price <= 299.99) {
-          const r = platformShippingRates.find((r) => r.rate_type === 'barem2');
-          if (r) { shippingCost = r.price; shippingVatRate = r.vat_rate || 20; baremUsed = 'barem2'; }
+      // Barem kurallari ortak modulde (src/lib/baremKurali.js): sinirlar
+      // platform kaydindan okunur, desi tavani ve use_barem kontrol edilir.
+      // Once bu sayfaya sabit yazilmisti ve HepsiBurada'da Trendyol'un
+      // bantlari uygulaniyordu.
+      const secilenBarem = baremSec(platform, matchedProduct, price, matchedProduct?.desi);
+      if (secilenBarem) {
+        const baremRate = baremTarifesiSec(platformShippingRates, secilenBarem, matchedProduct?.same_day_delivery || false);
+        if (baremRate) {
+          shippingCost = baremRate.price;
+          shippingVatRate = baremRate.vat_rate || 20;
+          baremUsed = secilenBarem;
         }
       }
       if (shippingCost === 0) {
@@ -336,14 +341,16 @@ export default function HBBasketCampaigns() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="max-w-[1600px] mx-auto px-6 py-8">
+      <div className="ph-page mx-auto">
         <div className="mb-8">
-          <h1 className="text-3xl font-semibold tracking-tight">Sepet Kampanyaları</h1>
+          <h1 className="ph-title">Sepet Kampanyaları</h1>
           <p className="text-muted-foreground mt-1">Hepsiburada sepet kampanyası Excel'ini yükleyin; indirimli komisyonla kârı görüp kampanya fiyatını belirleyin</p>
         </div>
 
-        {!hasHepsiburada && (
-          <div className="mb-6 flex items-start gap-4 bg-amber-50 border border-amber-200 rounded-xl p-5">
+        {/* Uyari platform sorgusu cozulmeden gosterilirse sayfa acilirken
+            bir an cakip kayboluyordu; artik veri geldikten sonra kalici. */}
+        {platformlarYuklendi && !hasHepsiburada && (
+          <div className="mb-6 flex items-start gap-4 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50 rounded-xl p-5">
             <div className="flex-shrink-0 w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center"><AlertCircle className="h-5 w-5 text-amber-600" /></div>
             <div>
               <h3 className="font-semibold text-amber-900 text-base mb-1">Hepsiburada Platformu Aktif Değil</h3>
@@ -359,7 +366,7 @@ export default function HBBasketCampaigns() {
               <div className="space-y-2">
                 <Label>Platform *</Label>
                 {hbPlatforms.length === 1 ? (
-                  <div className="flex items-center h-10 px-3 border border-gray-200 rounded-xl bg-gray-50 text-sm font-medium">{hbPlatforms[0].name}</div>
+                  <div className="flex items-center h-10 px-3 border border-border rounded-xl bg-secondary text-sm font-medium">{hbPlatforms[0].name}</div>
                 ) : (
                   <Select value={selectedPlatform} onValueChange={setSelectedPlatform}>
                     <SelectTrigger><SelectValue placeholder="Platform seçin" /></SelectTrigger>
@@ -369,14 +376,14 @@ export default function HBBasketCampaigns() {
               </div>
             </div>
             <div className="flex flex-wrap gap-3">
-              <Button onClick={() => document.getElementById('hbBasketUpload').click()} disabled={!selectedPlatform} className="bg-gray-900 hover:bg-gray-800">
+              <Button onClick={() => document.getElementById('hbBasketUpload').click()} disabled={!selectedPlatform} className="bg-primary hover:bg-black dark:hover:bg-white/90">
                 <Upload className="mr-2 h-4 w-4" />{uploadedData.length > 0 ? 'Yeni Excel Yükle' : 'Excel Yükle'}
               </Button>
               <input id="hbBasketUpload" type="file" accept=".xlsx,.xls" onChange={handleFileUpload} className="hidden" />
               {uploadedData.length > 0 && (
                 <>
-                  <Button onClick={handleSmartAutoSelect} className="bg-orange-500 hover:bg-orange-600 text-white gap-2"><Sparkles className="h-4 w-4" />Max Fiyatla Seç</Button>
-                  <Button variant="outline" onClick={() => { setUploadedData([]); setOriginalExcelData(null); toast.success('Liste temizlendi'); }} className="text-rose-600 hover:bg-rose-50"><Trash2 className="mr-2 h-4 w-4" />Temizle</Button>
+                  <Button onClick={handleSmartAutoSelect} className="bg-primary hover:bg-black dark:hover:bg-white/90 text-primary-foreground gap-2"><Sparkles className="h-4 w-4" />Max Fiyatla Seç</Button>
+                  <Button variant="outline" onClick={() => { setUploadedData([]); setOriginalExcelData(null); toast.success('Liste temizlendi'); }} className="text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:bg-rose-950/30"><Trash2 className="mr-2 h-4 w-4" />Temizle</Button>
                   <Button variant="outline" onClick={() => setUploadedData(uploadedData.map((i) => ({ ...i, selected: false })))}>Seçimleri Kaldır</Button>
                   <Button variant="outline" onClick={handleExport}><Download className="mr-2 h-4 w-4" />Excel İndir ({selectedCount})</Button>
                 </>
@@ -417,7 +424,7 @@ export default function HBBasketCampaigns() {
               <CardContent>
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
-                    <thead className="bg-slate-50 border-b">
+                    <thead className="bg-secondary border-b">
                       <tr>
                         <th className="p-3 text-center font-semibold w-10">Seç</th>
                         <th className="p-3 text-left font-semibold min-w-[200px]">Ürün</th>
@@ -434,31 +441,31 @@ export default function HBBasketCampaigns() {
                         const overMax = item.max_price > 0 && item.campaign_price > item.max_price;
                         const campCalc = item.campaign_price ? calculateProfit(item.campaign_price, item.discounted_commission, item) : { profit: 0, profitRate: 0 };
                         return (
-                          <tr key={index} className={`border-b hover:bg-slate-50 ${item.selected ? 'bg-gray-50' : ''}`}>
+                          <tr key={index} className={`border-b hover:bg-secondary ${item.selected ? 'bg-secondary' : ''}`}>
                             <td className="p-3 text-center">
                               <input type="checkbox" checked={item.selected} onChange={() => toggleSelect(item)} className="h-4 w-4 cursor-pointer accent-gray-900" disabled={!matchedProduct} />
                             </td>
                             <td className="p-3">
-                              <div className="font-medium text-slate-900">{item.product_name}</div>
-                              <div className="text-xs text-slate-500 font-mono">{item.seller_stock_code}</div>
+                              <div className="font-medium text-foreground">{item.product_name}</div>
+                              <div className="text-xs text-muted-foreground font-mono">{item.seller_stock_code}</div>
                               {matchedProduct ? <div className="text-xs text-emerald-600">{matchedProduct.category_name || matchedProduct.name}</div> : <div className="text-xs text-rose-500">eşleşmedi</div>}
                             </td>
                             <td className="p-3 text-center">{item.stock}</td>
                             <td className="p-3">
                               <div className="text-center">
-                                <div className="font-semibold text-slate-900">₺{(item.current_price || 0).toFixed(2)}</div>
-                                <div className="text-[11px] text-slate-500 mb-1">Kom: {commLabel(item.current_commission)}</div>
+                                <div className="font-semibold text-foreground">₺{(item.current_price || 0).toFixed(2)}</div>
+                                <div className="text-[11px] text-muted-foreground mb-1">Kom: {commLabel(item.current_commission)}</div>
                                 {matchedProduct && <div className={`text-xs font-medium ${currentCalc.profit > 0 ? 'text-emerald-600' : 'text-rose-600'}`}>₺{currentCalc.profit.toFixed(2)} (%{currentCalc.profitRate.toFixed(1)})</div>}
                               </div>
                             </td>
-                            <td className="p-3 text-center font-semibold text-slate-700">₺{(item.max_price || 0).toFixed(2)}</td>
+                            <td className="p-3 text-center font-semibold text-muted-foreground">₺{(item.max_price || 0).toFixed(2)}</td>
                             <td className="p-3">
-                              <div className={`border rounded-lg p-2 ${item.selected ? 'border-gray-900 bg-white' : 'border-slate-200'}`}>
+                              <div className={`border rounded-lg p-2 ${item.selected ? 'border-primary bg-card' : 'border-border'}`}>
                                 <div className="flex items-center gap-1 mb-1">
                                   <Input type="number" step="0.01" value={item.campaign_price || ''} onChange={(e) => handleCampaignPriceChange(item, e.target.value)} placeholder="Fiyat" className="h-8 text-xs" />
                                   <Button size="sm" variant="ghost" className="h-5 w-5 p-0 shrink-0" onClick={() => openDetailModal(item.campaign_price, item.discounted_commission, item)}><Info className="h-3 w-3" /></Button>
                                 </div>
-                                <div className="text-[11px] text-slate-500">Kom: {commLabel(item.discounted_commission)}</div>
+                                <div className="text-[11px] text-muted-foreground">Kom: {commLabel(item.discounted_commission)}</div>
                                 {item.campaign_price > 0 && (
                                   <div className={`text-xs font-semibold ${campCalc.profit > 0 ? 'text-emerald-600' : 'text-rose-600'}`}>{campCalc.profit > 0 ? '+' : ''}₺{campCalc.profit.toFixed(2)} (%{campCalc.profitRate.toFixed(1)})</div>
                                 )}
@@ -479,9 +486,9 @@ export default function HBBasketCampaigns() {
         {uploadedData.length === 0 && (
           <Card>
             <CardContent className="p-12 text-center">
-              <Upload className="h-16 w-16 text-slate-300 mx-auto mb-4" />
-              <p className="text-slate-500 mb-2">Henüz dosya yüklenmedi</p>
-              <p className="text-sm text-slate-400">Hepsiburada "Sepet Kampanyaları" Excel dosyasını yükleyin</p>
+              <Upload className="h-16 w-16 text-muted-foreground/50 mx-auto mb-4" />
+              <p className="text-muted-foreground mb-2">Henüz dosya yüklenmedi</p>
+              <p className="text-sm text-muted-foreground/70">Hepsiburada "Sepet Kampanyaları" Excel dosyasını yükleyin</p>
             </CardContent>
           </Card>
         )}

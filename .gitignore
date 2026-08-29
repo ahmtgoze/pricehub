@@ -31,3 +31,6 @@ dist-ssr
 
 # Analiz ciktilari (gercek musteri maliyet verisi icerir)
 analysis/
+
+# Sayfa botunun Chrome profili (oturum bilgisi icerir, repoya girmez)
+/tmp/pricehub-bot-profili

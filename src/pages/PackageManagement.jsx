@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { db } from '@/api/db';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,9 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import DataTable from "@/components/ui/DataTable";
+import SearchInput from '@/components/ui/SearchInput';
+import FiltreEtiketi from '@/components/ui/FiltreEtiketi';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Plus, Trash2, Edit2, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -21,6 +24,8 @@ export default function PackageManagement() {
   const [editingPackage, setEditingPackage] = useState(null);
   const [editingItem, setEditingItem] = useState(null);
   const [selectedPackageId, setSelectedPackageId] = useState(null);
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
 
   const queryClient = useQueryClient();
 
@@ -42,6 +47,7 @@ export default function PackageManagement() {
       setEditingPackage(null);
       toast.success('Paket kaydedildi');
     },
+    onError: (e) => toast.error(e?.message || 'İşlem başarısız'),
   });
 
   const updatePackageMutation = useMutation({
@@ -52,6 +58,7 @@ export default function PackageManagement() {
       setEditingPackage(null);
       toast.success('Paket güncellendi');
     },
+    onError: (e) => toast.error(e?.message || 'İşlem başarısız'),
   });
 
   const deletePackageMutation = useMutation({
@@ -60,6 +67,7 @@ export default function PackageManagement() {
       queryClient.invalidateQueries({ queryKey: ['packages'] });
       toast.success('Paket silindi');
     },
+    onError: (e) => toast.error(e?.message || 'İşlem başarısız'),
   });
 
   const createItemMutation = useMutation({
@@ -71,6 +79,7 @@ export default function PackageManagement() {
       setEditingItem(null);
       toast.success('Kalem kaydedildi');
     },
+    onError: (e) => toast.error(e?.message || 'İşlem başarısız'),
   });
 
   const updateItemMutation = useMutation({
@@ -82,6 +91,7 @@ export default function PackageManagement() {
       setEditingItem(null);
       toast.success('Kalem güncellendi');
     },
+    onError: (e) => toast.error(e?.message || 'İşlem başarısız'),
   });
 
   const deleteItemMutation = useMutation({
@@ -91,6 +101,7 @@ export default function PackageManagement() {
       queryClient.invalidateQueries({ queryKey: ['packages'] });
       toast.success('Kalem silindi');
     },
+    onError: (e) => toast.error(e?.message || 'İşlem başarısız'),
   });
 
   const getPackageItems = (packageId) => {
@@ -120,13 +131,15 @@ export default function PackageManagement() {
   const packageColumns = [
     { header: 'Paket Adı', accessor: 'name' },
     { header: 'Grup', accessor: 'group' },
-    { header: 'Desi Aralığı', cell: (row) => row.desi_min && row.desi_max ? `${row.desi_min} - ${row.desi_max}` : '-' },
-    { header: 'Toplam Maliyet', cell: (row) => `${getPackageTotal(row.id).toFixed(2)} TL` },
+    { id: 'desi_araligi', header: 'Desi Aralığı', cell: (row) => row.desi_min && row.desi_max ? `${row.desi_min} - ${row.desi_max}` : '-' },
+    { id: 'toplam_maliyet', header: 'Toplam Maliyet', cell: (row) => `${getPackageTotal(row.id).toFixed(2)} TL` },
     { 
+      id: 'aktif',
       header: 'Aktif', 
       cell: (row) => <span className={row.is_active ? 'text-green-600' : 'text-red-600'}>{row.is_active ? 'Evet' : 'Hayır'}</span>
     },
     {
+      id: 'islemler',
       header: 'İşlemler',
       cell: (row) => (
         <div className="flex gap-2">
@@ -160,50 +173,89 @@ export default function PackageManagement() {
           </Button>
         </div>
       )
-    }
+    },
+    // ── Eklenebilir sutunlar: varsayilanda gizli, panelden acilir ──
+    { id: 'description', header: 'Açıklama', optional: true, cell: (row) => row.description || '-' },
+    { id: 'created_at', header: 'Eklenme Tarihi', optional: true, cell: (row) => row.created_at ? new Date(row.created_at).toLocaleDateString('tr-TR') : '-' },
   ];
+
+  const suzulmusPaketler = useMemo(() => {
+    let sonuc = [...packages];
+    if (search) {
+      const a = search.trim().toLowerCase();
+      sonuc = sonuc.filter(p => p.name?.toLowerCase().includes(a));
+    }
+    if (statusFilter !== 'all') {
+      const aktifMi = statusFilter === 'active';
+      sonuc = sonuc.filter(p => (p.is_active !== false) === aktifMi);
+    }
+    return sonuc;
+  }, [packages, search, statusFilter]);
 
   return (
     <div className="p-6 space-y-8">
       <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold text-gray-900">Paketleme Yönetimi</h1>
+        <h1 className="ph-title">Paketleme Yönetimi</h1>
         <Button
           onClick={() => {
             setEditingPackage(null);
             setPackageModalOpen(true);
           }}
-          className="bg-indigo-600 hover:bg-indigo-700"
+          className="bg-primary hover:bg-black dark:hover:bg-white/90"
         >
           <Plus className="h-5 w-5 mr-2" />
           Yeni Paket
         </Button>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200">
-        <div className="p-6 border-b border-gray-200">
-          <h2 className="text-lg font-semibold text-gray-900">Paketler</h2>
+      {/* DataTable kendi kartini (ph-panel) ciziyor; ayrica kart icine
+          sarilirsa kart-icinde-kart gorunumu olusuyordu. */}
+      <div className="space-y-4">
+        <h2 className="text-lg font-semibold text-foreground">Paketler</h2>
+
+        <div className="rounded-[18px] border border-border bg-card p-5">
+          <div className="flex flex-col sm:flex-row gap-4">
+            <SearchInput
+              value={search}
+              onChange={setSearch}
+              placeholder="Paket ara..."
+              className="flex-1 max-w-md"
+            />
+            <FiltreEtiketi ad="Durum">
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-full sm:w-40"><SelectValue placeholder="Durum" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tümü</SelectItem>
+                  <SelectItem value="active">Aktif</SelectItem>
+                  <SelectItem value="passive">Pasif</SelectItem>
+                </SelectContent>
+              </Select>
+            </FiltreEtiketi>
+          </div>
         </div>
-        <DataTable 
-          columns={packageColumns} 
-          data={packages} 
+
+        <DataTable pageKey="paketleme"
+          columns={packageColumns}
+          data={suzulmusPaketler}
           isLoading={packagesLoading}
+          emptyMessage="Paket bulunamadı"
         />
       </div>
 
       {selectedPackageId && (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200">
-          <div className="p-6 border-b border-gray-200">
-            <h2 className="text-lg font-semibold text-gray-900">
+        <div className="rounded-[18px] border border-border bg-card">
+          <div className="p-6 border-b border-border">
+            <h2 className="text-lg font-semibold text-foreground">
               {packages.find(p => p.id === selectedPackageId)?.name} - Paket İçeriği
             </h2>
           </div>
           <div className="p-6">
             <div className="space-y-4 mb-4">
               {getPackageItems(selectedPackageId).map(item => (
-                <div key={item.id} className="flex justify-between items-center p-4 border border-gray-200 rounded-lg">
+                <div key={item.id} className="flex justify-between items-center p-4 border border-border rounded-lg">
                   <div>
-                    <p className="font-medium text-gray-900">{item.name}</p>
-                    <p className="text-sm text-gray-500">{item.size} - {item.cost?.toFixed(2) ?? 0} TL</p>
+                    <p className="font-medium text-foreground">{item.name}</p>
+                    <p className="text-sm text-muted-foreground">{item.size} - {item.cost?.toFixed(2) ?? 0} TL</p>
                   </div>
                   <div className="flex gap-2">
                     <Button
@@ -359,7 +411,7 @@ function PackageModal({ open, onOpenChange, package: pkg, onSave, isSaving }) {
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               İptal
             </Button>
-            <Button type="submit" disabled={isSaving} className="bg-indigo-600 hover:bg-indigo-700">
+            <Button type="submit" disabled={isSaving} className="bg-primary hover:bg-black dark:hover:bg-white/90">
               {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {pkg ? 'Güncelle' : 'Ekle'}
             </Button>
@@ -419,7 +471,7 @@ function PackageItemModal({ open, onOpenChange, item, packageId, onSave, isSavin
             <select
               value={formData.item_type}
               onChange={(e) => setFormData({ ...formData, item_type: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-gray-900/20"
+              className="w-full px-3 py-2 border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-gray-900/20"
             >
               <option value="poşet">Poşet</option>
               <option value="kutu">Kutu</option>
@@ -459,7 +511,7 @@ function PackageItemModal({ open, onOpenChange, item, packageId, onSave, isSavin
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               İptal
             </Button>
-            <Button type="submit" disabled={isSaving} className="bg-indigo-600 hover:bg-indigo-700">
+            <Button type="submit" disabled={isSaving} className="bg-primary hover:bg-black dark:hover:bg-white/90">
               {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {item ? 'Güncelle' : 'Ekle'}
             </Button>

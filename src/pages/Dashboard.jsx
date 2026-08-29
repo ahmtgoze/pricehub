@@ -1,10 +1,11 @@
+import WidgetIzgarasi from '@/components/dashboard/WidgetIzgarasi';
 import React, { useMemo, useState, useEffect } from 'react';
 import { db } from '@/api/db';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import {
-  Package, Percent, Store,
-  AlertCircle, CheckCircle2, BarChart2, Tag, ChevronDown, ChevronUp
+  Package, Store,
+  AlertCircle, CheckCircle2, Tag, ChevronDown, ChevronUp
 } from 'lucide-react';
 import { formatTurkishPercent } from '@/utils/formatters';
 import { Button } from '@/components/ui/button';
@@ -12,6 +13,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
+import { tariheGoreSuz } from '@/lib/tarihAraligi';
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -150,11 +152,7 @@ if (filteredByRange) {
 
   const handleShowProducts = () => {
     if (!startDate || !endDate) return;
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-    end.setHours(23, 59, 59, 999);
-    const filtered = products.filter(p => p.created_date && new Date(p.created_date) >= start && new Date(p.created_date) <= end).sort((a, b) => new Date(b.created_date) - new Date(a.created_date));
-    setNewProductsList(filtered);
+    setNewProductsList(tariheGoreSuz(products, startDate, endDate));
     setShowProductsList(true);
   };
 
@@ -186,242 +184,310 @@ if (filteredByRange) {
     }
   };
 
+  // Prototip rengi yalnızca uyarı için kullanıyor: sağlıklı kâr nötr (siyah),
+  // düşük kâr amber, negatif kâr kırmızı. Yeşil ton kaldırıldı.
   const profitColor = (rate) => {
-    if (rate === null) return 'text-gray-400';
-    if (rate < 0) return 'text-red-600';
-    if (rate < 10) return 'text-orange-500';
-    if (rate < 20) return 'text-yellow-600';
-    return 'text-emerald-600';
+    if (rate === null) return 'text-muted-foreground';
+    if (rate < 0) return 'text-destructive';
+    if (rate < 10) return 'text-amber-600';
+    if (rate < 20) return 'text-amber-500';
+    return 'text-foreground';
+  };
+
+  // Prototipten birebir olculen kar dagilimi paleti (11 aralik):
+  // negatiften basliyor, kar arttikca kirmizi -> turuncu -> sari -> yesil.
+  // Degerler tasarim dosyasindaki sutunlardan dogrudan okundu.
+  const KAR_PALETI = {
+    '< 0%': '#d70015',
+    '0\u201310%': '#e8834a',
+    '10\u201320%': '#e8a33d',
+    '20\u201330%': '#d7c04a',
+    '30\u201340%': '#8fc46b',
+    '40\u201350%': '#5fb96a',
+    '50\u201375%': '#39a35a',
+    '75\u2013100%': '#2b8c4c',
+    '100\u2013200%': '#22703d',
+    '200\u2013300%': '#1a5c31',
+    '> 300%': '#124524',
   };
 
   const barColor = (item) => {
-    if (item.type === 'negative') return '#ef4444';
-    if (item.type === 'positive') return '#22c55e';
-    const name = item.name || item;
-    if (name === '< 0%') return '#ef4444';
-    if (name.startsWith('0\u2013')) return '#f97316';
-    if (name.startsWith('10\u2013')) return '#eab308';
-    if (name.startsWith('20\u2013')) return '#fbbf24';
-    if (name.startsWith('30\u2013')) return '#86efac';
-    if (name.startsWith('40\u2013')) return '#4ade80';
-    if (name.startsWith('50\u2013')) return '#22c55e';
-    if (name.startsWith('75\u2013')) return '#16a34a';
-    if (name.startsWith('100\u2013')) return '#15803d';
-    if (name.startsWith('200\u2013')) return '#166534';
-    return '#14532d';
+    if (item.type === 'negative') return KAR_PALETI['< 0%'];
+    const ad = item.name || item;
+    if (KAR_PALETI[ad]) return KAR_PALETI[ad];
+    // Ozel aralik secildiginde tek sutun cikar: kar pozitifse koyu yesil
+    if (item.type === 'positive') return '#22703d';
+    return '#1d1d1f';
   };
 
-  const platformColors = { trendyol: 'border-orange-200 bg-orange-50', hepsiburada: 'border-yellow-200 bg-yellow-50', website: 'border-indigo-200 bg-indigo-50' };
-  const platformTextColors = { trendyol: 'text-orange-700', hepsiburada: 'text-yellow-700', website: 'text-indigo-700' };
-  const platformBadgeColors = { trendyol: 'bg-orange-100 text-orange-800', hepsiburada: 'bg-yellow-100 text-yellow-800', website: 'bg-indigo-100 text-indigo-800' };
+  const platformColors = { trendyol: 'border-orange-200 dark:border-orange-900/50 bg-orange-50 dark:bg-orange-950/30', hepsiburada: 'border-purple-200 dark:border-purple-900/50 bg-purple-50 dark:bg-purple-950/30', website: 'border-border bg-secondary' };
+  const platformTextColors = { trendyol: 'text-orange-700', hepsiburada: 'text-purple-700', website: 'text-foreground' };
+  const platformBadgeColors = { trendyol: 'bg-orange-100 text-orange-800', hepsiburada: 'bg-purple-100 text-purple-800', website: 'bg-secondary text-muted-foreground' };
 
-  return (
-    <div className="min-h-screen">
-      <div className="max-w-[1600px] mx-auto px-3 sm:px-6 py-5 sm:py-8">
-        <div className="mb-6">
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Dashboard</h1>
-          <p className="text-gray-500 mt-1 text-sm">Ürün, platform ve kâr özeti</p>
-        </div>
-
-        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5 mb-6">
-          <StatCard icon={Package} label="Aktif Ürün" value={activeProducts.length} color="blue" />
-          <StatCard icon={Store} label="Platform" value={activePlatforms.length} color="purple" />
-          <StatCard icon={Tag} label="Hesaplanan Fiyat" value={productPrices.length} color="green" />
-          <StatCard icon={AlertCircle} label="Fiyatlanmamış" value={unpricedProducts.length} color={unpricedProducts.length > 0 ? 'red' : 'green'} onClick={() => navigate('/Prices?filter=unpriced')} />
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 mb-6">
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex flex-col gap-4">
-            <h2 className="font-semibold text-gray-800 flex items-center gap-2"><Percent className="h-4 w-4 text-gray-400" />Kâr Özeti</h2>
-            <div className="space-y-3">
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-500">Ort. Kâr Oranı</span>
-                <span className={`text-lg font-bold ${profitColor(overallAvgProfit)}`}>{formatTurkishPercent(overallAvgProfit)}</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-500">Toplam Fiyatlı Kayıt</span>
-                <span className="font-semibold text-gray-800">{productPrices.length}</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-500">Negatif Kârlı</span>
-                <span className={`font-semibold ${negativeProfitTotal > 0 ? 'text-red-600' : 'text-emerald-600'}`}>
-                  {negativeProfitTotal}
-                  {negativeProfitTotal > 0 && <AlertCircle className="inline ml-1 h-3.5 w-3.5" />}
-                </span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-500">Kategoriler</span>
-                <span className="font-semibold text-gray-800">{categories.length}</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-500">Komisyon Kuralı</span>
-                <span className="font-semibold text-gray-800">{commissions.filter(c => c.is_active !== false).length}</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 lg:col-span-2">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="font-semibold text-gray-800 flex items-center gap-2"><BarChart2 className="h-4 w-4 text-gray-400" />Kâr Oranı Dağılımı</h2>
-              <Button variant="outline" size="sm" onClick={() => setShowCustomFilter(!showCustomFilter)} className="text-xs">
-                {filteredByRange ? '✓ Filtre Aktif' : 'Özel Aralık Seç'}
-              </Button>
-            </div>
-            {showCustomFilter && (
-              <div className="mb-4 p-3 bg-gray-50 rounded-lg border border-gray-200 flex gap-2 items-end">
-                <div className="flex-1 min-w-0">
-                  <Label className="text-xs text-gray-500 mb-1 block">Min %</Label>
-                  <Input type="number" value={customMinProfit} onChange={(e) => setCustomMinProfit(e.target.value)} placeholder="0" className="text-sm" />
+  // Dashboard kutulari. WidgetIzgarasi bunlari tasinabilir ve
+  // boyutlandirilabilir hale getiriyor; icerik/hesap mantigi degismedi.
+  const widgetTanimlari = [
+    // Ust ozet kartlari tek bir sabit blok degil, dort ayri widget:
+    // kullanici her birini tasiyabilir, boyutlandirabilir, gizleyebilir.
+    // Tasarim prototipi de bunlari ayri widget olarak tanimliyor.
+    {
+      id: 'kpi-urun',
+      baslik: 'Aktif Ürün',
+      varsayilanSpan: 1,
+      icerik: <StatCard icon={Package} label="Aktif Ürün" value={activeProducts.length} color="blue" />,
+    },
+    {
+      id: 'kpi-platform',
+      baslik: 'Platform',
+      varsayilanSpan: 1,
+      icerik: <StatCard icon={Store} label="Platform" value={activePlatforms.length} color="purple" />,
+    },
+    {
+      id: 'kpi-fiyat',
+      baslik: 'Hesaplanan Fiyat',
+      varsayilanSpan: 1,
+      icerik: <StatCard icon={Tag} label="Hesaplanan Fiyat" value={productPrices.length} color="green" />,
+    },
+    {
+      id: 'kpi-fiyatlanmamis',
+      baslik: 'Fiyatlanmamış',
+      varsayilanSpan: 1,
+      icerik: (
+        <StatCard
+          icon={AlertCircle}
+          label="Fiyatlanmamış"
+          value={unpricedProducts.length}
+          color={unpricedProducts.length > 0 ? 'red' : 'green'}
+          onClick={() => navigate('/Prices?filter=unpriced')}
+        />
+      ),
+    },
+    {
+      id: 'kar-ozeti',
+      baslik: 'Kâr Özeti',
+      varsayilanSpan: 1,
+      icerik: (
+      <div className="ph-card flex flex-col gap-4">
+                <h2 className="text-[15px] font-semibold tracking-[-0.2px]">Kâr Özeti</h2>
+                <div className="flex flex-col gap-3">
+                    <div className="flex justify-between items-center text-[13.5px]">
+                      <span className="text-muted-foreground">Ort. Kâr Oranı</span>
+                      <span className={`font-semibold tabular-nums ${profitColor(overallAvgProfit)}`}>{formatTurkishPercent(overallAvgProfit)}</span>
+                    </div>
+                    <div className="flex justify-between items-center text-[13.5px]">
+                      <span className="text-muted-foreground">Toplam Fiyatlı Kayıt</span>
+                      <span className="font-semibold tabular-nums">{productPrices.length}</span>
+                    </div>
+                    <div className="flex justify-between items-center text-[13.5px]">
+                      <span className="text-muted-foreground">Negatif Kârlı</span>
+                      <span className={`font-semibold tabular-nums ${negativeProfitTotal > 0 ? 'text-destructive' : 'text-foreground'}`}>
+                        {negativeProfitTotal}
+                        {negativeProfitTotal > 0 && <AlertCircle className="inline ml-1 h-3.5 w-3.5" />}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center text-[13.5px]">
+                      <span className="text-muted-foreground">Kategoriler</span>
+                      <span className="font-semibold tabular-nums">{categories.length}</span>
+                    </div>
+                    <div className="flex justify-between items-center text-[13.5px]">
+                      <span className="text-muted-foreground">Komisyon Kuralı</span>
+                      <span className="font-semibold tabular-nums">{commissions.filter(c => c.is_active !== false).length}</span>
+                    </div>
+                  </div>
                 </div>
-                <div className="flex-1 min-w-0">
-                  <Label className="text-xs text-gray-500 mb-1 block">Max %</Label>
-                  <Input type="number" value={customMaxProfit} onChange={(e) => setCustomMaxProfit(e.target.value)} placeholder="100" className="text-sm" />
-                </div>
-                <Button size="sm" onClick={() => { if (customMinProfit !== '' || customMaxProfit !== '') setFilteredByRange(true); }} className="text-xs shrink-0">Filtrele</Button>
-                <Button variant="outline" size="sm" onClick={() => { setCustomMinProfit(''); setCustomMaxProfit(''); setFilteredByRange(false); }} className="text-xs shrink-0">Sıfırla</Button>
-              </div>
-            )}
-            {productPrices.length === 0 ? (
-              <div className="flex items-center justify-center h-32 text-gray-400 text-sm">Henüz fiyat hesaplanmamış</div>
-            ) : (
-              <ResponsiveContainer width="100%" height={160}>
-                <BarChart data={profitDistribution} barSize={36} style={{ cursor: 'pointer' }} onClick={handleBarClick}>
-                  <XAxis dataKey="name" tick={{ fontSize: 12, fill: '#6b7280' }} axisLine={false} tickLine={false} />
-                  <YAxis tick={{ fontSize: 11, fill: '#9ca3af' }} axisLine={false} tickLine={false} allowDecimals={false} />
-                  <Tooltip contentStyle={{ borderRadius: 10, border: '1px solid #e5e7eb', fontSize: 12 }} formatter={(v) => [`${v} fiyat`, 'Adet']} />
-                  <Bar dataKey="value" radius={[6, 6, 0, 0]}>
-                    {profitDistribution.map((entry) => (<Cell key={entry.name} fill={barColor(entry)} />))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            )}
-            <p className="text-xs text-gray-400 mt-2 text-center">Bir sütuna tıklayarak o kâr aralığındaki ürünleri görün</p>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 sm:p-5 mb-6">
-          <h2 className="font-semibold text-gray-800 mb-4 flex items-center gap-2"><Store className="h-4 w-4 text-gray-400" />Platform Bazlı Kâr Özeti</h2>
-          {platformSummary.length === 0 ? (
-            <p className="text-gray-400 text-sm text-center py-4">Platform bulunamadı</p>
-          ) : (
-            <div className="hidden sm:block overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="text-left text-gray-500 border-b border-gray-100">
-                    <th className="pb-2 pr-4 font-medium">Platform</th>
-                    <th className="pb-2 pr-4 font-medium text-center">Fiyat Sayısı</th>
-                    <th className="pb-2 pr-4 font-medium text-center">Ort. Kâr</th>
-                    <th className="pb-2 pr-4 font-medium text-center">Min</th>
-                    <th className="pb-2 pr-4 font-medium text-center">Maks</th>
-                    <th className="pb-2 font-medium text-center">Negatif</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {platformSummary.map(({ platform, prices, avgProfit, minProfit, maxProfit, negativeProfitCount }) => (
-                    <tr key={platform.id} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
-                      <td className="py-2.5 pr-4 font-medium text-gray-900">{platform.name}</td>
-                      <td className="py-2.5 pr-4 text-center text-gray-600">{prices}</td>
-                      <td className={`py-2.5 pr-4 text-center font-semibold ${profitColor(avgProfit)}`}>{avgProfit !== null ? formatTurkishPercent(avgProfit) : '—'}</td>
-                      <td className={`py-2.5 pr-4 text-center text-xs ${profitColor(minProfit)}`}>{minProfit !== null ? formatTurkishPercent(minProfit) : '—'}</td>
-                      <td className={`py-2.5 pr-4 text-center text-xs ${profitColor(maxProfit)}`}>{maxProfit !== null ? formatTurkishPercent(maxProfit) : '—'}</td>
-                      <td className="py-2.5 text-center">
-                        {negativeProfitCount > 0 ? <Badge variant="destructive" className="text-xs">{negativeProfitCount}</Badge> : <CheckCircle2 className="h-4 w-4 text-emerald-500 mx-auto" />}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 sm:p-5">
-            <h2 className="font-semibold text-gray-800 mb-4 flex items-center gap-2"><Package className="h-4 w-4 text-gray-400" />Tarihe Göre Eklenen Ürünler</h2>
-            <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-end w-full">
-              <div className="flex-1 min-w-0">
-                <Label className="text-xs text-gray-500 mb-1 block">Başlangıç</Label>
-                <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="w-full" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <Label className="text-xs text-gray-500 mb-1 block">Bitiş</Label>
-                <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="w-full" />
-              </div>
-              <Button onClick={handleShowProducts} disabled={!startDate || !endDate} className="w-full sm:w-auto shrink-0">Listele</Button>
-            </div>
-            {showProductsList && (
-              <div className="mt-4">
-                <p className="text-sm font-semibold text-gray-700 mb-3">{newProductsList.length} ürün bulundu</p>
-                <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
-                  {newProductsList.length > 0 ? newProductsList.map(product => (
-                    <div key={product.id} className="flex items-center justify-between px-3 py-2.5 bg-gray-50 rounded-xl border border-gray-100 hover:bg-gray-100 transition-colors">
-                      <div className="min-w-0 flex-1">
-                        <p className="font-medium text-gray-900 text-sm truncate">{product.name}</p>
-                        {product.sku && <p className="text-xs text-gray-400 font-mono truncate">{product.sku}</p>}
+      ),
+    },
+    {
+      id: 'kar-dagilimi',
+      baslik: 'Kâr Oranı Dağılımı',
+      varsayilanSpan: 3,
+      icerik: (
+      <div className="ph-card">
+                  <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-[15px] font-semibold tracking-[-0.2px]">Kâr Oranı Dağılımı</h2>
+                    <Button variant="outline" size="sm" onClick={() => setShowCustomFilter(!showCustomFilter)} className="text-xs">
+                      {filteredByRange ? '✓ Filtre Aktif' : 'Tarih Aralığı Seç'}
+                    </Button>
+                  </div>
+                  {showCustomFilter && (
+                    <div className="mb-4 p-[14px] bg-secondary rounded-xl flex gap-2 items-end">
+                      <div className="flex-1 min-w-0">
+                        <Label className="text-[11.5px] text-muted-foreground mb-[5px] block">Min %</Label>
+                        <Input type="number" value={customMinProfit} onChange={(e) => setCustomMinProfit(e.target.value)} placeholder="0" className="text-sm" />
                       </div>
-                      <span className="text-xs text-gray-500 shrink-0 ml-3 whitespace-nowrap">{new Date(product.created_date).toLocaleDateString('tr-TR')}</span>
+                      <div className="flex-1 min-w-0">
+                        <Label className="text-[11.5px] text-muted-foreground mb-[5px] block">Max %</Label>
+                        <Input type="number" value={customMaxProfit} onChange={(e) => setCustomMaxProfit(e.target.value)} placeholder="100" className="text-sm" />
+                      </div>
+                      <Button size="sm" onClick={() => { if (customMinProfit !== '' || customMaxProfit !== '') setFilteredByRange(true); }} className="text-xs shrink-0">Filtrele</Button>
+                      <Button variant="outline" size="sm" onClick={() => { setCustomMinProfit(''); setCustomMaxProfit(''); setFilteredByRange(false); }} className="text-xs shrink-0">Sıfırla</Button>
                     </div>
-                  )) : <p className="text-center text-gray-400 py-8 text-sm">Bu tarihte eklenen ürün yok</p>}
-                </div>
+                  )}
+                  {productPrices.length === 0 ? (
+                    <div className="flex items-center justify-center h-32 text-muted-foreground text-[13.5px]">Henüz fiyat hesaplanmamış</div>
+                  ) : (
+                    <ResponsiveContainer width="100%" height={160}>
+                      <BarChart data={profitDistribution} barSize={36} style={{ cursor: 'pointer' }} onClick={handleBarClick}>
+                        <XAxis dataKey="name" tick={{ fontSize: 10, fill: '#86868b' }} axisLine={false} tickLine={false} />
+                        <YAxis tick={{ fontSize: 10, fill: '#a1a1a6' }} axisLine={false} tickLine={false} allowDecimals={false} />
+                        <Tooltip contentStyle={{ borderRadius: 12, border: '1px solid #ececee', fontSize: 12 }} formatter={(v) => [`${v} fiyat`, 'Adet']} />
+                        <Bar dataKey="value" radius={[6, 6, 0, 0]}>
+                          {profitDistribution.map((entry) => (<Cell key={entry.name} fill={barColor(entry)} />))}
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                  )}
+                  <p className="text-xs text-muted-foreground mt-2 text-center">Bir sütuna tıklayarak o kâr aralığındaki ürünleri görün</p>
               </div>
-            )}
-          </div>
-
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 sm:p-5">
-            <h2 className="font-semibold text-gray-800 mb-4 flex items-center gap-2"><AlertCircle className="h-4 w-4 text-gray-400" />Platformda Listelenmeyen Ürünler</h2>
-            <div className="space-y-3">
-              {unlistedByPlatform.map(({ platformType, name, listedCount, unlistedCount, unlistedProducts }) => (
-                <div key={platformType} className={`rounded-xl border overflow-hidden ${platformColors[platformType]}`}>
-                  <button onClick={() => setExpandedPlatform(expandedPlatform === platformType ? null : platformType)} className="w-full flex items-center justify-between px-4 py-3">
-                    <div className="flex items-center gap-3">
-                      <span className={`font-semibold text-sm ${platformTextColors[platformType]}`}>{name}</span>
-                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${platformBadgeColors[platformType]}`}>{listedCount} listelendi</span>
-                      {unlistedCount > 0 && <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-red-100 text-red-700">{unlistedCount} listelenmemiş</span>}
-                      {unlistedCount === 0 && <CheckCircle2 className="h-4 w-4 text-emerald-500" />}
-                    </div>
-                    {unlistedCount > 0 && (expandedPlatform === platformType ? <ChevronUp className="h-4 w-4 text-gray-500 shrink-0" /> : <ChevronDown className="h-4 w-4 text-gray-500 shrink-0" />)}
-                  </button>
-                  {expandedPlatform === platformType && unlistedCount > 0 && (
-                    <div className="px-4 pb-3 border-t border-white/50">
-                      <div className="space-y-1.5 max-h-56 overflow-y-auto mt-2 pr-1">
-                        {unlistedProducts.map(p => (
-                          <div key={p.id} className="flex items-center justify-between bg-white rounded-lg px-3 py-2 text-xs">
-                            <span className="font-medium text-gray-800 truncate">{p.name}</span>
-                            {p.sku && <span className="text-gray-400 font-mono ml-2 shrink-0">{p.sku}</span>}
-                          </div>
+      ),
+    },
+    {
+      id: 'platform-ozeti',
+      baslik: 'Platform Bazlı Kâr Özeti',
+      varsayilanSpan: 4,
+      icerik: (
+      <div className="ph-card">
+                <h2 className="text-[15px] font-semibold tracking-[-0.2px] mb-4">Platform Bazlı Kâr Özeti</h2>
+                {platformSummary.length === 0 ? (
+                  <p className="ph-empty">Platform bulunamadı</p>
+                ) : (
+                  <div className="hidden sm:block overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="text-left border-b border-border">
+                          <th className="ph-th pb-[13px] pr-4">Platform</th>
+                          <th className="ph-th pb-[13px] pr-4 text-center">Fiyat Sayısı</th>
+                          <th className="ph-th pb-[13px] pr-4 text-center">Ort. Kâr</th>
+                          <th className="ph-th pb-[13px] pr-4 text-center">Min</th>
+                          <th className="ph-th pb-[13px] pr-4 text-center">Maks</th>
+                          <th className="ph-th pb-[13px] text-center">Negatif</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {platformSummary.map(({ platform, prices, avgProfit, minProfit, maxProfit, negativeProfitCount }) => (
+                          <tr key={platform.id} className="border-b border-[#f2f2f4] last:border-0 hover:bg-secondary/60 transition-colors">
+                            <td className="py-[11px] pr-4 font-medium">{platform.name}</td>
+                            <td className="py-[11px] pr-4 text-center text-muted-foreground tabular-nums">{prices}</td>
+                            <td className={`py-[11px] pr-4 text-center font-semibold tabular-nums ${profitColor(avgProfit)}`}>{avgProfit !== null ? formatTurkishPercent(avgProfit) : '—'}</td>
+                            <td className={`py-[11px] pr-4 text-center text-xs tabular-nums ${profitColor(minProfit)}`}>{minProfit !== null ? formatTurkishPercent(minProfit) : '—'}</td>
+                            <td className={`py-[11px] pr-4 text-center text-xs tabular-nums ${profitColor(maxProfit)}`}>{maxProfit !== null ? formatTurkishPercent(maxProfit) : '—'}</td>
+                            <td className="py-[11px] text-center">
+                              {negativeProfitCount > 0 ? <Badge variant="destructive" className="text-xs">{negativeProfitCount}</Badge> : <CheckCircle2 className="h-4 w-4 text-muted-foreground/50 mx-auto" />}
+                            </td>
+                          </tr>
                         ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+      ),
+    },
+    {
+      id: 'tarihe-gore',
+      baslik: 'Tarihe Göre Eklenen Ürünler',
+      varsayilanSpan: 1,
+      icerik: (
+      <div className="ph-card">
+                  <h2 className="text-[15px] font-semibold tracking-[-0.2px] mb-4">Tarihe Göre Eklenen Ürünler</h2>
+                  <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-end w-full">
+                    <div className="flex-1 min-w-0">
+                      <Label className="text-[11.5px] text-muted-foreground mb-[5px] block">Başlangıç</Label>
+                      <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="w-full" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <Label className="text-[11.5px] text-muted-foreground mb-[5px] block">Bitiş</Label>
+                      <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="w-full" />
+                    </div>
+                    <Button onClick={handleShowProducts} disabled={!startDate || !endDate} className="w-full sm:w-auto shrink-0">Listele</Button>
+                  </div>
+                  {showProductsList && (
+                    <div className="mt-4">
+                      <p className="text-[13.5px] font-semibold mb-3">{newProductsList.length} ürün bulundu</p>
+                      <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
+                        {newProductsList.length > 0 ? newProductsList.map(product => (
+                          <div key={product.id} className="flex items-center justify-between px-[13px] py-2.5 bg-secondary rounded-xl hover:bg-accent transition-colors">
+                            <div className="min-w-0 flex-1">
+                              <p className="font-medium text-[13.5px] truncate">{product.name}</p>
+                              {product.sku && <p className="text-xs text-muted-foreground font-mono-numeric truncate">{product.sku}</p>}
+                            </div>
+                            <span className="text-xs text-muted-foreground shrink-0 ml-3 whitespace-nowrap tabular-nums">{new Date(product.created_date).toLocaleDateString('tr-TR')}</span>
+                          </div>
+                        )) : <p className="ph-empty">Bu tarihte eklenen ürün yok</p>}
                       </div>
                     </div>
                   )}
                 </div>
-              ))}
-            </div>
+      ),
+    },
+    {
+      id: 'listelenmeyen',
+      baslik: 'Platformda Listelenmeyen Ürünler',
+      varsayilanSpan: 1,
+      icerik: (
+      <div className="ph-card">
+                  <h2 className="text-[15px] font-semibold tracking-[-0.2px] mb-4">Platformda Listelenmeyen Ürünler</h2>
+                  <div className="space-y-3">
+                    {unlistedByPlatform.map(({ platformType, name, listedCount, unlistedCount, unlistedProducts }) => (
+                      <div key={platformType} className={`rounded-xl border overflow-hidden ${platformColors[platformType]}`}>
+                        <button onClick={() => setExpandedPlatform(expandedPlatform === platformType ? null : platformType)} className="w-full flex items-center justify-between px-4 py-3">
+                          <div className="flex items-center gap-3">
+                            <span className={`font-semibold text-sm ${platformTextColors[platformType]}`}>{name}</span>
+                            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${platformBadgeColors[platformType]}`}>{listedCount} listelendi</span>
+                            {unlistedCount > 0 && <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-red-100 text-red-700">{unlistedCount} listelenmemiş</span>}
+                            {unlistedCount === 0 && <CheckCircle2 className="h-4 w-4 text-muted-foreground/60" />}
+                          </div>
+                          {unlistedCount > 0 && (expandedPlatform === platformType ? <ChevronUp className="h-4 w-4 text-muted-foreground shrink-0" /> : <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />)}
+                        </button>
+                        {expandedPlatform === platformType && unlistedCount > 0 && (
+                          <div className="px-4 pb-3 border-t border-white/50">
+                            <div className="space-y-1.5 max-h-56 overflow-y-auto mt-2 pr-1">
+                              {unlistedProducts.map(p => (
+                                <div key={p.id} className="flex items-center justify-between bg-card rounded-[10px] px-3 py-2 text-xs">
+                                  <span className="font-medium truncate">{p.name}</span>
+                                  {p.sku && <span className="text-muted-foreground font-mono-numeric ml-2 shrink-0">{p.sku}</span>}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+      ),
+    },
+  ];
+
+  return (
+    <div className="ph-page mx-auto">
+      <WidgetIzgarasi
+        pageKey="dashboard"
+        tanimlar={widgetTanimlari}
+        baslik={(
+          <div>
+            <h1 className="ph-title">Dashboard</h1>
+            <p className="ph-subtitle">Ürün, platform ve kâr özeti</p>
           </div>
-        </div>
-      </div>
+        )}
+      />
     </div>
   );
 }
 
-function StatCard({ icon: Icon, label, value, color, onClick }) {
-  const colors = {
-    blue: 'bg-blue-50 text-blue-600',
-    purple: 'bg-purple-50 text-purple-600',
-    green: 'bg-emerald-50 text-emerald-600',
-    red: 'bg-red-50 text-red-600',
-  };
+// Prototipteki istatistik kutusu: ikon yok, üstte soluk etiket, altta iri sayı.
+// `icon` (kullanılmıyor) ve `color` parametreleri çağrı yerleri bozulmasın diye korundu;
+// `color === 'red'` sayıyı kırmızıya çeker (fiyatlanmamış ürün uyarısı kaybolmasın).
+function StatCard({ icon: _icon, label, value, color, onClick }) {
   return (
     <div
-      className={`bg-white rounded-2xl border border-gray-100 shadow-sm p-4 sm:p-5 flex items-center gap-4 ${onClick ? 'cursor-pointer hover:shadow-md transition-shadow' : ''}`}
+      className={`ph-card ${onClick ? 'cursor-pointer transition-colors hover:border-[#d8d8dc] dark:hover:border-muted-foreground/40' : ''}`}
       onClick={onClick}
     >
-      <div className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 ${colors[color]}`}>
-        <Icon className="h-5 w-5" />
-      </div>
-      <div>
-        <p className="text-xs text-gray-500">{label}</p>
-        <p className="text-xl sm:text-2xl font-bold text-gray-900">{value}</p>
-      </div>
+      <p className="text-[12.5px] font-medium text-muted-foreground">{label}</p>
+      <p className={`mt-2.5 text-[28px] sm:text-[38px] font-semibold leading-none tracking-[-0.04em] tabular-nums ${color === 'red' ? 'text-destructive' : 'text-foreground'}`}>
+        {value}
+      </p>
     </div>
   );
 }

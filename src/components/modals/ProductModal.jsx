@@ -307,14 +307,14 @@ export default function ProductModal({
   });
 
   const SearchList = ({ results, onSelect }) => (
-    <div className="border border-gray-200 rounded-lg overflow-hidden mt-1 bg-white shadow-sm">
+    <div className="border border-border rounded-lg overflow-hidden mt-1 bg-card shadow-sm">
       {results.length === 0
-        ? <div className="px-3 py-3 text-sm text-gray-400">Sonuç bulunamadı — farklı kelime deneyin</div>
+        ? <div className="px-3 py-3 text-sm text-muted-foreground/70">Sonuç bulunamadı — farklı kelime deneyin</div>
         : results.map(p => (
           <button key={p.id} type="button" onClick={() => onSelect(p)}
-            className="w-full text-left px-3 py-2.5 text-sm hover:bg-gray-50 border-b border-gray-100 last:border-0 flex items-center justify-between gap-2">
-            <span className="text-gray-800 truncate">{p.name}</span>
-            <span className="text-xs text-indigo-500 shrink-0 font-medium">Ekle</span>
+            className="w-full text-left px-3 py-2.5 text-sm hover:bg-secondary border-b border-border last:border-0 flex items-center justify-between gap-2">
+            <span className="text-foreground truncate">{p.name}</span>
+            <span className="text-xs text-foreground shrink-0 font-medium">Ekle</span>
           </button>
         ))
       }
@@ -322,9 +322,9 @@ export default function ProductModal({
   );
 
   const Tag = ({ label, onRemove }) => (
-    <div className="inline-flex items-center gap-1.5 bg-indigo-50 border border-indigo-200 rounded-md px-2 py-1 text-xs text-indigo-700 max-w-full">
+    <div className="inline-flex items-center gap-1.5 bg-secondary border border-border rounded-md px-2 py-1 text-xs text-muted-foreground max-w-full">
       <span className="truncate max-w-[200px]">{label}</span>
-      <button type="button" onClick={onRemove} className="text-indigo-400 hover:text-indigo-700 shrink-0 text-base leading-none">×</button>
+      <button type="button" onClick={onRemove} className="text-muted-foreground/70 hover:text-muted-foreground shrink-0 text-base leading-none">×</button>
     </div>
   );
 
@@ -332,7 +332,7 @@ export default function ProductModal({
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="sm:max-w-lg flex flex-col p-0 gap-0" style={{ maxHeight: '90dvh' }}>
-          <DialogHeader className="px-6 pt-6 pb-4 border-b border-slate-100 flex-shrink-0">
+          <DialogHeader className="px-6 pt-6 pb-4 border-b border-border flex-shrink-0">
             <DialogTitle className="text-xl font-semibold">
               {product ? 'Ürün Düzenle' : 'Yeni Ürün Ekle'}
             </DialogTitle>
@@ -401,11 +401,11 @@ export default function ProductModal({
               )}
 
               {/* REFERANS ÜRÜN — ÖZELLİĞE GÖRE (kendi referans ürünü) */}
-              <div className="border border-gray-200 rounded-lg overflow-hidden">
-                <div className="flex items-center justify-between px-4 py-3 bg-gray-50 border-b border-gray-200">
+              <div className="border border-border rounded-lg overflow-hidden">
+                <div className="flex items-center justify-between px-4 py-3 bg-secondary border-b border-border">
                   <div>
                     <Label className="font-medium text-sm">Referans Ürün — Özelliğe Göre</Label>
-                    <p className="text-xs text-gray-500 mt-0.5">Aynı ölçüde farklı özellik (renk, cepli/cepsiz) kıyası. Maliyet eki elle girilir.</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">Aynı ölçüde farklı özellik (renk, cepli/cepsiz) kıyası. Maliyet eki elle girilir.</p>
                   </div>
                   {form.ref_product_id && (
                     <button type="button"
@@ -417,14 +417,14 @@ export default function ProductModal({
                 </div>
                 <div className="p-4 space-y-4">
                   {refProduct ? (
-                    <div className="flex items-center gap-2 p-2.5 bg-indigo-50 border border-indigo-200 rounded-lg text-sm">
-                      <span className="font-medium text-indigo-800 flex-1 truncate">{refProduct.name}</span>
-                      <span className="text-indigo-600 shrink-0">₺{parseFloat(refProduct.cost).toFixed(2)}</span>
+                    <div className="flex items-center gap-2 p-2.5 bg-secondary border border-border rounded-lg text-sm">
+                      <span className="font-medium text-foreground flex-1 truncate">{refProduct.name}</span>
+                      <span className="text-muted-foreground shrink-0">₺{parseFloat(refProduct.cost).toFixed(2)}</span>
                     </div>
                   ) : (
                     <div>
-                      <div className="flex items-center gap-2 border border-gray-200 rounded-lg px-3 py-2 bg-white focus-within:border-indigo-300">
-                        <Search className="h-4 w-4 text-gray-400 shrink-0" />
+                      <div className="flex items-center gap-2 border border-border rounded-lg px-3 py-2 bg-card focus-within:border-input">
+                        <Search className="h-4 w-4 text-muted-foreground/70 shrink-0" />
                         <input
                           value={refSearch}
                           onChange={e => { setRefSearch(e.target.value); setShowRefSearch(true); }}
@@ -438,10 +438,10 @@ export default function ProductModal({
                   )}
 
                   {form.ref_product_id && (
-                    <div className={`space-y-3 rounded-lg border p-3 ${baseCostResult?.source === 'feature' ? 'border-emerald-300 bg-emerald-50/40' : 'border-gray-200'}`}>
+                    <div className={`space-y-3 rounded-lg border p-3 ${baseCostResult?.source === 'feature' ? 'border-emerald-300 bg-emerald-50 dark:bg-emerald-950/30/40' : 'border-border'}`}>
                       <div className="flex items-center justify-between">
                         <Label className="text-sm font-medium">Hesaplanan baz maliyet</Label>
-                        {featureBaseCost !== null && <span className="text-xs text-gray-500">₺{featureBaseCost.toFixed(2)}</span>}
+                        {featureBaseCost !== null && <span className="text-xs text-muted-foreground">₺{featureBaseCost.toFixed(2)}</span>}
                       </div>
                       <div className="space-y-2">
                         <Label className="text-sm">Maliyet eki türü</Label>
@@ -454,8 +454,8 @@ export default function ProductModal({
                             <button key={opt.val} type="button"
                               onClick={() => upd('cost_addon_type', opt.val)}
                               className={`py-2 px-2 text-xs rounded-lg border transition-colors ${form.cost_addon_type === opt.val
-                                ? 'bg-indigo-50 border-indigo-400 text-indigo-700 font-medium'
-                                : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'}`}>
+                                ? 'bg-primary border-primary text-primary-foreground font-medium'
+                                : 'bg-card border-border text-muted-foreground hover:bg-secondary'}`}>
                               {opt.label}
                             </button>
                           ))}
@@ -483,11 +483,11 @@ export default function ProductModal({
               </div>
 
               {/* REFERANS ÜRÜN — ÖLÇÜYE GÖRE (ayrı referans ürünü) */}
-              <div className="border border-gray-200 rounded-lg overflow-hidden">
-                <div className="flex items-center justify-between px-4 py-3 bg-gray-50 border-b border-gray-200">
+              <div className="border border-border rounded-lg overflow-hidden">
+                <div className="flex items-center justify-between px-4 py-3 bg-secondary border-b border-border">
                   <div>
                     <Label className="font-medium text-sm">Referans Ürün — Ölçüye Göre</Label>
-                    <p className="text-xs text-gray-500 mt-0.5">Farklı ölçüdeki ürünler arası kıyas. Maliyet eki (%) otomatik hesaplanır.</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">Farklı ölçüdeki ürünler arası kıyas. Maliyet eki (%) otomatik hesaplanır.</p>
                   </div>
                   {form.ref_product_id_size && (
                     <button type="button"
@@ -499,14 +499,14 @@ export default function ProductModal({
                 </div>
                 <div className="p-4 space-y-4">
                   {refProductSize ? (
-                    <div className="flex items-center gap-2 p-2.5 bg-indigo-50 border border-indigo-200 rounded-lg text-sm">
-                      <span className="font-medium text-indigo-800 flex-1 truncate">{refProductSize.name}</span>
-                      <span className="text-indigo-600 shrink-0">₺{parseFloat(refProductSize.cost).toFixed(2)}</span>
+                    <div className="flex items-center gap-2 p-2.5 bg-secondary border border-border rounded-lg text-sm">
+                      <span className="font-medium text-foreground flex-1 truncate">{refProductSize.name}</span>
+                      <span className="text-muted-foreground shrink-0">₺{parseFloat(refProductSize.cost).toFixed(2)}</span>
                     </div>
                   ) : (
                     <div>
-                      <div className="flex items-center gap-2 border border-gray-200 rounded-lg px-3 py-2 bg-white focus-within:border-indigo-300">
-                        <Search className="h-4 w-4 text-gray-400 shrink-0" />
+                      <div className="flex items-center gap-2 border border-border rounded-lg px-3 py-2 bg-card focus-within:border-input">
+                        <Search className="h-4 w-4 text-muted-foreground/70 shrink-0" />
                         <input
                           value={refSearchSize}
                           onChange={e => { setRefSearchSize(e.target.value); setShowRefSearchSize(true); }}
@@ -520,13 +520,13 @@ export default function ProductModal({
                   )}
 
                   {form.ref_product_id_size && (
-                    <div className={`space-y-3 rounded-lg border p-3 ${baseCostResult?.source === 'size' ? 'border-emerald-300 bg-emerald-50/40' : 'border-gray-200'}`}>
+                    <div className={`space-y-3 rounded-lg border p-3 ${baseCostResult?.source === 'size' ? 'border-emerald-300 bg-emerald-50 dark:bg-emerald-950/30/40' : 'border-border'}`}>
                       <div className="flex items-center justify-between">
                         <Label className="text-sm font-medium">Hesaplanan baz maliyet</Label>
-                        {sizeBaseCostValue !== null && <span className="text-xs text-gray-500">₺{sizeBaseCostValue.toFixed(2)}</span>}
+                        {sizeBaseCostValue !== null && <span className="text-xs text-muted-foreground">₺{sizeBaseCostValue.toFixed(2)}</span>}
                       </div>
                       {sizeSuggestion ? (
-                        <div className="text-xs text-indigo-700 bg-indigo-50 border border-indigo-200 rounded-lg p-3 space-y-1">
+                        <div className="text-xs text-muted-foreground bg-secondary border border-border rounded-lg p-3 space-y-1">
                           <p>Bu ürün: {sizeSuggestion.targetArea} cm² × {sizeSuggestion.targetAdet} adet</p>
                           <p>Referans: {sizeSuggestion.refArea} cm² × {sizeSuggestion.refAdet} adet</p>
                           <p className="font-medium">
@@ -536,7 +536,7 @@ export default function ProductModal({
                           </p>
                         </div>
                       ) : (
-                        <div className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-lg p-3">
+                        <div className="text-xs text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50 rounded-lg p-3">
                           Ürün adlarından ölçü (en x boy) tespit edilemedi. Maliyet ekini elle girmen gerekiyor.
                         </div>
                       )}
@@ -554,7 +554,7 @@ export default function ProductModal({
                 <div className="space-y-2">
                   <Label className="text-sm">Baz maliyet (otomatik)</Label>
                   {baseCost !== null ? (
-                    <div className="px-3 py-2.5 rounded-lg bg-emerald-50 border border-emerald-300 text-emerald-800 text-sm font-semibold flex items-center justify-between">
+                    <div className="px-3 py-2.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-300 text-emerald-800 dark:text-emerald-200 text-sm font-semibold flex items-center justify-between">
                       <span>₺{baseCost.toFixed(2)}</span>
                       <span className="text-xs text-emerald-700 font-normal">
                         {baseCost <= (parseFloat(form.cost) || 0)
@@ -565,12 +565,12 @@ export default function ProductModal({
                       </span>
                     </div>
                   ) : (
-                    <div className="px-3 py-2.5 rounded-lg bg-gray-50 border border-gray-200 text-gray-400 text-sm">
+                    <div className="px-3 py-2.5 rounded-lg bg-secondary border border-border text-muted-foreground/70 text-sm">
                       — maliyet eki girince hesaplanır
                     </div>
                   )}
                   {baseCost !== null && baseCost <= (parseFloat(form.cost) || 0) && (
-                    <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-lg p-3 text-xs text-amber-700">
+                    <div className="flex items-start gap-2 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50 rounded-lg p-3 text-xs text-amber-700 dark:text-amber-300">
                       <span className="mt-0.5 shrink-0">⚠️</span>
                       <span>Baz maliyet normal maliyetten düşük. Fiyat hesaplama normal maliyet (₺{parseFloat(form.cost || 0).toFixed(2)}) üzerinden yapılacak.</span>
                     </div>
@@ -579,10 +579,10 @@ export default function ProductModal({
               )}
 
               {/* ADET BAZLI ZİNCİR */}
-              <div className="border border-gray-200 rounded-lg overflow-hidden">
-                <div className="px-4 py-3 bg-gray-50 border-b border-gray-200">
+              <div className="border border-border rounded-lg overflow-hidden">
+                <div className="px-4 py-3 bg-secondary border-b border-border">
                   <Label className="font-medium text-sm">Adet Bazlı Ürün Zinciri</Label>
-                  <p className="text-xs text-gray-500 mt-0.5">Aynı ürünün farklı adetli varyantlarını bağla. Birinin maliyeti değişince tüm zincir birim maliyete göre güncellenir.</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">Aynı ürünün farklı adetli varyantlarını bağla. Birinin maliyeti değişince tüm zincir birim maliyete göre güncellenir.</p>
                 </div>
                 <div className="p-4 space-y-3">
                   <div className="space-y-2">
@@ -595,7 +595,7 @@ export default function ProductModal({
                         placeholder="örn: 100"
                         className="w-32"
                       />
-                      <p className="text-xs text-gray-400">Zincir tutarsızlığı kontrolü için kullanılır</p>
+                      <p className="text-xs text-muted-foreground/70">Zincir tutarsızlığı kontrolü için kullanılır</p>
                     </div>
                   </div>
 
@@ -608,21 +608,21 @@ export default function ProductModal({
                     </div>
                   )}
                   {chainMembers.length === 0 && !showChainSearch && (
-                    <p className="text-sm text-gray-400">Henüz eklenmedi</p>
+                    <p className="text-sm text-muted-foreground/70">Henüz eklenmedi</p>
                   )}
                   {showChainSearch && (
                     <div>
-                      <div className="flex items-center gap-2 border border-gray-200 rounded-lg px-3 py-2 bg-white focus-within:border-indigo-300">
-                        <Search className="h-4 w-4 text-gray-400 shrink-0" />
+                      <div className="flex items-center gap-2 border border-border rounded-lg px-3 py-2 bg-card focus-within:border-input">
+                        <Search className="h-4 w-4 text-muted-foreground/70 shrink-0" />
                         <input autoFocus value={chainSearch} onChange={e => setChainSearch(e.target.value)}
                           placeholder="Ürün adı, ölçü, adet ile ara..."
                           className="flex-1 text-sm outline-none bg-transparent" />
-                        <button type="button" onClick={() => { setShowChainSearch(false); setChainSearch(''); }} className="text-gray-400 hover:text-gray-600 text-lg leading-none">×</button>
+                        <button type="button" onClick={() => { setShowChainSearch(false); setChainSearch(''); }} className="text-muted-foreground/70 hover:text-muted-foreground text-lg leading-none">×</button>
                       </div>
                       <SearchList results={chainResults} onSelect={handleAddChain} />
                     </div>
                   )}
-                  <Button type="button" variant="outline" size="sm" className="w-full border-dashed text-gray-500"
+                  <Button type="button" variant="outline" size="sm" className="w-full border-dashed text-muted-foreground"
                     onClick={() => setShowChainSearch(true)}>
                     <Plus className="h-3.5 w-3.5 mr-1" /> Varyant Ekle
                   </Button>
@@ -630,10 +630,10 @@ export default function ProductModal({
               </div>
 
               {/* ÜRÜN EŞLEŞTİRME */}
-              <div className="border border-gray-200 rounded-lg overflow-hidden">
-                <div className="px-4 py-3 bg-gray-50 border-b border-gray-200">
+              <div className="border border-border rounded-lg overflow-hidden">
+                <div className="px-4 py-3 bg-secondary border-b border-border">
                   <Label className="font-medium text-sm">Ürün Eşleştirme</Label>
-                  <p className="text-xs text-gray-500 mt-0.5">Eşleştirilen ürünlerin maliyeti her zaman aynı olur. Birini güncellersen hepsi güncellenir.</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">Eşleştirilen ürünlerin maliyeti her zaman aynı olur. Birini güncellersen hepsi güncellenir.</p>
                 </div>
                 <div className="p-4 space-y-3">
                   {matchMembers.length > 0 && (
@@ -644,21 +644,21 @@ export default function ProductModal({
                     </div>
                   )}
                   {matchMembers.length === 0 && !showMatchSearch && (
-                    <p className="text-sm text-gray-400">Henüz eşleştirilmedi</p>
+                    <p className="text-sm text-muted-foreground/70">Henüz eşleştirilmedi</p>
                   )}
                   {showMatchSearch && (
                     <div>
-                      <div className="flex items-center gap-2 border border-gray-200 rounded-lg px-3 py-2 bg-white focus-within:border-indigo-300">
-                        <Search className="h-4 w-4 text-gray-400 shrink-0" />
+                      <div className="flex items-center gap-2 border border-border rounded-lg px-3 py-2 bg-card focus-within:border-input">
+                        <Search className="h-4 w-4 text-muted-foreground/70 shrink-0" />
                         <input autoFocus value={matchSearch} onChange={e => setMatchSearch(e.target.value)}
                           placeholder="Ürün adı, renk veya ölçü ile ara..."
                           className="flex-1 text-sm outline-none bg-transparent" />
-                        <button type="button" onClick={() => { setShowMatchSearch(false); setMatchSearch(''); }} className="text-gray-400 hover:text-gray-600 text-lg leading-none">×</button>
+                        <button type="button" onClick={() => { setShowMatchSearch(false); setMatchSearch(''); }} className="text-muted-foreground/70 hover:text-muted-foreground text-lg leading-none">×</button>
                       </div>
                       <SearchList results={matchResults} onSelect={handleAddMatch} />
                     </div>
                   )}
-                  <Button type="button" variant="outline" size="sm" className="w-full border-dashed text-gray-500"
+                  <Button type="button" variant="outline" size="sm" className="w-full border-dashed text-muted-foreground"
                     onClick={() => setShowMatchSearch(true)}>
                     <Plus className="h-3.5 w-3.5 mr-1" /> Ürün Ekle
                   </Button>
@@ -666,7 +666,7 @@ export default function ProductModal({
               </div>
 
               {/* ÇOK PAKETLİ */}
-              <div className="border border-gray-200 rounded-lg p-4 space-y-3">
+              <div className="border border-border rounded-lg p-4 space-y-3">
                 <div className="flex items-center justify-between cursor-pointer"
                   onClick={() => {
                     setShowPackages(!showPackages);
@@ -687,7 +687,7 @@ export default function ProductModal({
                 {showPackages && form.multi_package && (
                   <div className="space-y-3 pt-2">
                     {form.packages.map((pkg, i) => (
-                      <div key={i} className="p-3 bg-gray-50 rounded-lg space-y-2">
+                      <div key={i} className="p-3 bg-secondary rounded-lg space-y-2">
                         <div className="grid grid-cols-2 gap-2">
                           <div>
                             <Label className="text-xs">Paket Seç</Label>
@@ -726,10 +726,10 @@ export default function ProductModal({
                 <Switch checked={form.same_day_delivery} onCheckedChange={v => upd('same_day_delivery', v)} />
               </div>
 
-              <div className="flex items-center justify-between py-2 border-t border-gray-100">
+              <div className="flex items-center justify-between py-2 border-t border-border">
                 <div className="space-y-0.5">
                   <Label>Çift Kargo</Label>
-                  <p className="text-xs text-slate-500">Açık olursa kargo ücreti 2 katı hesaplanır (üretim→depo→müşteri)</p>
+                  <p className="text-xs text-muted-foreground">Açık olursa kargo ücreti 2 katı hesaplanır (üretim→depo→müşteri)</p>
                 </div>
                 <Switch checked={form.double_shipping} onCheckedChange={v => upd('double_shipping', v)} />
               </div>
@@ -741,9 +741,9 @@ export default function ProductModal({
 
             </div>
 
-            <div className="flex justify-end gap-3 px-6 py-4 border-t border-slate-100 flex-shrink-0">
+            <div className="flex justify-end gap-3 px-6 py-4 border-t border-border flex-shrink-0">
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>İptal</Button>
-              <Button type="submit" disabled={isSaving} className="bg-indigo-600 hover:bg-indigo-700">
+              <Button type="submit" disabled={isSaving} className="bg-primary hover:bg-black dark:hover:bg-white/90">
                 {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 {product ? 'Güncelle' : 'Ekle'}
               </Button>
@@ -757,11 +757,11 @@ export default function ProductModal({
           <AlertDialogHeader>
             <AlertDialogTitle>⚠️ Eşleştirme Uyarısı</AlertDialogTitle>
             <AlertDialogDescription asChild>
-              <div className="space-y-2 text-sm text-gray-600">
+              <div className="space-y-2 text-sm text-muted-foreground">
                 <p><strong>"{chainConflict?.product?.name}"</strong> şu adet zincirine bağlı:</p>
-                <ul className="mt-2 space-y-1 border border-gray-200 rounded-lg p-3 bg-gray-50">
+                <ul className="mt-2 space-y-1 border border-border rounded-lg p-3 bg-secondary">
                   {chainConflict?.chainMembers?.map(p => (
-                    <li key={p.id} className="text-sm text-gray-700">• {p.name}</li>
+                    <li key={p.id} className="text-sm text-muted-foreground">• {p.name}</li>
                   ))}
                 </ul>
                 <p className="mt-2">Eşleştirme yaparsanız bu zincirde maliyet çakışması oluşabilir. Raporlar sayfasına uyarı düşecek.</p>

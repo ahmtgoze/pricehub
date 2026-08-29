@@ -4,7 +4,7 @@ import { getAdapter, downloadFile } from '@/lib/platformAdapters';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import DataTable from '@/components/ui/DataTable';
 import { Download, Trash2, RefreshCw, ChevronDown, ChevronUp } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -12,6 +12,7 @@ import { Label } from '@/components/ui/label';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
 import * as XLSX from 'xlsx';
+import FiltreEtiketi from '@/components/ui/FiltreEtiketi';
 
 const HEPSIBURADA_FIYAT_ADIMLARI = [
   'Bu sayfada sağ üstteki "Sırala" butonuna tıklayarak "Değişim Oranı (Yüksekten Düşüğe)" veya "Değişim Tutarı (Yüksekten Düşüğe)" seçeneğini seçin.',
@@ -287,42 +288,77 @@ export default function UpdatedPrices() {
     toast.success('Excel indirildi');
   };
 
-  const changeOranCell = (row) => (
-    <TableCell className="text-sm">
-      <span className={`font-medium ${row.price_change_percent > 0 ? 'text-green-600' : row.price_change_percent < 0 ? 'text-red-600' : 'text-gray-600'}`}>
-        {row.price_change_percent > 0 ? '+' : ''}{row.price_change_percent?.toFixed(2)}%
-      </span>
-    </TableCell>
+  const changeOranIcerik = (row) => (
+    <span className={`font-medium ${row.price_change_percent > 0 ? 'text-green-600' : row.price_change_percent < 0 ? 'text-red-600' : 'text-muted-foreground'}`}>
+      {row.price_change_percent > 0 ? '+' : ''}{row.price_change_percent?.toFixed(2)}%
+    </span>
   );
 
-  const changeTutarCell = (row) => (
-    <TableCell className="text-sm">
-      <span className={`font-medium ${row.price_diff > 0 ? 'text-green-600' : row.price_diff < 0 ? 'text-red-600' : 'text-gray-600'}`}>
-        {row.price_diff > 0 ? '+' : ''}₺{row.price_diff?.toFixed(2)}
-      </span>
-    </TableCell>
+  const changeTutarIcerik = (row) => (
+    <span className={`font-medium ${row.price_diff > 0 ? 'text-green-600' : row.price_diff < 0 ? 'text-red-600' : 'text-muted-foreground'}`}>
+      {row.price_diff > 0 ? '+' : ''}₺{row.price_diff?.toFixed(2)}
+    </span>
   );
+
+  // Platforma gore degisen sutun kumesi. DataTable bunlarla calisiyor;
+  // kullanici gizleyebilir, siralayabilir, genisletebilir, sabitleyebilir.
+  const ortakFiyatKolonlari = [
+    { id: 'market_price', header: 'Eski Fiyat', cell: (row) => <span className="font-medium text-muted-foreground">₺{row.market_price?.toFixed(2)}</span> },
+    { id: 'system_price', header: isWebsite ? 'Yeni Fiyat (Sistem)' : 'Yeni Fiyat', cell: (row) => <span className="font-bold text-green-700">₺{row.system_price?.toFixed(2)}</span> },
+    { id: 'price_change_percent', header: 'Değişim Oranı', cell: changeOranIcerik },
+    { id: 'price_diff', header: 'Değişim Tutarı', cell: changeTutarIcerik },
+  ];
+
+  const fiyatKolonlari = [
+    {
+      id: '__select',
+      header: <Checkbox checked={selectedRows.size === updatedPrices.length && updatedPrices.length > 0} onCheckedChange={handleSelectAll} />,
+      cell: (row) => <Checkbox checked={selectedRows.has(row.id)} onCheckedChange={() => handleSelectRow(row.id)} />,
+    },
+    ...(isWebsite
+      ? [
+          { id: 'platform_product_name', header: 'Platform Ürün Adı', cell: (row) => <p className="font-medium">{row.platform_product_name}</p> },
+          { id: 'product_name', header: 'Sistem Ürünü', cell: (row) => (<><p>{row.product_name}</p><p className="text-xs text-muted-foreground/70">{row.product_sku}</p></>) },
+          ...ortakFiyatKolonlari,
+        ]
+      : isHepsiburada
+        ? [
+            { id: 'hb_sku', header: 'SKU', cell: (row) => row.hb_sku || '' },
+            { id: 'platform_product_name', header: 'Ürün Adı', accessor: 'platform_product_name' },
+            ...ortakFiyatKolonlari,
+            { id: 'stock_quantity', header: 'Stok', cell: (row) => row.stock_quantity || 0 },
+          ]
+        : [
+            { id: 'barkod', header: 'Barkod', accessor: 'barkod' },
+            { id: 'platform_product_name', header: 'Ürün Adı', accessor: 'platform_product_name' },
+            ...ortakFiyatKolonlari,
+            { id: 'stock_quantity', header: 'Stok', cell: (row) => row.stock_quantity || 0 },
+          ]),
+    // ── Eklenebilir sutunlar: varsayilanda gizli, panelden acilir ──
+    { id: 'product_sku', header: 'Sistem Ürünü SKU', optional: true, cell: (row) => row.product_sku || '-' },
+    { id: 'barkod_ek', header: 'Barkod', optional: true, cell: (row) => row.barkod || '-' },
+  ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-100 via-gray-50 to-purple-50 p-6">
-      <div className="max-w-7xl mx-auto">
+    <div className="min-h-screen bg-secondary">
+      <div className="ph-page-flow mx-auto">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Düzenlenen Fiyatlar</h1>
-          <p className="text-gray-600">Sistemde güncellenen fiyatları görüntüleyin ve indirin</p>
+          <h1 className="ph-title">Düzenlenen Fiyatlar</h1>
+          <p className="text-muted-foreground">Sistemde güncellenen fiyatları görüntüleyin ve indirin</p>
         </div>
 
         {/* HepsiBurada Kılavuz */}
-        <div className="mb-4 rounded-xl border border-orange-200 bg-orange-50 overflow-hidden">
+        <div className="mb-4 rounded-xl border border-border bg-secondary overflow-hidden">
           <button onClick={() => setShowHepsiGuide(!showHepsiGuide)} className="w-full flex items-center justify-between px-5 py-3 text-left">
-            <span className="font-semibold text-orange-800 text-sm">📦 HepsiBurada — Fiyat Güncelleme Nasıl Yapılır?</span>
-            {showHepsiGuide ? <ChevronUp className="w-4 h-4 text-orange-600" /> : <ChevronDown className="w-4 h-4 text-orange-600" />}
+            <span className="font-semibold text-foreground text-sm">📦 HepsiBurada — Fiyat Güncelleme Nasıl Yapılır?</span>
+            {showHepsiGuide ? <ChevronUp className="w-4 h-4 text-muted-foreground/70" /> : <ChevronDown className="w-4 h-4 text-muted-foreground/70" />}
           </button>
           {showHepsiGuide && (
-            <div className="px-5 pb-4 border-t border-orange-200">
+            <div className="px-5 pb-4 border-t border-border">
               <ol className="mt-3 space-y-1.5">
                 {HEPSIBURADA_FIYAT_ADIMLARI.map((adim, i) => (
-                  <li key={i} className="text-sm flex gap-2 text-orange-900">
-                    <span className="font-bold text-orange-600 shrink-0">{i + 1}.</span>
+                  <li key={i} className="text-sm flex gap-2 text-muted-foreground">
+                    <span className="font-bold text-muted-foreground shrink-0">{i + 1}.</span>
                     <span>{adim}</span>
                   </li>
                 ))}
@@ -332,17 +368,17 @@ export default function UpdatedPrices() {
         </div>
 
         {/* Trendyol Kılavuz */}
-        <div className="mb-4 rounded-xl border border-amber-300 bg-amber-50 overflow-hidden">
+        <div className="mb-4 rounded-xl border border-border bg-secondary overflow-hidden">
           <button onClick={() => setShowTrendyolGuide(!showTrendyolGuide)} className="w-full flex items-center justify-between px-5 py-3 text-left">
-            <span className="font-semibold text-amber-800 text-sm">🛒 Trendyol — Fiyat Güncelleme Nasıl Yapılır?</span>
-            {showTrendyolGuide ? <ChevronUp className="w-4 h-4 text-amber-600" /> : <ChevronDown className="w-4 h-4 text-amber-600" />}
+            <span className="font-semibold text-foreground text-sm">🛒 Trendyol — Fiyat Güncelleme Nasıl Yapılır?</span>
+            {showTrendyolGuide ? <ChevronUp className="w-4 h-4 text-muted-foreground/70" /> : <ChevronDown className="w-4 h-4 text-muted-foreground/70" />}
           </button>
           {showTrendyolGuide && (
-            <div className="px-5 pb-4 border-t border-amber-200">
+            <div className="px-5 pb-4 border-t border-border">
               <ol className="mt-3 space-y-1.5">
                 {TRENDYOL_FIYAT_ADIMLARI.map((adim, i) => (
-                  <li key={i} className="text-sm flex gap-2 text-amber-900">
-                    <span className="font-bold text-amber-600 shrink-0">{i + 1}.</span>
+                  <li key={i} className="text-sm flex gap-2 text-muted-foreground">
+                    <span className="font-bold text-muted-foreground shrink-0">{i + 1}.</span>
                     <span>{adim}</span>
                   </li>
                 ))}
@@ -352,17 +388,17 @@ export default function UpdatedPrices() {
         </div>
 
         {/* ✅ Web Sitesi Kılavuz */}
-        <div className="mb-6 rounded-xl border border-indigo-200 bg-indigo-50 overflow-hidden">
+        <div className="mb-6 rounded-xl border border-border bg-secondary overflow-hidden">
           <button onClick={() => setShowWebsiteGuide(!showWebsiteGuide)} className="w-full flex items-center justify-between px-5 py-3 text-left">
-            <span className="font-semibold text-indigo-800 text-sm">🌐 Web Sitesi — Fiyat Güncelleme Nasıl Yapılır?</span>
-            {showWebsiteGuide ? <ChevronUp className="w-4 h-4 text-indigo-600" /> : <ChevronDown className="w-4 h-4 text-indigo-600" />}
+            <span className="font-semibold text-foreground text-sm">🌐 Web Sitesi — Fiyat Güncelleme Nasıl Yapılır?</span>
+            {showWebsiteGuide ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
           </button>
           {showWebsiteGuide && (
-            <div className="px-5 pb-4 border-t border-indigo-200">
+            <div className="px-5 pb-4 border-t border-border">
               <ol className="mt-3 space-y-1.5">
                 {WEBSITE_FIYAT_ADIMLARI.map((adim, i) => (
-                  <li key={i} className={`text-sm flex gap-2 ${adim.startsWith('⚠️') ? 'text-red-700 font-medium' : 'text-indigo-900'}`}>
-                    {!adim.startsWith('⚠️') && <span className="font-bold text-indigo-600 shrink-0">{i + 1}.</span>}
+                  <li key={i} className={`text-sm flex gap-2 ${adim.startsWith('⚠️') ? 'text-destructive font-medium' : 'text-foreground'}`}>
+                    {!adim.startsWith('⚠️') && <span className="font-bold text-muted-foreground shrink-0">{i + 1}.</span>}
                     <span>{adim}</span>
                   </li>
                 ))}
@@ -372,7 +408,7 @@ export default function UpdatedPrices() {
         </div>
 
         {/* Platform & Kontroller */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-6">
+        <div className="rounded-[18px] border border-border bg-card p-6 mb-6">
           <div className="flex flex-col gap-4 md:flex-row md:gap-2 md:items-end">
             <div className="flex-1">
               <Label className="text-sm mb-2 block font-semibold">Platform</Label>
@@ -402,20 +438,19 @@ export default function UpdatedPrices() {
         </div>
 
         {!selectedPlatform && (
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-12 text-center">
-            <p className="text-gray-500">Ürünleri görüntülemek için lütfen platform seçin</p>
+          <div className="rounded-[18px] border border-border bg-card p-12 text-center">
+            <p className="text-muted-foreground">Ürünleri görüntülemek için lütfen platform seçin</p>
           </div>
         )}
 
         {selectedPlatform && updatedPrices.length > 0 && (
           <>
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 mb-4 flex items-center justify-between flex-wrap gap-3">
+            <div className="rounded-[18px] border border-border bg-card p-4 mb-4 flex items-center justify-between flex-wrap gap-3">
               <div className="flex items-center gap-4">
-                <span className="text-sm font-semibold text-gray-900">Toplam: {updatedPrices.length} ürün</span>
-                {selectedRows.size > 0 && <span className="text-sm text-gray-600">{selectedRows.size} seçildi</span>}
+                <span className="text-sm font-semibold text-foreground">Toplam: {updatedPrices.length} ürün</span>
+                {selectedRows.size > 0 && <span className="text-sm text-muted-foreground">{selectedRows.size} seçildi</span>}
               </div>
-              <div className="flex items-center gap-2">
-                <Label className="text-sm">Sırala:</Label>
+              <FiltreEtiketi ad="Sırala">
                 <Select value={sortBy} onValueChange={setSortBy}>
                   <SelectTrigger className="w-64"><SelectValue /></SelectTrigger>
                   <SelectContent>
@@ -428,7 +463,7 @@ export default function UpdatedPrices() {
                     <SelectItem value="change_amount_desc">Değişim Tutarı (Yüksekten Düşüğe)</SelectItem>
                   </SelectContent>
                 </Select>
-              </div>
+              </FiltreEtiketi>
               {selectedRows.size > 0 && (
                 <Button variant="destructive" size="sm" onClick={() => setDeleteDialogOpen(true)}>
                   <Trash2 className="w-4 h-4 mr-2" />Seçilenleri Sil ({selectedRows.size})
@@ -436,114 +471,44 @@ export default function UpdatedPrices() {
               )}
             </div>
 
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-x-auto">
-              <Table>
-                <TableHeader className="bg-gray-50">
-                  <TableRow>
-                    <TableHead className="w-12">
-                      <Checkbox checked={selectedRows.size === updatedPrices.length && updatedPrices.length > 0} onCheckedChange={handleSelectAll} />
-                    </TableHead>
-                    {isWebsite && <>
-                      <TableHead>Platform Ürün Adı</TableHead>
-                      <TableHead>Sistem Ürünü</TableHead>
-                      <TableHead>Eski Fiyat</TableHead>
-                      <TableHead>Yeni Fiyat (Sistem)</TableHead>
-                      <TableHead>Değişim Oranı</TableHead>
-                      <TableHead>Değişim Tutarı</TableHead>
-                    </>}
-                    {isHepsiburada && <>
-                      <TableHead>SKU</TableHead>
-                      <TableHead>Ürün Adı</TableHead>
-                      <TableHead>Eski Fiyat</TableHead>
-                      <TableHead>Yeni Fiyat</TableHead>
-                      <TableHead>Değişim Oranı</TableHead>
-                      <TableHead>Değişim Tutarı</TableHead>
-                      <TableHead>Stok</TableHead>
-                    </>}
-                    {!isHepsiburada && !isWebsite && <>
-                      <TableHead>Barkod</TableHead>
-                      <TableHead>Ürün Adı</TableHead>
-                      <TableHead>Eski Fiyat</TableHead>
-                      <TableHead>Yeni Fiyat</TableHead>
-                      <TableHead>Değişim Oranı</TableHead>
-                      <TableHead>Değişim Tutarı</TableHead>
-                      <TableHead>Stok</TableHead>
-                    </>}
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {updatedPrices.map((row) => (
-                    <TableRow key={row.id} className={selectedRows.has(row.id) ? 'bg-blue-50' : ''}>
-                      <TableCell>
-                        <Checkbox checked={selectedRows.has(row.id)} onCheckedChange={() => handleSelectRow(row.id)} />
-                      </TableCell>
-                      {isWebsite && <>
-                        <TableCell className="text-sm">
-                          <p className="font-medium">{row.platform_product_name}</p>
-                        </TableCell>
-                        <TableCell className="text-sm">
-                          <p>{row.product_name}</p>
-                          <p className="text-xs text-gray-400">{row.product_sku}</p>
-                        </TableCell>
-                        <TableCell className="text-sm font-medium text-gray-500">₺{row.market_price?.toFixed(2)}</TableCell>
-                        <TableCell className="text-sm font-bold text-green-700">₺{row.system_price?.toFixed(2)}</TableCell>
-                        {changeOranCell(row)}
-                        {changeTutarCell(row)}
-                      </>}
-                      {isHepsiburada && <>
-                        <TableCell className="text-sm">{row.hb_sku || ''}</TableCell>
-                        <TableCell className="text-sm">{row.platform_product_name}</TableCell>
-                        <TableCell className="text-sm font-medium text-gray-500">₺{row.market_price?.toFixed(2)}</TableCell>
-                        <TableCell className="text-sm font-bold text-green-700">₺{row.system_price?.toFixed(2)}</TableCell>
-                        {changeOranCell(row)}
-                        {changeTutarCell(row)}
-                        <TableCell className="text-sm">{row.stock_quantity || 0}</TableCell>
-                      </>}
-                      {!isHepsiburada && !isWebsite && <>
-                        <TableCell className="text-sm">{row.barkod}</TableCell>
-                        <TableCell className="text-sm">{row.platform_product_name}</TableCell>
-                        <TableCell className="text-sm font-medium text-gray-500">₺{row.market_price?.toFixed(2)}</TableCell>
-                        <TableCell className="text-sm font-bold text-green-700">₺{row.system_price?.toFixed(2)}</TableCell>
-                        {changeOranCell(row)}
-                        {changeTutarCell(row)}
-                        <TableCell className="text-sm">{row.stock_quantity || 0}</TableCell>
-                      </>}
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
+            <DataTable
+              pageKey="duzenlenen-fiyatlar"
+              columns={fiyatKolonlari}
+              data={updatedPrices}
+              rowClassName={(row) => selectedRows.has(row.id) ? 'bg-secondary' : 'hover:bg-secondary/60'}
+              emptyMessage="Gösterilecek fiyat yok"
+            />
           </>
         )}
 
         {selectedPlatform && updatedPrices.length === 0 && (
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-12 text-center">
-            <p className="text-gray-500">Bu platform için eşleştirilmiş ürün bulunamadı</p>
-            <p className="text-xs text-gray-400 mt-2">Pazaryeri Ürünleri sayfasında ürünleri eşleştirin, sonra "Ürünleri Güncelle" butonuna basın</p>
+          <div className="rounded-[18px] border border-border bg-card p-12 text-center">
+            <p className="text-muted-foreground">Bu platform için eşleştirilmiş ürün bulunamadı</p>
+            <p className="text-xs text-muted-foreground/70 mt-2">Pazaryeri Ürünleri sayfasında ürünleri eşleştirin, sonra "Ürünleri Güncelle" butonuna basın</p>
           </div>
         )}
 
         {/* Güncelleme İlerleme Popup */}
         {refreshProgress && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-            <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md mx-4">
-              <h3 className="text-lg font-bold text-gray-900 mb-1">Veriler Güncelleniyor</h3>
-              <p className="text-sm text-blue-600 font-medium mb-1">{refreshProgress.step}</p>
-              {refreshProgress.detail && <p className="text-xs text-gray-500 mb-4">{refreshProgress.detail}</p>}
-              {!refreshProgress.detail && <p className="text-xs text-gray-400 mb-4">Lütfen bekleyin...</p>}
+            <div className="bg-card rounded-2xl shadow-2xl p-8 w-full max-w-md mx-4">
+              <h3 className="text-lg font-bold text-foreground mb-1">Veriler Güncelleniyor</h3>
+              <p className="text-sm text-foreground font-medium mb-1">{refreshProgress.step}</p>
+              {refreshProgress.detail && <p className="text-xs text-muted-foreground mb-4">{refreshProgress.detail}</p>}
+              {!refreshProgress.detail && <p className="text-xs text-muted-foreground/70 mb-4">Lütfen bekleyin...</p>}
               <div className="mb-3">
-                <div className="flex justify-between text-xs text-gray-600 mb-1">
+                <div className="flex justify-between text-xs text-muted-foreground mb-1">
                   <span>Adım {refreshProgress.stepNum} / {refreshProgress.totalSteps}</span>
                   <span>%{Math.round((refreshProgress.stepNum / refreshProgress.totalSteps) * 100)}</span>
                 </div>
-                <div className="w-full bg-gray-100 rounded-full h-3 overflow-hidden">
+                <div className="w-full bg-secondary rounded-full h-3 overflow-hidden">
                   <div
-                    className="bg-blue-500 h-3 rounded-full transition-all duration-500"
+                    className="bg-primary h-3 rounded-full transition-all duration-500"
                     style={{ width: `${(refreshProgress.stepNum / refreshProgress.totalSteps) * 100}%` }}
                   />
                 </div>
               </div>
-              <p className="text-xs text-gray-400 text-center">Tüm veriler yüklenene kadar bekleyin, kapatmayın</p>
+              <p className="text-xs text-muted-foreground/70 text-center">Tüm veriler yüklenene kadar bekleyin, kapatmayın</p>
             </div>
           </div>
         )}

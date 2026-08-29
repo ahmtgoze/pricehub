@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { db } from '@/api/db';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Pencil, Trash2, FolderTree, Download, Upload } from 'lucide-react';
+import { Plus, Pencil, Trash2, Download, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import * as XLSX from 'xlsx';
@@ -16,6 +16,8 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import SearchInput from '@/components/ui/SearchInput';
+import FiltreEtiketi from '@/components/ui/FiltreEtiketi';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import DataTable from '@/components/ui/DataTable';
 import CategoryModal from '@/components/modals/CategoryModal';
 import { toast } from 'sonner';
@@ -36,6 +38,7 @@ export default function Categories() {
 
   // Seçim (toplu/tek tek)
   const [selectedIds, setSelectedIds] = useState([]);
+  const [statusFilter, setStatusFilter] = useState('all');
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
   const selectAllRef = useRef(null);
 
@@ -150,21 +153,40 @@ export default function Categories() {
 
       let created = 0, updated = 0, skipped = 0;
 
+      // Bos hucre "eslesmeyi sil" demek degil; sadece dolu gelen deger yazilir.
+      const metin = (v) => {
+        const t = (v ?? '').toString().trim();
+        return t === '' ? null : t;
+      };
+
       for (const row of rows) {
         const name = (row['Kategori Adı'] || row['name'] || '').toString().trim();
         const vatRate = parseFloat(row['Varsayılan KDV (%)'] || row['default_vat_rate'] || 20);
+        const trendyol = metin(row['Trendyol Kategorisi'] || row['trendyol_category']);
+        const hepsiburada = metin(row['HepsiBurada Kategorisi'] || row['hepsiburada_category']);
         if (!name) { skipped++; continue; }
 
         const existing = existingByName[name.toLowerCase()];
         if (existing) {
-          if ((existing.default_vat_rate || 20) !== vatRate) {
-            await Category.update(existing.id, { default_vat_rate: vatRate });
+          const degisiklik = {};
+          if ((existing.default_vat_rate || 20) !== vatRate) degisiklik.default_vat_rate = vatRate;
+          if (trendyol !== null && trendyol !== existing.trendyol_category) degisiklik.trendyol_category = trendyol;
+          if (hepsiburada !== null && hepsiburada !== existing.hepsiburada_category) degisiklik.hepsiburada_category = hepsiburada;
+
+          if (Object.keys(degisiklik).length > 0) {
+            await Category.update(existing.id, degisiklik);
             updated++;
           } else {
             skipped++;
           }
         } else {
-          await Category.create({ name, default_vat_rate: vatRate, is_active: true });
+          await Category.create({
+            name,
+            default_vat_rate: vatRate,
+            trendyol_category: trendyol,
+            hepsiburada_category: hepsiburada,
+            is_active: true,
+          });
           created++;
         }
       }
@@ -181,8 +203,12 @@ export default function Categories() {
       const s = search.toLowerCase();
       result = result.filter(c => c.name?.toLowerCase().includes(s));
     }
+    if (statusFilter !== 'all') {
+      const aktifMi = statusFilter === 'active';
+      result = result.filter(c => (c.is_active !== false) === aktifMi);
+    }
     return result.sort((a, b) => a.name?.localeCompare(b.name));
-  }, [categories, search]);
+  }, [categories, search, statusFilter]);
 
   const paginatedCategories = filteredCategories.slice((page - 1) * pageSize, page * pageSize);
 
@@ -219,7 +245,7 @@ export default function Categories() {
           type="checkbox"
           checked={allSelected}
           onChange={toggleAll}
-          className="h-4 w-4 cursor-pointer accent-indigo-600"
+          className="h-4 w-4 cursor-pointer accent-gray-900"
           title="Tümünü seç"
         />
       ),
@@ -230,14 +256,14 @@ export default function Categories() {
           checked={selectedIds.includes(row.id)}
           onChange={() => toggleOne(row.id)}
           onClick={(e) => e.stopPropagation()}
-          className="h-4 w-4 cursor-pointer accent-indigo-600"
+          className="h-4 w-4 cursor-pointer accent-gray-900"
         />
       )
     },
     {
       header: 'Kategori Adı',
       accessor: 'name',
-      cell: (row) => <span className="font-medium text-slate-900">{row.name}</span>
+      cell: (row) => <span className="font-medium text-foreground">{row.name}</span>
     },
     {
       header: 'Varsayılan KDV',
@@ -245,13 +271,27 @@ export default function Categories() {
       cell: (row) => `%${row.default_vat_rate || 20}`
     },
     {
+      id: 'trendyol_category',
+      header: 'Trendyol Kategorisi',
+      cell: (row) => row.trendyol_category
+        ? <span className="text-muted-foreground">{row.trendyol_category}</span>
+        : <span className="text-muted-foreground/60">—</span>
+    },
+    {
+      id: 'hepsiburada_category',
+      header: 'HepsiBurada Kategorisi',
+      cell: (row) => row.hepsiburada_category
+        ? <span className="text-muted-foreground">{row.hepsiburada_category}</span>
+        : <span className="text-muted-foreground/60">—</span>
+    },
+    {
       header: 'Ürün Sayısı',
       accessor: '__pcount',
       cell: (row) => {
         const n = countForCat(row.id);
         return n > 0
-          ? <span className="text-slate-700">{n}</span>
-          : <span className="text-slate-400">0</span>;
+          ? <span className="text-muted-foreground">{n}</span>
+          : <span className="text-muted-foreground/70">0</span>;
       }
     },
     {
@@ -264,6 +304,7 @@ export default function Categories() {
       )
     },
     {
+      id: 'islemler',
       header: 'İşlemler',
       cell: (row) => (
         <div className="flex items-center gap-2">
@@ -286,23 +327,23 @@ export default function Categories() {
               setDeleteId(row.id);
             }}
           >
-            <Trash2 className="h-4 w-4 text-rose-500" />
+            <Trash2 className="h-4 w-4 text-red-500" />
           </Button>
         </div>
       )
-    }
+    },
+    // ── Eklenebilir sutunlar: varsayilanda gizli, panelden acilir ──
+    { id: 'description', header: 'Açıklama', optional: true, cell: (row) => row.description || '-' },
+    { id: 'created_at', header: 'Eklenme Tarihi', optional: true, cell: (row) => row.created_at ? new Date(row.created_at).toLocaleDateString('tr-TR') : '-' },
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-indigo-50/30">
-      <div className="max-w-[1200px] mx-auto px-3 sm:px-6 py-5 sm:py-8">
+    <div className="min-h-screen bg-secondary">
+      <div className="ph-page-flow mx-auto">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight flex items-center gap-3">
-              <FolderTree className="h-8 w-8 text-indigo-600" />
-              Kategoriler
-            </h1>
-            <p className="text-slate-500 mt-1">{filteredCategories.length} kategori</p>
+            <h1 className="ph-title">Kategoriler</h1>
+            <p className="text-muted-foreground mt-1">{filteredCategories.length} kategori</p>
           </div>
           <div className="flex gap-2 flex-wrap">
             <input ref={importRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={handleImport} />
@@ -316,7 +357,7 @@ export default function Categories() {
             </Button>
             <Button 
               onClick={() => { setEditingCategory(null); setModalOpen(true); }}
-              className="bg-indigo-600 hover:bg-indigo-700 gap-2"
+              className="bg-primary hover:bg-black dark:hover:bg-white/90 gap-2"
             >
               <Plus className="h-4 w-4" />
               Yeni Kategori
@@ -324,18 +365,30 @@ export default function Categories() {
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 mb-6">
-          <SearchInput
-            value={search}
-            onChange={setSearch}
-            placeholder="Kategori ara..."
-            className="max-w-md"
-          />
+        <div className="rounded-[18px] border border-border bg-card p-5 mb-6">
+          <div className="flex flex-col sm:flex-row gap-4">
+            <SearchInput
+              value={search}
+              onChange={setSearch}
+              placeholder="Kategori ara..."
+              className="flex-1 max-w-md"
+            />
+            <FiltreEtiketi ad="Durum">
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-full sm:w-40"><SelectValue placeholder="Durum" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tümü</SelectItem>
+                  <SelectItem value="active">Aktif</SelectItem>
+                  <SelectItem value="passive">Pasif</SelectItem>
+                </SelectContent>
+              </Select>
+            </FiltreEtiketi>
+          </div>
         </div>
 
         {validSelectedIds.length > 0 && (
-          <div className="flex items-center justify-between gap-3 bg-rose-50 border border-rose-200 rounded-xl px-4 py-3 mb-4">
-            <span className="text-sm text-rose-700 font-medium">
+          <div className="flex items-center justify-between gap-3 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/50 rounded-xl px-4 py-3 mb-4">
+            <span className="text-sm text-red-700 font-medium">
               {validSelectedIds.length} kategori seçildi
             </span>
             <div className="flex gap-2">
@@ -344,7 +397,7 @@ export default function Categories() {
               </Button>
               <Button
                 size="sm"
-                className="bg-rose-600 hover:bg-rose-700 gap-2"
+                className="bg-red-600 hover:bg-red-700 gap-2"
                 onClick={() => setBulkDeleteOpen(true)}
               >
                 <Trash2 className="h-4 w-4" />
@@ -354,7 +407,7 @@ export default function Categories() {
           </div>
         )}
 
-        <DataTable
+        <DataTable pageKey="kategoriler"
           columns={columns}
           data={paginatedCategories}
           isLoading={isLoading}
@@ -381,7 +434,7 @@ export default function Categories() {
               <AlertDialogDescription>
                 Bu kategoriyi silmek istediğinizden emin misiniz?
                 {singleAffected > 0 && (
-                  <span className="block mt-2 text-rose-600 font-medium">
+                  <span className="block mt-2 text-red-600 font-medium">
                     ⚠️ Bu kategoride {singleAffected} ürün var. Silersen bu ürünler kategorisiz kalır
                     ve fiyat/komisyon hesapları bozulabilir.
                   </span>
@@ -392,7 +445,7 @@ export default function Categories() {
               <AlertDialogCancel>İptal</AlertDialogCancel>
               <AlertDialogAction
                 onClick={() => deleteMutation.mutate(deleteId)}
-                className="bg-rose-600 hover:bg-rose-700"
+                className="bg-red-600 hover:bg-red-700"
               >
                 Sil
               </AlertDialogAction>
@@ -408,7 +461,7 @@ export default function Categories() {
               <AlertDialogDescription>
                 {validSelectedIds.length} kategoriyi silmek istediğinizden emin misiniz?
                 {bulkAffected > 0 && (
-                  <span className="block mt-2 text-rose-600 font-medium">
+                  <span className="block mt-2 text-red-600 font-medium">
                     ⚠️ Seçili kategorilerde toplam {bulkAffected} ürün var. Silersen bu ürünler
                     kategorisiz kalır ve fiyat/komisyon hesapları bozulabilir.
                   </span>
@@ -420,7 +473,7 @@ export default function Categories() {
               <AlertDialogAction
                 onClick={() => bulkDeleteMutation.mutate(validSelectedIds)}
                 disabled={bulkDeleteMutation.isPending}
-                className="bg-rose-600 hover:bg-rose-700"
+                className="bg-red-600 hover:bg-red-700"
               >
                 {bulkDeleteMutation.isPending ? 'Siliniyor...' : `Sil (${validSelectedIds.length})`}
               </AlertDialogAction>

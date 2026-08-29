@@ -1,14 +1,13 @@
 import React, { useState, useMemo } from 'react';
 import { db } from '@/api/db';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Download, ChevronDown, ChevronUp, RefreshCw, Info, Filter, Eye, EyeOff, X } from 'lucide-react';
+import { Download, ChevronDown, ChevronUp, RefreshCw, Info, Filter, Eye, EyeOff, X, Trash2 } from 'lucide-react';
 import { formatTurkishCurrency, formatTurkishPercent } from '@/utils/formatters';
 import SearchInput from '@/components/ui/SearchInput';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { downloadCSV } from '@/components/ImportExport';
 import { calculateAllPlatformPrices } from '@/components/PriceCalculationEngine';
@@ -17,13 +16,18 @@ import { useBackgroundTask } from '@/lib/BackgroundTaskContext';
 import { useLocation } from 'react-router-dom';
 import PriceDetailModal from '@/components/modals/PriceDetailModal';
 import ProductHistoryModal from '@/components/modals/ProductHistoryModal';
-import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import DataTable from '@/components/ui/DataTable';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { bayatFiyatlariBul, SEBEP_ETIKETLERI } from '@/lib/fiyatGuncelligi';
 
 export default function Prices() {
   const [userEmail, setUserEmail] = React.useState(null);
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
+  const [baremFilter, setBaremFilter] = useState('all');
+  const [siraSecimi, setSiraSecimi] = useState('default');
   const [sortField, setSortField] = useState('name');
   const [sortDir, setSortDir] = useState('asc');
   const [calculating, setCalculating] = useState(false);
@@ -32,6 +36,7 @@ export default function Prices() {
   const [detailModal, setDetailModal] = useState({ open: false, product: null, platform: null });
   const [historyModal, setHistoryModal] = useState({ open: false, productId: null, productName: '' });
   const [failedProducts, setFailedProducts] = useState([]);
+  const [guncellikUyarisi, setGuncellikUyarisi] = useState(null);
   const [successModal, setSuccessModal] = useState({ open: false, successCount: 0, failedCount: 0 });
   const [priceCalculationProgress, setPriceCalculationProgress] = useState({ isCalculating: false, current: 0, total: 0, title: '', currentProductName: '', estimatedSecondsLeft: null, startTime: null });
   const [showProgressModal, setShowProgressModal] = useState(false);
@@ -47,6 +52,19 @@ export default function Prices() {
   const [minTargetAmount, setMinTargetAmount] = useState('');
   const [maxTargetAmount, setMaxTargetAmount] = useState('');
   const [visiblePlatforms, setVisiblePlatforms] = useState({});
+  const [showBeforeTax, setShowBeforeTax] = useState(false);
+  // Uc gorunum: platform sutun bazli | satir bazli | detayli.
+  // Tercih tarayicida saklanir (localStorage) — veritabanina dokunmaz.
+  const [viewMode, setViewMode] = useState(() => {
+    try {
+      const v = localStorage.getItem('pricehub-fiyat-gorunum');
+      return ['platform', 'satir', 'detay'].includes(v) ? v : 'platform';
+    } catch { return 'platform'; }
+  });
+  const changeViewMode = (v) => {
+    setViewMode(v);
+    try { localStorage.setItem('pricehub-fiyat-gorunum', v); } catch { /* yoksay */ }
+  };
 
   // Seçim
   const [selectedIds, setSelectedIds] = useState(new Set());
@@ -190,6 +208,28 @@ export default function Prices() {
       });
     }
 
+    if (baremFilter !== 'all') {
+      result = result.filter(p => getVisiblePrices(p).some(price =>
+        baremFilter === 'sameday' ? !!price.same_day_delivery : price.barem_used === baremFilter
+      ));
+    }
+
+    // Sirala acilirI, sutun basligina tiklamayla ayni sirali alanlari kullanir;
+    // secildiginde onun yerine gecer.
+    if (siraSecimi !== 'default') {
+      const enIyiOran = (p) => {
+        const oranlar = getVisiblePrices(p).map(x => x.profit_rate ?? 0);
+        return oranlar.length ? Math.max(...oranlar) : 0;
+      };
+      const enIyiKar = (p) => {
+        const karlar = getVisiblePrices(p).map(x => x.net_profit ?? 0);
+        return karlar.length ? Math.max(...karlar) : 0;
+      };
+      const olcut = siraSecimi.startsWith('rate') ? enIyiOran : enIyiKar;
+      const artan = siraSecimi.endsWith('asc');
+      return result.sort((a, b) => artan ? olcut(a) - olcut(b) : olcut(b) - olcut(a));
+    }
+
     result.sort((a, b) => {
       let valA, valB;
       if (sortField.startsWith('platform_')) {
@@ -206,13 +246,15 @@ export default function Prices() {
       return 0;
     });
     return result;
-  }, [enrichedProducts, search, categoryFilter, sortField, sortDir, unpricedFilter, minProfit, maxProfit, minProfitRate, maxProfitRate, minTargetAmount, maxTargetAmount, commissions, visiblePlatformList]);
+  }, [enrichedProducts, search, categoryFilter, sortField, sortDir, unpricedFilter, minProfit, maxProfit, minProfitRate, maxProfitRate, minTargetAmount, maxTargetAmount, commissions, visiblePlatformList, baremFilter, siraSecimi]);
 
   const clearFilters = () => {
     setMinProfit(''); setMaxProfit('');
     setMinProfitRate(''); setMaxProfitRate('');
     setMinTargetAmount(''); setMaxTargetAmount('');
     setCategoryFilter('all');
+    setBaremFilter('all');
+    setSiraSecimi('default');
   };
 
   const toggleSelect = (id) => {
@@ -293,7 +335,9 @@ export default function Prices() {
         const product = freshProducts[i];
         try {
           const calculatedPrices = calculateAllPlatformPrices({ product, platforms: freshActivePlatforms, shippingRates: freshShippingRates, commissions: freshCommissions, packages: freshPackages, packageItems: freshPackageItems, getPackageCost: getFreshPackageCost, settings: freshSettings, systemAdminPlatforms: freshAdminPlatforms });
-          if (calculatedPrices.length === 0) { failedProductsList.push({ id: product.id, name: product.name }); }
+          if (calculatedPrices.length === 0) {
+            failedProductsList.push({ id: product.id, name: product.name, sebep: hesaplanamamaSebebi(product, freshShippingRates, freshActivePlatforms, freshCommissions) });
+          }
           else {
             for (const calcPrice of calculatedPrices) {
               const existing = freshProductPrices.filter(pp => pp.product_id === product.id && pp.platform_id === calcPrice.platform_id);
@@ -302,7 +346,12 @@ export default function Prices() {
             }
             successCount++;
           }
-        } catch (err) { failedProductsList.push({ id: product.id, name: product.name }); }
+        } catch (err) {
+          const sebep = String(err?.message) === 'KARGO_TARIFESI_YOK'
+            ? `Kargo tarifesi yok (${product.desi || 0} desi)`
+            : hesaplanamamaSebebi(product, freshShippingRates, freshActivePlatforms, freshCommissions);
+          failedProductsList.push({ id: product.id, name: product.name, sebep });
+        }
       }
       const BATCH = 100;
       for (let i = 0; i < allToCreate.length; i += BATCH) await db.entities.ProductPrice.bulkCreate(allToCreate.slice(i, i + BATCH));
@@ -351,6 +400,48 @@ export default function Prices() {
       setPriceCalculationProgress({ isCalculating: false, current: 0, total: 0, title: '', estimatedSecondsLeft: null, startTime: null });
       stopFakeProgress(); finishTask();
     }
+  };
+
+  /**
+   * Bir urun neden fiyatlanamadi? Kullaniciya "hesaplanamadi" demek yerine
+   * ne yapmasi gerektigini soyleyebilmek icin.
+   */
+  /**
+   * Maliyet/komisyon degistikten sonra fiyatlar kendiliginden guncellenmiyor;
+   * kullanicinin "Fiyatlari Hesapla" demesi gerekiyor. Sayfaya girildiginde
+   * neyin bayatladigini soyluyoruz.
+   */
+  const bayatDurumu = React.useMemo(
+    () => bayatFiyatlariBul(productPrices, products, commissions),
+    [productPrices, products, commissions]
+  );
+
+  React.useEffect(() => {
+    if (bayatDurumu.bayatSayisi > 0 && guncellikUyarisi === null) {
+      setGuncellikUyarisi(bayatDurumu);
+    }
+    // yalnizca ilk tespitte acilsin; kullanici kapatinca tekrar acilmasin
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bayatDurumu.bayatSayisi]);
+
+  const hesaplanamamaSebebi = (product, tarifeler, aktifPlatformlar, komisyonlar) => {
+    const desi = Number(product.desi) || 0;
+    const eksikTarife = aktifPlatformlar.filter((pl) => {
+      const platformTarifeleri = tarifeler.filter(
+        (r) => r.rate_type === 'desi' && r.is_active !== false && r.desi != null &&
+          (r.platform_type === pl.platform_type || r.platform_id === pl.id)
+      );
+      if (platformTarifeleri.length === 0) return true;
+      return !platformTarifeleri.some((r) => desi <= Number(r.desi));
+    });
+    if (eksikTarife.length > 0) {
+      return `Kargo tarifesi yok (${desi} desi) — ${eksikTarife.map((p) => p.name).join(', ')}`;
+    }
+    const komisyonVar = aktifPlatformlar.some((pl) =>
+      komisyonlar.some((c) => c.platform_id === pl.id && c.category_id === product.category_id && c.is_active !== false)
+    );
+    if (!komisyonVar) return 'Kategori komisyonu tanımlı değil';
+    return 'Hesaplanamadı';
   };
 
   const handleCalculateSingleProduct = async (originalProduct) => {
@@ -483,15 +574,49 @@ export default function Prices() {
   };
 
   const getProfitColor = (rate) => {
-    if (rate >= 30) return 'text-emerald-600 bg-emerald-50';
-    if (rate >= 20) return 'text-blue-600 bg-blue-50';
-    if (rate >= 10) return 'text-amber-600 bg-amber-50';
-    return 'text-rose-600 bg-rose-50';
+    if (rate >= 30) return 'text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40';
+    if (rate >= 20) return 'text-muted-foreground bg-secondary';
+    if (rate >= 10) return 'text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40';
+    return 'text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/40';
   };
+
+  // Vergi öncesi/sonrası kâr: PriceCalculationEngine zaten her ikisini de hesaplayıp
+  // product_prices.net_profit_before_tax / net_profit alanlarına kaydediyor, motora dokunmadan
+  // sadece hangisinin gösterileceğini seçiyoruz. Oran, motordaki "profitRate = netProfit / productCost * 100"
+  // formülüyle birebir aynı mantıkla, before-tax tutar üzerinden türetiliyor.
+  const getDisplayProfit = (price, product, commission) => {
+    if (!price) return { amount: 0, rate: 0 };
+    if (!showBeforeTax) {
+      return { amount: price.net_profit, rate: commission?.target_profit_rate ?? price.profit_rate };
+    }
+    const beforeTaxAmount = price.net_profit_before_tax ?? price.net_profit;
+    const beforeTaxRate = product?.cost > 0 ? (beforeTaxAmount / product.cost) * 100 : 0;
+    return { amount: beforeTaxAmount, rate: beforeTaxRate };
+  };
+
+  // Satir bazli gorunum icin duzlestirilmis liste: her urun x platform bir satir.
+  // Ayni filtreli urun kumesini ve ayni kar hesabini kullanir; yeni veri cekmez.
+  const satirBazliVeri = useMemo(() => {
+    if (viewMode !== 'satir') return [];
+    const satirlar = [];
+    for (const product of filteredProducts) {
+      for (const platform of visiblePlatformList) {
+        const price = product.prices[platform.id];
+        if (!price) continue;
+        const commission = commissions.find(
+          c => c.category_id === product.category_id && c.platform_id === platform.id && c.is_active !== false
+        );
+        const { amount: profitAmount, rate: profitRate } = getDisplayProfit(price, product, commission);
+        satirlar.push({ product, platform, price, profitAmount, profitRate });
+      }
+    }
+    return satirlar;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [viewMode, filteredProducts, visiblePlatformList, commissions, showBeforeTax]);
 
   const getBaremBadge = (barem) => {
     if (barem === 'barem1') return <Badge className="bg-red-100 text-red-700 text-xs">B1</Badge>;
-    if (barem === 'barem2') return <Badge className="bg-blue-100 text-blue-700 text-xs">B2</Badge>;
+    if (barem === 'barem2') return <Badge className="bg-border text-muted-foreground text-xs">B2</Badge>;
     if (barem === 'desi') return <Badge variant="outline" className="text-xs">Desi</Badge>;
     return null;
   };
@@ -514,17 +639,154 @@ export default function Prices() {
     setVisiblePlatforms(prev => ({ ...prev, [platformId]: !prev[platformId] }));
   };
 
-  const platformColors = { trendyol: 'bg-orange-100 text-orange-700 border-orange-200', hepsiburada: 'bg-yellow-100 text-yellow-700 border-yellow-200', website: 'bg-indigo-100 text-indigo-700 border-indigo-200' };
+  const platformColors = { trendyol: 'bg-orange-100 text-orange-700 border-orange-200', hepsiburada: 'bg-purple-100 text-purple-700 border-purple-200', website: 'bg-border text-muted-foreground border-input' };
+
+  // ── Sutun tanimlari ──
+  // Her gorunum kendi sutun tercihini ayri saklar (fiyatlar-platform /
+  // fiyatlar-satir). '__select' sistem sutunudur: gizlenemez.
+  const platformKolonlari = [
+    {
+      id: '__select',
+      header: (
+        <input
+          type="checkbox"
+          checked={isAllSelected}
+          ref={el => { if (el) el.indeterminate = isPartialSelected; }}
+          onChange={toggleSelectAll}
+          className="rounded border-input text-foreground"
+        />
+      ),
+      cell: (product) => (
+        <input
+          type="checkbox"
+          checked={selectedIds.has(product.id)}
+          onChange={() => toggleSelect(product.id)}
+          className="rounded border-input text-foreground"
+        />
+      ),
+    },
+    {
+      id: 'sku',
+      etiket: 'SKU',
+      header: <span className="cursor-pointer hover:text-foreground" onClick={() => handleSort('sku')}>SKU <SortIcon field="sku" /></span>,
+      cell: (product) => (
+        <div className="flex items-center gap-2 font-mono text-muted-foreground">
+          <span>{product.sku || '-'}</span>
+          <Button variant="ghost" size="sm" className="h-6 px-2 text-xs" onClick={() => handleCalculateSingleProduct(product)} disabled={calculating || calculatingSingle === product.id}>
+            <RefreshCw className={`h-3 w-3 ${calculatingSingle === product.id ? 'animate-spin' : ''}`} />
+          </Button>
+          <Button variant="ghost" size="sm" className="h-6 px-2 text-xs text-muted-foreground hover:text-foreground hover:bg-secondary" onClick={() => setHistoryModal({ open: true, productId: product.id, productName: product.name })} title="Geçmiş Analizi">📈</Button>
+        </div>
+      ),
+    },
+    {
+      id: 'name',
+      etiket: 'Ürün Adı',
+      header: <span className="cursor-pointer hover:text-foreground" onClick={() => handleSort('name')}>Ürün Adı <SortIcon field="name" /></span>,
+      cell: (product) => (<div><p className="font-medium text-foreground">{product.name}</p><p className="text-xs text-muted-foreground">{product.category_name}</p></div>),
+    },
+    {
+      id: 'cost',
+      etiket: 'Maliyet',
+      header: <span className="cursor-pointer hover:text-foreground" onClick={() => handleSort('cost')}>Maliyet <SortIcon field="cost" /></span>,
+      cell: (product) => <span className="font-semibold">₺{formatTurkishCurrency(product.cost)}</span>,
+    },
+    { id: 'printing_cost', header: 'Baskı', cell: (p) => p.printing_cost > 0 ? <span className="text-muted-foreground font-medium">₺{formatTurkishCurrency(p.printing_cost)}</span> : '-' },
+    { id: 'extra_cost', header: 'Ek Maliyet', cell: (p) => p.extra_cost > 0 ? <span className="text-rose-600 font-medium">₺{formatTurkishCurrency(p.extra_cost)}</span> : '-' },
+    ...[0, 1, 2, 3, 4].map(idx => ({
+      id: `desi_${idx + 1}`,
+      header: `Desi ${idx + 1}`,
+      cell: (product) => getDesiValue(product, idx),
+    })),
+    ...visiblePlatformList.map(platform => ({
+      id: `platform_${platform.id}`,
+      etiket: platform.name,
+      // Tasarim prototipi: platform sutunu ad + hizali uc alt baslik
+      // (Fiyat / Net Kar / Kar %). Degerler satirlar arasinda ayni
+      // sutunda hizalandigi icin goz kolayca tarayabiliyor.
+      header: (
+        <div className="min-w-0">
+          <div
+            className="flex items-center gap-2 cursor-pointer hover:text-foreground"
+            onClick={() => handleSort(`platform_${platform.id}`)}
+          >
+            <span className="truncate">{platform.name}</span>
+            <SortIcon field={`platform_${platform.id}`} />
+          </div>
+          <div className="grid grid-cols-3 gap-x-2 mt-1 text-[10.5px] font-semibold uppercase tracking-wider text-muted-foreground/70 whitespace-nowrap">
+            <span>Fiyat</span>
+            <span className="text-right">Net Kâr</span>
+            <span className="text-right">Kâr %</span>
+          </div>
+        </div>
+      ),
+      width: '290px',
+      cell: (product) => {
+        const price = product.prices[platform.id];
+        if (!price) return <span className="text-muted-foreground/70">-</span>;
+        const commission = commissions.find(c => c.category_id === product.category_id && c.platform_id === platform.id && c.is_active !== false);
+        const { amount: profitAmount, rate: profitRateDisplay } = getDisplayProfit(price, product, commission);
+        return (
+          <div className="grid grid-cols-3 gap-x-2 gap-y-1.5 items-baseline">
+            <span className="font-medium text-foreground">₺{formatTurkishCurrency(price.sale_price)}</span>
+            <span className="text-right text-muted-foreground">
+              ₺{formatTurkishCurrency(profitAmount)}
+            </span>
+            <span className={`text-right text-xs font-semibold px-1.5 py-0.5 rounded-full justify-self-end ${getProfitColor(profitRateDisplay)}`}>
+              {formatTurkishPercent(profitRateDisplay)}
+            </span>
+            <span className="col-span-3 flex items-center gap-1.5">
+              {getBaremBadge(price.barem_used)}
+              {showBeforeTax && (
+                <span className="text-[10.5px] text-muted-foreground/70">vergi öncesi</span>
+              )}
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-6 px-1.5 text-[11px] ml-auto"
+                onClick={() => handleShowDetail(product, platform)}
+              >
+                <Info className="h-3 w-3 mr-1" />Kırılım
+              </Button>
+            </span>
+          </div>
+        );
+      },
+    })),
+    // ── Eklenebilir sutunlar: varsayilanda gizli, panelden acilir ──
+    { id: 'barcode', header: 'Barkod', optional: true, cell: (p) => p.barcode || '-' },
+    { id: 'vat_rate', header: 'KDV Oranı', optional: true, cell: (p) => p.vat_rate != null ? `%${p.vat_rate}` : '-' },
+    { id: 'same_day_delivery', header: 'Bugün Kargoda', optional: true, cell: (p) => p.same_day_delivery ? 'Evet' : 'Hayır' },
+    { id: 'notes', header: 'Notlar', optional: true, cell: (p) => p.notes || '-' },
+  ];
+
+  const satirKolonlari = [
+    { id: 'sku', header: 'SKU', cell: (r) => <span className="font-mono text-muted-foreground">{r.product.sku || '-'}</span> },
+    { id: 'name', header: 'Ürün Adı', cell: (r) => (<div><p className="font-medium text-foreground">{r.product.name}</p><p className="text-xs text-muted-foreground">{r.product.category_name}</p></div>) },
+    { id: 'platform', header: 'Platform', cell: (r) => <span className="font-medium text-foreground">{r.platform.name}</span> },
+    { id: 'cost', header: 'Maliyet', cell: (r) => `₺${formatTurkishCurrency(r.product.cost)}` },
+    { id: 'sale_price', header: 'Satış Fiyatı', cell: (r) => <span className="font-bold text-foreground">₺{formatTurkishCurrency(r.price.sale_price)}</span> },
+    { id: 'profit', header: 'Kâr', cell: (r) => (<>₺{formatTurkishCurrency(r.profitAmount)}{showBeforeTax && <span className="text-muted-foreground/70 text-xs"> (vergi öncesi)</span>}</>) },
+    { id: 'profit_rate', header: 'Kâr Oranı', cell: (r) => <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${getProfitColor(r.profitRate)}`}>{formatTurkishPercent(r.profitRate)}</span> },
+    { id: 'barem', header: 'Barem', cell: (r) => getBaremBadge(r.price.barem_used) || <span className="text-muted-foreground/70">—</span> },
+    { id: 'detay', header: 'Kırılım', cell: (r) => (
+      <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => handleShowDetail(r.product, r.platform)}>
+        <Info className="h-3 w-3 mr-1" />Kırılım
+      </Button>
+    ) },
+  ];
 
   return (
     <div className="min-h-screen">
-      <div className="max-w-[1600px] mx-auto px-4 sm:px-6 py-6 sm:py-8">
+      <div className="ph-page mx-auto">
         <div className="mb-6 sm:mb-8">
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Fiyatlar</h1>
-          <p className="text-gray-500 mt-1 text-sm">Tüm ürünlerin platform bazlı fiyat ve kâr tablosu</p>
+          <h1 className="ph-title">Fiyatlar</h1>
+          <p className="ph-subtitle">
+            {products.length} ürün · {productPrices.length} fiyat kaydı · {platforms.length} platform
+          </p>
         </div>
 
-        <div className="bg-white rounded-2xl border border-gray-100 card-shadow p-4 sm:p-6 mb-6">
+        <div className="rounded-[18px] border border-border bg-card p-4 sm:p-6 mb-6">
           <div className="flex flex-col gap-4">
             <div className="flex flex-wrap items-center gap-2">
               <Button onClick={handleCalculatePrices} disabled={calculating || products.length === 0} size="sm">
@@ -532,27 +794,55 @@ export default function Prices() {
                 <span className="hidden sm:inline ml-1">Fiyatları Hesapla</span>
                 <span className="sm:hidden ml-1">Hesapla</span>
               </Button>
-              <Button onClick={handleRecalculateFailed} variant="outline" disabled={calculating || failedProducts.length === 0} className="gap-2 border-amber-200 text-amber-700 hover:bg-amber-50" size="sm">
-                <RefreshCw className={`h-4 w-4 ${calculating ? 'animate-spin' : ''}`} />
-                <span className="hidden sm:inline">Hesaplanamayan Ürünleri Hesapla</span>
-                <span className="sm:hidden">Hesaplanamayan</span>
-              </Button>
-              <Button onClick={handleResetPrices} variant="destructive" disabled={calculating} size="sm">
-                <span className="hidden sm:inline">Tüm Fiyatları Sıfırla</span>
-                <span className="sm:hidden">Sıfırla</span>
-              </Button>
-
               <Button onClick={handleExportFiltered} variant="outline" className="gap-2" size="sm">
                 <Download className="h-4 w-4" />
-                <span className="hidden sm:inline">Filtrelenenleri İndir</span>
+                <span className="hidden sm:inline">Dışa Aktar</span>
                 <span className="sm:hidden">İndir</span>
               </Button>
-              {selectedIds.size > 0 && (
-                <Button onClick={handleExportSelected} variant="outline" className="gap-2 border-indigo-200 text-indigo-700 hover:bg-indigo-50" size="sm">
-                  <Download className="h-4 w-4" />
-                  <span>Seçilileri İndir ({selectedIds.size})</span>
-                </Button>
-              )}
+
+              {/* Ikincil islemler tek bir menude — prototipte ust satirda
+                  yalnizca Disa Aktar / Daha fazla / Fiyatlari Hesapla var. */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" className="gap-1.5">
+                    Daha fazla
+                    <ChevronDown className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="w-[260px]">
+                  <DropdownMenuItem
+                    onClick={handleRecalculateFailed}
+                    disabled={calculating || failedProducts.length === 0}
+                    className="gap-2 cursor-pointer"
+                  >
+                    <RefreshCw className="h-4 w-4" />
+                    Hesaplanamayan Ürünleri Hesapla
+                    {failedProducts.length > 0 && (
+                      <span className="ml-auto text-xs text-muted-foreground">{failedProducts.length}</span>
+                    )}
+                  </DropdownMenuItem>
+                  {selectedIds.size > 0 && (
+                    <DropdownMenuItem onClick={handleExportSelected} className="gap-2 cursor-pointer">
+                      <Download className="h-4 w-4" />
+                      Seçilileri İndir
+                      <span className="ml-auto text-xs text-muted-foreground">{selectedIds.size}</span>
+                    </DropdownMenuItem>
+                  )}
+                  <DropdownMenuItem onClick={() => setShowBeforeTax(v => !v)} className="gap-2 cursor-pointer">
+                    {showBeforeTax ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    {showBeforeTax ? 'Vergi Sonrası Kârı Göster' : 'Vergi Öncesi Kârı Göster'}
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={handleResetPrices}
+                    disabled={calculating}
+                    className="gap-2 cursor-pointer text-destructive focus:text-destructive"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    Tüm Fiyatları Sıfırla
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
 
               <Button onClick={() => setShowFilters(!showFilters)} variant={showFilters ? 'default' : 'outline'} className="gap-2 ml-auto" size="sm">
                 <Filter className="h-4 w-4" />
@@ -561,20 +851,41 @@ export default function Prices() {
               </Button>
             </div>
 
-            <div className="flex flex-col sm:flex-row gap-3">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3">
               <SearchInput value={search} onChange={setSearch} placeholder="Ürün adı veya SKU ara..." className="w-full sm:w-72" />
+
+              {/* Gorunum secici — yalnizca masaustunde; mobilde zaten kart gorunumu var */}
+              <div className="hidden sm:flex items-center gap-1 rounded-[11px] bg-secondary p-1 sm:ml-auto">
+                {[
+                  { id: 'platform', etiket: 'Platform sütunlu' },
+                  { id: 'satir', etiket: 'Satır bazlı' },
+                  { id: 'detay', etiket: 'Detaylı' },
+                ].map(g => (
+                  <button
+                    key={g.id}
+                    onClick={() => changeViewMode(g.id)}
+                    className={`px-3 h-[30px] rounded-[9px] text-[12.5px] font-medium transition-colors ${
+                      viewMode === g.id
+                        ? 'bg-card text-foreground shadow-sm'
+                        : 'text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    {g.etiket}
+                  </button>
+                ))}
+              </div>
             </div>
 
             {showFilters && (
-              <div className="border border-gray-200 rounded-xl p-4 bg-gray-50 space-y-4">
+              <div className="border border-border rounded-xl p-4 bg-secondary space-y-4">
                 {profitRangeLabel && (
-                  <div className="flex items-center gap-2 text-sm text-indigo-700 bg-indigo-50 rounded-lg px-3 py-2">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground bg-secondary rounded-lg px-3 py-2">
                     <span>Dashboard filtresi: <strong>{profitRangeLabel}</strong></span>
                   </div>
                 )}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                   <div>
-                    <label className="text-xs text-gray-500 mb-1 block font-medium">Kategori</label>
+                    <label className="text-xs text-muted-foreground mb-1 block font-medium">Kategori</label>
                     <Select value={categoryFilter} onValueChange={setCategoryFilter}>
                       <SelectTrigger className="w-full"><SelectValue placeholder="Tüm Kategoriler" /></SelectTrigger>
                       <SelectContent>
@@ -584,35 +895,61 @@ export default function Prices() {
                     </Select>
                   </div>
                   <div>
-                    <label className="text-xs text-gray-500 mb-1 block font-medium">Kâr Tutarı (₺)</label>
+                    <label className="text-xs text-muted-foreground mb-1 block font-medium">Barem</label>
+                    <Select value={baremFilter} onValueChange={setBaremFilter}>
+                      <SelectTrigger className="w-full"><SelectValue placeholder="Tümü" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Tümü</SelectItem>
+                        <SelectItem value="barem1">Barem 1</SelectItem>
+                        <SelectItem value="barem2">Barem 2</SelectItem>
+                        <SelectItem value="sameday">Bugün Kargoda</SelectItem>
+                        <SelectItem value="desi">Desi tarifesi</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <label className="text-xs text-muted-foreground mb-1 block font-medium">Sırala</label>
+                    <Select value={siraSecimi} onValueChange={setSiraSecimi}>
+                      <SelectTrigger className="w-full"><SelectValue placeholder="Varsayılan" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="default">Varsayılan</SelectItem>
+                        <SelectItem value="rate_desc">Kâr oranı: yüksek → düşük</SelectItem>
+                        <SelectItem value="rate_asc">Kâr oranı: düşük → yüksek</SelectItem>
+                        <SelectItem value="amount_desc">Kâr tutarı: yüksek → düşük</SelectItem>
+                        <SelectItem value="amount_asc">Kâr tutarı: düşük → yüksek</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <label className="text-xs text-muted-foreground mb-1 block font-medium">Kâr Tutarı (₺)</label>
                     <div className="flex gap-2">
                       <Input type="number" placeholder="Min" value={minProfit} onChange={e => setMinProfit(e.target.value)} className="text-sm" />
                       <Input type="number" placeholder="Max" value={maxProfit} onChange={e => setMaxProfit(e.target.value)} className="text-sm" />
                     </div>
                   </div>
                   <div>
-                    <label className="text-xs text-gray-500 mb-1 block font-medium">Kâr Oranı (%)</label>
+                    <label className="text-xs text-muted-foreground mb-1 block font-medium">Kâr Oranı (%)</label>
                     <div className="flex gap-2">
                       <Input type="number" placeholder="Min" value={minProfitRate} onChange={e => setMinProfitRate(e.target.value)} className="text-sm" />
                       <Input type="number" placeholder="Max" value={maxProfitRate} onChange={e => setMaxProfitRate(e.target.value)} className="text-sm" />
                     </div>
                   </div>
                   <div>
-                    <label className="text-xs text-gray-500 mb-1 block font-medium">Hedef Kâr Tutarı (₺)</label>
+                    <label className="text-xs text-muted-foreground mb-1 block font-medium">Hedef Kâr Tutarı (₺)</label>
                     <div className="flex gap-2">
                       <Input type="number" placeholder="Min" value={minTargetAmount} onChange={e => setMinTargetAmount(e.target.value)} className="text-sm" />
                       <Input type="number" placeholder="Max" value={maxTargetAmount} onChange={e => setMaxTargetAmount(e.target.value)} className="text-sm" />
                     </div>
                   </div>
                   <div className="sm:col-span-2">
-                    <label className="text-xs text-gray-500 mb-1 block font-medium">Platform Görünürlüğü</label>
+                    <label className="text-xs text-muted-foreground mb-1 block font-medium">Platform Görünürlüğü</label>
                     <div className="flex gap-2 flex-wrap">
                       {platforms.map(platform => {
                         const isVisible = visiblePlatforms[platform.id] !== false;
-                        const colorClass = platformColors[platform.platform_type] || 'bg-gray-100 text-gray-700 border-gray-200';
+                        const colorClass = platformColors[platform.platform_type] || 'bg-secondary text-muted-foreground border-border';
                         return (
                           <button key={platform.id} onClick={() => togglePlatformVisibility(platform.id)}
-                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium transition-all ${isVisible ? colorClass : 'bg-gray-100 text-gray-400 border-gray-200 opacity-50'}`}>
+                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium transition-all ${isVisible ? colorClass : 'bg-secondary text-muted-foreground/70 border-border opacity-50'}`}>
                             {isVisible ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
                             {platform.name}
                           </button>
@@ -631,14 +968,15 @@ export default function Prices() {
           </div>
         </div>
 
-        <div className="mb-3 flex items-center justify-between text-sm text-gray-500">
+        <div className="mb-3 flex items-center justify-between text-sm text-muted-foreground">
           <div>
-            <span className="font-semibold text-gray-700">{filteredProducts.length}</span> ürün listeleniyor
-            {hasActiveFilters && <span className="ml-2 text-indigo-600">(filtre aktif)</span>}
-            {selectedIds.size > 0 && <span className="ml-2 text-indigo-600 font-medium">{selectedIds.size} seçili</span>}
+            <span className="font-semibold text-muted-foreground">{filteredProducts.length}</span> ürün listeleniyor
+            {hasActiveFilters && <span className="ml-2 text-muted-foreground">(filtre aktif)</span>}
+            {selectedIds.size > 0 && <span className="ml-2 text-muted-foreground font-medium">{selectedIds.size} seçili</span>}
+            {showBeforeTax && <span className="ml-2 text-amber-700 font-medium">— vergi öncesi kâr gösteriliyor</span>}
           </div>
           {selectedIds.size > 0 && (
-            <Button variant="ghost" size="sm" className="text-xs text-gray-400" onClick={() => setSelectedIds(new Set())}>
+            <Button variant="ghost" size="sm" className="text-xs text-muted-foreground/70" onClick={() => setSelectedIds(new Set())}>
               Seçimi Temizle
             </Button>
           )}
@@ -648,21 +986,21 @@ export default function Prices() {
         <div className="block sm:hidden space-y-4">
           {isLoading ? (
             [...Array(3)].map((_, i) => (
-              <div key={i} className="bg-white rounded-xl border border-gray-100 p-4 space-y-2">
+              <div key={i} className="rounded-[18px] border border-border bg-card p-4 space-y-2">
                 <Skeleton className="h-5 w-40" /><Skeleton className="h-4 w-28" /><Skeleton className="h-10 w-full" />
               </div>
             ))
           ) : filteredProducts.length === 0 ? (
-            <div className="bg-white rounded-xl border border-gray-100 p-8 text-center text-gray-500">Ürün bulunamadı</div>
+            <div className="rounded-[18px] border border-border bg-card p-8 text-center text-muted-foreground">Ürün bulunamadı</div>
           ) : (
             filteredProducts.map(product => (
-              <div key={product.id} className={`bg-white rounded-xl border shadow-sm p-4 ${selectedIds.has(product.id) ? 'border-indigo-300 bg-indigo-50/30' : 'border-gray-100'}`}>
+              <div key={product.id} className={`bg-card rounded-[14px] border p-4 ${selectedIds.has(product.id) ? 'border-input bg-secondary/50' : 'border-border'}`}>
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex items-center gap-2">
-                    <input type="checkbox" checked={selectedIds.has(product.id)} onChange={() => toggleSelect(product.id)} className="rounded border-gray-300 text-indigo-600" />
+                    <input type="checkbox" checked={selectedIds.has(product.id)} onChange={() => toggleSelect(product.id)} className="rounded border-input text-foreground" />
                     <div>
-                      <p className="font-semibold text-gray-900 text-sm">{product.name}</p>
-                      <p className="text-xs text-gray-500 font-mono">{product.sku} · {product.category_name}</p>
+                      <p className="font-semibold text-foreground text-sm">{product.name}</p>
+                      <p className="text-xs text-muted-foreground font-mono">{product.sku} · {product.category_name}</p>
                     </div>
                   </div>
                   <Button variant="ghost" size="sm" className="h-7 px-2 shrink-0" onClick={() => handleCalculateSingleProduct(product)} disabled={calculating || calculatingSingle === product.id}>
@@ -673,19 +1011,20 @@ export default function Prices() {
                   {visiblePlatformList.map(platform => {
                     const price = product.prices[platform.id];
                     const commission = commissions.find(c => c.category_id === product.category_id && c.platform_id === platform.id && c.is_active !== false);
-                    const targetRate = commission?.target_profit_rate ?? price?.profit_rate;
-                    if (!price) return <div key={platform.id} className="flex items-center justify-between bg-gray-50 rounded-lg px-3 py-2"><span className="text-xs font-medium text-gray-600">{platform.name}</span><span className="text-xs text-gray-400">—</span></div>;
+                    if (!price) return <div key={platform.id} className="flex items-center justify-between bg-secondary rounded-lg px-3 py-2"><span className="text-xs font-medium text-muted-foreground">{platform.name}</span><span className="text-xs text-muted-foreground/70">—</span></div>;
+                    const { amount: profitAmount, rate: profitRateDisplay } = getDisplayProfit(price, product, commission);
                     return (
-                      <div key={platform.id} className="flex flex-col gap-1 bg-gray-50 rounded-lg px-3 py-2">
+                      <div key={platform.id} className="flex flex-col gap-1 bg-secondary rounded-lg px-3 py-2">
                         <div className="flex items-center justify-between">
-                          <span className="text-xs font-medium text-gray-700">{platform.name}</span>
-                          <button onClick={() => handleShowDetail(product, platform)} className="text-blue-500 hover:text-blue-700"><Info className="h-3.5 w-3.5" /></button>
+                          <span className="text-xs font-medium text-muted-foreground">{platform.name}</span>
+                          <button onClick={() => handleShowDetail(product, platform)} className="text-muted-foreground/70 hover:text-muted-foreground"><Info className="h-3.5 w-3.5" /></button>
                         </div>
                         <div className="flex items-center gap-2">
-                          <span className="text-sm font-bold text-gray-900">₺{formatTurkishCurrency(price.sale_price)}</span>
-                          <span className={`text-xs font-medium px-1.5 py-0.5 rounded-full ${getProfitColor(targetRate)}`}>{formatTurkishPercent(targetRate)}</span>
+                          <span className="text-sm font-bold text-foreground">₺{formatTurkishCurrency(price.sale_price)}</span>
+                          <span className={`text-xs font-medium px-1.5 py-0.5 rounded-full ${getProfitColor(profitRateDisplay)}`}>{formatTurkishPercent(profitRateDisplay)}</span>
                           {getBaremBadge(price.barem_used)}
                         </div>
+                        <p className="text-[11px] text-muted-foreground">Kâr: ₺{formatTurkishCurrency(profitAmount)}{showBeforeTax && <span className="text-muted-foreground/70"> (vergi öncesi)</span>}</p>
                       </div>
                     );
                   })}
@@ -695,89 +1034,146 @@ export default function Prices() {
           )}
         </div>
 
-        {/* Desktop Table */}
-        <div className="hidden sm:block bg-white rounded-2xl border border-gray-100 card-shadow overflow-hidden">
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-gray-50 hover:bg-gray-50">
-                  <TableHead className="w-10">
-                    <input type="checkbox" checked={isAllSelected} ref={el => { if (el) el.indeterminate = isPartialSelected; }} onChange={toggleSelectAll} className="rounded border-gray-300 text-indigo-600" />
-                  </TableHead>
-                  <TableHead className="font-semibold cursor-pointer hover:text-gray-900" onClick={() => handleSort('sku')}>SKU <SortIcon field="sku" /></TableHead>
-                  <TableHead className="font-semibold cursor-pointer hover:text-gray-900" onClick={() => handleSort('name')}>Ürün Adı <SortIcon field="name" /></TableHead>
-                  <TableHead className="font-semibold cursor-pointer hover:text-gray-900 text-right" onClick={() => handleSort('cost')}>Maliyet <SortIcon field="cost" /></TableHead>
-                  <TableHead className="font-semibold">Baskı</TableHead>
-                  <TableHead className="font-semibold">Ek Maliyet</TableHead>
-                  <TableHead className="font-semibold">Desi 1</TableHead>
-                  <TableHead className="font-semibold">Desi 2</TableHead>
-                  <TableHead className="font-semibold">Desi 3</TableHead>
-                  <TableHead className="font-semibold">Desi 4</TableHead>
-                  <TableHead className="font-semibold">Desi 5</TableHead>
-                  {visiblePlatformList.map(p => (
-                    <TableHead key={p.id} className="font-semibold text-center min-w-[160px] cursor-pointer hover:text-gray-900" onClick={() => handleSort(`platform_${p.id}`)}>{p.name} <SortIcon field={`platform_${p.id}`} /></TableHead>
-                  ))}
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {isLoading ? (
-                  [...Array(5)].map((_, i) => (
-                    <TableRow key={i}>{[...Array(11 + visiblePlatformList.length)].map((_, j) => <TableCell key={j}><Skeleton className="h-5 w-20" /></TableCell>)}</TableRow>
-                  ))
-                ) : filteredProducts.length === 0 ? (
-                  <TableRow><TableCell colSpan={11 + visiblePlatformList.length} className="h-32 text-center text-slate-500">Ürün bulunamadı</TableCell></TableRow>
-                ) : (
-                  filteredProducts.map(product => (
-                    <TableRow key={product.id} className={`hover:bg-slate-50/50 ${selectedIds.has(product.id) ? 'bg-indigo-50/40' : ''}`}>
-                      <TableCell>
-                        <input type="checkbox" checked={selectedIds.has(product.id)} onChange={() => toggleSelect(product.id)} className="rounded border-gray-300 text-indigo-600" />
-                      </TableCell>
-                      <TableCell className="font-mono text-sm text-slate-600">
-                        <div className="flex items-center gap-2">
-                          <span>{product.sku || '-'}</span>
-                          <Button variant="ghost" size="sm" className="h-6 px-2 text-xs" onClick={() => handleCalculateSingleProduct(product)} disabled={calculating || calculatingSingle === product.id}>
-                            <RefreshCw className={`h-3 w-3 ${calculatingSingle === product.id ? 'animate-spin' : ''}`} />
-                          </Button>
-                          <Button variant="ghost" size="sm" className="h-6 px-2 text-xs text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50" onClick={() => setHistoryModal({ open: true, productId: product.id, productName: product.name })} title="Geçmiş Analizi">📈</Button>
-                        </div>
-                      </TableCell>
-                      <TableCell><div><p className="font-medium text-slate-900">{product.name}</p><p className="text-xs text-slate-500">{product.category_name}</p></div></TableCell>
-                      <TableCell className="font-semibold">₺{formatTurkishCurrency(product.cost)}</TableCell>
-                      <TableCell className="text-sm">{product.printing_cost > 0 ? <span className="text-purple-600 font-medium">₺{formatTurkishCurrency(product.printing_cost)}</span> : '-'}</TableCell>
-                      <TableCell className="text-sm">{product.extra_cost > 0 ? <span className="text-rose-600 font-medium">₺{formatTurkishCurrency(product.extra_cost)}</span> : '-'}</TableCell>
-                      {[0, 1, 2, 3, 4].map(idx => <TableCell key={idx}>{getDesiValue(product, idx)}</TableCell>)}
-                      {visiblePlatformList.map(platform => {
-                        const price = product.prices[platform.id];
-                        if (!price) return <TableCell key={platform.id} className="text-center text-slate-400">-</TableCell>;
-                        const commission = commissions.find(c => c.category_id === product.category_id && c.platform_id === platform.id && c.is_active !== false);
-                        const targetRate = commission?.target_profit_rate ?? price.profit_rate;
-                        return (
-                          <TableCell key={platform.id} className="text-center">
-                            <div className="space-y-1">
-                              <p className="font-bold text-slate-900">₺{formatTurkishCurrency(price.sale_price)}</p>
-                              <div className="flex items-center justify-center gap-1">
-                                <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${getProfitColor(targetRate)}`}>{formatTurkishPercent(targetRate)}</span>
-                                {getBaremBadge(price.barem_used)}
-                              </div>
-                              <p className="text-xs text-slate-500">Kâr: ₺{formatTurkishCurrency(price.net_profit)}</p>
-                              {price.packaging_cost > 0 && <p className="text-xs text-amber-600 font-medium">📦 Paket: ₺{formatTurkishCurrency(price.packaging_cost)}</p>}
-                              <Button variant="ghost" size="sm" className="h-7 text-xs mt-1" onClick={() => handleShowDetail(product, platform)}>
-                                <Info className="h-3 w-3 mr-1" />Detay
-                              </Button>
-                            </div>
-                          </TableCell>
-                        );
-                      })}
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
+        {/* Gorunum 1: platform sutun bazli (varsayilan) */}
+        {viewMode === 'platform' && (
+          <div className="hidden sm:block">
+            <DataTable
+              pageKey="fiyatlar-platform"
+              columns={platformKolonlari}
+              data={filteredProducts}
+              isLoading={isLoading}
+              rowClassName={(row) => selectedIds.has(row.id) ? 'bg-secondary/60' : 'hover:bg-secondary/50'}
+              emptyMessage="Ürün bulunamadı"
+            />
           </div>
-        </div>
+        )}
+
+        {/* Gorunum 2: satir bazli — her urun x platform bir satir */}
+        {viewMode === 'satir' && (
+          <div className="hidden sm:block">
+            <DataTable
+              pageKey="fiyatlar-satir"
+              columns={satirKolonlari}
+              data={satirBazliVeri}
+              isLoading={isLoading}
+              emptyMessage="Gösterilecek fiyat yok"
+            />
+          </div>
+        )}
+
+        {/* Gorunum 3: detayli — urun basina kart, maliyet kalemleri + platformlar */}
+        {viewMode === 'detay' && (
+          <div className="hidden sm:block space-y-4">
+            {isLoading ? (
+              [...Array(3)].map((_, i) => <Skeleton key={i} className="h-40 w-full rounded-[18px]" />)
+            ) : filteredProducts.length === 0 ? (
+              <div className="ph-panel"><p className="ph-empty">Ürün bulunamadı</p></div>
+            ) : (
+              filteredProducts.map(product => (
+                <div key={product.id} className="ph-card">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                      <p className="text-[15px] font-semibold text-foreground">{product.name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {product.sku || '-'} · {product.category_name}
+                      </p>
+                    </div>
+                    <Button variant="ghost" size="sm" onClick={() => handleCalculateSingleProduct(product)} disabled={calculating || calculatingSingle === product.id}>
+                      <RefreshCw className={`h-3.5 w-3.5 mr-1 ${calculatingSingle === product.id ? 'animate-spin' : ''}`} />
+                      Yeniden hesapla
+                    </Button>
+                  </div>
+
+                  {/* Maliyet kalemleri */}
+                  <div className="mt-4 flex flex-wrap gap-x-6 gap-y-2 text-[13px]">
+                    <span className="text-muted-foreground">Maliyet: <strong className="text-foreground">₺{formatTurkishCurrency(product.cost)}</strong></span>
+                    {product.printing_cost > 0 && <span className="text-muted-foreground">Baskı: <strong className="text-foreground">₺{formatTurkishCurrency(product.printing_cost)}</strong></span>}
+                    {product.extra_cost > 0 && <span className="text-muted-foreground">Ek maliyet: <strong className="text-foreground">₺{formatTurkishCurrency(product.extra_cost)}</strong></span>}
+                    <span className="text-muted-foreground">
+                      Desi: <strong className="text-foreground">{[0, 1, 2, 3, 4].map(i => getDesiValue(product, i)).filter(v => v && v !== '-').join(' · ') || '-'}</strong>
+                    </span>
+                  </div>
+
+                  {/* Platform kirilimi */}
+                  <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+                    {visiblePlatformList.map(platform => {
+                      const price = product.prices[platform.id];
+                      if (!price) {
+                        return (
+                          <div key={platform.id} className="rounded-[14px] bg-secondary px-4 py-3">
+                            <p className="text-xs font-medium text-muted-foreground">{platform.name}</p>
+                            <p className="mt-1 text-[13px] text-muted-foreground/70">Fiyat hesaplanmamış</p>
+                          </div>
+                        );
+                      }
+                      const commission = commissions.find(c => c.category_id === product.category_id && c.platform_id === platform.id && c.is_active !== false);
+                      const { amount: profitAmount, rate: profitRate } = getDisplayProfit(price, product, commission);
+                      return (
+                        <div key={platform.id} className="rounded-[14px] bg-secondary px-4 py-3">
+                          <div className="flex items-center justify-between">
+                            <p className="text-xs font-medium text-muted-foreground">{platform.name}</p>
+                            <button onClick={() => handleShowDetail(product, platform)} className="text-muted-foreground/70 hover:text-foreground" title="Detay">
+                              <Info className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                          <div className="mt-1 flex items-center gap-2">
+                            <span className="text-[17px] font-semibold text-foreground">₺{formatTurkishCurrency(price.sale_price)}</span>
+                            <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${getProfitColor(profitRate)}`}>{formatTurkishPercent(profitRate)}</span>
+                            {getBaremBadge(price.barem_used)}
+                          </div>
+                          <p className="mt-1 text-[12px] text-muted-foreground">
+                            Kâr: ₺{formatTurkishCurrency(profitAmount)}{showBeforeTax && ' (vergi öncesi)'}
+                          </p>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        )}
 
         <PriceDetailModal open={detailModal.open} onClose={() => setDetailModal({ open: false, product: null, platform: null })} product={detailModal.product} platform={detailModal.platform} productPrices={productPrices} commissions={commissions} />
         <ProductHistoryModal open={historyModal.open} onClose={() => setHistoryModal({ open: false, productId: null, productName: '' })} productId={historyModal.productId} productName={historyModal.productName} />
+
+        {/* Fiyatlar bayatladiysa sayfaya girer girmez soyle */}
+        <AlertDialog open={!!guncellikUyarisi && !guncellikUyarisi.kapandi} onOpenChange={(a) => !a && setGuncellikUyarisi({ ...guncellikUyarisi, kapandi: true })}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>⚠️ Fiyatlar güncel değil</AlertDialogTitle>
+              <AlertDialogDescription className="space-y-3">
+                <p>
+                  Son hesaplamadan sonra bazı değerler değişti. <strong>{guncellikUyarisi?.bayatSayisi}</strong> ürünün
+                  fiyatı artık güncel değil.
+                </p>
+                <div className="rounded-lg border border-border divide-y divide-border">
+                  {Object.entries(guncellikUyarisi?.sebepler || {})
+                    .filter(([, adet]) => adet > 0)
+                    .map(([sebep, adet]) => (
+                      <div key={sebep} className="flex items-center justify-between px-3 py-2 text-[13px]">
+                        <span className="text-muted-foreground">{SEBEP_ETIKETLERI[sebep]} değişti</span>
+                        <span className="font-medium tabular-nums">{adet} fiyat kaydı</span>
+                      </div>
+                    ))}
+                </div>
+                <p className="text-[13px]">
+                  Doğru kâr rakamları için <strong>Fiyatları Hesapla</strong> demen gerekiyor.
+                </p>
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
+              <AlertDialogCancel onClick={() => setGuncellikUyarisi({ ...guncellikUyarisi, kapandi: true })}>
+                Sonra
+              </AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => { setGuncellikUyarisi({ ...guncellikUyarisi, kapandi: true }); handleCalculatePrices(); }}
+              >
+                Fiyatları Hesapla
+              </AlertDialogAction>
+            </div>
+          </AlertDialogContent>
+        </AlertDialog>
 
         <AlertDialog open={successModal.open} onOpenChange={(open) => !open && setSuccessModal({ ...successModal, open: false })}>
           <AlertDialogContent>
@@ -785,7 +1181,21 @@ export default function Prices() {
               <AlertDialogTitle>{successModal.failedCount === 0 ? '✅ Başarılı' : '⚠️ Kısmi Başarı'}</AlertDialogTitle>
               <AlertDialogDescription className="space-y-2">
                 <p>{successModal.successCount} ürün için fiyatlar başarıyla hesaplandı.</p>
-                {successModal.failedCount > 0 && <p className="text-amber-600 font-medium">{successModal.failedCount} ürün hesaplanamadı.</p>}
+                {successModal.failedCount > 0 && (
+                  <>
+                    <p className="text-amber-600 font-medium">{successModal.failedCount} ürün hesaplanamadı:</p>
+                    {/* Sadece sayi degil, HANGI urun ve NEDEN — kullanici ne
+                        yapmasi gerektigini bilsin (orn. kargo tarifesi ekle). */}
+                    <div className="max-h-56 overflow-y-auto rounded-lg border border-border divide-y divide-border">
+                      {failedProducts.map((u) => (
+                        <div key={u.id} className="px-3 py-2">
+                          <p className="text-[13px] font-medium text-foreground">{u.name}</p>
+                          <p className="text-xs text-amber-700 dark:text-amber-300 mt-0.5">{u.sebep || 'Hesaplanamadı'}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                )}
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogAction onClick={() => setSuccessModal({ ...successModal, open: false })}>Tamam</AlertDialogAction>
@@ -796,12 +1206,12 @@ export default function Prices() {
           <DialogContent className="max-w-sm" onInteractOutside={(e) => e.preventDefault()}>
             <DialogHeader><DialogTitle>Fiyatlar Hesaplanıyor</DialogTitle></DialogHeader>
             <div className="space-y-4">
-              <div className="w-full bg-slate-100 rounded-full h-4 overflow-hidden">
-                <div className="bg-indigo-600 h-4 rounded-full transition-all duration-300" style={{ width: `${fakeProgress}%` }} />
+              <div className="w-full bg-secondary rounded-full h-4 overflow-hidden">
+                <div className="bg-primary h-4 rounded-full transition-all duration-300" style={{ width: `${fakeProgress}%` }} />
               </div>
               <div className="text-center">
-                <p className="text-3xl font-bold text-indigo-600">%{fakeProgress}</p>
-                <p className="text-sm text-slate-500 mt-1">Lütfen bekleyin...</p>
+                <p className="text-3xl font-bold text-foreground">%{fakeProgress}</p>
+                <p className="text-sm text-muted-foreground mt-1">Lütfen bekleyin...</p>
               </div>
             </div>
           </DialogContent>

@@ -1,12 +1,19 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Download, Upload, FileSpreadsheet } from "lucide-react";
+import { Download, Upload, FileSpreadsheet, X, Plus } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { toast } from 'sonner';
+import { db } from '@/api/db';
 import * as XLSX from 'xlsx';
 
 /**
@@ -259,15 +266,152 @@ export const downloadTemplate = (columns, filename, infoData = null) => {
   XLSX.writeFile(wb, `${filename}_sablon.xlsx`);
 };
 
+/**
+ * Dosya adi: <sayfa>_<YYYY-AA-GG_SS-DD>. Ayni sayfadan birden fazla indirme
+ * yapildiginda dosyalar birbirinin ustune yazmasin diye tarih-saat eklenir.
+ */
+export const dosyaAdiUret = (filename) => {
+  const d = new Date();
+  const iki = (n) => String(n).padStart(2, '0');
+  const damga = `${d.getFullYear()}-${iki(d.getMonth() + 1)}-${iki(d.getDate())}_${iki(d.getHours())}-${iki(d.getMinutes())}`;
+  return `${filename}_${damga}`;
+};
+
+/**
+ * Excel (.xlsx) olarak disa aktar — CSV'nin yaninda ikinci format secenegi.
+ */
+export const downloadExcel = (data, columns, filename) => {
+  const basliklar = columns.map(c => c.label);
+  const satirlar = data.map(row => columns.map(c => {
+    const v = typeof c.format === 'function' ? c.format(row) : row[c.key];
+    return v === null || v === undefined ? '' : v;
+  }));
+  const ws = XLSX.utils.aoa_to_sheet([basliklar, ...satirlar]);
+  ws['!cols'] = columns.map(() => ({ wch: 20 }));
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Veri');
+  XLSX.writeFile(wb, `${filename}.xlsx`);
+};
+
+/**
+ * Baslik normalizasyonu: buyuk/kucuk harf (Turkce), bosluk ve noktalama
+ * farklarini yok sayar. "Ürün Adı" = " URUN ADI " = "urun_adi".
+ */
+const basligiNormalize = (s) =>
+  String(s ?? '')
+    .replace(/[İIı]/g, 'i')
+    .toLocaleLowerCase('tr')
+    .replace(/[^a-z0-9çğıöşü]+/gi, '')
+    .trim();
+
+/**
+ * Ice aktarilan satirlarda basliklari beklenen sutun etiketlerine esler.
+ * Ozgun anahtarlar KORUNUR (mevcut sayfalar bozulmasin), eslesen etiket
+ * ayrica eklenir. Boylece "urun adi" yazan dosya da "Ürün Adı" ile okunur.
+ */
+export const basligaGoreEslestir = (satirlar, beklenenSutunlar) => {
+  if (!beklenenSutunlar?.length) return satirlar;
+  const harita = new Map(beklenenSutunlar.map(c => [basligiNormalize(c.label), c.label]));
+  return satirlar.map(row => {
+    const yeni = { ...row };
+    Object.keys(row).forEach(k => {
+      const hedef = harita.get(basligiNormalize(k));
+      if (hedef && hedef !== k && yeni[hedef] === undefined) yeni[hedef] = row[k];
+    });
+    return yeni;
+  });
+};
+
+/**
+ * Zorunlu alan kontrolu. templateColumns icinde required: true olan
+ * sutunlar bos ise satir numarasiyla birlikte hata listesi doner.
+ */
+export const zorunluAlanlariDogrula = (satirlar, beklenenSutunlar) => {
+  const zorunlular = (beklenenSutunlar || []).filter(c => c.required);
+  if (!zorunlular.length) return [];
+  const hatalar = [];
+  satirlar.forEach((row, i) => {
+    const eksik = zorunlular
+      .filter(c => {
+        const v = row[c.label];
+        return v === undefined || v === null || String(v).trim() === '';
+      })
+      .map(c => c.label);
+    // Excel'de 1. satir baslik oldugu icin gercek satir numarasi i + 2
+    if (eksik.length) hatalar.push(`Satır ${i + 2}: ${eksik.join(', ')} boş`);
+  });
+  return hatalar;
+};
+
 export default function ImportExport({
   data,
   columns,
   filename,
   onImport,
   templateColumns,
-  templateInfoData
+  templateInfoData,
+  // Yeni (opsiyonel): verilirse kullanici sablonlari ve zorunlu alan
+  // kontrolu devreye girer. Verilmezse davranis eskisiyle AYNI.
+  pageKey,
 }) {
   const fileInputRef = useRef(null);
+  const qc = useQueryClient();
+  const [sablonAdi, setSablonAdi] = useState('');
+  const [sablonAcik, setSablonAcik] = useState(false);
+  const [seciliAlanlar, setSeciliAlanlar] = useState([]);
+  const [sablonFormat, setSablonFormat] = useState('xlsx');
+
+  // Dialog acilirken tum sutunlar secili gelir; kullanici istemedigini kaldirir.
+  const sablonDialogAc = () => {
+    setSeciliAlanlar(columns.map(c => c.key));
+    setSablonAdi('');
+    setSablonFormat('xlsx');
+    setSablonAcik(true);
+  };
+
+  const alanDegistir = (key) => setSeciliAlanlar(p =>
+    p.includes(key) ? p.filter(k => k !== key) : [...p, key]
+  );
+
+  // Kullaniciya ozel disa aktarma sablonlari (RLS ile izole)
+  const { data: sablonlar = [] } = useQuery({
+    queryKey: ['exportTemplates', pageKey],
+    queryFn: () => db.entities.ExportTemplate.filter({ page_key: pageKey }, '-created_at', 50),
+    enabled: !!pageKey,
+  });
+
+  const sablonKaydet = useMutation({
+    mutationFn: (ad) => db.entities.ExportTemplate.create({
+      page_key: pageKey,
+      name: ad,
+      fields: seciliAlanlar,
+      format: sablonFormat,
+    }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['exportTemplates', pageKey] });
+      setSablonAdi('');
+      setSablonAcik(false);
+      toast.success('Şablon kaydedildi');
+    },
+    onError: (e) => toast.error(e?.message || 'Şablon kaydedilemedi'),
+  });
+
+  const sablonSil = useMutation({
+    mutationFn: (id) => db.entities.ExportTemplate.delete(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['exportTemplates', pageKey] });
+      toast.success('Şablon silindi');
+    },
+  });
+
+  // Sablon = hangi sutunlar disa aktarilacak
+  const sablonlaIndir = (sablon) => {
+    const secili = columns.filter(c => sablon.fields.includes(c.key));
+    const kullanilacak = secili.length ? secili : columns;
+    const ad = dosyaAdiUret(filename);
+    if (sablon.format === 'csv') downloadCSV(data, kullanilacak, ad);
+    else downloadExcel(data, kullanilacak, ad);
+  };
 
   const handleFileChange = (e) => {
   const file = e.target.files?.[0];
@@ -295,14 +439,30 @@ export default function ImportExport({
         });
         return converted;
       });
-      onImport?.(parsed);
+      const eslenmis = basligaGoreEslestir(parsed, templateColumns);
+      const hatalar = zorunluAlanlariDogrula(eslenmis, templateColumns);
+      if (hatalar.length) {
+        toast.error(`${hatalar.length} satırda zorunlu alan eksik`, {
+          description: hatalar.slice(0, 5).join(' · ') + (hatalar.length > 5 ? ' …' : ''),
+        });
+        return;
+      }
+      onImport?.(eslenmis);
     };
     reader.readAsArrayBuffer(file);
   } else {
     reader.onload = (event) => {
       const text = event.target?.result;
       const parsed = parseCSV(text);
-      onImport?.(parsed);
+      const eslenmis = basligaGoreEslestir(parsed, templateColumns);
+      const hatalar = zorunluAlanlariDogrula(eslenmis, templateColumns);
+      if (hatalar.length) {
+        toast.error(`${hatalar.length} satırda zorunlu alan eksik`, {
+          description: hatalar.slice(0, 5).join(' · ') + (hatalar.length > 5 ? ' …' : ''),
+        });
+        return;
+      }
+      onImport?.(eslenmis);
     };
     reader.readAsText(file, 'UTF-8');
   }
@@ -327,9 +487,19 @@ export default function ImportExport({
             Dışa Aktar
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
+        <DropdownMenuContent align="end" className="w-[260px]">
+          <DropdownMenuLabel className="text-[11px] uppercase tracking-[0.06em] text-muted-foreground">
+            Standart şablon
+          </DropdownMenuLabel>
           <DropdownMenuItem
-            onClick={() => downloadCSV(data, columns, filename)}
+            onClick={() => downloadExcel(data, columns, dosyaAdiUret(filename))}
+            className="gap-2 cursor-pointer"
+          >
+            <FileSpreadsheet className="h-4 w-4" />
+            Excel (.xlsx) İndir
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            onClick={() => downloadCSV(data, columns, dosyaAdiUret(filename))}
             className="gap-2 cursor-pointer"
           >
             <FileSpreadsheet className="h-4 w-4" />
@@ -344,6 +514,48 @@ export default function ImportExport({
               Boş Şablon İndir
             </DropdownMenuItem>
           )}
+
+          {pageKey && (
+            <>
+              <DropdownMenuSeparator />
+              <DropdownMenuLabel className="text-[11px] uppercase tracking-[0.06em] text-muted-foreground">
+                Kendi şablonların
+              </DropdownMenuLabel>
+              {sablonlar.length === 0 && (
+                <p className="px-2 py-1.5 text-xs text-muted-foreground/70">Henüz şablon yok</p>
+              )}
+              {sablonlar.map(sb => (
+                <DropdownMenuItem
+                  key={sb.id}
+                  onClick={() => sablonlaIndir(sb)}
+                  className="gap-2 cursor-pointer"
+                >
+                  <FileSpreadsheet className="h-4 w-4" />
+                  <span className="flex-1 truncate">{sb.name}</span>
+                  <span className="text-[10px] text-muted-foreground/70 uppercase">{sb.format}</span>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (window.confirm(`"${sb.name}" şablonu silinsin mi? Standart şablon etkilenmez.`)) {
+                        sablonSil.mutate(sb.id);
+                      }
+                    }}
+                    className="text-muted-foreground hover:text-destructive"
+                    title="Şablonu sil"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </DropdownMenuItem>
+              ))}
+              <DropdownMenuItem
+                onSelect={(e) => { e.preventDefault(); sablonDialogAc(); }}
+                className="gap-2 cursor-pointer"
+              >
+                <Plus className="h-4 w-4" />
+                Şablon oluştur…
+              </DropdownMenuItem>
+            </>
+          )}
         </DropdownMenuContent>
       </DropdownMenu>
 
@@ -356,6 +568,79 @@ export default function ImportExport({
         <Upload className="h-4 w-4" />
         İçe Aktar
       </Button>
+
+      {/* Kendi Excel sablonunu olustur: hangi sutunlar, hangi format */}
+      <Dialog open={sablonAcik} onOpenChange={setSablonAcik}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Şablon oluştur</DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-muted-foreground">Şablon adı</label>
+              <Input
+                value={sablonAdi}
+                onChange={(e) => setSablonAdi(e.target.value)}
+                placeholder="Örn: Muhasebe için"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-muted-foreground">Biçim</label>
+              <div className="flex gap-1 rounded-[11px] bg-secondary p-1">
+                {[{ id: 'xlsx', ad: 'Excel (.xlsx)' }, { id: 'csv', ad: 'CSV' }].map(f => (
+                  <button
+                    key={f.id}
+                    type="button"
+                    onClick={() => setSablonFormat(f.id)}
+                    className={`flex-1 h-[30px] rounded-[9px] text-[12.5px] font-medium transition-colors ${
+                      sablonFormat === f.id ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    {f.ad}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-semibold text-muted-foreground">
+                  Sütunlar ({seciliAlanlar.length}/{columns.length})
+                </label>
+                <div className="flex gap-2 text-xs">
+                  <button type="button" className="text-muted-foreground hover:text-foreground" onClick={() => setSeciliAlanlar(columns.map(c => c.key))}>Tümü</button>
+                  <button type="button" className="text-muted-foreground hover:text-foreground" onClick={() => setSeciliAlanlar([])}>Hiçbiri</button>
+                </div>
+              </div>
+              <div className="max-h-[240px] overflow-y-auto rounded-[11px] border border-border divide-y divide-border">
+                {columns.map(c => (
+                  <label key={c.key} className="flex items-center gap-2 px-3 py-2 text-[13px] cursor-pointer hover:bg-secondary">
+                    <input
+                      type="checkbox"
+                      checked={seciliAlanlar.includes(c.key)}
+                      onChange={() => alanDegistir(c.key)}
+                      className="rounded border-input"
+                    />
+                    <span className="text-foreground">{c.label}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSablonAcik(false)}>İptal</Button>
+            <Button
+              disabled={!sablonAdi.trim() || seciliAlanlar.length === 0 || sablonKaydet.isPending}
+              onClick={() => sablonKaydet.mutate(sablonAdi.trim())}
+            >
+              Kaydet
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

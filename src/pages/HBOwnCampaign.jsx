@@ -10,14 +10,16 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import PriceDetailModal from '@/components/modals/PriceDetailModal';
+import { baremSec, baremTarifesiSec } from '@/lib/baremKurali';
 
 const Product = db.entities.Product;
 const Platform = db.entities.Platform;
 const Commission = db.entities.Commission;
 const ShippingRate = db.entities.ShippingRate;
 
-const withVatRate = (rate) => Math.round((rate || 0) * 1.2 * 100) / 100;
-const commLabel = (rate) => `%${rate || 0} (KDV'li %${withVatRate(rate)})`;
+// HepsiBurada komisyonlari sisteme zaten KDV DAHIL giriliyor;
+// etikette bir daha KDV eklemek yaniltiyordu.
+const commLabel = (rate) => `%${rate || 0}`;
 
 const CAMPAIGN_TYPES = [
   { value: 'cart_percent', label: 'Sepette % indirim' },
@@ -38,6 +40,7 @@ export default function HBOwnCampaign() {
   const [commissionDiscount, setCommissionDiscount] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCategory, setFilterCategory] = useState('');
+  const [siraSecimi, setSiraSecimi] = useState('default');
   const [onlyLoss, setOnlyLoss] = useState(false);
   const [detailModal, setDetailModal] = useState({ open: false, product: null, priceData: null, calculationDetails: null });
 
@@ -45,7 +48,7 @@ export default function HBOwnCampaign() {
     db.auth.me().then((u) => setUserEmail(u.email)).catch(() => {});
   }, []);
 
-  const { data: platforms = [] } = useQuery({ queryKey: ['platforms', userEmail], queryFn: () => Platform.filter({ created_by: userEmail }), enabled: !!userEmail });
+  const { data: platforms = [], isFetched: platformlarYuklendi } = useQuery({ queryKey: ['platforms', userEmail], queryFn: () => Platform.filter({ created_by: userEmail }), enabled: !!userEmail });
   const { data: products = [] } = useQuery({ queryKey: ['products', userEmail], queryFn: () => Product.filter({ created_by: userEmail }), enabled: !!userEmail });
   const { data: commissions = [] } = useQuery({ queryKey: ['commissions', userEmail], queryFn: () => Commission.filter({ created_by: userEmail }), enabled: !!userEmail });
   const { data: shippingRates = [] } = useQuery({ queryKey: ['shippingRates'], queryFn: () => ShippingRate.list('-id', 10000), enabled: !!userEmail });
@@ -96,10 +99,18 @@ export default function HBOwnCampaign() {
       }
 
       let shippingCost = 0, shippingVatRate = 20, baremUsed = 'desi';
-      const canUseBarem = !product.special_shipping && !product.multi_package;
-      if (canUseBarem && price > 0) {
-        if (price <= 149.99) { const r = platformShippingRates.find((r) => r.rate_type === 'barem1'); if (r) { shippingCost = r.price; shippingVatRate = r.vat_rate || 20; baremUsed = 'barem1'; } }
-        else if (price <= 299.99) { const r = platformShippingRates.find((r) => r.rate_type === 'barem2'); if (r) { shippingCost = r.price; shippingVatRate = r.vat_rate || 20; baremUsed = 'barem2'; } }
+      // Barem kurallari ortak modulde (src/lib/baremKurali.js): sinirlar
+      // platform kaydindan okunur, desi tavani ve use_barem kontrol edilir.
+      // Once bu sayfaya sabit yazilmisti ve HepsiBurada'da Trendyol'un
+      // bantlari uygulaniyordu.
+      const secilenBarem = baremSec(platform, product, price, product?.desi);
+      if (secilenBarem) {
+        const baremRate = baremTarifesiSec(platformShippingRates, secilenBarem, product?.same_day_delivery || false);
+        if (baremRate) {
+          shippingCost = baremRate.price;
+          shippingVatRate = baremRate.vat_rate || 20;
+          baremUsed = secilenBarem;
+        }
       }
       if (shippingCost === 0) {
         if (product.multi_package && product.packages) {
@@ -178,6 +189,25 @@ export default function HBOwnCampaign() {
     return true;
   });
 
+  // Kar degerleri satirda hazir; siralama motor calistirmiyor.
+  const siraliRows = React.useMemo(() => {
+    if (siraSecimi === 'default') return filteredRows;
+    const artan = siraSecimi.endsWith('asc');
+    const kopya = [...filteredRows];
+    kopya.sort((a, b) => {
+      if (siraSecimi.startsWith('name')) {
+        const x = (a.product.name || '').toLocaleLowerCase('tr');
+        const y = (b.product.name || '').toLocaleLowerCase('tr');
+        return artan ? x.localeCompare(y, 'tr') : y.localeCompare(x, 'tr');
+      }
+      const alan = siraSecimi.startsWith('rate') ? 'profitRate' : 'profit';
+      const x = Number(a.campaign?.[alan] ?? 0);
+      const y = Number(b.campaign?.[alan] ?? 0);
+      return artan ? x - y : y - x;
+    });
+    return kopya;
+  }, [filteredRows, siraSecimi]);
+
   const lossCount = rows.filter((r) => r.campaign.profit < 0).length;
 
   const openDetail = (price, commissionRate, product) => {
@@ -191,14 +221,16 @@ export default function HBOwnCampaign() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="max-w-[1600px] mx-auto px-6 py-8">
+      <div className="ph-page mx-auto">
         <div className="mb-8">
-          <h1 className="text-3xl font-semibold tracking-tight">Kendi Kampanyanı Oluştur</h1>
+          <h1 className="ph-title">Kendi Kampanyanı Oluştur</h1>
           <p className="text-muted-foreground mt-1">Bir sepet kampanyası kurgulayıp, ürünlerinde kâr etkisini görün (Hepsiburada)</p>
         </div>
 
-        {!hasHepsiburada && (
-          <div className="mb-6 flex items-start gap-4 bg-amber-50 border border-amber-200 rounded-xl p-5">
+        {/* Uyari platform sorgusu cozulmeden gosterilirse sayfa acilirken
+            bir an cakip kayboluyordu; artik veri geldikten sonra kalici. */}
+        {platformlarYuklendi && !hasHepsiburada && (
+          <div className="mb-6 flex items-start gap-4 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50 rounded-xl p-5">
             <div className="flex-shrink-0 w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center"><AlertCircle className="h-5 w-5 text-amber-600" /></div>
             <div>
               <h3 className="font-semibold text-amber-900 text-base mb-1">Hepsiburada Platformu Aktif Değil</h3>
@@ -233,11 +265,11 @@ export default function HBOwnCampaign() {
               )}
 
               <div className="space-y-2">
-                <Label>Komisyon İndirimi (%) <span className="text-xs text-slate-400">opsiyonel</span></Label>
+                <Label>Komisyon İndirimi (%) <span className="text-xs text-muted-foreground/70">opsiyonel</span></Label>
                 <Input type="number" value={commissionDiscount} onChange={(e) => setCommissionDiscount(e.target.value)} placeholder="örn. 7" />
               </div>
             </div>
-            <p className="text-xs text-slate-400 mt-3">Not: "X al Y öde" ürün başına ortalama birim fiyatı (Y/X) baz alır. Komisyon indirimi girersen, kampanya kârı düşük komisyonla hesaplanır.</p>
+            <p className="text-xs text-muted-foreground/70 mt-3">Not: "X al Y öde" ürün başına ortalama birim fiyatı (Y/X) baz alır. Komisyon indirimi girersen, kampanya kârı düşük komisyonla hesaplanır.</p>
           </CardContent>
         </Card>
 
@@ -252,6 +284,18 @@ export default function HBOwnCampaign() {
                     <SelectTrigger><SelectValue placeholder="Kategori" /></SelectTrigger>
                     <SelectContent><SelectItem value="all">Kategori</SelectItem>{allCategories.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
                   </Select>
+                  <Select value={siraSecimi} onValueChange={setSiraSecimi}>
+                    <SelectTrigger><SelectValue placeholder="Sırala" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="default">Varsayılan</SelectItem>
+                      <SelectItem value="rate_desc">Kâr oranı: yüksek → düşük</SelectItem>
+                      <SelectItem value="rate_asc">Kâr oranı: düşük → yüksek</SelectItem>
+                      <SelectItem value="amount_desc">Kâr tutarı: yüksek → düşük</SelectItem>
+                      <SelectItem value="amount_asc">Kâr tutarı: düşük → yüksek</SelectItem>
+                      <SelectItem value="name_asc">Ürün adı: A → Z</SelectItem>
+                      <SelectItem value="name_desc">Ürün adı: Z → A</SelectItem>
+                    </SelectContent>
+                  </Select>
                   <Button variant={onlyLoss ? 'default' : 'outline'} onClick={() => setOnlyLoss(!onlyLoss)} className="gap-2">
                     Sadece zarar edenler {lossCount > 0 && <Badge variant="outline" className="text-rose-600 border-rose-300">{lossCount}</Badge>}
                   </Button>
@@ -260,11 +304,11 @@ export default function HBOwnCampaign() {
             </Card>
 
             <Card>
-              <CardHeader><CardTitle>Kâr Etkisi ({filteredRows.length} ürün)</CardTitle></CardHeader>
+              <CardHeader><CardTitle>Kâr Etkisi ({siraliRows.length} ürün)</CardTitle></CardHeader>
               <CardContent>
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
-                    <thead className="bg-slate-50 border-b">
+                    <thead className="bg-secondary border-b">
                       <tr>
                         <th className="p-3 text-left font-semibold min-w-[200px]">Ürün</th>
                         <th className="p-3 text-center font-semibold min-w-[150px]">Mevcut</th>
@@ -273,26 +317,26 @@ export default function HBOwnCampaign() {
                       </tr>
                     </thead>
                     <tbody>
-                      {filteredRows.map((r, i) => {
+                      {siraliRows.map((r, i) => {
                         const diff = r.campaign.profit - r.current.profit;
                         return (
-                          <tr key={i} className={`border-b hover:bg-slate-50 ${r.campaign.profit < 0 ? 'bg-rose-50/50' : ''}`}>
+                          <tr key={i} className={`border-b hover:bg-secondary ${r.campaign.profit < 0 ? 'bg-rose-50 dark:bg-rose-950/30/50' : ''}`}>
                             <td className="p-3">
-                              <div className="font-medium text-slate-900">{r.product.name}</div>
-                              <div className="text-xs text-slate-500 font-mono">{r.product.sku}</div>
-                              <div className="text-xs text-slate-400">{r.product.category_name}</div>
+                              <div className="font-medium text-foreground">{r.product.name}</div>
+                              <div className="text-xs text-muted-foreground font-mono">{r.product.sku}</div>
+                              <div className="text-xs text-muted-foreground/70">{r.product.category_name}</div>
                             </td>
                             <td className="p-3 text-center">
-                              <div className="font-semibold text-slate-900">₺{r.basePrice.toFixed(2)}</div>
-                              <div className="text-[11px] text-slate-500">Kom: {commLabel(r.baseCommission)}</div>
+                              <div className="font-semibold text-foreground">₺{r.basePrice.toFixed(2)}</div>
+                              <div className="text-[11px] text-muted-foreground">Kom: {commLabel(r.baseCommission)}</div>
                               <div className={`text-xs font-medium ${r.current.profit > 0 ? 'text-emerald-600' : 'text-rose-600'}`}>₺{r.current.profit.toFixed(2)} (%{r.current.profitRate.toFixed(1)})</div>
                             </td>
                             <td className="p-3 text-center">
                               <div className="flex items-center justify-center gap-1">
-                                <span className="font-semibold text-slate-900">₺{r.campPrice.toFixed(2)}</span>
+                                <span className="font-semibold text-foreground">₺{r.campPrice.toFixed(2)}</span>
                                 <Button size="sm" variant="ghost" className="h-5 w-5 p-0" onClick={() => openDetail(r.campPrice, r.effCommission, r.product)}><Info className="h-3 w-3" /></Button>
                               </div>
-                              <div className="text-[11px] text-slate-500">Kom: {commLabel(r.effCommission)}</div>
+                              <div className="text-[11px] text-muted-foreground">Kom: {commLabel(r.effCommission)}</div>
                               <div className={`text-xs font-semibold ${r.campaign.profit > 0 ? 'text-emerald-600' : 'text-rose-600'}`}>₺{r.campaign.profit.toFixed(2)} (%{r.campaign.profitRate.toFixed(1)})</div>
                             </td>
                             <td className="p-3 text-center">
@@ -310,9 +354,9 @@ export default function HBOwnCampaign() {
         ) : (
           <Card>
             <CardContent className="p-12 text-center">
-              <Megaphone className="h-16 w-16 text-slate-300 mx-auto mb-4" />
-              <p className="text-slate-500 mb-2">Hepsiburada fiyatı olan ürün bulunamadı</p>
-              <p className="text-sm text-slate-400">Bu araç, Fiyatlar sayfasında Hepsiburada fiyatı belirlenmiş ürünler üzerinden kâr etkisini hesaplar.</p>
+              <Megaphone className="h-16 w-16 text-muted-foreground/50 mx-auto mb-4" />
+              <p className="text-muted-foreground mb-2">Hepsiburada fiyatı olan ürün bulunamadı</p>
+              <p className="text-sm text-muted-foreground/70">Bu araç, Fiyatlar sayfasında Hepsiburada fiyatı belirlenmiş ürünler üzerinden kâr etkisini hesaplar.</p>
             </CardContent>
           </Card>
         )}

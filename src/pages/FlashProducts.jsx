@@ -16,6 +16,8 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import * as XLSX from 'xlsx';
+import BaremBadge from '@/components/ui/BaremBadge';
+import { baremSec, baremTavanFiyatlari, baremTarifesiSec } from '@/lib/baremKurali';
 
 export default function FlashProducts() {
   const [userEmail, setUserEmail] = useState(null);
@@ -36,6 +38,9 @@ export default function FlashProducts() {
   const [bulkColumn, setBulkColumn] = useState('');
   const [bulkMinProfitRate, setBulkMinProfitRate] = useState('');
   const [bulkMinProfitAmount, setBulkMinProfitAmount] = useState('');
+  // Ust sinir: bos birakilirsa sinir yok. Min-max araligi disindaki urunler secilmez.
+  const [bulkMaxProfitRate, setBulkMaxProfitRate] = useState('');
+  const [bulkMaxProfitAmount, setBulkMaxProfitAmount] = useState('');
   const [calendarKey, setCalendarKey] = useState(0);
 
   const queryClient = useQueryClient();
@@ -50,7 +55,7 @@ export default function FlashProducts() {
     enabled: !!userEmail
   });
 
-  const { data: platforms = [] } = useQuery({
+  const { data: platforms = [], isFetched: platformlarYuklendi } = useQuery({
     queryKey: ['platforms', userEmail],
     queryFn: () => db.entities.Platform.filter({ created_by: userEmail }),
     enabled: !!userEmail
@@ -575,24 +580,17 @@ export default function FlashProducts() {
       let shippingVatRate = 20;
       let baremUsed = 'desi';
 
-      const canUseBarem = !matchedProduct.special_shipping && !matchedProduct.multi_package;
-      
-      // Barem kontrolleri — Prices sayfasıyla aynı
-      if (canUseBarem && price > 0) {
-        if (price >= 0 && price <= 149.99) {
-          const baremRate = platformShippingRates.find(r => r.rate_type === 'barem1');
-          if (baremRate) {
-            shippingCost = baremRate.price;
-            shippingVatRate = baremRate.vat_rate || 20;
-            baremUsed = 'barem1';
-          }
-        } else if (price >= 150 && price <= 299.99) {
-          const baremRate = platformShippingRates.find(r => r.rate_type === 'barem2');
-          if (baremRate) {
-            shippingCost = baremRate.price;
-            shippingVatRate = baremRate.vat_rate || 20;
-            baremUsed = 'barem2';
-          }
+      // Barem kurallari ortak modulde (src/lib/baremKurali.js): sinirlar
+      // platform kaydindan okunur, desi tavani ve use_barem kontrol edilir.
+      // Once bu sayfaya sabit yazilmisti ve HepsiBurada'da Trendyol'un
+      // bantlari uygulaniyordu.
+      const secilenBarem = baremSec(platform, matchedProduct, price, matchedProduct?.desi);
+      if (secilenBarem) {
+        const baremRate = baremTarifesiSec(platformShippingRates, secilenBarem, matchedProduct?.same_day_delivery || false);
+        if (baremRate) {
+          shippingCost = baremRate.price;
+          shippingVatRate = baremRate.vat_rate || 20;
+          baremUsed = secilenBarem;
         }
       }
 
@@ -763,6 +761,12 @@ export default function FlashProducts() {
 
     const minRate = parseFloat(bulkMinProfitRate) || 0;
     const minAmount = parseFloat(bulkMinProfitAmount) || 0;
+    const maxRate = bulkMaxProfitRate !== '' ? parseFloat(bulkMaxProfitRate) : Infinity;
+    const maxAmount = bulkMaxProfitAmount !== '' ? parseFloat(bulkMaxProfitAmount) : Infinity;
+    const araliktaMi = (oran, tutar) =>
+      oran >= minRate && tutar >= minAmount &&
+      oran <= (Number.isNaN(maxRate) ? Infinity : maxRate) &&
+      tutar <= (Number.isNaN(maxAmount) ? Infinity : maxAmount);
 
     // Kategori filtresi aktifse sadece görünen ürünlerin adlarını bul
     const visibleProductNames = filterCategory
@@ -798,7 +802,7 @@ export default function FlashProducts() {
       let commissionRate = getCommissionRate(item, price);
       const { profit, profitRate } = calculateProfit(price, commissionRate, item);
 
-      if (profitRate >= minRate && profit >= minAmount && commissionRate !== null) {
+      if (araliktaMi(profitRate, profit) && commissionRate !== null) {
         return { ...item, selected_type: bulkColumn, selected_price: price };
       }
 
@@ -1159,15 +1163,17 @@ export default function FlashProducts() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-indigo-50/30">
-      <div className="max-w-[1600px] mx-auto px-6 py-8">
+    <div className="min-h-screen bg-secondary">
+      <div className="ph-page mx-auto">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-slate-900">Flaş Ürünler</h1>
-          <p className="text-slate-500 mt-1">Flaş ürün fiyatlarını yükleyip kârlılık analizi yapın</p>
+          <h1 className="ph-title">Flaş Ürünler</h1>
+          <p className="text-muted-foreground mt-1">Flaş ürün fiyatlarını yükleyip kârlılık analizi yapın</p>
         </div>
 
-        {!hasTrendyol && (
-          <div className="mb-6 flex items-start gap-4 bg-amber-50 border border-amber-200 rounded-xl p-5">
+        {/* Uyari platform sorgusu cozulmeden gosterilirse sayfa acilirken
+            bir an cakip kayboluyordu; artik veri geldikten sonra kalici. */}
+        {platformlarYuklendi && !hasTrendyol && (
+          <div className="mb-6 flex items-start gap-4 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50 rounded-xl p-5">
             <div className="flex-shrink-0 w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center">
               <AlertCircle className="h-5 w-5 text-amber-600" />
             </div>
@@ -1192,7 +1198,7 @@ export default function FlashProducts() {
               <div className="space-y-2">
                 <Label>Platform *</Label>
                 {trendyolPlatforms.length === 1 ? (
-                  <div className="flex items-center h-10 px-3 border border-gray-200 rounded-xl bg-gray-50 text-sm font-medium">
+                  <div className="flex items-center h-10 px-3 border border-border rounded-xl bg-secondary text-sm font-medium">
                     {trendyolPlatforms[0].name}
                   </div>
                 ) : (
@@ -1243,7 +1249,7 @@ export default function FlashProducts() {
                       defaultMonth={new Date()}
                       numberOfMonths={2}
                       locale={tr}
-                      classNames={{ day_today: "bg-blue-500 font-bold text-white" }}
+                      classNames={{ day_today: "bg-primary font-bold text-primary-foreground" }}
                     />
                   </PopoverContent>
                 </Popover>
@@ -1254,7 +1260,7 @@ export default function FlashProducts() {
               <Button
                 onClick={() => document.getElementById('excelUpload').click()}
                 disabled={!selectedPlatform || !dateRangeValue?.from || !dateRangeValue?.to}
-                className="bg-indigo-600 hover:bg-indigo-700"
+                className="bg-primary hover:bg-black dark:hover:bg-white/90"
               >
                 <Upload className="mr-2 h-4 w-4" />
                 {uploadProgress.total > 0
@@ -1270,7 +1276,7 @@ export default function FlashProducts() {
               />
               {uploadedData.length > 0 && (
                 <>
-                  <Button onClick={handleSmartAutoSelect} className="bg-orange-500 hover:bg-orange-600 text-white gap-2">
+                  <Button onClick={handleSmartAutoSelect} className="bg-primary hover:bg-black dark:hover:bg-white/90 text-primary-foreground gap-2">
                     <Sparkles className="h-4 w-4" />
                     Akıllı Otomatik Seç
                   </Button>
@@ -1302,7 +1308,7 @@ export default function FlashProducts() {
                         toast.error('Silme hatası (arka plan): ' + error.message);
                       }
                     }}
-                    className="text-rose-600 hover:text-rose-700 hover:bg-rose-50"
+                    className="text-red-600 dark:text-red-400 hover:text-red-700 dark:text-red-300 hover:bg-red-50 dark:bg-red-950/30"
                   >
                     <Trash2 className="mr-2 h-4 w-4" />
                     Excel'i Sil
@@ -1335,7 +1341,7 @@ export default function FlashProducts() {
           <>
             {/* Info Banner */}
             {excludedCount > 0 && (
-              <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+              <div className="mb-6 p-4 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50 rounded-lg">
                 <div className="flex items-center gap-2 text-amber-800">
                   <AlertCircle className="h-5 w-5" />
                   <span className="font-medium">{excludedCount} ürün tarih aralığı dışında olduğu için gösterilmiyor</span>
@@ -1439,6 +1445,18 @@ export default function FlashProducts() {
                     value={bulkMinProfitAmount}
                     onChange={(e) => setBulkMinProfitAmount(e.target.value)}
                   />
+                  <Input
+                    type="number"
+                    placeholder="Maks Kâr Oranı (%)"
+                    value={bulkMaxProfitRate}
+                    onChange={(e) => setBulkMaxProfitRate(e.target.value)}
+                  />
+                  <Input
+                    type="number"
+                    placeholder="Maks Kâr Tutarı (₺)"
+                    value={bulkMaxProfitAmount}
+                    onChange={(e) => setBulkMaxProfitAmount(e.target.value)}
+                  />
                   <Button onClick={handleBulkSelect} variant="outline">
                     Toplu Seç
                   </Button>
@@ -1454,7 +1472,7 @@ export default function FlashProducts() {
               <CardContent>
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
-                    <thead className="bg-slate-50 border-b">
+                    <thead className="bg-secondary border-b">
                       <tr>
                         <th className="p-3 text-left font-semibold min-w-[180px]">Ürün</th>
                         <th className="p-3 text-center font-semibold">Stok</th>
@@ -1475,11 +1493,11 @@ export default function FlashProducts() {
                         const commissionRate3h = getCommissionRate(item, item.price_3h);
 
                         return (
-                          <tr key={index} className="border-b hover:bg-slate-50">
+                          <tr key={index} className="border-b hover:bg-secondary">
                             <td className="p-3">
-                              <div className="font-medium text-slate-900">{item.product_name}</div>
+                              <div className="font-medium text-foreground">{item.product_name}</div>
                               {!matchedProduct && (
-                                <Badge variant="outline" className="mt-1 text-xs text-rose-600 border-rose-300">
+                                <Badge variant="outline" className="mt-1 text-xs text-red-600 border-red-300">
                                   Master eşleşmedi
                                 </Badge>
                               )}
@@ -1492,46 +1510,47 @@ export default function FlashProducts() {
                               {category ? (
                                 <span className="text-xs font-medium">{category.name}</span>
                               ) : (
-                                <span className="text-slate-400">-</span>
+                                <span className="text-muted-foreground/70">-</span>
                               )}
                             </td>
                             <td className="p-3">
                               {systemPrice ? (
                                 <div className="text-center">
                                   <div className="font-semibold">₺{systemPrice.sale_price?.toFixed(2)}</div>
-                                  <div className="text-xs text-slate-500">
+                                  <div className="text-xs text-muted-foreground">
                                     {matchedProduct?.desi} desi • {systemPrice.barem_used === 'barem1' ? 'Barem 1' : systemPrice.barem_used === 'barem2' ? 'Barem 2' : 'Desi'}
                                   </div>
-                                  <div className="text-xs text-slate-500">Kom: %{systemPrice.commission_rate || 0}</div>
-                                  <div className={`text-xs font-medium ${(systemPrice.profit_rate || 0) > 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                                  <div className="text-xs text-muted-foreground">Kom: %{systemPrice.commission_rate || 0}</div>
+                                  <div className={`text-xs font-medium ${(systemPrice.profit_rate || 0) > 0 ? 'text-green-600' : 'text-red-600'}`}>
                                     ₺{(systemPrice.net_profit || 0).toFixed(2)} (%{(systemPrice.profit_rate || 0).toFixed(1)})
                                   </div>
                                 </div>
                               ) : (
-                                <span className="text-slate-400">-</span>
+                                <span className="text-muted-foreground/70">-</span>
                               )}
                             </td>
                             <td className="p-3">
                               {item.price_24h > 0 ? (
-                                <div className={`border rounded-lg p-2 ${item.selected_type === 'flash_24h' ? 'border-indigo-500 bg-indigo-50' : 'border-slate-200'}`}>
-                                  <div className="text-xs font-semibold text-slate-700 mb-1">₺{item.price_24h.toFixed(2)}</div>
+                                <div className={`border rounded-lg p-2 ${item.selected_type === 'flash_24h' ? 'border-primary bg-secondary' : 'border-border'}`}>
+                                  <div className="text-xs font-semibold text-muted-foreground mb-1">₺{item.price_24h.toFixed(2)}</div>
                                   {item.start_24h && item.end_24h && (
-                                    <div className="text-xs text-slate-400 mb-1">
+                                    <div className="text-xs text-muted-foreground/70 mb-1">
                                       {format(new Date(item.start_24h), 'd MMM', { locale: tr })} - {format(new Date(item.end_24h), 'd MMM', { locale: tr })}
                                     </div>
                                   )}
                                   {commissionRate24h !== null ? (
                                     <>
-                                      <div className="text-xs text-slate-500">
-                                        Kom: %{commissionRate24h}
-                                      </div>
                                       {(() => {
-                                        const { profit, profitRate } = calculateProfit(item.price_24h, commissionRate24h, item);
+                                        const { profit, profitRate, baremUsed } = calculateProfit(item.price_24h, commissionRate24h, item);
                                         const isProfitable = profit > 0;
                                         return (
                                           <>
+                                          <div className="flex items-center justify-between gap-1">
+                                            <span className="text-xs text-muted-foreground">Kom: %{commissionRate24h}</span>
+                                            <BaremBadge barem={baremUsed} />
+                                          </div>
                                             <div className="flex items-center justify-between mt-1">
-                                              <div className={`text-xs font-semibold ${isProfitable ? 'text-emerald-600' : 'text-rose-600'}`}>
+                                              <div className={`text-xs font-semibold ${isProfitable ? 'text-green-600' : 'text-red-600'}`}>
                                                 {isProfitable ? '+' : ''}₺{profit.toFixed(2)} (%{profitRate.toFixed(1)})
                                               </div>
                                               <Button
@@ -1583,25 +1602,25 @@ export default function FlashProducts() {
                                       })()}
                                     </>
                                   ) : (
-                                    <div className="text-center text-slate-400 text-xs">-</div>
+                                    <div className="text-center text-muted-foreground/70 text-xs">-</div>
                                   )}
                                 </div>
                               ) : (
-                                <span className="text-slate-400">-</span>
+                                <span className="text-muted-foreground/70">-</span>
                               )}
                             </td>
                             <td className="p-3">
                               {item.price_3h > 0 ? (
-                                <div className={`border rounded-lg p-2 ${item.selected_type === 'flash_3h' ? 'border-indigo-500 bg-indigo-50' : 'border-slate-200'}`}>
-                                  <div className="text-xs font-semibold text-slate-700 mb-1">₺{item.price_3h.toFixed(2)}</div>
+                                <div className={`border rounded-lg p-2 ${item.selected_type === 'flash_3h' ? 'border-primary bg-secondary' : 'border-border'}`}>
+                                  <div className="text-xs font-semibold text-muted-foreground mb-1">₺{item.price_3h.toFixed(2)}</div>
                                   {item.start_3h && item.end_3h && (
-                                    <div className="text-xs text-slate-400 mb-1">
+                                    <div className="text-xs text-muted-foreground/70 mb-1">
                                       {format(new Date(item.start_3h), 'd MMM', { locale: tr })} - {format(new Date(item.end_3h), 'd MMM', { locale: tr })}
                                     </div>
                                   )}
                                   {commissionRate3h !== null ? (
                                     <>
-                                      <div className="text-xs text-slate-500">
+                                      <div className="text-xs text-muted-foreground">
                                         Kom: %{commissionRate3h}
                                       </div>
                                       {(() => {
@@ -1610,7 +1629,7 @@ export default function FlashProducts() {
                                         return (
                                           <>
                                             <div className="flex items-center justify-between mt-1">
-                                              <div className={`text-xs font-semibold ${isProfitable ? 'text-emerald-600' : 'text-rose-600'}`}>
+                                              <div className={`text-xs font-semibold ${isProfitable ? 'text-green-600' : 'text-red-600'}`}>
                                                 {isProfitable ? '+' : ''}₺{profit.toFixed(2)} (%{profitRate.toFixed(1)})
                                               </div>
                                               <Button
@@ -1662,11 +1681,11 @@ export default function FlashProducts() {
                                       })()}
                                     </>
                                   ) : (
-                                    <div className="text-center text-slate-400 text-xs">-</div>
+                                    <div className="text-center text-muted-foreground/70 text-xs">-</div>
                                   )}
                                 </div>
                               ) : (
-                                <span className="text-slate-400">-</span>
+                                <span className="text-muted-foreground/70">-</span>
                               )}
                             </td>
 
@@ -1675,12 +1694,12 @@ export default function FlashProducts() {
                               {(() => {
                                 const selectedPrice = item.selected_price || 0;
                                 if (selectedPrice === 0 || item.selected_type === 'none') return (
-                                  <div className="text-center text-slate-400 text-xs">-</div>
+                                  <div className="text-center text-muted-foreground/70 text-xs">-</div>
                                 );
 
                                 const selectedCommissionRate = getCommissionRate(item, selectedPrice);
                                 if (selectedCommissionRate === null) return (
-                                  <div className="text-center text-slate-400 text-xs">-</div>
+                                  <div className="text-center text-muted-foreground/70 text-xs">-</div>
                                 );
 
                                 const currentCalc = calculateProfit(selectedPrice, selectedCommissionRate, item);
@@ -1688,18 +1707,25 @@ export default function FlashProducts() {
                                 const currentBaremUsed = currentCalc.baremUsed;
 
                                 if (currentBaremUsed === 'barem1' || currentBaremUsed === 'barem2') {
-                                  return <div className="text-center text-slate-400 text-xs">-</div>;
+                                  return <div className="text-center text-muted-foreground/70 text-xs">-</div>;
                                 }
 
                                 let bestBaremSuggestion = null;
 
-                                if (selectedPrice > 299.99) {
-                                  const barem2CommissionRate = getCommissionRate(item, 299.99);
+                                // Oneri fiyatlari platformun kendi barem tavanlarindan
+                                // geliyor; sayfaya sabit yazilmis 299,99 / 149,99
+                                // HepsiBurada'da yanlisti.
+                                const tavanlar = baremTavanFiyatlari(currentCalc.platform);
+                                const ustTavan = tavanlar[0];
+                                const altTavan = tavanlar[1];
+
+                                if (ustTavan && selectedPrice > ustTavan) {
+                                  const barem2CommissionRate = getCommissionRate(item, ustTavan);
                                   if (barem2CommissionRate !== null) {
-                                    const barem2Calc = calculateProfit(299.99, barem2CommissionRate, item);
+                                    const barem2Calc = calculateProfit(ustTavan, barem2CommissionRate, item);
                                     if (barem2Calc.baremUsed === 'barem2' && barem2Calc.profitRate > currentProfitRate) {
                                       bestBaremSuggestion = {
-                                        price: 299.99,
+                                        price: ustTavan,
                                         profit: barem2Calc.profit,
                                         profitRate: barem2Calc.profitRate,
                                         baremType: 'Barem 2',
@@ -1712,14 +1738,14 @@ export default function FlashProducts() {
                                   }
                                 }
 
-                                if (selectedPrice > 149.99) {
-                                  const barem1CommissionRate = getCommissionRate(item, 149.99);
+                                if (altTavan && selectedPrice > altTavan) {
+                                  const barem1CommissionRate = getCommissionRate(item, altTavan);
                                   if (barem1CommissionRate !== null) {
-                                    const barem1Calc = calculateProfit(149.99, barem1CommissionRate, item);
+                                    const barem1Calc = calculateProfit(altTavan, barem1CommissionRate, item);
                                     if (barem1Calc.baremUsed === 'barem1' && barem1Calc.profitRate > currentProfitRate) {
                                       if (!bestBaremSuggestion || barem1Calc.profitRate > bestBaremSuggestion.profitRate) {
                                         bestBaremSuggestion = {
-                                          price: 149.99,
+                                          price: altTavan,
                                           profit: barem1Calc.profit,
                                           profitRate: barem1Calc.profitRate,
                                           baremType: 'Barem 1',
@@ -1734,24 +1760,24 @@ export default function FlashProducts() {
                                 }
 
                                 if (!bestBaremSuggestion) {
-                                  return <div className="text-center text-slate-400 text-xs">-</div>;
+                                  return <div className="text-center text-muted-foreground/70 text-xs">-</div>;
                                 }
 
                                 const profitIncrease = bestBaremSuggestion.profitRate - currentProfitRate;
 
                                 return (
-                                  <div className="border rounded-lg p-2 border-amber-300 bg-amber-50">
+                                  <div className="border rounded-lg p-2 border-amber-300 bg-amber-50 dark:bg-amber-950/30">
                                     <div className="text-xs font-semibold text-amber-800 mb-1">
                                       {bestBaremSuggestion.baremType} Önerisi
                                     </div>
-                                    <div className="text-xs text-slate-600">
+                                    <div className="text-xs text-muted-foreground">
                                       Fiyat: ₺{bestBaremSuggestion.price.toFixed(2)}
                                     </div>
-                                    <div className="text-xs text-slate-600">
+                                    <div className="text-xs text-muted-foreground">
                                       Kom: %{bestBaremSuggestion.commissionRate}
                                     </div>
                                     <div className="flex items-center justify-between mt-1">
-                                      <div className="text-xs font-semibold text-emerald-600">
+                                      <div className="text-xs font-semibold text-green-600">
                                         +₺{bestBaremSuggestion.profit.toFixed(2)} (%{bestBaremSuggestion.profitRate.toFixed(1)})
                                       </div>
                                       <Button
@@ -1806,8 +1832,8 @@ export default function FlashProducts() {
                             </td>
 
                             <td className="p-3">
-                              <div className={`border rounded-lg p-2 ${item.selected_type === 'manual' ? 'border-indigo-500 bg-indigo-50' : 'border-slate-200'}`}>
-                                <div className="text-xs font-semibold text-slate-700 mb-2">Manuel Fiyat</div>
+                              <div className={`border rounded-lg p-2 ${item.selected_type === 'manual' ? 'border-primary bg-secondary' : 'border-border'}`}>
+                                <div className="text-xs font-semibold text-muted-foreground mb-2">Manuel Fiyat</div>
                                     <Input
                                       type="number"
                                       step="0.01"
@@ -1819,15 +1845,15 @@ export default function FlashProducts() {
                                     {item.manual_price > 0 && (
                                      <>
                                        {item.manual_time_range_error ? (
-                                         <div className="mb-2 p-2 bg-rose-50 border border-rose-200 rounded">
-                                           <div className="text-xs text-rose-700 font-medium">
+                                         <div className="mb-2 p-2 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/50 rounded">
+                                           <div className="text-xs text-red-700 font-medium">
                                              ⚠ Fiyat hem 3 hem 24 saatlik fiyattan büyük olamaz
                                            </div>
                                          </div>
                                        ) : (
                                          <>
                                            <div className="flex items-center justify-between mb-2">
-                                             <div className={`text-xs font-semibold ${(item.manual_profit || 0) > 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                                             <div className={`text-xs font-semibold ${(item.manual_profit || 0) > 0 ? 'text-green-600' : 'text-red-600'}`}>
                                                {(item.manual_profit || 0) > 0 ? '+' : ''}₺{(item.manual_profit || 0).toFixed(2)} (%{(item.manual_profit_rate || 0).toFixed(1)})
                                              </div>
                                              <Button
@@ -1888,7 +1914,7 @@ export default function FlashProducts() {
                                              </div>
                                            ) : (
                                              item.manual_time_range && (
-                                               <div className="mb-2 text-xs text-slate-600">
+                                               <div className="mb-2 text-xs text-muted-foreground">
                                                  Zaman: {item.manual_time_range === 'flash_24h' ? '24 Saat' : '3 Saat'}
                                                </div>
                                              )
@@ -1922,9 +1948,9 @@ export default function FlashProducts() {
         {uploadedData.length === 0 && (
           <Card>
             <CardContent className="p-12 text-center">
-              <Upload className="h-16 w-16 text-slate-300 mx-auto mb-4" />
-              <p className="text-slate-500 mb-2">Henüz dosya yüklenmedi</p>
-              <p className="text-sm text-slate-400">Platform seçip Excel dosyasını yükleyin</p>
+              <Upload className="h-16 w-16 text-muted-foreground/50 mx-auto mb-4" />
+              <p className="text-muted-foreground mb-2">Henüz dosya yüklenmedi</p>
+              <p className="text-sm text-muted-foreground/70">Platform seçip Excel dosyasını yükleyin</p>
             </CardContent>
           </Card>
         )}

@@ -35,13 +35,15 @@ export const findDesiShippingRate = (shippingRates, desi) => {
     }
   }
   
-  // Eğer uygun tarife bulunamazsa en yüksek desi tarifesini kullan
-  if (desiRates.length > 0) {
-    return desiRates[desiRates.length - 1];
-  }
-  
+  // Urunun desisi tanimli en yuksek tarifenin de ustundeyse TARIFE YOKTUR.
+  // Eskiden burada en yuksek tarifeye dusuluyordu; bu, gercek kargo bedeli
+  // daha yuksek oldugu icin kari OLDUGUNDAN IYI gosteriyordu. Artik null
+  // donuyor ve urun fiyatlanmiyor, kullaniciya uyari veriliyor.
   return null;
 };
+
+/** Kargo tarifesi eksikligini anlatan hata (fiyatlama durdurulur). */
+export const KARGO_TARIFESI_YOK = 'KARGO_TARIFESI_YOK';
 
 /**
  * Barem kargo ücretini bul
@@ -166,7 +168,12 @@ export const calculatePriceBreakdown = ({
   const transactionFeeVatRate = platform.transaction_fee_vat_rate || 20;
   const transactionFeeExclVat = transactionFeeInclVat / (1 + transactionFeeVatRate / 100);
   const transactionFeeVat = transactionFeeInclVat - transactionFeeExclVat;
-  const posServiceFeeRate = (platform.has_pos_service_fee && platform.platform_type === 'hepsiburada')
+  // POS hizmet bedeli: HepsiBurada'nin yaninda Web Sitesi platformunda da
+  // uygulanir (kendi POS/sanal pos kesintisi). Yalnizca platformun kendi
+  // has_pos_service_fee anahtari aciksa devreye girer; kapaliyken oran 0
+  // oldugu icin hesap eskisiyle birebir ayni kalir.
+  const POS_BEDELI_OLAN_PLATFORMLAR = ['hepsiburada', 'website'];
+  const posServiceFeeRate = (platform.has_pos_service_fee && POS_BEDELI_OLAN_PLATFORMLAR.includes(platform.platform_type))
     ? (platform.pos_service_fee_rate || 0)
     : 0;
   const posServiceFeeInclVat = salePriceInclVat * posServiceFeeRate / 100;
@@ -519,30 +526,30 @@ export const calculateProductPrice = ({
 
           for (const pkg of productPackages) {
             const desiRate = findDesiShippingRate(platformShippingRates, pkg.desi || 0);
-            if (desiRate) {
-              const desiShippingCost = desiRate.price * 2;
-              shippingCost += desiShippingCost + returnCostPerPackage;
-              shippingVatRate = desiRate.vat_rate || 20;
-            }
+            if (!desiRate) throw new Error(KARGO_TARIFESI_YOK);
+            const desiShippingCost = desiRate.price * 2;
+            shippingCost += desiShippingCost + returnCostPerPackage;
+            shippingVatRate = desiRate.vat_rate || 20;
           }
         } else {
           for (const pkg of productPackages) {
             const desiRate = findDesiShippingRate(platformShippingRates, pkg.desi || 0);
-            if (desiRate) {
-              shippingCost += desiRate.price;
-              shippingVatRate = desiRate.vat_rate || 20;
-            }
+            if (!desiRate) throw new Error(KARGO_TARIFESI_YOK);
+            shippingCost += desiRate.price;
+            shippingVatRate = desiRate.vat_rate || 20;
           }
         }
       } else {
         const desiRate = findDesiShippingRate(platformShippingRates, product.desi || 0);
-        shippingCost = desiRate?.price || 0;
-        shippingVatRate = desiRate?.vat_rate || 20;
+        if (!desiRate) throw new Error(KARGO_TARIFESI_YOK);
+        shippingCost = desiRate.price;
+        shippingVatRate = desiRate.vat_rate || 20;
       }
     } else {
       const desiRate = findDesiShippingRate(platformShippingRates, product.desi || 0);
-      shippingCost = desiRate?.price || 0;
-      shippingVatRate = desiRate?.vat_rate || 20;
+      if (!desiRate) throw new Error(KARGO_TARIFESI_YOK);
+      shippingCost = desiRate.price;
+      shippingVatRate = desiRate.vat_rate || 20;
     }
 
     // ÇİFT KARGO: hesaplanan kargo bedelini 2 ile çarp (gerekirse)
@@ -634,14 +641,15 @@ export const calculateProductPrice = ({
     }
   }
   
+  // Fiyat yuvarlama kurali platform ayarindan gelir (kullanici belirler).
+  // Tanimli degilse eski davranis korunur: kurus < 0,50 ise ,49 degilse ,99.
   const roundToPrice = (price) => {
+    const kural = platform?.price_rounding || '49_99';
+    if (kural === 'yok') return Math.round(price * 100) / 100;
     const integer = Math.floor(price);
+    if (kural === 'hep_99') return integer + 0.99;
     const decimal = price - integer;
-    if (decimal < 0.50) {
-      return integer + 0.49;
-    } else {
-      return integer + 0.99;
-    }
+    return decimal < 0.50 ? integer + 0.49 : integer + 0.99;
   };
 
   const finalSalePrice = roundToPrice(result.salePriceInclVat);

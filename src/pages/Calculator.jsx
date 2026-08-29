@@ -22,7 +22,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { calculateProductPrice } from '@/components/PriceCalculationEngine';
+import { calculateProductPrice, calculatePriceBreakdown } from '@/components/PriceCalculationEngine';
 
 const Platform = db.entities.Platform;
 const ShippingRate = db.entities.ShippingRate;
@@ -35,7 +35,10 @@ export default function Calculator() {
   const isAdmin = user?.role === 'admin';
 
   const [userEmail, setUserEmail] = React.useState(null);
-  const [mode, setMode] = useState('manual'); // manual | product
+  // manual = maliyetten hedef kara, product = sistem urununden,
+  // from_price = satis fiyatindan kar (prototipteki ucuncu mod)
+  const [mode, setMode] = useState('manual');
+  const [enteredSalePrice, setEnteredSalePrice] = useState('');
   const [selectedProduct, setSelectedProduct] = useState('');
   const [selectedPlatform, setSelectedPlatform] = useState('');
   const [selectedShippingCompany, setSelectedShippingCompany] = useState('');
@@ -238,11 +241,11 @@ export default function Calculator() {
       id: 'manual',
       name: 'Manuel Hesaplama',
       sku: '-',
-      cost: parseFloat(cost) || 0,
-      desi: parseFloat(desi) || 1,
-      vat_rate: parseFloat(vatRate) || 20,
-      printing_cost: parseFloat(printingCost) || 0,
-      extra_cost: parseFloat(extraCost) || 0,
+      cost: pozitif(cost),
+      desi: pozitif(desi, 1) || 1,
+      vat_rate: pozitif(vatRate, 20),
+      printing_cost: pozitif(printingCost),
+      extra_cost: pozitif(extraCost),
       multi_package: isMultiPackage,
       special_shipping: false,
       packages: isMultiPackage ? JSON.stringify(packages.map(p => ({ desi: parseFloat(p.desi) || 0, package_id: p.package_id }))) : null,
@@ -251,9 +254,9 @@ export default function Calculator() {
 
     // Fake komisyon oluştur
     const fakeCommission = {
-      commission_rate: parseFloat(commissionRate) || 0,
+      commission_rate: pozitif(commissionRate),
       commission_vat_rate: 20,
-      target_profit_rate: parseFloat(targetProfit) || 30
+      target_profit_rate: pozitif(targetProfit, 30)
     };
 
     const calcResult = calculateProductPrice({
@@ -262,18 +265,94 @@ export default function Calculator() {
       shippingRates,
       commission: fakeCommission,
       packagingCost: getTotalPackagingCost(),
-      printingCost: parseFloat(printingCost) || 0,
-      extraCost: parseFloat(extraCost) || 0,
+      printingCost: pozitif(printingCost),
+      extraCost: pozitif(extraCost),
       isSameDayDelivery,
       settings,
-      overrideShippingCost: shippingMode === 'manual' ? (parseFloat(manualShippingCost) || 0) : null,
+      overrideShippingCost: shippingMode === 'manual' ? pozitif(manualShippingCost) : null,
       overrideShippingCompany: shippingMode === 'company' ? selectedShippingCompany : null,
     });
 
-    setResult(calcResult);
+    // POS hizmet bedeli motorun ust duzey ciktisinda yok (o nesne dogrudan
+    // product_prices'a yaziliyor, tabloda boyle bir kolon yok). Motorun kendi
+    // hesapladigi degeri calculation_details icinden okuyup ekrana tasiyoruz.
+    let detay = {};
+    try { detay = JSON.parse(calcResult.calculation_details || '{}'); } catch { detay = {}; }
+    const posBedeli = detay.posServiceFee || 0;
+
+    // ── Satis fiyatindan kar modu ───────────────────────────────────────
+    // Fiyat motoruna DOKUNMUYORUZ: once motor kendi mantigiyla kargo/barem
+    // seciyor, sonra ayni girdilerle kullanicinin yazdigi fiyat uzerinden
+    // kirilim aliniyor. Kargo KDV orani tahmin edilmiyor, motorun dondurdugu
+    // tutarlardan birebir turetiliyor.
+    if (mode === 'from_price') {
+      const girilenFiyat = pozitif(enteredSalePrice);
+      if (girilenFiyat <= 0) { setResult(null); return; }
+
+      const kargoTutar = calcResult.shipping_cost || 0;
+      const kargoKdv = detay.shippingVat || 0;
+      const kargoHaric = kargoTutar - kargoKdv;
+      const kargoKdvOrani = kargoHaric > 0 ? (kargoKdv / kargoHaric) * 100 : 20;
+
+      const kirilim = calculatePriceBreakdown({
+        salePriceInclVat: girilenFiyat,
+        productCost: fakeProduct.cost,
+        productVatRate: fakeProduct.vat_rate,
+        shippingCost: kargoTutar,
+        shippingVatRate: kargoKdvOrani,
+        commissionRate: fakeCommission.commission_rate,
+        commissionVatRate: fakeCommission.commission_vat_rate,
+        platform,
+        baremUsed: calcResult.barem_used,
+        packagingCost: getTotalPackagingCost(),
+        printingCost: pozitif(printingCost),
+        extraCost: pozitif(extraCost),
+        isSameDayDelivery,
+      });
+
+      const yuvarla = (v) => Math.round((v || 0) * 100) / 100;
+      setResult({
+        ...calcResult,
+        sale_price: yuvarla(girilenFiyat),
+        net_profit: yuvarla(kirilim.netProfit),
+        profit_rate: yuvarla(kirilim.profitRate),
+        shipping_cost: yuvarla(kirilim.shippingCost),
+        commission_amount: yuvarla(kirilim.commissionAmount),
+        calculation_details: JSON.stringify(kirilim),
+        pos_service_fee: yuvarla(kirilim.posServiceFee),
+        pos_service_fee_rate: platform?.has_pos_service_fee ? (platform.pos_service_fee_rate || 0) : 0,
+      });
+      return;
+    }
+
+    setResult({
+      ...calcResult,
+      pos_service_fee: posBedeli,
+      pos_service_fee_rate: platform?.has_pos_service_fee ? (platform.pos_service_fee_rate || 0) : 0,
+    });
+  };
+
+  // Negatif deger yasak: elle eksi yazilsa bile hesaba 0 olarak girer.
+  const pozitif = (deger, varsayilan = 0) => {
+    const n = parseFloat(deger);
+    if (!Number.isFinite(n)) return varsayilan;
+    return n < 0 ? 0 : n;
+  };
+
+  // Mod degistirirken girdiler KORUNUR: ayni urun icin "hedef kardan fiyat"
+  // ile "fiyattan kar" arasinda gidip gelmek bu sayfanin asil kullanimi.
+  // Yalnizca sonuc ve moda ozel alan temizlenir.
+  const modDegistir = (yeniMod) => {
+    if (yeniMod === mode) return;
+    setMode(yeniMod);
+    setResult(null);
+    if (yeniMod === 'from_price') setEnteredSalePrice('');
+    else setTargetProfit('');
+    if (yeniMod === 'manual') setSelectedProduct('');
   };
 
   const handleReset = () => {
+    setEnteredSalePrice('');
     setCost('');
     setDesi('');
     setVatRate('20');
@@ -320,39 +399,44 @@ export default function Calculator() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-indigo-50/30">
-      <div className="max-w-[1200px] mx-auto px-6 py-8">
+    <div className="min-h-screen bg-secondary">
+      <div className="ph-page-flow mx-auto">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-slate-900 tracking-tight flex items-center gap-3">
-            <CalcIcon className="h-8 w-8 text-indigo-600" />
-            Fiyat Hesaplayıcı
-          </h1>
-          <p className="text-slate-500 mt-1">Ürün fiyatını ve kârını hesaplayın (kaydetmez)</p>
+          <h1 className="ph-title">Fiyat Hesaplayıcı</h1>
+          <p className="text-muted-foreground mt-1">Fiyat çalışması yapın — bu sayfada hiçbir şey kaydedilmez</p>
         </div>
 
         <div className="grid lg:grid-cols-2 gap-8">
           {/* Input Section */}
-          <Card className="border-slate-200 shadow-sm">
+          <Card className="border-border">
             <CardHeader className="pb-4">
-              <div className="flex items-center gap-4">
-                <Button
-                  variant={mode === 'manual' ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => { setMode('manual'); handleReset(); }}
-                >
-                  Manuel Giriş
-                </Button>
-                <Button
-                  variant={mode === 'product' ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => { setMode('product'); handleReset(); }}
-                >
-                  Ürün Seç
-                </Button>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground mb-3">
+                Nasıl hesaplamak istiyorsun?
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                {[
+                  { id: 'manual', ad: 'Manuel Giriş', aciklama: 'Maliyetleri elle gir, hedef kâr oranına göre satış fiyatını gör' },
+                  { id: 'product', ad: 'Üründen Kâr Hesaplama', aciklama: 'Sistemdeki master ürünü seç, maliyetleri üzerinde oyna' },
+                  { id: 'from_price', ad: 'Satış Fiyatından Kâr Hesaplama', aciklama: 'Satış fiyatını gir, net kârını ve kâr oranını gör' },
+                ].map((m) => (
+                  <button
+                    key={m.id}
+                    type="button"
+                    onClick={() => modDegistir(m.id)}
+                    className={`text-left rounded-xl border p-3 transition-colors ${
+                      mode === m.id
+                        ? 'border-foreground bg-secondary'
+                        : 'border-border hover:bg-secondary/60'
+                    }`}
+                  >
+                    <span className="block text-[13px] font-semibold leading-snug">{m.ad}</span>
+                    <span className="block text-[11.5px] text-muted-foreground mt-1 leading-snug">{m.aciklama}</span>
+                  </button>
+                ))}
               </div>
             </CardHeader>
             <CardContent className="space-y-5">
-              {mode === 'product' && (
+              {(mode === 'product' || mode === 'from_price') && (
                 <div className="space-y-2">
                   <Label>Ürün</Label>
                   <Select value={selectedProduct} onValueChange={setSelectedProduct}>
@@ -389,11 +473,14 @@ export default function Calculator() {
 
               <Separator />
 
+              <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground pt-2">
+                Maliyet Kalemleri
+              </p>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Maliyet (KDV Dahil) *</Label>
                   <Input
-                    type="number"
+                    type="number" min="0"
                     step="0.01"
                     value={cost}
                     onChange={(e) => setCost(e.target.value)}
@@ -403,7 +490,7 @@ export default function Calculator() {
                 <div className="space-y-2">
                   <Label>Baskı Maliyeti (KDV Dahil)</Label>
                   <Input
-                    type="number"
+                    type="number" min="0"
                     step="0.01"
                     value={printingCost}
                     onChange={(e) => setPrintingCost(e.target.value)}
@@ -413,7 +500,7 @@ export default function Calculator() {
                 <div className="space-y-2">
                   <Label>Ek Maliyet (KDV Dahil)</Label>
                   <Input
-                    type="number"
+                    type="number" min="0"
                     step="0.01"
                     value={extraCost}
                     onChange={(e) => setExtraCost(e.target.value)}
@@ -421,6 +508,12 @@ export default function Calculator() {
                   />
                 </div>
                </div>
+
+{selectedPlatform && (
+                <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground pt-2">
+                  Kargo ve Paketleme
+                </p>
+              )}
 
 {selectedPlatform && (() => {
                const selectedPlatformObj = platforms.find(p => p.id === selectedPlatform);
@@ -466,7 +559,7 @@ export default function Calculator() {
                        </Select>
                      ) : (
                        <Input
-                         type="number"
+                         type="number" min="0"
                          step="0.01"
                          value={manualShippingCost}
                          onChange={(e) => setManualShippingCost(e.target.value)}
@@ -483,7 +576,7 @@ export default function Calculator() {
                <div className="space-y-2">
                 <Label>Desi *</Label>
                 <Input
-                  type="number"
+                  type="number" min="0"
                   step="0.1"
                   value={desi}
                   onChange={(e) => setDesi(e.target.value)}
@@ -492,35 +585,9 @@ export default function Calculator() {
                </div>
               )}
 
-              {/* Bugün Kapında - sadece Trendyol/Hepsiburada için */}
-              {(() => {
-                const selectedPlatformObj = platforms.find(p => p.id === selectedPlatform);
-                const isMarketplace = selectedPlatformObj?.platform_type === 'trendyol' || selectedPlatformObj?.platform_type === 'hepsiburada';
-                if (!isMarketplace) return null;
-                return (
-                  <div className={`border rounded-xl p-4 transition-all ${isSameDayDelivery ? 'border-amber-300 bg-amber-50/50' : 'border-slate-200 bg-slate-50/50'}`}>
-                    <div className="flex items-center space-x-3">
-                      <input
-                        type="checkbox"
-                        id="sameDayDelivery"
-                        checked={isSameDayDelivery}
-                        onChange={(e) => setIsSameDayDelivery(e.target.checked)}
-                        className="h-4 w-4 rounded border-slate-300 text-amber-600 focus:ring-amber-500"
-                      />
-                      <div className="flex-1">
-                        <Label htmlFor="sameDayDelivery" className="cursor-pointer font-medium text-slate-700">
-                          Bugün Kapında
-                        </Label>
-                        <p className="text-xs text-slate-500 mt-0.5">İndirimli hizmet bedeli ve Bugün Kapında barem/desi tarifeleri kullanılır</p>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })()}
-
               <div className="space-y-4">
                <div className={`border rounded-xl p-4 transition-all ${
-                 isMultiPackage ? 'border-indigo-200 bg-indigo-50/30' : 'border-slate-200 bg-slate-50/50'
+                 isMultiPackage ? 'border-primary bg-secondary' : 'border-border bg-secondary/50'
                }`}>
                  <div className="flex items-center space-x-3">
                    <input
@@ -528,13 +595,13 @@ export default function Calculator() {
                      id="multiPackage"
                      checked={isMultiPackage}
                      onChange={(e) => setIsMultiPackage(e.target.checked)}
-                     className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                     className="h-4 w-4 rounded border-input text-foreground focus:ring-gray-400"
                    />
                    <div className="flex-1">
-                     <Label htmlFor="multiPackage" className="cursor-pointer font-medium text-slate-700">
+                     <Label htmlFor="multiPackage" className="cursor-pointer font-medium text-muted-foreground">
                        Çoklu Gönderim
                      </Label>
-                     <p className="text-xs text-slate-500 mt-0.5">Bu ürün birden fazla paket halinde gönderilir</p>
+                     <p className="text-xs text-muted-foreground mt-0.5">Bu ürün birden fazla paket halinde gönderilir</p>
                    </div>
                  </div>
 
@@ -554,13 +621,13 @@ export default function Calculator() {
                        </Button>
                      </div>
                      {packages.map((pkg, index) => (
-                       <div key={index} className="flex gap-2 items-start bg-white rounded-lg p-3 border border-indigo-100">
+                       <div key={index} className="flex gap-2 items-start bg-card rounded-lg p-3 border border-border">
                          <div className="flex-1 space-y-2">
                            <div className="flex gap-2">
                              <div className="flex-1">
-                               <Label className="text-xs text-slate-600">Desi</Label>
+                               <Label className="text-xs text-muted-foreground">Desi</Label>
                                <Input
-                                 type="number"
+                                 type="number" min="0"
                                  step="0.1"
                                  value={pkg.desi}
                                  onChange={(e) => updatePackage(index, 'desi', e.target.value)}
@@ -569,7 +636,7 @@ export default function Calculator() {
                                />
                              </div>
                              <div className="flex-1">
-                               <Label className="text-xs text-slate-600">Paket</Label>
+                               <Label className="text-xs text-muted-foreground">Paket</Label>
                                <Select 
                                  value={pkg.package_id} 
                                  onValueChange={(val) => updatePackage(index, 'package_id', val)}
@@ -594,7 +661,7 @@ export default function Calculator() {
                              size="icon"
                              variant="ghost"
                              onClick={() => removePackage(index)}
-                             className="h-8 w-8 text-rose-500 hover:text-rose-700 hover:bg-rose-50 mt-5"
+                             className="h-8 w-8 text-red-500 hover:text-red-700 dark:text-red-300 hover:bg-red-50 dark:bg-red-950/30 mt-5"
                            >
                              <X className="h-4 w-4" />
                            </Button>
@@ -605,6 +672,32 @@ export default function Calculator() {
                    )}
                    </div>
                    </div>
+
+              {/* Bugün Kapında - sadece Trendyol/Hepsiburada için */}
+              {(() => {
+                const selectedPlatformObj = platforms.find(p => p.id === selectedPlatform);
+                const isMarketplace = selectedPlatformObj?.platform_type === 'trendyol' || selectedPlatformObj?.platform_type === 'hepsiburada';
+                if (!isMarketplace) return null;
+                return (
+                  <div className={`border rounded-xl p-4 transition-all ${isSameDayDelivery ? 'border-amber-300 bg-amber-50 dark:bg-amber-950/30/50' : 'border-border bg-secondary/50'}`}>
+                    <div className="flex items-center space-x-3">
+                      <input
+                        type="checkbox"
+                        id="sameDayDelivery"
+                        checked={isSameDayDelivery}
+                        onChange={(e) => setIsSameDayDelivery(e.target.checked)}
+                        className="h-4 w-4 rounded border-input text-amber-600 focus:ring-amber-500"
+                      />
+                      <div className="flex-1">
+                        <Label htmlFor="sameDayDelivery" className="cursor-pointer font-medium text-muted-foreground">
+                          Bugün Kapında
+                        </Label>
+                        <p className="text-xs text-muted-foreground mt-0.5">İndirimli hizmet bedeli ve Bugün Kapında barem/desi tarifeleri kullanılır</p>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
@@ -623,7 +716,7 @@ export default function Calculator() {
                 <div className="space-y-2">
                   <Label>Komisyon Oranı (%)</Label>
                   <Input
-                    type="number"
+                    type="number" min="0"
                     step="0.01"
                     value={commissionRate}
                     onChange={(e) => setCommissionRate(e.target.value)}
@@ -632,28 +725,44 @@ export default function Calculator() {
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <Label className="flex items-center gap-2">
-                  Hedef Kâr Oranı (%)
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger>
-                        <Info className="h-4 w-4 text-slate-400" />
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Kâr Oranı = Net Kâr / Maliyet × 100</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                </Label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  value={targetProfit}
-                  onChange={(e) => setTargetProfit(e.target.value)}
-                  placeholder="30"
-                />
-              </div>
+              {mode === 'from_price' ? (
+                <div className="space-y-2">
+                  <Label>Satış Fiyatı (KDV dahil) *</Label>
+                  <Input
+                    type="number" min="0"
+                    step="0.01"
+                    value={enteredSalePrice}
+                    onChange={(e) => setEnteredSalePrice(e.target.value)}
+                    placeholder="0,00"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Platformdaki güncel satış fiyatını gir — kârın ve kâr oranın anında hesaplanır.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2">
+                    Hedef Kâr Oranı (%)
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger>
+                          <Info className="h-4 w-4 text-muted-foreground/70" />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Kâr Oranı = Net Kâr / Maliyet × 100</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </Label>
+                  <Input
+                    type="number" min="0"
+                    step="0.01"
+                    value={targetProfit}
+                    onChange={(e) => setTargetProfit(e.target.value)}
+                    placeholder="30"
+                  />
+                </div>
+              )}
 
               {!isMultiPackage && (
                 <div className="space-y-2">
@@ -683,7 +792,7 @@ export default function Calculator() {
                       </Select>
                     ) : (
                       <Input
-                        type="number"
+                        type="number" min="0"
                         step="0.01"
                         value={packagingCost}
                         onChange={(e) => setPackagingCost(e.target.value)}
@@ -698,8 +807,8 @@ export default function Calculator() {
               <div className="flex gap-3 pt-4">
                 <Button 
                   onClick={handleCalculate}
-                  className="flex-1 bg-indigo-600 hover:bg-indigo-700"
-                  disabled={!selectedPlatform || (shippingMode === 'company' && !selectedShippingCompany) || (shippingMode === 'manual' && !manualShippingCost) || !cost || (!isMultiPackage && !desi) || (isMultiPackage && packages.some(p => !p.desi))}
+                  className="flex-1 bg-primary hover:bg-black dark:hover:bg-white/90"
+                  disabled={!selectedPlatform || (shippingMode === 'company' && !selectedShippingCompany) || (shippingMode === 'manual' && !manualShippingCost) || !cost || (!isMultiPackage && !desi) || (isMultiPackage && packages.some(p => !p.desi)) || (mode === 'from_price' && !enteredSalePrice)}
                 >
                   <CalcIcon className="mr-2 h-4 w-4" />
                   Hesapla
@@ -712,30 +821,30 @@ export default function Calculator() {
           </Card>
 
           {/* Result Section */}
-          <Card className={`border-slate-200 shadow-sm transition-all ${result ? 'bg-white' : 'bg-slate-50'}`}>
+          <Card className={`border-border transition-all ${result ? 'bg-card' : 'bg-secondary'}`}>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <ArrowRight className="h-5 w-5 text-indigo-600" />
+                <ArrowRight className="h-5 w-5 text-foreground" />
                 Hesaplama Sonucu
               </CardTitle>
             </CardHeader>
             <CardContent>
               {!result ? (
-                <div className="h-64 flex items-center justify-center text-slate-400">
+                <div className="h-64 flex items-center justify-center text-muted-foreground/70">
                   <p>Hesaplama sonucu burada görünecek</p>
                 </div>
               ) : (
                 <div className="space-y-6">
                   {/* Main Result */}
-                  <div className="bg-gradient-to-br from-indigo-50 to-indigo-100/50 rounded-xl p-6 text-center">
-                    <p className="text-sm text-indigo-600 font-medium mb-1">Önerilen Satış Fiyatı</p>
-                    <p className="text-4xl font-bold text-indigo-700">
+                  <div className="bg-secondary rounded-xl p-6 text-center">
+                    <p className="text-sm text-muted-foreground font-medium mb-1">Önerilen Satış Fiyatı</p>
+                    <p className="text-4xl font-bold text-foreground">
                       ₺{result.sale_price?.toFixed(2)}
                     </p>
                     <div className="flex items-center justify-center gap-2 mt-3">
                       <Badge className={`${
-                        result.profit_rate >= 30 ? 'bg-emerald-100 text-emerald-700' :
-                        result.profit_rate >= 20 ? 'bg-blue-100 text-blue-700' :
+                        result.profit_rate >= 30 ? 'bg-green-100 text-green-700' :
+                        result.profit_rate >= 20 ? 'bg-secondary text-muted-foreground' :
                         'bg-amber-100 text-amber-700'
                       }`}>
                         Kâr: %{result.profit_rate?.toFixed(1)}
@@ -748,72 +857,81 @@ export default function Calculator() {
 
                   {/* Breakdown */}
                   <div className="space-y-3">
-                    <h4 className="font-semibold text-slate-700">Detaylı Hesaplama</h4>
+                    <h4 className="font-semibold text-muted-foreground">Detaylı Hesaplama</h4>
                     
                     <div className="space-y-2 text-sm">
-                      <div className="flex justify-between py-2 border-b-2 border-indigo-100 bg-indigo-50/30 px-3 rounded-t-lg">
-                        <span className="font-semibold text-indigo-700">Satış Fiyatı (KDV Dahil)</span>
-                        <span className="font-bold text-indigo-700">₺{result.sale_price?.toFixed(2)}</span>
+                      <div className="flex justify-between py-2 border-b-2 border-border bg-secondary px-3 rounded-t-lg">
+                        <span className="font-semibold text-foreground">Satış Fiyatı (KDV Dahil)</span>
+                        <span className="font-bold text-foreground">₺{result.sale_price?.toFixed(2)}</span>
                       </div>
-                      
-                      <div className="flex justify-between py-2 pl-6 border-b border-slate-100">
-                        <span className="text-slate-600">- Ürün Maliyeti (KDV Dahil)</span>
-                        <span className="font-medium text-rose-600">-₺{parseFloat(cost || 0).toFixed(2)}</span>
+
+                      <div className="flex justify-between py-2 pl-6 border-b border-border">
+                        <span className="text-muted-foreground">- Ürün Maliyeti (KDV Dahil)</span>
+                        <span className="font-medium text-red-600">-₺{parseFloat(cost || 0).toFixed(2)}</span>
                       </div>
                       {printingCost && parseFloat(printingCost) > 0 && (
-                        <div className="flex justify-between py-2 pl-6 border-b border-slate-100">
-                          <span className="text-slate-600">- Baskı Maliyeti (KDV Dahil)</span>
-                          <span className="font-medium text-rose-600">-₺{parseFloat(printingCost).toFixed(2)}</span>
+                        <div className="flex justify-between py-2 pl-6 border-b border-border">
+                          <span className="text-muted-foreground">- Baskı Maliyeti (KDV Dahil)</span>
+                          <span className="font-medium text-red-600">-₺{parseFloat(printingCost).toFixed(2)}</span>
                         </div>
                       )}
-                      <div className="flex justify-between py-2 pl-6 border-b border-slate-100">
-                        <span className="text-slate-600">- Kargo Ücreti (KDV Dahil)</span>
-                        <span className="font-medium text-rose-600">-₺{result.shipping_cost?.toFixed(2)}</span>
+                      <div className="flex justify-between py-2 pl-6 border-b border-border">
+                        <span className="text-muted-foreground">- Kargo Ücreti (KDV Dahil)</span>
+                        <span className="font-medium text-red-600">-₺{result.shipping_cost?.toFixed(2)}</span>
                       </div>
-                      <div className="flex justify-between py-2 pl-6 border-b border-slate-100">
-                        <span className="text-slate-600">- Paketleme Maliyeti (KDV Dahil)</span>
-                        <span className="font-medium text-rose-600">-₺{result.packaging_cost?.toFixed(2)}</span>
+                      <div className="flex justify-between py-2 pl-6 border-b border-border">
+                        <span className="text-muted-foreground">- Paketleme Maliyeti (KDV Dahil)</span>
+                        <span className="font-medium text-red-600">-₺{result.packaging_cost?.toFixed(2)}</span>
                       </div>
                       {extraCost && parseFloat(extraCost) > 0 && (
-                        <div className="flex justify-between py-2 pl-6 border-b border-slate-100">
-                          <span className="text-slate-600">- Ek Maliyet (KDV Dahil)</span>
-                          <span className="font-medium text-rose-600">-₺{parseFloat(extraCost).toFixed(2)}</span>
+                        <div className="flex justify-between py-2 pl-6 border-b border-border">
+                          <span className="text-muted-foreground">- Ek Maliyet (KDV Dahil)</span>
+                          <span className="font-medium text-red-600">-₺{parseFloat(extraCost).toFixed(2)}</span>
                         </div>
                       )}
-                      <div className="flex justify-between py-2 pl-6 border-b border-slate-100">
-                        <span className="text-slate-600">- Komisyon Tutarı (KDV Dahil)</span>
-                        <span className="font-medium text-rose-600">-₺{result.commission_amount?.toFixed(2)}</span>
+                      <div className="flex justify-between py-2 pl-6 border-b border-border">
+                        <span className="text-muted-foreground">- Komisyon Tutarı (KDV Dahil)</span>
+                        <span className="font-medium text-red-600">-₺{result.commission_amount?.toFixed(2)}</span>
                       </div>
-                      <div className="flex justify-between py-2 pl-6 border-b border-slate-100">
-                        <span className="text-slate-600">- Stopaj Tutarı</span>
-                        <span className="font-medium text-rose-600">-₺{result.withholding_amount?.toFixed(2)}</span>
+                      <div className="flex justify-between py-2 pl-6 border-b border-border">
+                        <span className="text-muted-foreground">- Stopaj Tutarı</span>
+                        <span className="font-medium text-red-600">-₺{result.withholding_amount?.toFixed(2)}</span>
                       </div>
                       {isAdmin && (
-                      <div className="flex justify-between py-2 pl-6 border-b border-slate-100">
-                        <span className="text-slate-600">- Hizmet Bedeli (KDV Dahil)</span>
-                        <span className="font-medium text-rose-600">-₺{(result.service_fee || 0)?.toFixed(2)}</span>
+                      <div className="flex justify-between py-2 pl-6 border-b border-border">
+                        <span className="text-muted-foreground">- Hizmet Bedeli (KDV Dahil)</span>
+                        <span className="font-medium text-red-600">-₺{(result.service_fee || 0)?.toFixed(2)}</span>
                       </div>
                       )}
-                      <div className="flex justify-between py-2 pl-6 border-b-2 border-slate-200">
-                        <span className="text-slate-600">- Net KDV</span>
-                        <span className="font-medium text-rose-600">-₺{result.net_vat?.toFixed(2)}</span>
+                      {(result.pos_service_fee || 0) > 0 && (
+                      <div className="flex justify-between py-2 pl-6 border-b border-border">
+                        <span className="text-muted-foreground">
+                          - POS Hizmet Bedeli (KDV Dahil)
+                          {result.pos_service_fee_rate ? ` (%${result.pos_service_fee_rate})` : ''}
+                        </span>
+                        <span className="font-medium text-red-600">-₺{(result.pos_service_fee || 0).toFixed(2)}</span>
                       </div>
-                      
-                      <div className="flex justify-between py-3 bg-emerald-50 rounded-lg px-3 mt-3 border-2 border-emerald-200">
-                        <span className="font-semibold text-emerald-700 text-base">= NET KÂR</span>
-                        <span className="font-bold text-emerald-700 text-lg">₺{result.net_profit?.toFixed(2)}</span>
+                      )}
+                      <div className="flex justify-between py-2 pl-6 border-b-2 border-border">
+                        <span className="text-muted-foreground">- Net KDV</span>
+                        <span className="font-medium text-red-600">-₺{result.net_vat?.toFixed(2)}</span>
+                      </div>
+
+                      <div className="flex justify-between py-3 bg-green-50 dark:bg-green-950/30 rounded-lg px-3 mt-3 border-2 border-green-200 dark:border-green-900/50">
+                        <span className="font-semibold text-green-700 text-base">= NET KÂR</span>
+                        <span className="font-bold text-green-700 text-lg">₺{result.net_profit?.toFixed(2)}</span>
                       </div>
                     </div>
                   </div>
 
                   {/* Additional Info */}
-                  <div className="bg-slate-50 rounded-lg p-4 space-y-2 text-sm border border-slate-200">
+                  <div className="bg-secondary rounded-lg p-4 space-y-2 text-sm border border-border">
                    <div className="flex justify-between">
-                     <span className="text-slate-600">Ürün Desisi:</span>
+                     <span className="text-muted-foreground">Ürün Desisi:</span>
                      <span className="font-medium">{isMultiPackage ? packages.map(p => p.desi).join(', ') : desi}</span>
                    </div>
                    <div className="flex justify-between">
-                     <span className="text-slate-600">Kargo:</span>
+                     <span className="text-muted-foreground">Kargo:</span>
                      <span className="font-medium">
                        {shippingMode === 'manual'
                          ? `Manuel (₺${parseFloat(manualShippingCost).toFixed(2)})`
@@ -821,7 +939,7 @@ export default function Calculator() {
                      </span>
                    </div>
                    <div className="flex justify-between">
-                     <span className="text-slate-600">Çoklu Gönderim:</span>
+                     <span className="text-muted-foreground">Çoklu Gönderim:</span>
                      <span className="font-medium">{isMultiPackage ? 'Evet' : 'Hayır'}</span>
                    </div>
                    {(() => {
@@ -830,26 +948,26 @@ export default function Calculator() {
                      if (!isMarketplace) return null;
                      return (
                        <div className="flex justify-between">
-                         <span className="text-slate-600">Bugün Kapında:</span>
+                         <span className="text-muted-foreground">Bugün Kapında:</span>
                          <span className={`font-medium ${isSameDayDelivery ? 'text-amber-600' : ''}`}>{isSameDayDelivery ? 'Evet ✓' : 'Hayır'}</span>
                        </div>
                      );
                    })()}
                    <div className="flex justify-between">
-                     <span className="text-slate-600">Komisyon Oranı:</span>
+                     <span className="text-muted-foreground">Komisyon Oranı:</span>
                      <span className="font-medium">%{commissionRate || '-'}</span>
                    </div>
                    <div className="flex justify-between">
-                     <span className="text-slate-600">Ürün KDV Oranı:</span>
+                     <span className="text-muted-foreground">Ürün KDV Oranı:</span>
                      <span className="font-medium">%{vatRate}</span>
                    </div>
                    <div className="flex justify-between">
-                     <span className="text-slate-600">Hedef Kâr Oranı:</span>
+                     <span className="text-muted-foreground">Hedef Kâr Oranı:</span>
                      <span className="font-medium">%{targetProfit || '-'}</span>
                    </div>
                   </div>
 
-                  <p className="text-xs text-slate-400 text-center">
+                  <p className="text-xs text-muted-foreground/70 text-center">
                     * Bu hesaplama kaydedilmez. Sadece simülasyon amaçlıdır.
                   </p>
                 </div>

@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { db } from '@/api/db';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { FileText, ArrowUp, ArrowDown, Minus, Archive, Trash2 } from 'lucide-react';
+import { ArrowUp, ArrowDown, Minus, Archive, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -23,6 +23,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import SearchInput from '@/components/ui/SearchInput';
+import FiltreEtiketi from '@/components/ui/FiltreEtiketi';
 import DataTable from '@/components/ui/DataTable';
 import ImportExport from '@/components/ImportExport';
 import { format } from 'date-fns';
@@ -39,6 +40,8 @@ export default function UpdateReports() {
   const [search, setSearch] = useState('');
   const [platformFilter, setPlatformFilter] = useState('all');
   const [typeFilter, setTypeFilter] = useState('all');
+  const [sourceFilter, setSourceFilter] = useState('all');
+  const [sortFilter, setSortFilter] = useState('date_desc');
   const [tab, setTab] = useState('aktif');
   const [selectedIds, setSelectedIds] = useState([]);
   const [page, setPage] = useState(1);
@@ -107,8 +110,15 @@ export default function UpdateReports() {
     if (typeFilter !== 'all') {
       result = result.filter(r => r.change_type === typeFilter);
     }
-    return result;
-  }, [reports, search, platformFilter, typeFilter, tab]);
+    // Kaynak: update_type sutunu veritabaninda tamamen bos oldugu icin
+    // gercek ayrim change_type uzerinden yapiliyor - 'manual' kullanicinin
+    // kendi degisikligi, digerleri sistemin otomatik tespiti.
+    if (sourceFilter === 'user') result = result.filter(r => r.change_type === 'manual');
+    if (sourceFilter === 'system') result = result.filter(r => r.change_type !== 'manual');
+
+    const tarih = (r) => new Date(r.updated_date || r.created_date || 0).getTime();
+    return result.sort((a, b) => sortFilter === 'date_asc' ? tarih(a) - tarih(b) : tarih(b) - tarih(a));
+  }, [reports, search, platformFilter, typeFilter, tab, sourceFilter, sortFilter]);
 
   const paginatedReports = filteredReports.slice((page - 1) * pageSize, page * pageSize);
 
@@ -140,21 +150,21 @@ export default function UpdateReports() {
     const percent = oldPrice > 0 ? (diff / oldPrice) * 100 : 0;
     if (diff > 0) {
       return (
-        <div className="flex items-center gap-1 text-emerald-600">
+        <div className="flex items-center gap-1 text-green-600">
           <ArrowUp className="h-4 w-4" />
           <span>+₺{diff.toFixed(2)} ({percent.toFixed(1)}%)</span>
         </div>
       );
     } else if (diff < 0) {
       return (
-        <div className="flex items-center gap-1 text-rose-600">
+        <div className="flex items-center gap-1 text-red-600">
           <ArrowDown className="h-4 w-4" />
           <span>₺{diff.toFixed(2)} ({percent.toFixed(1)}%)</span>
         </div>
       );
     }
     return (
-      <div className="flex items-center gap-1 text-slate-400">
+      <div className="flex items-center gap-1 text-muted-foreground/70">
         <Minus className="h-4 w-4" />
         <span>Değişim yok</span>
       </div>
@@ -163,11 +173,14 @@ export default function UpdateReports() {
 
   const getChangeTypeBadge = (type) => {
     const types = {
-      cost_update: { label: 'Maliyet', color: 'bg-blue-100 text-blue-700' },
-      shipping_update: { label: 'Kargo', color: 'bg-purple-100 text-purple-700' },
+      cost_update: { label: 'Maliyet', color: 'bg-secondary text-muted-foreground' },
+      shipping_update: { label: 'Kargo', color: 'bg-secondary text-muted-foreground' },
       commission_update: { label: 'Komisyon', color: 'bg-amber-100 text-amber-700' },
-      platform_update: { label: 'Platform', color: 'bg-indigo-100 text-indigo-700' },
-      manual: { label: 'Manuel', color: 'bg-slate-100 text-slate-700' }
+      platform_update: { label: 'Platform', color: 'bg-secondary text-muted-foreground' },
+      // Urun zinciri tutarsizligi: motor bu tiple kayit yaziyordu ama listede
+      // tanimli olmadigi icin "Manuel" gorunuyordu.
+      chain_inconsistency: { label: 'Zincir Tutarsızlığı', color: 'bg-destructive/10 text-destructive' },
+      manual: { label: 'Manuel', color: 'bg-secondary text-muted-foreground' }
     };
     const config = types[type] || types.manual;
     return <Badge className={config.color}>{config.label}</Badge>;
@@ -175,12 +188,13 @@ export default function UpdateReports() {
 
   const columns = [
     {
+      id: '__select',
       header: (
         <input
           type="checkbox"
           checked={isPageSelected}
           onChange={toggleSelectPage}
-          className="rounded border-gray-300"
+          className="rounded border-input"
         />
       ),
       cell: (row) => (
@@ -188,7 +202,7 @@ export default function UpdateReports() {
           type="checkbox"
           checked={selectedIds.includes(row.id)}
           onChange={() => toggleSelect(row.id)}
-          className="rounded border-gray-300"
+          className="rounded border-input"
         />
       )
     },
@@ -196,22 +210,23 @@ export default function UpdateReports() {
       header: 'Tarih',
       accessor: 'created_date',
       cell: (row) => (
-        <span className="text-sm text-slate-600">
+        <span className="text-sm text-muted-foreground">
           {row.created_date ? format(new Date(row.created_date), 'dd MMM yyyy HH:mm', { locale: tr }) : '-'}
         </span>
       )
     },
     {
+      id: 'urun',
       header: 'Ürün',
       cell: (row) => (
         <div>
           <button
-            className="font-medium text-indigo-700 hover:text-indigo-900 hover:underline text-left"
+            className="font-medium text-foreground hover:text-muted-foreground hover:underline text-left"
             onClick={() => setHistoryModal({ open: true, productId: row.product_id, productName: row.product_name })}
           >
             {row.product_name}
           </button>
-          <p className="text-xs text-slate-500 font-mono">{row.product_sku}</p>
+          <p className="text-xs text-muted-foreground font-mono">{row.product_sku}</p>
         </div>
       )
     },
@@ -227,6 +242,7 @@ export default function UpdateReports() {
       cell: (row) => <span className="font-mono font-semibold">₺{row.new_sale_price?.toFixed(2)}</span>
     },
     {
+      id: 'degisim',
       header: 'Değişim',
       cell: (row) => getPriceChange(row.old_sale_price || 0, row.new_sale_price || 0)
     },
@@ -240,7 +256,7 @@ export default function UpdateReports() {
       accessor: 'new_profit_rate',
       cell: (row) => (
         <span className={`font-semibold ${
-          (row.new_profit_rate || 0) >= (row.old_profit_rate || 0) ? 'text-emerald-600' : 'text-rose-600'
+          (row.new_profit_rate || 0) >= (row.old_profit_rate || 0) ? 'text-green-600' : 'text-red-600'
         }`}>
           %{row.new_profit_rate?.toFixed(1)}
         </span>
@@ -250,7 +266,12 @@ export default function UpdateReports() {
       header: 'Neden',
       accessor: 'change_type',
       cell: (row) => getChangeTypeBadge(row.change_type)
-    }
+    },
+    // ── Eklenebilir sutunlar: varsayilanda gizli, panelden acilir ──
+    { id: 'product_sku', header: 'SKU', cell: (row) => row.product_sku || '-' },
+    { id: 'update_type', header: 'Güncelleme Tipi', optional: true, cell: (row) => row.update_type || '-' },
+    { id: 'change_reason', header: 'Değişim Sebebi', optional: true, cell: (row) => row.change_reason || '-' },
+    { id: 'notes', header: 'Notlar', optional: true, cell: (row) => row.notes || '-' },
   ];
 
   const exportColumns = [
@@ -267,15 +288,12 @@ export default function UpdateReports() {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-indigo-50/30">
-      <div className="max-w-[1600px] mx-auto px-6 py-8">
+    <div className="min-h-screen bg-secondary">
+      <div className="ph-page mx-auto">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
           <div>
-            <h1 className="text-3xl font-bold text-slate-900 tracking-tight flex items-center gap-3">
-              <FileText className="h-8 w-8 text-indigo-600" />
-              Güncelleme Raporları
-            </h1>
-            <p className="text-slate-500 mt-1">{filteredReports.length} değişiklik kaydı</p>
+            <h1 className="ph-title">Güncelleme Raporları</h1>
+            <p className="ph-subtitle">{filteredReports.length} değişiklik kaydı</p>
           </div>
           <div className="flex items-center gap-3">
             {selectedIds.length > 0 && (
@@ -301,7 +319,7 @@ export default function UpdateReports() {
                 </Button>
               </>
             )}
-            <ImportExport
+            <ImportExport pageKey="guncelleme-raporlari"
               data={filteredReports}
               columns={exportColumns}
               filename="guncelleme_raporlari"
@@ -309,11 +327,11 @@ export default function UpdateReports() {
           </div>
         </div>
 
-        <div className="mb-4 flex gap-2 border-b border-slate-200">
+        <div className="mb-4 flex gap-2 border-b border-border">
           <button
             onClick={() => { setTab('aktif'); setSelectedIds([]); setPage(1); }}
             className={`px-4 py-2 font-medium border-b-2 transition-colors ${
-              tab === 'aktif' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-600 hover:text-slate-900'
+              tab === 'aktif' ? 'border-primary text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground'
             }`}
           >
             Aktif Raporlar
@@ -321,53 +339,77 @@ export default function UpdateReports() {
           <button
             onClick={() => { setTab('arsiv'); setSelectedIds([]); setPage(1); }}
             className={`px-4 py-2 font-medium border-b-2 transition-colors ${
-              tab === 'arsiv' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-600 hover:text-slate-900'
+              tab === 'arsiv' ? 'border-primary text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground'
             }`}
           >
             Arşiv
           </button>
         </div>
 
-        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 mb-6">
-          <div className="flex flex-col sm:flex-row gap-4">
-            <SearchInput value={search} onChange={setSearch} placeholder="Ürün adı veya SKU ara..." className="flex-1" />
-            <Select value={platformFilter} onValueChange={setPlatformFilter}>
-              <SelectTrigger className="w-full sm:w-48"><SelectValue placeholder="Platform" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Tüm Platformlar</SelectItem>
-                {platforms.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
-              </SelectContent>
-            </Select>
-            <Select value={typeFilter} onValueChange={setTypeFilter}>
-              <SelectTrigger className="w-full sm:w-40"><SelectValue placeholder="Tip" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Tüm Tipler</SelectItem>
-                <SelectItem value="cost_update">Maliyet</SelectItem>
-                <SelectItem value="shipping_update">Kargo</SelectItem>
-                <SelectItem value="commission_update">Komisyon</SelectItem>
-                <SelectItem value="platform_update">Platform</SelectItem>
-                <SelectItem value="manual">Manuel</SelectItem>
-              </SelectContent>
-            </Select>
+        <div className="rounded-[18px] border border-border bg-card p-5 mb-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+            <SearchInput value={search} onChange={setSearch} placeholder="Ürün, SKU veya neden ara..." className="sm:col-span-2 lg:col-span-1" />
+            <FiltreEtiketi ad="Platform">
+              <Select value={platformFilter} onValueChange={setPlatformFilter}>
+                <SelectTrigger className="w-full"><SelectValue placeholder="Platform" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tüm Platformlar</SelectItem>
+                  {platforms.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </FiltreEtiketi>
+            <FiltreEtiketi ad="Değişim Sebebi">
+              <Select value={typeFilter} onValueChange={setTypeFilter}>
+                <SelectTrigger className="w-full"><SelectValue placeholder="Tüm Sebepler" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tüm Sebepler</SelectItem>
+                  <SelectItem value="cost_update">Maliyet</SelectItem>
+                  <SelectItem value="shipping_update">Kargo</SelectItem>
+                  <SelectItem value="commission_update">Komisyon</SelectItem>
+                  <SelectItem value="platform_update">Platform</SelectItem>
+                  <SelectItem value="chain_inconsistency">Zincir Tutarsızlığı</SelectItem>
+                  <SelectItem value="manual">Manuel</SelectItem>
+                </SelectContent>
+              </Select>
+            </FiltreEtiketi>
+            <FiltreEtiketi ad="Kaynak">
+              <Select value={sourceFilter} onValueChange={setSourceFilter}>
+                <SelectTrigger className="w-full"><SelectValue placeholder="Tümü" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tümü</SelectItem>
+                  <SelectItem value="system">Sistem (otomatik)</SelectItem>
+                  <SelectItem value="user">Kullanıcı</SelectItem>
+                </SelectContent>
+              </Select>
+            </FiltreEtiketi>
+            <FiltreEtiketi ad="Sırala">
+              <Select value={sortFilter} onValueChange={setSortFilter}>
+                <SelectTrigger className="w-full"><SelectValue placeholder="Sırala" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="date_desc">Tarih: yeni → eski</SelectItem>
+                  <SelectItem value="date_asc">Tarih: eski → yeni</SelectItem>
+                </SelectContent>
+              </Select>
+            </FiltreEtiketi>
           </div>
         </div>
 
         {/* Toplu seçim bilgi bandı */}
         {selectedIds.length > 0 && (
-          <div className="mb-4 flex items-center gap-3 bg-indigo-50 border border-indigo-200 rounded-xl px-4 py-3 text-sm text-indigo-700">
+          <div className="mb-4 flex items-center gap-3 bg-secondary border border-border rounded-xl px-4 py-3 text-sm text-foreground">
             <span className="font-medium">{selectedIds.length} rapor seçili</span>
             {!isAllSelected && (
-              <button onClick={selectAll} className="underline hover:text-indigo-900 font-medium">
+              <button onClick={selectAll} className="underline hover:text-muted-foreground font-medium">
                 Tüm {filteredReports.length} raporu seç
               </button>
             )}
-            <button onClick={clearSelection} className="underline hover:text-indigo-900 ml-auto">
+            <button onClick={clearSelection} className="underline hover:text-muted-foreground ml-auto">
               Seçimi temizle
             </button>
           </div>
         )}
 
-        <DataTable
+        <DataTable pageKey="guncelleme-raporlari"
           columns={columns}
           data={paginatedReports}
           isLoading={isLoading}
@@ -397,7 +439,7 @@ export default function UpdateReports() {
               <AlertDialogCancel>İptal</AlertDialogCancel>
               <AlertDialogAction
                 onClick={() => deleteMutation.mutate(selectedIds)}
-                className="bg-rose-600 hover:bg-rose-700"
+                className="bg-red-600 hover:bg-red-700"
               >
                 Sil
               </AlertDialogAction>

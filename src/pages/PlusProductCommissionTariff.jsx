@@ -15,6 +15,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { toast } from 'sonner';
 import * as XLSX from 'xlsx';
 import PriceDetailModal from '@/components/modals/PriceDetailModal';
+import BaremBadge from '@/components/ui/BaremBadge';
+import { baremSec, baremTavanFiyatlari, baremTarifesiSec } from '@/lib/baremKurali';
 
 const PlusEntity = db.entities.PlusProductCommissionTariff;
 const Product = db.entities.Product;
@@ -40,6 +42,9 @@ export default function PlusProductCommissionTariff() {
 
   const [bulkMinProfitRate, setBulkMinProfitRate] = useState('');
   const [bulkMinProfitAmount, setBulkMinProfitAmount] = useState('');
+  // Ust sinir: bos birakilirsa sinir yok. Min-max araligi disindaki urunler secilmez.
+  const [bulkMaxProfitRate, setBulkMaxProfitRate] = useState('');
+  const [bulkMaxProfitAmount, setBulkMaxProfitAmount] = useState('');
 
   const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0 });
   const [calendarOpen, setCalendarOpen] = useState(false);
@@ -51,7 +56,7 @@ export default function PlusProductCommissionTariff() {
     db.auth.me().then(user => setUserEmail(user.email)).catch(() => {});
   }, []);
 
-  const { data: platforms = [] } = useQuery({
+  const { data: platforms = [], isFetched: platformlarYuklendi } = useQuery({
     queryKey: ['platforms', userEmail],
     queryFn: () => Platform.filter({ created_by: userEmail }),
     enabled: !!userEmail
@@ -287,15 +292,17 @@ export default function PlusProductCommissionTariff() {
       let shippingCost = 0;
       let shippingVatRate = 20;
       let baremUsed = 'desi';
-      const canUseBarem = !matchedProduct.special_shipping && !matchedProduct.multi_package;
-
-      if (canUseBarem && price > 0) {
-        if (price >= 0 && price <= 149.99) {
-          const baremRate = platformShippingRates.find(r => r.rate_type === 'barem1');
-          if (baremRate) { shippingCost = baremRate.price; shippingVatRate = baremRate.vat_rate || 20; baremUsed = 'barem1'; }
-        } else if (price >= 150 && price <= 299.99) {
-          const baremRate = platformShippingRates.find(r => r.rate_type === 'barem2');
-          if (baremRate) { shippingCost = baremRate.price; shippingVatRate = baremRate.vat_rate || 20; baremUsed = 'barem2'; }
+      // Barem kurallari ortak modulde (src/lib/baremKurali.js): sinirlar
+      // platform kaydindan okunur, desi tavani ve use_barem kontrol edilir.
+      // Once bu sayfaya sabit yazilmisti ve HepsiBurada'da Trendyol'un
+      // bantlari uygulaniyordu.
+      const secilenBarem = baremSec(platform, matchedProduct, price, matchedProduct?.desi);
+      if (secilenBarem) {
+        const baremRate = baremTarifesiSec(platformShippingRates, secilenBarem, matchedProduct?.same_day_delivery || false);
+        if (baremRate) {
+          shippingCost = baremRate.price;
+          shippingVatRate = baremRate.vat_rate || 20;
+          baremUsed = secilenBarem;
         }
       }
 
@@ -418,6 +425,12 @@ export default function PlusProductCommissionTariff() {
   const handleBulkSelect = () => {
     const minRate = parseFloat(bulkMinProfitRate) || 0;
     const minAmount = parseFloat(bulkMinProfitAmount) || 0;
+    const maxRate = bulkMaxProfitRate !== '' ? parseFloat(bulkMaxProfitRate) : Infinity;
+    const maxAmount = bulkMaxProfitAmount !== '' ? parseFloat(bulkMaxProfitAmount) : Infinity;
+    const araliktaMi = (oran, tutar) =>
+      oran >= minRate && tutar >= minAmount &&
+      oran <= (Number.isNaN(maxRate) ? Infinity : maxRate) &&
+      tutar <= (Number.isNaN(maxAmount) ? Infinity : maxAmount);
     const visibleBarcodes = new Set(filteredData.map(i => i.barcode));
 
     const updated = uploadedData.map(item => {
@@ -426,7 +439,7 @@ export default function PlusProductCommissionTariff() {
       const price = item.plus_price_limit;
       if (!price || price <= 0) return item.selected_type === 'plus' ? { ...item, selected_type: 'none', selected_price: 0 } : item;
       const { profit, profitRate } = calculateProfit(price, item.plus_commission_offer || 0, item);
-      if (profitRate >= minRate && profit >= minAmount) return { ...item, selected_type: 'plus', selected_price: price };
+      if (araliktaMi(profitRate, profit)) return { ...item, selected_type: 'plus', selected_price: price };
       if (item.selected_type === 'plus') return { ...item, selected_type: 'none', selected_price: 0 };
       return item;
     });
@@ -640,15 +653,17 @@ export default function PlusProductCommissionTariff() {
   const selectedCount = uploadedData.filter(i => i.selected_type !== 'none').length;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-indigo-50/30">
-      <div className="max-w-[1600px] mx-auto px-6 py-8">
+    <div className="min-h-screen bg-secondary">
+      <div className="ph-page mx-auto">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Plus Ürün Komisyon Tarifesi</h1>
-          <p className="text-slate-500 mt-1">Trendyol Plus tekliflerini yükleyip kârlılık analizi yapın</p>
+          <h1 className="ph-title">Plus Ürün Komisyon Tarifesi</h1>
+          <p className="ph-subtitle">Trendyol Plus tekliflerini yükleyip kârlılık analizi yapın</p>
         </div>
 
-        {!hasTrendyol && (
-          <div className="mb-6 flex items-start gap-4 bg-amber-50 border border-amber-200 rounded-xl p-5">
+        {/* Uyari platform sorgusu cozulmeden gosterilirse sayfa acilirken
+            bir an cakip kayboluyordu; artik veri geldikten sonra kalici. */}
+        {platformlarYuklendi && !hasTrendyol && (
+          <div className="mb-6 flex items-start gap-4 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50 rounded-xl p-5">
             <div className="flex-shrink-0 w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center">
               <AlertCircle className="h-5 w-5 text-amber-600" />
             </div>
@@ -666,7 +681,7 @@ export default function PlusProductCommissionTariff() {
               <div className="space-y-2">
                 <Label>Platform *</Label>
                 {trendyolPlatforms.length === 1 ? (
-                  <div className="flex items-center h-10 px-3 border border-gray-200 rounded-xl bg-gray-50 text-sm font-medium">{trendyolPlatforms[0].name}</div>
+                  <div className="flex items-center h-10 px-3 border border-border rounded-xl bg-secondary text-sm font-medium">{trendyolPlatforms[0].name}</div>
                 ) : (
                   <Select value={selectedPlatform} onValueChange={setSelectedPlatform}>
                     <SelectTrigger><SelectValue placeholder="Platform seçin" /></SelectTrigger>
@@ -684,21 +699,21 @@ export default function PlusProductCommissionTariff() {
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar mode="range" selected={dateRangeValue} onSelect={(range) => { setDateRangeValue(range || { from: undefined, to: undefined }); if (range?.from && range?.to && range.from.getTime() !== range.to.getTime()) setCalendarOpen(false); }} defaultMonth={new Date()} numberOfMonths={2} locale={tr} classNames={{ day_today: "bg-blue-500 font-bold text-white" }} />
+                    <Calendar mode="range" selected={dateRangeValue} onSelect={(range) => { setDateRangeValue(range || { from: undefined, to: undefined }); if (range?.from && range?.to && range.from.getTime() !== range.to.getTime()) setCalendarOpen(false); }} defaultMonth={new Date()} numberOfMonths={2} locale={tr} classNames={{ day_today: "bg-primary font-bold text-primary-foreground" }} />
                   </PopoverContent>
                 </Popover>
               </div>
             </div>
             <div className="flex flex-wrap gap-3">
-              <Button onClick={() => document.getElementById('plusExcelUpload').click()} disabled={!selectedPlatform || !dateRangeValue?.from || !dateRangeValue?.to} className="bg-indigo-600 hover:bg-indigo-700">
+              <Button onClick={() => document.getElementById('plusExcelUpload').click()} disabled={!selectedPlatform || !dateRangeValue?.from || !dateRangeValue?.to} className="bg-primary hover:bg-black dark:hover:bg-white/90">
                 <Upload className="mr-2 h-4 w-4" />{uploadedData.length > 0 ? 'Yeni Excel Yükle' : 'Excel Yükle'}
               </Button>
               <input id="plusExcelUpload" type="file" accept=".xlsx,.xls" onChange={handleFileUpload} className="hidden" />
-              {uploadProgress.total > 0 && (<div className="flex items-center text-sm text-slate-500">{uploadProgress.current}/{uploadProgress.total} kaydediliyor...</div>)}
+              {uploadProgress.total > 0 && (<div className="flex items-center text-sm text-muted-foreground">{uploadProgress.current}/{uploadProgress.total} kaydediliyor...</div>)}
               {uploadedData.length > 0 && (
                 <>
-                  <Button onClick={handleSmartAutoSelect} className="bg-orange-500 hover:bg-orange-600 text-white gap-2"><Sparkles className="h-4 w-4" />Akıllı Otomatik Seç</Button>
-                  <Button variant="outline" onClick={handleDeleteExcel} className="text-rose-600 hover:text-rose-700 hover:bg-rose-50"><Trash2 className="mr-2 h-4 w-4" />Excel'i Sil</Button>
+                  <Button onClick={handleSmartAutoSelect} className="bg-primary hover:bg-black dark:hover:bg-white/90 text-primary-foreground gap-2"><Sparkles className="h-4 w-4" />Akıllı Otomatik Seç</Button>
+                  <Button variant="outline" onClick={handleDeleteExcel} className="text-red-600 dark:text-red-400 hover:text-red-700 dark:text-red-300 hover:bg-red-50 dark:bg-red-950/30"><Trash2 className="mr-2 h-4 w-4" />Excel'i Sil</Button>
                   <Button variant="outline" onClick={handleSave}><Check className="mr-2 h-4 w-4" />Seçimleri Kaydet ({selectedCount})</Button>
                   <Button variant="outline" onClick={() => { setUploadedData(uploadedData.map(item => ({ ...item, selected_type: 'none', selected_price: 0 }))); toast.success('Tüm seçimler kaldırıldı'); }}>Seçimleri Kaldır</Button>
                   <Button variant="outline" onClick={handleExport}><Download className="mr-2 h-4 w-4" />Excel İndir</Button>
@@ -748,6 +763,8 @@ export default function PlusProductCommissionTariff() {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <Input type="number" placeholder="Min Kâr Oranı (%)" value={bulkMinProfitRate} onChange={(e) => setBulkMinProfitRate(e.target.value)} />
                   <Input type="number" placeholder="Min Kâr Tutarı (₺)" value={bulkMinProfitAmount} onChange={(e) => setBulkMinProfitAmount(e.target.value)} />
+                  <Input type="number" placeholder="Maks Kâr Oranı (%)" value={bulkMaxProfitRate} onChange={(e) => setBulkMaxProfitRate(e.target.value)} />
+                  <Input type="number" placeholder="Maks Kâr Tutarı (₺)" value={bulkMaxProfitAmount} onChange={(e) => setBulkMaxProfitAmount(e.target.value)} />
                   <Button onClick={handleBulkSelect} variant="outline">Toplu Seç</Button>
                 </div>
               </CardContent>
@@ -758,7 +775,7 @@ export default function PlusProductCommissionTariff() {
               <CardContent>
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
-                    <thead className="bg-slate-50 border-b">
+                    <thead className="bg-secondary border-b">
                       <tr>
                         <th className="p-3 text-left font-semibold min-w-[180px]">Ürün</th>
                         <th className="p-3 text-center font-semibold">Stok</th>
@@ -780,63 +797,68 @@ export default function PlusProductCommissionTariff() {
                         const isPlusSelected = item.selected_type === 'plus';
 
                         return (
-                          <tr key={index} className="border-b hover:bg-slate-50">
+                          <tr key={index} className="border-b hover:bg-secondary">
                             <td className="p-3">
-                              <div className="font-medium text-slate-900">{item.product_name}</div>
-                              <div className="text-xs text-slate-500">{item.model_code}</div>
+                              <div className="font-medium text-foreground">{item.product_name}</div>
+                              <div className="text-xs text-muted-foreground">{item.model_code}</div>
                             </td>
                             <td className="p-3 text-center">{item.stock}</td>
                             <td className="p-3">
                               {(matchedProduct?.category_name || item.category) ? (
-                                <div className="text-center text-xs"><div className="font-medium text-slate-700">{matchedProduct?.category_name || item.category}</div></div>
-                              ) : <div className="text-center text-slate-400 text-xs">-</div>}
+                                <div className="text-center text-xs"><div className="font-medium text-muted-foreground">{matchedProduct?.category_name || item.category}</div></div>
+                              ) : <div className="text-center text-muted-foreground/70 text-xs">-</div>}
                             </td>
                             <td className="p-3">
                               {systemPrice ? (
                                 <div className="text-center">
-                                  <div className="font-semibold text-slate-900">₺{systemPrice.sale_price?.toFixed(2)}</div>
-                                  {matchedProduct && <div className="text-xs text-slate-500 mb-1">{matchedProduct.desi} desi • {systemPrice.barem_used === 'barem1' ? 'Barem 1' : systemPrice.barem_used === 'barem2' ? 'Barem 2' : 'Desi'}</div>}
-                                  <div className="text-xs text-slate-500 mb-1">Kom: %{systemPrice.commission_rate || 0}</div>
-                                  <div className={`text-xs font-medium ${(systemPrice.profit_rate || 0) > 0 ? 'text-emerald-600' : 'text-rose-600'}`}>₺{(systemPrice.net_profit || 0).toFixed(2)} (%{(systemPrice.profit_rate || 0).toFixed(1)})</div>
+                                  <div className="font-semibold text-foreground">₺{systemPrice.sale_price?.toFixed(2)}</div>
+                                  {matchedProduct && <div className="text-xs text-muted-foreground mb-1">{matchedProduct.desi} desi • {systemPrice.barem_used === 'barem1' ? 'Barem 1' : systemPrice.barem_used === 'barem2' ? 'Barem 2' : 'Desi'}</div>}
+                                  <div className="text-xs text-muted-foreground mb-1">Kom: %{systemPrice.commission_rate || 0}</div>
+                                  <div className={`text-xs font-medium ${(systemPrice.profit_rate || 0) > 0 ? 'text-green-600' : 'text-red-600'}`}>₺{(systemPrice.net_profit || 0).toFixed(2)} (%{(systemPrice.profit_rate || 0).toFixed(1)})</div>
                                 </div>
-                              ) : <div className="text-center text-slate-400 text-xs">-</div>}
+                              ) : <div className="text-center text-muted-foreground/70 text-xs">-</div>}
                             </td>
                             <td className="p-3">
                               {plusPrice > 0 ? (
-                                <div className={`border rounded-lg p-2 ${isPlusSelected ? 'border-indigo-500 bg-indigo-50' : 'border-slate-200'}`}>
-                                  <div className="text-xs font-semibold text-slate-700 mb-1">₺{plusPrice.toFixed(2)} ve altı</div>
-                                  <div className="text-xs text-slate-500">Plus Kom: %{plusComm}</div>
+                                <div className={`border rounded-lg p-2 ${isPlusSelected ? 'border-primary bg-secondary' : 'border-border'}`}>
+                                  <div className="text-xs font-semibold text-muted-foreground mb-1">₺{plusPrice.toFixed(2)} ve altı</div>
+                                  <div className="flex items-center justify-between gap-1">
+                                    <span className="text-xs text-muted-foreground">Plus Kom: %{plusComm}</span>
+                                    <BaremBadge barem={plusCalc.baremUsed} />
+                                  </div>
                                   <div className="flex items-center justify-between mt-1">
-                                    <div className={`text-xs font-semibold ${plusCalc.profit > 0 ? 'text-emerald-600' : 'text-rose-600'}`}>{plusCalc.profit > 0 ? '+' : ''}₺{plusCalc.profit.toFixed(2)} (%{plusCalc.profitRate.toFixed(1)})</div>
+                                    <div className={`text-xs font-semibold ${plusCalc.profit > 0 ? 'text-green-600' : 'text-red-600'}`}>{plusCalc.profit > 0 ? '+' : ''}₺{plusCalc.profit.toFixed(2)} (%{plusCalc.profitRate.toFixed(1)})</div>
                                     <Button size="sm" variant="ghost" className="h-5 w-5 p-0" onClick={() => openDetailModal(plusPrice, plusComm, item)}><Info className="h-3 w-3" /></Button>
                                   </div>
                                   <Button size="sm" variant={isPlusSelected ? 'default' : 'outline'} onClick={() => handleSelect(index, 'plus', plusPrice)} className="w-full mt-2 h-7 text-xs">{isPlusSelected ? 'Seçili' : 'Seç'}</Button>
                                 </div>
-                              ) : <div className="text-center text-slate-400 text-xs">-</div>}
+                              ) : <div className="text-center text-muted-foreground/70 text-xs">-</div>}
                             </td>
                             <td className="p-3">
                               {(() => {
                                 const selectedPrice = item.selected_price || 0;
-                                if (selectedPrice === 0 || item.selected_type === 'none') return <div className="text-center text-slate-400 text-xs">-</div>;
+                                if (selectedPrice === 0 || item.selected_type === 'none') return <div className="text-center text-muted-foreground/70 text-xs">-</div>;
                                 const currentCommission = item.selected_type === 'manual' ? (item.manual_commission || plusComm) : plusComm;
                                 const currentCalc = calculateProfit(selectedPrice, currentCommission, item);
-                                if (currentCalc.baremUsed === 'barem1' || currentCalc.baremUsed === 'barem2') return <div className="text-center text-slate-400 text-xs">-</div>;
+                                if (currentCalc.baremUsed === 'barem1' || currentCalc.baremUsed === 'barem2') return <div className="text-center text-muted-foreground/70 text-xs">-</div>;
                                 let best = null;
-                                if (selectedPrice > 299.99) {
-                                  const c = calculateProfit(299.99, currentCommission, item);
-                                  if (c.baremUsed === 'barem2' && c.profitRate > currentCalc.profitRate) best = { price: 299.99, ...c, baremType: 'Barem 2' };
+                                // Esikler platform kaydindan; sabit yazilmisti.
+                                const [ustTavan, altTavan] = baremTavanFiyatlari(currentCalc.platform);
+                                if (ustTavan && selectedPrice > ustTavan) {
+                                  const c = calculateProfit(ustTavan, currentCommission, item);
+                                  if (c.baremUsed === 'barem2' && c.profitRate > currentCalc.profitRate) best = { price: ustTavan, ...c, baremType: 'Barem 2' };
                                 }
-                                if (selectedPrice > 149.99) {
-                                  const c = calculateProfit(149.99, currentCommission, item);
-                                  if (c.baremUsed === 'barem1' && c.profitRate > currentCalc.profitRate && (!best || c.profitRate > best.profitRate)) best = { price: 149.99, ...c, baremType: 'Barem 1' };
+                                if (altTavan && selectedPrice > altTavan) {
+                                  const c = calculateProfit(altTavan, currentCommission, item);
+                                  if (c.baremUsed === 'barem1' && c.profitRate > currentCalc.profitRate && (!best || c.profitRate > best.profitRate)) best = { price: altTavan, ...c, baremType: 'Barem 1' };
                                 }
-                                if (!best) return <div className="text-center text-slate-400 text-xs">-</div>;
+                                if (!best) return <div className="text-center text-muted-foreground/70 text-xs">-</div>;
                                 return (
-                                  <div className="border rounded-lg p-2 border-amber-300 bg-amber-50">
+                                  <div className="border rounded-lg p-2 border-amber-300 bg-amber-50 dark:bg-amber-950/30">
                                     <div className="text-xs font-semibold text-amber-800 mb-1">{best.baremType} Önerisi</div>
-                                    <div className="text-xs text-slate-600">Fiyat: ₺{best.price.toFixed(2)}</div>
+                                    <div className="text-xs text-muted-foreground">Fiyat: ₺{best.price.toFixed(2)}</div>
                                     <div className="flex items-center justify-between mt-1">
-                                      <div className="text-xs font-semibold text-emerald-600">+₺{best.profit.toFixed(2)} (%{best.profitRate.toFixed(1)})</div>
+                                      <div className="text-xs font-semibold text-green-600">+₺{best.profit.toFixed(2)} (%{best.profitRate.toFixed(1)})</div>
                                       <Button size="sm" variant="ghost" className="h-5 w-5 p-0" onClick={() => openDetailModal(best.price, currentCommission, item, best.baremType === 'Barem 1' ? 'barem1' : 'barem2')}><Info className="h-3 w-3" /></Button>
                                     </div>
                                     <Button size="sm" variant="outline" onClick={() => handleSelect(index, item.selected_type, best.price)} className="w-full mt-2 h-7 text-xs border-amber-400 hover:bg-amber-100">Uygula</Button>
@@ -845,12 +867,12 @@ export default function PlusProductCommissionTariff() {
                               })()}
                             </td>
                             <td className="p-3">
-                              <div className={`border rounded-lg p-2 ${item.selected_type === 'manual' ? 'border-indigo-500 bg-indigo-50' : 'border-slate-200'}`}>
-                                <div className="text-xs font-semibold text-slate-700 mb-2">Manuel Fiyat</div>
+                              <div className={`border rounded-lg p-2 ${item.selected_type === 'manual' ? 'border-primary bg-secondary' : 'border-border'}`}>
+                                <div className="text-xs font-semibold text-muted-foreground mb-2">Manuel Fiyat</div>
                                 <Input type="number" step="0.01" value={item.manual_price || ''} onChange={(e) => handleManualPriceChange(index, e.target.value)} placeholder="Fiyat girin" className="h-8 text-xs mb-2" />
                                 {item.manual_price > 0 && (
                                   <div className="flex items-center justify-between mb-2">
-                                    <div className={`text-xs font-semibold ${(item.manual_profit || 0) > 0 ? 'text-emerald-600' : 'text-rose-600'}`}>{(item.manual_profit || 0) > 0 ? '+' : ''}₺{(item.manual_profit || 0).toFixed(2)} (%{(item.manual_profit_rate || 0).toFixed(1)})</div>
+                                    <div className={`text-xs font-semibold ${(item.manual_profit || 0) > 0 ? 'text-green-600' : 'text-red-600'}`}>{(item.manual_profit || 0) > 0 ? '+' : ''}₺{(item.manual_profit || 0).toFixed(2)} (%{(item.manual_profit_rate || 0).toFixed(1)})</div>
                                     <Button size="sm" variant="ghost" className="h-5 w-5 p-0" onClick={() => openDetailModal(item.manual_price, item.manual_commission || plusComm, item)}><Info className="h-3 w-3" /></Button>
                                   </div>
                                 )}
@@ -871,9 +893,9 @@ export default function PlusProductCommissionTariff() {
         {uploadedData.length === 0 && (
           <Card>
             <CardContent className="p-12 text-center">
-              <Upload className="h-16 w-16 text-slate-300 mx-auto mb-4" />
-              <p className="text-slate-500 mb-2">Henüz dosya yüklenmedi</p>
-              <p className="text-sm text-slate-400">Platform seçip tarih aralığı belirledikten sonra Plus Excel dosyasını yükleyin</p>
+              <Upload className="h-16 w-16 text-muted-foreground/50 mx-auto mb-4" />
+              <p className="text-muted-foreground mb-2">Henüz dosya yüklenmedi</p>
+              <p className="text-sm text-muted-foreground/70">Platform seçip tarih aralığı belirledikten sonra Plus Excel dosyasını yükleyin</p>
             </CardContent>
           </Card>
         )}

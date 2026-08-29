@@ -31,8 +31,13 @@ const AuthenticatedApp = () => {
     if (authError.type === 'user_not_registered') {
       return <UserNotRegisteredError />;
     } else if (authError.type === 'auth_required') {
-      navigateToLogin();
-      return null;
+      // Giris ekraninin kendisi herkese acik olmali; aksi halde /login
+      // surekli kendine yonlenip sonsuz donguye girer.
+      const path = window.location.pathname.toLowerCase();
+      if (path !== '/login' && path !== '/landing') {
+        navigateToLogin();
+        return null;
+      }
     }
   }
   return (

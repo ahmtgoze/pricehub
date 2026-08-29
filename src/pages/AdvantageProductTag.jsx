@@ -16,6 +16,8 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import * as XLSX from 'xlsx';
+import BaremBadge from '@/components/ui/BaremBadge';
+import { baremSec, baremTavanFiyatlari, baremTarifesiSec } from '@/lib/baremKurali';
 
 export default function AdvantageProductTag() {
   const [userEmail, setUserEmail] = useState(null);
@@ -34,6 +36,9 @@ export default function AdvantageProductTag() {
   const [bulkColumn, setBulkColumn] = useState('');
   const [bulkMinProfitRate, setBulkMinProfitRate] = useState('');
   const [bulkMinProfitAmount, setBulkMinProfitAmount] = useState('');
+  // Ust sinir: bos birakilirsa sinir yok. Min-max araligi disindaki urunler secilmez.
+  const [bulkMaxProfitRate, setBulkMaxProfitRate] = useState('');
+  const [bulkMaxProfitAmount, setBulkMaxProfitAmount] = useState('');
   const [detailModal, setDetailModal] = useState({ open: false, product: null, priceData: null, calculationDetails: null });
   const [calendarKey, setCalendarKey] = useState(0);
   const [calendarOpen, setCalendarOpen] = useState(false);
@@ -50,7 +55,7 @@ export default function AdvantageProductTag() {
     enabled: !!userEmail
   });
 
-  const { data: platforms = [] } = useQuery({
+  const { data: platforms = [], isFetched: platformlarYuklendi } = useQuery({
     queryKey: ['platforms', userEmail],
     queryFn: () => db.entities.Platform.filter({ created_by: userEmail }),
     enabled: !!userEmail
@@ -343,15 +348,17 @@ export default function AdvantageProductTag() {
       let shippingCost = 0;
       let shippingVatRate = 20;
       let baremUsed = 'desi';
-      const canUseBarem = !matchedProduct.special_shipping && !matchedProduct.multi_package;
-
-      if (canUseBarem && price > 0) {
-        if (price >= 0 && price <= 149.99) {
-          const r = platformShippingRates.find(r => r.rate_type === 'barem1');
-          if (r) { shippingCost = r.price; shippingVatRate = r.vat_rate || 20; baremUsed = 'barem1'; }
-        } else if (price >= 150 && price <= 299.99) {
-          const r = platformShippingRates.find(r => r.rate_type === 'barem2');
-          if (r) { shippingCost = r.price; shippingVatRate = r.vat_rate || 20; baremUsed = 'barem2'; }
+      // Barem kurallari ortak modulde (src/lib/baremKurali.js): sinirlar
+      // platform kaydindan okunur, desi tavani ve use_barem kontrol edilir.
+      // Once bu sayfaya sabit yazilmisti ve HepsiBurada'da Trendyol'un
+      // bantlari uygulaniyordu.
+      const secilenBarem = baremSec(platformObj, matchedProduct, price, matchedProduct?.desi);
+      if (secilenBarem) {
+        const baremRate = baremTarifesiSec(platformShippingRates, secilenBarem, matchedProduct?.same_day_delivery || false);
+        if (baremRate) {
+          shippingCost = baremRate.price;
+          shippingVatRate = baremRate.vat_rate || 20;
+          baremUsed = secilenBarem;
         }
       }
 
@@ -525,6 +532,12 @@ export default function AdvantageProductTag() {
     if (!bulkColumn) { toast.error('Lütfen kolon seçin'); return; }
     const minRate = parseFloat(bulkMinProfitRate) || 0;
     const minAmount = parseFloat(bulkMinProfitAmount) || 0;
+    const maxRate = bulkMaxProfitRate !== '' ? parseFloat(bulkMaxProfitRate) : Infinity;
+    const maxAmount = bulkMaxProfitAmount !== '' ? parseFloat(bulkMaxProfitAmount) : Infinity;
+    const araliktaMi = (oran, tutar) =>
+      oran >= minRate && tutar >= minAmount &&
+      oran <= (Number.isNaN(maxRate) ? Infinity : maxRate) &&
+      tutar <= (Number.isNaN(maxAmount) ? Infinity : maxAmount);
 
     const updated = uploadedData.map(item => {
       if (item.selected_range !== 'none' && item.selected_range !== bulkColumn) return item;
@@ -540,7 +553,7 @@ export default function AdvantageProductTag() {
       }
 
       const { profit, profitRate } = calculateProfit(price, commissionRate, item);
-      if (profitRate >= minRate && profit >= minAmount) return { ...item, selected_range: bulkColumn, selected_price: price };
+      if (araliktaMi(profitRate, profit)) return { ...item, selected_range: bulkColumn, selected_price: price };
       if (item.selected_range === bulkColumn) return { ...item, selected_range: 'none', selected_price: 0 };
       return item;
     });
@@ -674,26 +687,92 @@ export default function AdvantageProductTag() {
   const uniqueCategories = [...new Set(uploadedData.map(item => item.category).filter(Boolean))].sort();
   const uniqueBrands = [...new Set(uploadedData.map(item => item.brand).filter(Boolean))].sort();
 
+  // Barem esikleri platform kaydindan okunur (sayfaya sabit yazilmazdi;
+  // HepsiBurada'da Trendyol'un esikleri uygulaniyordu).
+  const seciliPlatformKaydi = uniquePlatforms.find(p => p.name === selectedPlatform);
+  const [BAREM2_UST, BAREM1_UST] = baremTavanFiyatlari(seciliPlatformKaydi);
+
+  /**
+   * Barem onerisi: secili fiyat desi tarifesine dusuyorsa, fiyati barem
+   * esigine cekmenin kari artirip artirmadigini hesaplar. Yalnizca EKRANDA
+   * gosterilir — sabit Excel sablonuna dahil DEGILDIR.
+   */
+  const renderBaremSuggestionCell = (item, index) => {
+    const seciliFiyat = Number(item.selected_price) || 0;
+    if (!seciliFiyat) return <div className="text-center text-muted-foreground/70 text-xs">-</div>;
+
+    const mevcutKomisyon = getDynamicCommissionForPrice(item, seciliFiyat);
+    const mevcut = calculateProfit(seciliFiyat, mevcutKomisyon, item);
+
+    // Zaten bir barem tarifesindeyse onerilecek bir sey yok
+    if (mevcut.baremUsed === 'barem1' || mevcut.baremUsed === 'barem2') {
+      return <div className="text-center text-muted-foreground/70 text-xs">-</div>;
+    }
+
+    let oneri = null;
+    if (seciliFiyat > BAREM2_UST) {
+      const c = calculateProfit(BAREM2_UST, mevcutKomisyon, item);
+      if (c.baremUsed === 'barem2' && c.profitRate > mevcut.profitRate) {
+        oneri = { price: BAREM2_UST, profit: c.profit, profitRate: c.profitRate, baremType: 'Barem 2' };
+      }
+    }
+    if (seciliFiyat > BAREM1_UST) {
+      const c = calculateProfit(BAREM1_UST, mevcutKomisyon, item);
+      if (c.baremUsed === 'barem1' && c.profitRate > mevcut.profitRate) {
+        if (!oneri || c.profitRate > oneri.profitRate) {
+          oneri = { price: BAREM1_UST, profit: c.profit, profitRate: c.profitRate, baremType: 'Barem 1' };
+        }
+      }
+    }
+
+    if (!oneri) return <div className="text-center text-muted-foreground/70 text-xs">-</div>;
+
+    const karArtisi = oneri.profitRate - mevcut.profitRate;
+
+    return (
+      <div className="border border-border rounded-lg p-2 bg-secondary">
+        <div className="text-xs font-semibold text-foreground mb-1">{oneri.baremType} Önerisi</div>
+        <div className="text-xs text-muted-foreground">Fiyat: ₺{oneri.price.toFixed(2)}</div>
+        <div className="text-xs text-muted-foreground">Kom: %{mevcutKomisyon}</div>
+        <div className="text-xs font-semibold text-green-600 mt-1">
+          +₺{oneri.profit.toFixed(2)} (%{oneri.profitRate.toFixed(1)})
+        </div>
+        <div className="text-xs font-medium text-foreground mt-1">+%{karArtisi.toFixed(1)} kâr artışı</div>
+        <Button
+          size="sm"
+          variant="outline"
+          className="w-full mt-2 h-7 text-xs"
+          onClick={() => handlePriceSelect(index, 'manual', oneri.price)}
+        >
+          Uygula
+        </Button>
+      </div>
+    );
+  };
+
   const renderRangeCell = (item, index, rangeType, minPrice, maxPrice, excelCommission, label) => {
-    if (!minPrice || minPrice <= 0) return <div className="text-center text-slate-400 text-xs">-</div>;
+    if (!minPrice || minPrice <= 0) return <div className="text-center text-muted-foreground/70 text-xs">-</div>;
 
     const dynamicCommission = getDynamicCommissionForPrice(item, maxPrice);
-    const { profit, profitRate } = calculateProfit(maxPrice, dynamicCommission, item);
+    const { profit, profitRate, baremUsed } = calculateProfit(maxPrice, dynamicCommission, item);
     const isProfitable = profit > 0;
     const isSelected = item.selected_range === rangeType;
 
     return (
-      <div className={`border rounded-lg p-2 ${isSelected ? 'border-indigo-500 bg-indigo-50' : 'border-slate-200'}`}>
-        <div className="text-xs font-semibold text-slate-700 mb-1">{label}</div>
+      <div className={`border rounded-lg p-2 ${isSelected ? 'border-primary bg-secondary' : 'border-border'}`}>
+        <div className="text-xs font-semibold text-muted-foreground mb-1">{label}</div>
         {maxPrice > 0 && (
-          <div className="text-xs text-slate-500 text-center">
+          <div className="text-xs text-muted-foreground text-center">
             <div className="font-bold text-sm">₺{maxPrice?.toFixed(2)}</div>
             <div>ve altı</div>
           </div>
         )}
-        <div className="text-xs text-slate-500">Kom: %{dynamicCommission}</div>
+        <div className="flex items-center justify-between gap-1">
+          <span className="text-xs text-muted-foreground">Kom: %{dynamicCommission}</span>
+          <BaremBadge barem={baremUsed} />
+        </div>
         <div className="flex items-center justify-between mt-1">
-          <div className={`text-xs font-semibold ${isProfitable ? 'text-emerald-600' : 'text-rose-600'}`}>
+          <div className={`text-xs font-semibold ${isProfitable ? 'text-green-600' : 'text-red-600'}`}>
             {isProfitable ? '+' : ''}₺{profit.toFixed(2)} (%{profitRate.toFixed(1)})
           </div>
           <Button size="sm" variant="ghost" className="h-5 w-5 p-0" onClick={() => {
@@ -751,15 +830,17 @@ export default function AdvantageProductTag() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-indigo-50/30">
-      <div className="max-w-[1600px] mx-auto px-6 py-8">
+    <div className="min-h-screen bg-secondary">
+      <div className="ph-page mx-auto">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Avantajlı Ürün Etiketi</h1>
-          <p className="text-slate-500 mt-1">Trendyol avantaj etiketlerini yükleyip kârlılık analizi yapın</p>
+          <h1 className="ph-title">Avantajlı Ürün Etiketi</h1>
+          <p className="text-muted-foreground mt-1">Trendyol avantaj etiketlerini yükleyip kârlılık analizi yapın</p>
         </div>
 
-        {!hasTrendyol && (
-          <div className="mb-6 flex items-start gap-4 bg-amber-50 border border-amber-200 rounded-xl p-5">
+        {/* Uyari platform sorgusu cozulmeden gosterilirse sayfa acilirken
+            bir an cakip kayboluyordu; artik veri geldikten sonra kalici. */}
+        {platformlarYuklendi && !hasTrendyol && (
+          <div className="mb-6 flex items-start gap-4 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50 rounded-xl p-5">
             <div className="flex-shrink-0 w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center">
               <AlertCircle className="h-5 w-5 text-amber-600" />
             </div>
@@ -780,7 +861,7 @@ export default function AdvantageProductTag() {
               <div className="space-y-2">
                 <Label>Platform *</Label>
                 {trendyolPlatforms.length === 1 ? (
-                  <div className="flex items-center h-10 px-3 border border-gray-200 rounded-xl bg-gray-50 text-sm font-medium">{trendyolPlatforms[0].name}</div>
+                  <div className="flex items-center h-10 px-3 border border-border rounded-xl bg-secondary text-sm font-medium">{trendyolPlatforms[0].name}</div>
                 ) : (
                   <Select value={selectedPlatform} onValueChange={setSelectedPlatform}>
                     <SelectTrigger><SelectValue placeholder="Platform seçin" /></SelectTrigger>
@@ -817,21 +898,21 @@ export default function AdvantageProductTag() {
                       defaultMonth={new Date()}
                       numberOfMonths={2}
                       locale={tr}
-                      classNames={{ day_today: "bg-blue-500 font-bold text-white" }}
+                      classNames={{ day_today: "bg-primary font-bold text-primary-foreground" }}
                     />
                   </PopoverContent>
                 </Popover>
               </div>
             </div>
             <div className="flex flex-wrap gap-3">
-              <Button onClick={() => document.getElementById('advantageExcelUpload').click()} disabled={!selectedPlatform || !dateRangeValue?.from || !dateRangeValue?.to} className="bg-indigo-600 hover:bg-indigo-700">
+              <Button onClick={() => document.getElementById('advantageExcelUpload').click()} disabled={!selectedPlatform || !dateRangeValue?.from || !dateRangeValue?.to} className="bg-primary hover:bg-black dark:hover:bg-white/90">
                 <Upload className="mr-2 h-4 w-4" />
                 {uploadProgress.total > 0 ? `Yükleniyor... ${uploadProgress.current}/${uploadProgress.total}` : uploadedData.length > 0 ? 'Yeni Excel Yükle' : 'Excel Yükle'}
               </Button>
               <input id="advantageExcelUpload" type="file" accept=".xlsx,.xls" onChange={handleFileUpload} className="hidden" />
               {uploadedData.length > 0 && (
                 <>
-                  <Button onClick={handleSmartAutoSelect} className="bg-orange-500 hover:bg-orange-600 text-white gap-2">
+                  <Button onClick={handleSmartAutoSelect} className="bg-primary hover:bg-black dark:hover:bg-white/90 text-primary-foreground gap-2">
                     <Sparkles className="h-4 w-4" />
                     Akıllı Otomatik Seç
                   </Button>
@@ -851,7 +932,7 @@ export default function AdvantageProductTag() {
                       }
                       queryClient.invalidateQueries(['advantageProductTags']);
                     } catch (error) { toast.error('Silme hatası (arka plan): ' + error.message); }
-                  }} className="text-rose-600 hover:text-rose-700 hover:bg-rose-50">
+                  }} className="text-red-600 dark:text-red-400 hover:text-red-700 dark:text-red-300 hover:bg-red-50 dark:bg-red-950/30">
                     <Trash2 className="mr-2 h-4 w-4" />Excel'i Sil
                   </Button>
                   <Button variant="outline" onClick={handleSave}>
@@ -931,6 +1012,8 @@ export default function AdvantageProductTag() {
                   </Select>
                   <Input type="number" placeholder="Min Kâr Oranı (%)" value={bulkMinProfitRate} onChange={(e) => setBulkMinProfitRate(e.target.value)} />
                   <Input type="number" placeholder="Min Kâr Tutarı (₺)" value={bulkMinProfitAmount} onChange={(e) => setBulkMinProfitAmount(e.target.value)} />
+                  <Input type="number" placeholder="Maks Kâr Oranı (%)" value={bulkMaxProfitRate} onChange={(e) => setBulkMaxProfitRate(e.target.value)} />
+                  <Input type="number" placeholder="Maks Kâr Tutarı (₺)" value={bulkMaxProfitAmount} onChange={(e) => setBulkMaxProfitAmount(e.target.value)} />
                   <Button onClick={handleBulkSelect} variant="outline">Toplu Seç</Button>
                 </div>
               </CardContent>
@@ -941,7 +1024,7 @@ export default function AdvantageProductTag() {
               <CardContent>
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
-                    <thead className="bg-slate-50 border-b">
+                    <thead className="bg-secondary border-b">
                       <tr>
                         <th className="p-3 text-left font-semibold min-w-[180px]">Ürün</th>
                         <th className="p-3 text-center font-semibold">Stok</th>
@@ -950,6 +1033,7 @@ export default function AdvantageProductTag() {
                         <th className="p-3 text-center font-semibold min-w-[150px]">Avantaj</th>
                         <th className="p-3 text-center font-semibold min-w-[150px]">Çok Avantaj</th>
                         <th className="p-3 text-center font-semibold min-w-[150px]">Süper Avantaj</th>
+                        <th className="p-3 text-center font-semibold min-w-[150px]">Barem Önerisi</th>
                         <th className="p-3 text-center font-semibold min-w-[160px]">Manuel</th>
                       </tr>
                     </thead>
@@ -958,11 +1042,11 @@ export default function AdvantageProductTag() {
                         const matchedProduct = getMatchedProduct(item);
                         const systemPrice = getSystemPrice(item);
                         return (
-                          <tr key={index} className="border-b hover:bg-slate-50">
+                          <tr key={index} className="border-b hover:bg-secondary">
                             <td className="p-3">
-                              <div className="font-medium text-slate-900">{item.product_name}</div>
-                              <div className="text-xs text-slate-500">{item.model_code}</div>
-                              {!matchedProduct && <Badge variant="outline" className="mt-1 text-xs text-rose-600 border-rose-300">Master eşleşmedi</Badge>}
+                              <div className="font-medium text-foreground">{item.product_name}</div>
+                              <div className="text-xs text-muted-foreground">{item.model_code}</div>
+                              {!matchedProduct && <Badge variant="outline" className="mt-1 text-xs text-red-600 border-red-300">Master eşleşmedi</Badge>}
                             </td>
                             <td className="p-3 text-center">{item.stock}</td>
                             <td className="p-3 text-center">
@@ -972,23 +1056,24 @@ export default function AdvantageProductTag() {
                               {systemPrice ? (
                                 <div className="text-center">
                                   <div className="font-semibold">₺{systemPrice.sale_price?.toFixed(2)}</div>
-                                  <div className="text-xs text-slate-500">Kom: %{systemPrice.commission_rate || 0}</div>
-                                  <div className={`text-xs font-medium ${(systemPrice.profit_rate || 0) > 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                                  <div className="text-xs text-muted-foreground">Kom: %{systemPrice.commission_rate || 0}</div>
+                                  <div className={`text-xs font-medium ${(systemPrice.profit_rate || 0) > 0 ? 'text-green-600' : 'text-red-600'}`}>
                                     ₺{(systemPrice.net_profit || 0).toFixed(2)} (%{(systemPrice.profit_rate || 0).toFixed(1)})
                                   </div>
                                 </div>
-                              ) : <span className="text-slate-400 text-xs">-</span>}
+                              ) : <span className="text-muted-foreground/70 text-xs">-</span>}
                             </td>
                             <td className="p-3">{renderRangeCell(item, index, 'advantage', item.advantage_min, item.advantage_max, item.advantage_commission, 'Avantaj')}</td>
                             <td className="p-3">{renderRangeCell(item, index, 'super_advantage', item.super_advantage_min, item.super_advantage_max, item.super_advantage_commission, 'Çok Avantaj')}</td>
                             <td className="p-3">{renderRangeCell(item, index, 'mega_advantage', item.mega_advantage_min, item.mega_advantage_max, item.mega_advantage_commission, 'Süper Avantaj')}</td>
+                            <td className="p-3">{renderBaremSuggestionCell(item, index)}</td>
                             <td className="p-3">
-                              <div className={`border rounded-lg p-2 ${item.selected_range === 'manual' ? 'border-indigo-500 bg-indigo-50' : 'border-slate-200'}`}>
-                                <div className="text-xs font-semibold text-slate-700 mb-2">Manuel Fiyat</div>
+                              <div className={`border rounded-lg p-2 ${item.selected_range === 'manual' ? 'border-primary bg-secondary' : 'border-border'}`}>
+                                <div className="text-xs font-semibold text-muted-foreground mb-2">Manuel Fiyat</div>
                                 <Input type="number" step="0.01" value={item.manual_price || ''} onChange={(e) => handleManualPriceChange(uploadedData.indexOf(item), e.target.value)} placeholder="Fiyat girin" className="h-8 text-xs mb-2" />
                                 {item.manual_price > 0 && (
                                   <div className="flex items-center justify-between mb-2">
-                                    <div className={`text-xs font-semibold ${(item.manual_profit || 0) > 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                                    <div className={`text-xs font-semibold ${(item.manual_profit || 0) > 0 ? 'text-green-600' : 'text-red-600'}`}>
                                       {(item.manual_profit || 0) > 0 ? '+' : ''}₺{(item.manual_profit || 0).toFixed(2)} (%{(item.manual_profit_rate || 0).toFixed(1)})
                                     </div>
                                   </div>
@@ -1012,9 +1097,9 @@ export default function AdvantageProductTag() {
         {uploadedData.length === 0 && (
           <Card>
             <CardContent className="p-12 text-center">
-              <Upload className="h-16 w-16 text-slate-300 mx-auto mb-4" />
-              <p className="text-slate-500 mb-2">Henüz dosya yüklenmedi</p>
-              <p className="text-sm text-slate-400">Platform seçip tarih aralığı belirledikten sonra Excel dosyasını yükleyin</p>
+              <Upload className="h-16 w-16 text-muted-foreground/50 mx-auto mb-4" />
+              <p className="text-muted-foreground mb-2">Henüz dosya yüklenmedi</p>
+              <p className="text-sm text-muted-foreground/70">Platform seçip tarih aralığı belirledikten sonra Excel dosyasını yükleyin</p>
             </CardContent>
           </Card>
         )}

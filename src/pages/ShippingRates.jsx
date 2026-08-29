@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { db } from '@/api/db';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Pencil, Trash2, Truck, Package } from 'lucide-react';
+import { Plus, Pencil, Trash2, Package } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -9,6 +9,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import SearchInput from '@/components/ui/SearchInput';
 import DataTable from '@/components/ui/DataTable';
+import FiltreEtiketi from '@/components/ui/FiltreEtiketi';
 import ShippingRateModal from '@/components/modals/ShippingRateModal';
 import ImportExport from '@/components/ImportExport';
 import { toast } from 'sonner';
@@ -25,6 +26,9 @@ export default function ShippingRates() {
   const [typeFilter, setTypeFilter] = useState('all');
   const [companyFilter, setCompanyFilter] = useState('all');
   const [sourceFilter, setSourceFilter] = useState('all');
+  const [sameDayFilter, setSameDayFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [sortFilter, setSortFilter] = useState('default');
   const [page, setPage] = useState(1);
   const pageSize = 20;
   const [modalOpen, setModalOpen] = useState(false);
@@ -65,6 +69,34 @@ export default function ShippingRates() {
   });
 
   const platforms = rawPlatforms.filter((p, idx, arr) => arr.findIndex(x => x.name === p.name) === idx);
+
+  // Barem sinirlari (barem1_min/max, barem2_min/max, barem_max_desi) sistem
+  // platformunda tanimli; Fiyatlar ve Hesaplayici da bunu boyle okuyor.
+  const { data: adminPlatforms = [] } = useQuery({
+    queryKey: ['adminPlatforms'],
+    queryFn: () => Platform.filter({ is_system_admin: true }),
+  });
+
+  const baremAyari = React.useMemo(() => {
+    const harita = {};
+    for (const p of adminPlatforms) harita[p.platform_type] = p;
+    // Sistem sablonu yoksa kullanicinin kendi platformuna dus
+    for (const p of platforms) if (!harita[p.platform_type]) harita[p.platform_type] = p;
+    return harita;
+  }, [adminPlatforms, platforms]);
+
+  const paraYaz = (v) =>
+    Number(v ?? 0).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+  // Barem tarifesi desiye degil SATIS FIYATINA gore gecerli; bu aralik
+  // tabloda hic gorunmuyordu.
+  const fiyatAraligi = (row) => {
+    const ayar = baremAyari[row.platform_type];
+    if (!ayar) return '—';
+    if (row.rate_type === 'barem1') return `${paraYaz(ayar.barem1_min)} – ${paraYaz(ayar.barem1_max)} ₺`;
+    if (row.rate_type === 'barem2') return `${paraYaz(ayar.barem2_min)} – ${paraYaz(ayar.barem2_max)} ₺`;
+    return '—';
+  };
 
   const { data: shippingCompanies = [] } = useQuery({
     queryKey: ['shipping-companies'],
@@ -207,6 +239,18 @@ export default function ShippingRates() {
     if (typeFilter !== 'all') result = result.filter(r => r.rate_type === typeFilter);
     if (companyFilter !== 'all') result = result.filter(r => r.shipping_company === companyFilter);
     if (sourceFilter === 'manual') result = result.filter(r => r.is_manual === true);
+    if (sourceFilter === 'system') result = result.filter(r => r.is_admin_created === true);
+    if (sameDayFilter !== 'all') {
+      const istenen = sameDayFilter === 'yes';
+      result = result.filter(r => !!r.same_day_delivery === istenen);
+    }
+    if (statusFilter !== 'all') {
+      const aktifMi = statusFilter === 'active';
+      result = result.filter(r => (r.is_active !== false) === aktifMi);
+    }
+
+    if (sortFilter === 'desi_asc') return result.sort((a, b) => (a.desi || 0) - (b.desi || 0));
+    if (sortFilter === 'price_desc') return result.sort((a, b) => (b.price || 0) - (a.price || 0));
 
     return result.sort((a, b) => {
       if (a.platform_name !== b.platform_name) return a.platform_name?.localeCompare(b.platform_name);
@@ -216,14 +260,14 @@ export default function ShippingRates() {
       }
       return (a.desi_min || 0) - (b.desi_min || 0);
     });
-  }, [shippingRates, search, platformFilter, typeFilter, userRole, userEmail, companyFilter, sourceFilter]);
+  }, [shippingRates, search, platformFilter, typeFilter, userRole, userEmail, companyFilter, sourceFilter, sameDayFilter, statusFilter, sortFilter]);
 
   const paginatedRates = filteredRates.slice((page - 1) * pageSize, page * pageSize);
 
   const getRateTypeBadge = (type) => {
     switch (type) {
-      case 'barem1': return <Badge className="bg-emerald-100 text-emerald-700">Barem 1</Badge>;
-      case 'barem2': return <Badge className="bg-blue-100 text-blue-700">Barem 2</Badge>;
+      case 'barem1': return <Badge className="bg-secondary text-muted-foreground">Barem 1</Badge>;
+      case 'barem2': return <Badge className="bg-border text-foreground">Barem 2</Badge>;
       default: return <Badge variant="outline">Desi</Badge>;
     }
   };
@@ -237,8 +281,9 @@ export default function ShippingRates() {
 
   const columns = [
     {
-      header: <input type="checkbox" checked={selectedIds.length === paginatedRates.length && paginatedRates.length > 0} onChange={toggleSelectAll} className="rounded border-gray-300" />,
-      cell: (row) => <input type="checkbox" checked={selectedIds.includes(row.id)} onChange={() => toggleSelect(row.id)} className="rounded border-gray-300" />
+      id: '__select',
+      header: <input type="checkbox" checked={selectedIds.length === paginatedRates.length && paginatedRates.length > 0} onChange={toggleSelectAll} className="rounded border-input" />,
+      cell: (row) => <input type="checkbox" checked={selectedIds.includes(row.id)} onChange={() => toggleSelect(row.id)} className="rounded border-input" />
     },
     { header: 'Platform', accessor: 'platform_name', cell: (row) => <span className="font-medium">{row.platform_name}</span> },
     { header: 'Kargo Firması', accessor: 'shipping_company' },
@@ -255,11 +300,31 @@ export default function ShippingRates() {
         </div>
       )
     },
-    { header: 'Desi', cell: (row) => row.rate_type === 'desi' ? `${row.desi || 0} desi` : '-' },
+    {
+      id: 'fiyat_araligi',
+      header: 'Fiyat Aralığı',
+      cell: (row) => {
+        const deger = fiyatAraligi(row);
+        return deger === '—'
+          ? <span className="text-muted-foreground/70">—</span>
+          : <span className="whitespace-nowrap">{deger}</span>;
+      },
+    },
+    {
+      id: 'desi',
+      header: 'Desi',
+      cell: (row) => {
+        if (row.rate_type === 'desi') return `${row.desi || 0} desi`;
+        // Barem satirlarinda barem'in gecerli oldugu ust desi siniri
+        const ayar = baremAyari[row.platform_type];
+        return ayar?.barem_max_desi ? `≤ ${ayar.barem_max_desi}` : '-';
+      },
+    },
     { header: 'Ücret', accessor: 'price', cell: (row) => <span className="font-semibold">₺{row.price?.toFixed(2)}</span> },
     { header: 'KDV', accessor: 'vat_rate', cell: (row) => `%${row.vat_rate || 20}` },
-    { header: 'Durum', cell: (row) => <Badge variant={row.is_active !== false ? 'default' : 'secondary'}>{row.is_active !== false ? 'Aktif' : 'Pasif'}</Badge> },
+    { id: 'durum', header: 'Durum', cell: (row) => <Badge variant={row.is_active !== false ? 'default' : 'secondary'}>{row.is_active !== false ? 'Aktif' : 'Pasif'}</Badge> },
     {
+      id: 'islemler',
       header: 'İşlemler',
       cell: (row) => {
         const canEdit = userRole === 'admin' || (row.created_by === userEmail && row.is_manual);
@@ -272,13 +337,17 @@ export default function ShippingRates() {
             </Button>
             {canDelete && (
               <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); setDeleteId(row.id); }}>
-                <Trash2 className="h-4 w-4 text-rose-500" />
+                <Trash2 className="h-4 w-4 text-red-500" />
               </Button>
             )}
           </div>
         );
       }
-    }
+    },
+    // ── Eklenebilir sutunlar: varsayilanda gizli, panelden acilir ──
+    { id: 'same_day_delivery', header: 'Bugün Kargoda', optional: true, cell: (row) => row.same_day_delivery ? 'Evet' : 'Hayır' },
+    { id: 'is_manual', header: 'Kaynak', optional: true, cell: (row) => row.is_manual ? 'Manuel' : 'Sistem' },
+    { id: 'updated_date', header: 'Güncellenme Tarihi', optional: true, cell: (row) => row.updated_date ? new Date(row.updated_date).toLocaleDateString('tr-TR') : '-' },
   ];
 
   const exportColumns = [
@@ -319,14 +388,12 @@ export default function ShippingRates() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-indigo-50/30">
-      <div className="max-w-[1400px] mx-auto px-3 sm:px-6 py-5 sm:py-8">
+    <div className="min-h-screen bg-secondary">
+      <div className="ph-page-flow mx-auto">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
           <div>
-            <h1 className="text-3xl font-bold text-slate-900 tracking-tight flex items-center gap-3">
-              <Truck className="h-8 w-8 text-indigo-600" />Kargo Tarifeleri
-            </h1>
-            <p className="text-slate-500 mt-1">
+            <h1 className="ph-title">Kargo Tarifeleri</h1>
+            <p className="ph-subtitle">
               {filteredRates.length} tarife
               {userRole === 'admin' && <span className="ml-4 text-xs font-medium">👨‍💼 Sistem Yöneticisi Paneli</span>}
             </p>
@@ -337,66 +404,105 @@ export default function ShippingRates() {
                 <Trash2 className="h-4 w-4" />Seçilenleri Sil ({selectedIds.length})
               </Button>
             )}
-            <ImportExport data={filteredRates} columns={exportColumns} templateColumns={templateColumns} templateInfoData={templateInfoData} filename="kargo_tarifeleri" onImport={handleImport} />
+            <ImportExport pageKey="kargo-tarifeleri" data={filteredRates} columns={exportColumns} templateColumns={templateColumns} templateInfoData={templateInfoData} filename="kargo_tarifeleri" onImport={handleImport} />
             {userRole === 'admin' && (
-              <Button onClick={() => { setEditingRate(null); setIsSystemRate(true); setModalOpen(true); }} variant="outline" className="gap-2 border-orange-300 text-orange-700 hover:bg-orange-50">
+              <Button onClick={() => { setEditingRate(null); setIsSystemRate(true); setModalOpen(true); }} variant="outline" className="gap-2 border-input text-muted-foreground hover:bg-secondary">
                 <Plus className="h-4 w-4" />Sistem Tarifesi Ekle
               </Button>
             )}
-            <Button onClick={() => { setEditingRate(null); setIsSystemRate(false); setModalOpen(true); }} className="bg-indigo-600 hover:bg-indigo-700 gap-2">
+            <Button onClick={() => { setEditingRate(null); setIsSystemRate(false); setModalOpen(true); }} className="bg-primary hover:bg-black dark:hover:bg-white/90 gap-2">
               <Plus className="h-4 w-4" />Manuel Tarife Ekle
             </Button>
           </div>
         </div>
 
         {userRole === 'admin' && (
-          <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 mb-6">
-            <h3 className="font-semibold text-slate-900 text-sm mb-2">⚙️ Sistem Yöneticisi</h3>
-            <p className="text-sm text-slate-600">Trendyol ve HepsiBurada kargo tarifelerini Excel'den yükleyebilirsiniz. Yüklenen tarifeler kullanıcılar tarafından görüntülenebilir ancak düzenlenemez.</p>
+          <div className="bg-secondary border border-border rounded-2xl p-4 mb-6">
+            <h3 className="font-semibold text-foreground text-sm mb-2">⚙️ Sistem Yöneticisi</h3>
+            <p className="text-sm text-muted-foreground">Trendyol ve HepsiBurada kargo tarifelerini Excel'den yükleyebilirsiniz. Yüklenen tarifeler kullanıcılar tarafından görüntülenebilir ancak düzenlenemez.</p>
           </div>
         )}
 
-        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 mb-6">
-          <div className="flex flex-col sm:flex-row gap-4">
-            <SearchInput value={search} onChange={setSearch} placeholder="Platform, firma veya desi ara (örn: 4, 4 desi)..." className="flex-1" />
-            <Select value={platformFilter} onValueChange={setPlatformFilter}>
-              <SelectTrigger className="w-full sm:w-48"><SelectValue placeholder="Platform" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Tüm Platformlar</SelectItem>
-                <SelectItem value="trendyol">Trendyol</SelectItem>
-                <SelectItem value="hepsiburada">HepsiBurada</SelectItem>
-                <SelectItem value="website">Web Sitesi</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={typeFilter} onValueChange={setTypeFilter}>
-              <SelectTrigger className="w-full sm:w-40"><SelectValue placeholder="Tip" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Tüm Tipler</SelectItem>
-                <SelectItem value="barem1">Barem 1</SelectItem>
-                <SelectItem value="barem2">Barem 2</SelectItem>
-                <SelectItem value="desi">Desi</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={companyFilter} onValueChange={(v) => { setCompanyFilter(v); setSourceFilter('all'); }}>
-              <SelectTrigger className="w-full sm:w-48"><SelectValue placeholder="Kargo Firması" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Tüm Firmalar</SelectItem>
-                {[...new Set(shippingRates.map(r => r.shipping_company).filter(Boolean))].sort().map(company => (
-                  <SelectItem key={company} value={company}>{company}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={sourceFilter} onValueChange={(v) => { setSourceFilter(v); setCompanyFilter('all'); }}>
-              <SelectTrigger className="w-full sm:w-52"><SelectValue placeholder="Kaynak" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Tüm Tarifeler</SelectItem>
-                <SelectItem value="manual">📋 Manuel Anlaşmalı Fiyatlar</SelectItem>
-              </SelectContent>
-            </Select>
+        <div className="rounded-[18px] border border-border bg-card p-5 mb-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <SearchInput value={search} onChange={setSearch} placeholder="Platform, firma veya desi ara (örn: 4, 4 desi)..." className="sm:col-span-2" />
+            <FiltreEtiketi ad="Platform">
+              <Select value={platformFilter} onValueChange={setPlatformFilter}>
+                <SelectTrigger className="w-full"><SelectValue placeholder="Platform" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tüm Platformlar</SelectItem>
+                  <SelectItem value="trendyol">Trendyol</SelectItem>
+                  <SelectItem value="hepsiburada">HepsiBurada</SelectItem>
+                  <SelectItem value="website">Web Sitesi</SelectItem>
+                </SelectContent>
+              </Select>
+            </FiltreEtiketi>
+            <FiltreEtiketi ad="Tarife Tipi">
+              <Select value={typeFilter} onValueChange={setTypeFilter}>
+                <SelectTrigger className="w-full"><SelectValue placeholder="Tip" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tüm Tipler</SelectItem>
+                  <SelectItem value="barem1">Barem 1</SelectItem>
+                  <SelectItem value="barem2">Barem 2</SelectItem>
+                  <SelectItem value="desi">Desi</SelectItem>
+                </SelectContent>
+              </Select>
+            </FiltreEtiketi>
+            <FiltreEtiketi ad="Kargo Firması">
+              <Select value={companyFilter} onValueChange={(v) => { setCompanyFilter(v); setSourceFilter('all'); }}>
+                <SelectTrigger className="w-full"><SelectValue placeholder="Kargo Firması" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tüm Firmalar</SelectItem>
+                  {[...new Set(shippingRates.map(r => r.shipping_company).filter(Boolean))].sort().map(company => (
+                    <SelectItem key={company} value={company}>{company}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </FiltreEtiketi>
+            <FiltreEtiketi ad="Kaynak">
+              <Select value={sourceFilter} onValueChange={(v) => { setSourceFilter(v); setCompanyFilter('all'); }}>
+                <SelectTrigger className="w-full"><SelectValue placeholder="Kaynak" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tüm Tarifeler</SelectItem>
+                  <SelectItem value="manual">📋 Manuel Anlaşmalı Fiyatlar</SelectItem>
+                  <SelectItem value="system">⚙️ Sistem Tarifeleri</SelectItem>
+                </SelectContent>
+              </Select>
+            </FiltreEtiketi>
+            <FiltreEtiketi ad="Bugün Kargoda">
+              <Select value={sameDayFilter} onValueChange={setSameDayFilter}>
+                <SelectTrigger className="w-full"><SelectValue placeholder="Bugün Kargoda" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tümü</SelectItem>
+                  <SelectItem value="yes">Evet</SelectItem>
+                  <SelectItem value="no">Hayır</SelectItem>
+                </SelectContent>
+              </Select>
+            </FiltreEtiketi>
+            <FiltreEtiketi ad="Durum">
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-full"><SelectValue placeholder="Durum" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tümü</SelectItem>
+                  <SelectItem value="active">Aktif</SelectItem>
+                  <SelectItem value="passive">Pasif</SelectItem>
+                </SelectContent>
+              </Select>
+            </FiltreEtiketi>
+            <FiltreEtiketi ad="Sırala">
+              <Select value={sortFilter} onValueChange={setSortFilter}>
+                <SelectTrigger className="w-full"><SelectValue placeholder="Sırala" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="default">Varsayılan</SelectItem>
+                  <SelectItem value="desi_asc">Desi: küçük → büyük</SelectItem>
+                  <SelectItem value="price_desc">Ücret: yüksek → düşük</SelectItem>
+                </SelectContent>
+              </Select>
+            </FiltreEtiketi>
           </div>
         </div>
 
-        <DataTable columns={columns} data={paginatedRates} isLoading={isLoading} page={page} pageSize={pageSize} totalItems={filteredRates.length} onPageChange={setPage} emptyMessage="Kargo tarifesi bulunamadı" rowClassName={(row) => row.is_manual ? "bg-amber-50 hover:bg-amber-100/70" : "hover:bg-slate-50/50"} />
+        <DataTable pageKey="kargo-tarifeleri" columns={columns} data={paginatedRates} isLoading={isLoading} page={page} pageSize={pageSize} totalItems={filteredRates.length} onPageChange={setPage} emptyMessage="Kargo tarifesi bulunamadı" rowClassName={(row) => row.is_manual ? "bg-amber-50 dark:bg-amber-950/30 hover:bg-amber-100/70 dark:hover:bg-amber-900/40" : "hover:bg-secondary/50"} />
 
         <ShippingRateModal open={modalOpen} onOpenChange={(open) => { setModalOpen(open); if (!open) setIsSystemRate(false); }} shippingRate={editingRate} platforms={platforms} onSave={(data) => saveMutation.mutate({ ...data, is_admin_created: isSystemRate, is_manual: !isSystemRate })} isSaving={saveMutation.isPending} isAdmin={userRole === 'admin'} isSystemRate={isSystemRate} />
 
@@ -405,7 +511,7 @@ export default function ShippingRates() {
             <AlertDialogHeader><AlertDialogTitle>Tarifeyi Sil</AlertDialogTitle><AlertDialogDescription>Bu kargo tarifesini silmek istediğinizden emin misiniz?</AlertDialogDescription></AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel>İptal</AlertDialogCancel>
-              <AlertDialogAction onClick={() => deleteMutation.mutate(deleteId)} className="bg-rose-600 hover:bg-rose-700">Sil</AlertDialogAction>
+              <AlertDialogAction onClick={() => deleteMutation.mutate(deleteId)} className="bg-red-600 hover:bg-red-700">Sil</AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
@@ -415,7 +521,7 @@ export default function ShippingRates() {
             <AlertDialogHeader><AlertDialogTitle>Toplu Tarife Silme</AlertDialogTitle><AlertDialogDescription>{selectedIds.length} tarifeyi silmek istediğinizden emin misiniz?</AlertDialogDescription></AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel>İptal</AlertDialogCancel>
-              <AlertDialogAction onClick={() => bulkDeleteMutation.mutate(selectedIds)} className="bg-rose-600 hover:bg-rose-700">Sil</AlertDialogAction>
+              <AlertDialogAction onClick={() => bulkDeleteMutation.mutate(selectedIds)} className="bg-red-600 hover:bg-red-700">Sil</AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
@@ -425,14 +531,14 @@ export default function ShippingRates() {
             <DialogHeader><DialogTitle>Excel İçe Aktarma İşleniyor...</DialogTitle></DialogHeader>
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <span className="text-sm text-slate-500">İlerleme</span>
-                <span className="text-sm font-bold text-indigo-600">{importProgress.current} / {importProgress.total}</span>
+                <span className="text-sm text-muted-foreground">İlerleme</span>
+                <span className="text-sm font-bold text-foreground">{importProgress.current} / {importProgress.total}</span>
               </div>
-              <div className="w-full bg-slate-200 rounded-full h-4 overflow-hidden">
-                <div className="bg-indigo-600 h-4 rounded-full transition-all duration-300" style={{ width: `${(importProgress.current / (importProgress.total || 1)) * 100}%` }} />
+              <div className="w-full bg-border rounded-full h-4 overflow-hidden">
+                <div className="bg-primary h-4 rounded-full transition-all duration-300" style={{ width: `${(importProgress.current / (importProgress.total || 1)) * 100}%` }} />
               </div>
               <div className="text-center">
-                <p className="text-3xl font-bold text-indigo-600">%{Math.round((importProgress.current / (importProgress.total || 1)) * 100)}</p>
+                <p className="text-3xl font-bold text-foreground">%{Math.round((importProgress.current / (importProgress.total || 1)) * 100)}</p>
               </div>
             </div>
           </DialogContent>

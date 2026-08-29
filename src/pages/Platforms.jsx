@@ -5,6 +5,7 @@ import { Store, Check, X, Settings2, Truck } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
 import PlatformSettingsModal from '@/components/modals/PlatformSettingsModal';
+import { hesaplaPlatformIstatistigi } from '@/lib/platformIstatistigi';
 
 const PlatformEntity = db.entities.Platform;
 
@@ -14,7 +15,7 @@ const PLATFORM_DEFAULTS = [
     name: 'Trendyol',
     code: 'trendyol',
     color: 'from-orange-500 to-orange-600',
-    bgColor: 'bg-orange-50',
+    bgColor: 'bg-orange-50 dark:bg-orange-950/30',
     borderColor: 'border-orange-200',
     badgeColor: 'bg-orange-100 text-orange-700',
   },
@@ -22,19 +23,19 @@ const PLATFORM_DEFAULTS = [
     platform_type: 'hepsiburada',
     name: 'HepsiBurada',
     code: 'hepsiburada',
-    color: 'from-yellow-500 to-orange-500',
-    bgColor: 'bg-yellow-50',
-    borderColor: 'border-yellow-200',
-    badgeColor: 'bg-yellow-100 text-yellow-700',
+    color: 'from-purple-500 to-purple-600',
+    bgColor: 'bg-purple-50 dark:bg-purple-950/30',
+    borderColor: 'border-purple-200',
+    badgeColor: 'bg-purple-100 text-purple-700',
   },
   {
     platform_type: 'website',
     name: 'Web Sitesi',
     code: 'website',
-    color: 'from-indigo-500 to-purple-600',
-    bgColor: 'bg-indigo-50',
-    borderColor: 'border-indigo-200',
-    badgeColor: 'bg-indigo-100 text-indigo-700',
+    color: 'bg-border',
+    bgColor: 'bg-secondary',
+    borderColor: 'border-border',
+    badgeColor: 'bg-secondary text-foreground',
   }
 ];
 
@@ -49,6 +50,7 @@ const SYSTEM_FIELDS = [
 export default function Platforms() {
   const queryClient = useQueryClient();
   const [userEmail, setUserEmail] = useState(null);
+  const [authHatasi, setAuthHatasi] = useState(null);
   const [user, setUser] = useState(null);
   const [selectedPlatform, setSelectedPlatform] = useState(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -57,7 +59,11 @@ export default function Platforms() {
     db.auth.me().then(u => {
       setUserEmail(u.email);
       setUser(u);
-    }).catch(() => {});
+    }).catch((err) => {
+      // Onceden bu hata sessizce yutuluyordu: userEmail hic dolmadigi icin
+      // sayfa sonsuza kadar spinner gosteriyordu.
+      setAuthHatasi(err?.message || 'Oturum bilgisi alinamadi.');
+    });
   }, []);
 
   const isAdmin = user?.role === 'admin';
@@ -100,6 +106,24 @@ export default function Platforms() {
     },
     enabled: !!userEmail,
   });
+
+  // Prototipteki "Fiyat kaydı" ve "Ortalama komisyon" satirlari.
+  // Komisyon orani calculation_details icinde JSON METNI olarak duruyor
+  // (ust seviye commission_rate sutunu doldurulmuyor), bu yuzden cozup
+  // okuyoruz. Sadece bu iki sutunu cekiyoruz — tum satiri degil.
+  const { data: fiyatKayitlari = [] } = useQuery({
+    queryKey: ['platformIstatistik', userEmail],
+    queryFn: () => db.entities.ProductPrice.filter(
+      { created_by: userEmail }, '-created_at', 10000, 'platform_name, calculation_details'
+    ),
+    enabled: !!userEmail,
+    staleTime: 60_000,
+  });
+
+  const platformIstatistigi = React.useMemo(
+    () => hesaplaPlatformIstatistigi(fiyatKayitlari),
+    [fiyatKayitlari]
+  );
 
   const [initialized, setInitialized] = useState(false);
 
@@ -194,23 +218,41 @@ export default function Platforms() {
     }
   };
 
+  if (authHatasi) {
+    return (
+      <div className="min-h-screen bg-secondary flex items-center justify-center px-6">
+        <div className="ph-card max-w-md w-full text-center">
+          <p className="text-[15px] font-semibold text-foreground">Platformlar açılamadı</p>
+          <p className="mt-2 text-[13.5px] leading-relaxed text-muted-foreground">
+            Oturum bilgisi alınamadı, bu yüzden platformların yüklenemedi.
+            Genellikle oturumun sona ermesinden kaynaklanır.
+          </p>
+          <p className="mt-2 text-xs text-muted-foreground/70">{authHatasi}</p>
+          <button
+            onClick={() => { window.location.href = '/login'; }}
+            className="mt-5 h-[38px] px-4 rounded-[11px] bg-primary text-primary-foreground text-[13.5px] font-semibold hover:bg-black dark:hover:bg-white/90 transition-colors"
+          >
+            Tekrar giriş yap
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   if (isLoading || !userEmail) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-indigo-50/30 flex items-center justify-center">
-        <div className="w-8 h-8 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin" />
+      <div className="min-h-screen bg-secondary flex items-center justify-center">
+        <div className="w-8 h-8 border-4 border-border border-t-gray-900 rounded-full animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-indigo-50/30">
-      <div className="max-w-[1400px] mx-auto px-6 py-8">
+    <div className="min-h-screen bg-secondary">
+      <div className="ph-page-flow mx-auto">
         <div className="mb-10">
-          <h1 className="text-3xl font-bold text-slate-900 tracking-tight flex items-center gap-3">
-            <Store className="h-8 w-8 text-indigo-600" />
-            Platformlar
-          </h1>
-          <p className="text-slate-500 mt-1">Satış kanallarını aktif veya pasif yapın, kargo firması seçin</p>
+          <h1 className="ph-title">Platformlar</h1>
+          <p className="text-muted-foreground mt-1">Satış kanallarını aktif veya pasif yapın, kargo firması seçin</p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -223,8 +265,8 @@ export default function Platforms() {
             return (
               <div
                 key={def.platform_type}
-                className={`relative bg-white rounded-2xl border shadow-sm overflow-hidden transition-all duration-200 ${
-                  isActive ? 'border-slate-200 shadow-md' : 'border-slate-100 opacity-70'
+                className={`relative bg-card rounded-[18px] border overflow-hidden transition-colors duration-200 ${
+                  isActive ? 'border-border' : 'border-border opacity-60'
                 }`}
               >
                 <div className={`h-1.5 w-full bg-gradient-to-r ${def.color}`} />
@@ -232,10 +274,10 @@ export default function Platforms() {
                   <div className="flex items-start justify-between mb-5">
                     <div className="flex items-center gap-3">
                       <div className={`w-12 h-12 rounded-xl ${def.bgColor} flex items-center justify-center`}>
-                        <Store className={`h-6 w-6 ${def.platform_type === 'trendyol' ? 'text-orange-600' : def.platform_type === 'hepsiburada' ? 'text-yellow-600' : 'text-indigo-600'}`} />
+                        <Store className={`h-6 w-6 ${def.platform_type === 'trendyol' ? 'text-orange-600' : def.platform_type === 'hepsiburada' ? 'text-purple-600' : 'text-foreground'}`} />
                       </div>
                       <div>
-                        <h3 className="text-lg font-bold text-slate-900">{def.name}</h3>
+                        <h3 className="text-lg font-bold text-foreground">{def.name}</h3>
                         <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${def.badgeColor}`}>
                           {def.platform_type === 'website' ? 'E-Ticaret' : 'Pazaryeri'}
                         </span>
@@ -249,26 +291,49 @@ export default function Platforms() {
                         }}
                         disabled={!record || !userEmail}
                       />
-                      <span className="text-xs text-slate-400">{isActive ? 'Aktif' : 'Pasif'}</span>
+                      <span className="text-xs text-muted-foreground/70">{isActive ? 'Aktif' : 'Pasif'}</span>
                     </div>
                   </div>
 
                   <div className="space-y-3 mb-5">
+                    {(() => {
+                      const ist = platformIstatistigi[def.name.toLowerCase()];
+                      const ortalama = ist?.ortalamaKomisyon ?? null;
+                      return (
+                        <>
+                          <div className="flex items-center justify-between gap-3 text-sm">
+                            <span className="text-muted-foreground/80">Fiyat kaydı</span>
+                            <span className="font-medium text-foreground tabular-nums">
+                              {ist ? ist.adet.toLocaleString('tr-TR') : '—'}
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-between gap-3 text-sm">
+                            <span className="text-muted-foreground/80">Ortalama komisyon</span>
+                            <span className="font-medium text-foreground tabular-nums">
+                              {ortalama === null
+                                ? '—'
+                                : `%${ortalama.toLocaleString('tr-TR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}`}
+                            </span>
+                          </div>
+                        </>
+                      );
+                    })()}
+
                     <div className="flex items-center gap-2 text-sm">
-                      <Truck className="h-4 w-4 text-slate-400 flex-shrink-0" />
+                      <Truck className="h-4 w-4 text-muted-foreground/70 flex-shrink-0" />
                       {hasShipping ? (
-                        <span className="text-slate-700 font-medium">{record.shipping_company_name}</span>
+                        <span className="text-muted-foreground font-medium">{record.shipping_company_name}</span>
                       ) : (
-                        <span className="text-slate-400 italic">Kargo firması seçilmedi</span>
+                        <span className="text-muted-foreground/70 italic">Kargo firması seçilmedi</span>
                       )}
                     </div>
 
                     {def.platform_type !== 'website' && (
                       <div className="flex items-center gap-2 text-sm">
                         {record?.use_barem && !record?.use_custom_shipping_price ? (
-                          <><Check className="h-4 w-4 text-emerald-500 flex-shrink-0" /><span className="text-slate-600">Barem aktif</span></>
+                          <><Check className="h-4 w-4 text-green-500 flex-shrink-0" /><span className="text-muted-foreground">Barem aktif</span></>
                         ) : (
-                          <><X className="h-4 w-4 text-slate-300 flex-shrink-0" /><span className="text-slate-400">Barem aktif değil</span></>
+                          <><X className="h-4 w-4 text-muted-foreground/50 flex-shrink-0" /><span className="text-muted-foreground/70">Barem aktif değil</span></>
                         )}
                       </div>
                     )}
@@ -276,16 +341,16 @@ export default function Platforms() {
                     {def.platform_type !== 'website' && (
                       <div className="flex items-center gap-2 text-sm">
                         {record?.has_same_day_delivery ? (
-                          <><Check className="h-4 w-4 text-emerald-500 flex-shrink-0" /><span className="text-slate-600">Bugün Kargoda aktif</span></>
+                          <><Check className="h-4 w-4 text-green-500 flex-shrink-0" /><span className="text-muted-foreground">Bugün Kargoda aktif</span></>
                         ) : (
-                          <><X className="h-4 w-4 text-slate-300 flex-shrink-0" /><span className="text-slate-400">Bugün Kargoda kapalı</span></>
+                          <><X className="h-4 w-4 text-muted-foreground/50 flex-shrink-0" /><span className="text-muted-foreground/70">Bugün Kargoda kapalı</span></>
                         )}
                       </div>
                     )}
                   </div>
 
                   {!canEdit && (
-                    <div className="bg-slate-50 border border-slate-100 rounded-xl px-3 py-2 mb-4 text-xs text-slate-500 flex items-center gap-2">
+                    <div className="bg-secondary border border-border rounded-xl px-3 py-2 mb-4 text-xs text-muted-foreground flex items-center gap-2">
                       <Settings2 className="h-3.5 w-3.5 flex-shrink-0" />
                       <span>Barem ücretleri, stopaj oranı ve hizmet bedelleri sistem yöneticisi tarafından belirlenir.</span>
                     </div>
@@ -297,8 +362,8 @@ export default function Platforms() {
                       disabled={!record}
                       className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all ${
                         canEdit
-                          ? 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm'
-                          : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                          ? 'bg-primary hover:bg-black dark:hover:bg-white/90 text-primary-foreground shadow-sm'
+                          : 'bg-secondary hover:bg-border text-muted-foreground'
                       }`}
                     >
                       <Settings2 className="h-4 w-4" />
@@ -311,7 +376,7 @@ export default function Platforms() {
           })}
         </div>
 
-        <div className="mt-8 bg-amber-50 border border-amber-200 rounded-2xl px-5 py-4 flex items-start gap-3">
+        <div className="mt-8 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50 rounded-2xl px-5 py-4 flex items-start gap-3">
           <Settings2 className="h-5 w-5 text-amber-600 mt-0.5 flex-shrink-0" />
           <div className="text-sm text-amber-800 space-y-2">
             <p className="font-semibold">Pazaryeri Platformları Hakkında</p>

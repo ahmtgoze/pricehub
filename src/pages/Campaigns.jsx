@@ -16,6 +16,8 @@ import { tr } from 'date-fns/locale';
 import { toast } from 'sonner';
 import * as XLSX from 'xlsx';
 import PriceDetailModal from '@/components/modals/PriceDetailModal';
+import BaremBadge from '@/components/ui/BaremBadge';
+import { baremSec, baremTavanFiyatlari, baremTarifesiSec } from '@/lib/baremKurali';
 
 const Campaign = db.entities.Campaign;
 let CampaignProduct;
@@ -66,8 +68,12 @@ export default function Campaigns() {
   const [originalExcelData, setOriginalExcelData] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCategory, setFilterCategory] = useState('');
+  const [siraSecimi, setSiraSecimi] = useState('default');
   const [bulkMinProfitRate, setBulkMinProfitRate] = useState('');
   const [bulkMinProfitAmount, setBulkMinProfitAmount] = useState('');
+  // Ust sinir: bos birakilirsa sinir yok. Min-max araligi disindaki urunler secilmez.
+  const [bulkMaxProfitRate, setBulkMaxProfitRate] = useState('');
+  const [bulkMaxProfitAmount, setBulkMaxProfitAmount] = useState('');
   const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0 });
   const [detailModal, setDetailModal] = useState({ open: false, product: null, priceData: null, calculationDetails: null });
 
@@ -253,6 +259,59 @@ export default function Campaigns() {
 
   const getPackageCost = (packageId) => (packages.find(p => p.id === packageId)?.total_cost) || 0;
 
+  /**
+   * Barem onerisi: kampanya fiyatinin etkin karsiligi desi tarifesine
+   * dusuyorsa, etkin fiyati barem esigine cekecek kampanya fiyatini onerir.
+   * Yalnizca ekranda gosterilir; Excel sablonuna dahil degildir.
+   */
+  const renderBaremOnerisi = (item, realIndex) => {
+    const mevcutFiyat = parseFloat(item.campaign_price) || 0;
+    if (!mevcutFiyat) return <span className="text-muted-foreground/70 text-xs">-</span>;
+
+    const mevcut = calculateProfit(mevcutFiyat, item);
+    if (!mevcut.breakdown) return <span className="text-muted-foreground/70 text-xs">-</span>;
+    if (mevcut.baremUsed === 'barem1' || mevcut.baremUsed === 'barem2') {
+      return <span className="text-muted-foreground/70 text-xs">-</span>;
+    }
+
+    const maks = parseFloat(item.max_price) || 0;
+    let oneri = null;
+    for (const [hedefEtkin, ad, tip] of [[BAREM2_UST, 'Barem 2', 'barem2'], [BAREM1_UST, 'Barem 1', 'barem1']]) {
+      const aday = etkinFiyatIcinKampanyaFiyati(hedefEtkin);
+      if (!aday || aday <= 0) continue;
+      if (aday >= mevcutFiyat) continue;          // fiyati dusurerek bareme inilir
+      if (maks > 0 && aday > maks) continue;      // max girilebilir asilmasin
+      const c = calculateProfit(aday, item);
+      if (c.baremUsed !== tip) continue;
+      if (c.profitRate <= mevcut.profitRate) continue;
+      if (!oneri || c.profitRate > oneri.profitRate) {
+        oneri = { fiyat: aday, profit: c.profit, profitRate: c.profitRate, ad };
+      }
+    }
+
+    if (!oneri) return <span className="text-muted-foreground/70 text-xs">-</span>;
+    const karArtisi = oneri.profitRate - mevcut.profitRate;
+
+    return (
+      <div className="border border-border rounded-lg p-2 bg-secondary text-left">
+        <div className="text-xs font-semibold text-foreground mb-1">{oneri.ad} Önerisi</div>
+        <div className="text-xs text-muted-foreground">Fiyat: ₺{oneri.fiyat.toFixed(2)}</div>
+        <div className="text-xs font-semibold text-green-600 mt-1">
+          +₺{oneri.profit.toFixed(2)} (%{oneri.profitRate.toFixed(1)})
+        </div>
+        <div className="text-xs font-medium text-foreground mt-1">+%{karArtisi.toFixed(1)} kâr artışı</div>
+        <Button
+          size="sm"
+          variant="outline"
+          className="w-full mt-2 h-7 text-xs"
+          onClick={() => handlePriceChange(realIndex, oneri.fiyat.toFixed(2))}
+        >
+          Uygula
+        </Button>
+      </div>
+    );
+  };
+
   const effectiveSellerPrice = (campaignPrice) => {
     const L = parseFloat(campaignPrice) || 0;
     if (L <= 0 || !managingCampaign) return 0;
@@ -322,6 +381,26 @@ export default function Campaigns() {
     return parseFloat(commRec?.commission_rate) || parseFloat(item.current_commission) || 0;
   };
 
+  // Barem esikleri platform kaydindan okunur (sayfaya sabit yazilmazdi).
+  const seciliPlatformKaydi = trendyolPlatforms.find(p => p.name === selectedPlatform) || trendyolPlatforms[0];
+  const [BAREM2_UST, BAREM1_UST] = baremTavanFiyatlari(seciliPlatformKaydi);
+
+  /**
+   * effectiveSellerPrice'in tersi: hedeflenen ETKIN fiyati veren kampanya
+   * fiyatini bulur. Barem esikleri etkin fiyata gore degerlendirildigi icin
+   * oneri fiyatini dogru hesaplamak adina gerekli.
+   */
+  const etkinFiyatIcinKampanyaFiyati = (hedefEtkin) => {
+    if (!managingCampaign) return 0;
+    const d = parseFloat(managingCampaign.discount_amount) || 0;
+    const cov = (parseFloat(managingCampaign.trendyol_coverage_rate) || 0) / 100;
+    if (managingCampaign.discount_type === 'percent') {
+      const k = 1 - (d / 100) * (1 - cov);
+      return k > 0 ? hedefEtkin / k : 0;
+    }
+    return hedefEtkin + d * (1 - cov);
+  };
+
   const calculateProfit = (campaignPrice, item) => {
     try {
       const effPrice = effectiveSellerPrice(campaignPrice);
@@ -350,14 +429,17 @@ export default function Campaigns() {
       const extraCost = matchedProduct.extra_cost || 0;
 
       let shippingCost = 0, shippingVatRate = 20, baremUsed = 'desi';
-      const canUseBarem = !matchedProduct.special_shipping && !matchedProduct.multi_package;
-      if (canUseBarem && effPrice > 0) {
-        if (effPrice <= 149.99) {
-          const r = platformShippingRates.find(x => x.rate_type === 'barem1');
-          if (r) { shippingCost = r.price; shippingVatRate = r.vat_rate || 20; baremUsed = 'barem1'; }
-        } else if (effPrice >= 150 && effPrice <= 299.99) {
-          const r = platformShippingRates.find(x => x.rate_type === 'barem2');
-          if (r) { shippingCost = r.price; shippingVatRate = r.vat_rate || 20; baremUsed = 'barem2'; }
+      // Barem kurallari ortak modulde (src/lib/baremKurali.js): sinirlar
+      // platform kaydindan okunur, desi tavani ve use_barem kontrol edilir.
+      // Once bu sayfaya sabit yazilmisti ve HepsiBurada'da Trendyol'un
+      // bantlari uygulaniyordu.
+      const secilenBarem = baremSec(platform, matchedProduct, effPrice, matchedProduct?.desi);
+      if (secilenBarem) {
+        const baremRate = baremTarifesiSec(platformShippingRates, secilenBarem, matchedProduct?.same_day_delivery || false);
+        if (baremRate) {
+          shippingCost = baremRate.price;
+          shippingVatRate = baremRate.vat_rate || 20;
+          baremUsed = secilenBarem;
         }
       }
       if (shippingCost === 0) {
@@ -547,13 +629,19 @@ export default function Campaigns() {
   const handleBulkSelect = () => {
     const minRate = parseFloat(bulkMinProfitRate) || 0;
     const minAmount = parseFloat(bulkMinProfitAmount) || 0;
+    const maxRate = bulkMaxProfitRate !== '' ? parseFloat(bulkMaxProfitRate) : Infinity;
+    const maxAmount = bulkMaxProfitAmount !== '' ? parseFloat(bulkMaxProfitAmount) : Infinity;
+    const araliktaMi = (oran, tutar) =>
+      oran >= minRate && tutar >= minAmount &&
+      oran <= (Number.isNaN(maxRate) ? Infinity : maxRate) &&
+      tutar <= (Number.isNaN(maxAmount) ? Infinity : maxAmount);
     const visible = new Set(sortedData.map(i => i.barcode));
     const updated = uploadedData.map(item => {
       if (!visible.has(item.barcode)) return item;
       const price = item.campaign_price || item.max_price;
       if (!price || price <= 0) return item;
       const { profit, profitRate } = calculateProfit(price, item);
-      if (profitRate >= minRate && profit >= minAmount) return { ...item, selected_type: 'campaign', campaign_price: price };
+      if (araliktaMi(profitRate, profit)) return { ...item, selected_type: 'campaign', campaign_price: price };
       if (item.selected_type === 'campaign') return { ...item, selected_type: 'none' };
       return item;
     });
@@ -682,19 +770,47 @@ export default function Campaigns() {
     if (filterCategory) { const mp = getMatchedProduct(item); if ((mp?.category_name || item.category) !== filterCategory) return false; }
     return true;
   });
-  const sortedData = filteredData;
+  // Siralama: kar orani fiyat motorunu calistirdigi icin anahtar her
+  // karsilastirmada degil, satir basina BIR KEZ hesaplanip sirasi bulunuyor.
+  const sortedData = React.useMemo(() => {
+    if (siraSecimi === 'default') return filteredData;
+
+    const anahtarli = filteredData.map(item => {
+      let anahtar;
+      if (siraSecimi.startsWith('name')) {
+        anahtar = (item.product_name || '').toLocaleLowerCase('tr');
+      } else if (siraSecimi.startsWith('price')) {
+        anahtar = Number(item.campaign_price || item.max_price || 0);
+      } else {
+        anahtar = Number(calculateProfit(item.campaign_price || item.max_price, item)?.profitRate ?? 0);
+      }
+      return { item, anahtar };
+    });
+
+    const artan = siraSecimi.endsWith('asc');
+    anahtarli.sort((a, b) => {
+      if (typeof a.anahtar === 'string') {
+        return artan ? a.anahtar.localeCompare(b.anahtar, 'tr') : b.anahtar.localeCompare(a.anahtar, 'tr');
+      }
+      return artan ? a.anahtar - b.anahtar : b.anahtar - a.anahtar;
+    });
+    return anahtarli.map(x => x.item);
+    // calculateProfit her renderda yeniden tanimlaniyor; bagimliliga
+    // eklemek sonsuz yeniden hesaba yol acar, veri + secim yeterli.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filteredData, siraSecimi]);
   const allCategories = [...new Set(uploadedData.map(item => getMatchedProduct(item)?.category_name || item.category).filter(Boolean))].sort();
   const selectedCount = uploadedData.filter(i => i.selected_type === 'campaign').length;
 
   // ===================== RENDER: ÜRÜN YÖNETİMİ =====================
   if (managingCampaign) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-indigo-50/30">
-        <div className="max-w-[1600px] mx-auto px-6 py-8">
+      <div className="min-h-screen bg-secondary">
+        <div className="ph-page mx-auto">
           <Button variant="outline" onClick={closeManager} className="mb-4">← Kampanyalara Dön</Button>
           <div className="mb-6">
-            <h1 className="text-2xl font-bold text-slate-900">Ürün Ekle — {getTypeLabel(managingCampaign.campaign_type)}</h1>
-            <p className="text-slate-500 mt-1">{campaignTitle(managingCampaign)} · {safeDate(managingCampaign.start_date)} - {safeDate(managingCampaign.end_date)}</p>
+            <h1 className="ph-title">Ürün Ekle — {getTypeLabel(managingCampaign.campaign_type)}</h1>
+            <p className="text-muted-foreground mt-1">{campaignTitle(managingCampaign)} · {safeDate(managingCampaign.start_date)} - {safeDate(managingCampaign.end_date)}</p>
           </div>
 
           <Card className="mb-6">
@@ -703,7 +819,7 @@ export default function Campaigns() {
                 <div className="space-y-2">
                   <Label>Platform</Label>
                   {trendyolPlatforms.length === 1 ? (
-                    <div className="flex items-center h-10 px-3 border border-gray-200 rounded-xl bg-gray-50 text-sm font-medium">{trendyolPlatforms[0]?.name}</div>
+                    <div className="flex items-center h-10 px-3 border border-border rounded-xl bg-secondary text-sm font-medium">{trendyolPlatforms[0]?.name}</div>
                   ) : (
                     <Select value={selectedPlatform} onValueChange={setSelectedPlatform}>
                       <SelectTrigger><SelectValue placeholder="Platform" /></SelectTrigger>
@@ -714,10 +830,10 @@ export default function Campaigns() {
                 <div className="space-y-2 md:col-span-2">
                   <Label>Kampanya Excel'i (Trendyol'dan "Ürün Ekle" ile indirdiğin dosya)</Label>
                   <input type="file" accept=".xlsx,.xls" onChange={handleFileUpload}
-                    className="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100" />
+                    className="block w-full text-sm text-muted-foreground file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-secondary file:text-foreground hover:file:bg-border" />
                 </div>
               </div>
-              {uploadProgress.total > 0 && (<p className="text-sm text-indigo-600">Yükleniyor: {uploadProgress.current}/{uploadProgress.total}</p>)}
+              {uploadProgress.total > 0 && (<p className="text-sm text-muted-foreground">Yükleniyor: {uploadProgress.current}/{uploadProgress.total}</p>)}
             </CardContent>
           </Card>
 
@@ -732,24 +848,38 @@ export default function Campaigns() {
                     {allCategories.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
                   </SelectContent>
                 </Select>
-                <Button onClick={handleSmartAutoSelect} className="bg-violet-600 hover:bg-violet-700"><Sparkles className="h-4 w-4 mr-1" />Akıllı Otomatik Seç</Button>
+                <Select value={siraSecimi} onValueChange={setSiraSecimi}>
+                  <SelectTrigger className="w-56"><SelectValue placeholder="Sırala" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="default">Varsayılan</SelectItem>
+                    <SelectItem value="rate_desc">Kâr oranı: yüksek → düşük</SelectItem>
+                    <SelectItem value="rate_asc">Kâr oranı: düşük → yüksek</SelectItem>
+                    <SelectItem value="price_desc">Kampanya fiyatı: yüksek → düşük</SelectItem>
+                    <SelectItem value="price_asc">Kampanya fiyatı: düşük → yüksek</SelectItem>
+                    <SelectItem value="name_asc">Ürün adı: A → Z</SelectItem>
+                    <SelectItem value="name_desc">Ürün adı: Z → A</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Button onClick={handleSmartAutoSelect} className="bg-primary hover:bg-black dark:hover:bg-white/90"><Sparkles className="h-4 w-4 mr-1" />Akıllı Otomatik Seç</Button>
                 <div className="flex items-center gap-2">
                   <Input type="number" placeholder="min %" value={bulkMinProfitRate} onChange={(e) => setBulkMinProfitRate(e.target.value)} className="w-24" />
                   <Input type="number" placeholder="min TL" value={bulkMinProfitAmount} onChange={(e) => setBulkMinProfitAmount(e.target.value)} className="w-24" />
+                  <Input type="number" placeholder="maks %" value={bulkMaxProfitRate} onChange={(e) => setBulkMaxProfitRate(e.target.value)} className="w-24" />
+                  <Input type="number" placeholder="maks TL" value={bulkMaxProfitAmount} onChange={(e) => setBulkMaxProfitAmount(e.target.value)} className="w-24" />
                   <Button variant="outline" onClick={handleBulkSelect}>Toplu Seç</Button>
                 </div>
                 <div className="flex-1" />
-                <Badge className="bg-indigo-100 text-indigo-700">{selectedCount} seçili</Badge>
+                <Badge className="bg-primary text-primary-foreground">{selectedCount} seçili</Badge>
                 <Button onClick={handleSave} className="bg-green-600 hover:bg-green-700"><Check className="h-4 w-4 mr-1" />Kaydet</Button>
                 <Button onClick={handleExport} variant="outline"><Download className="h-4 w-4 mr-1" />Excel İndir</Button>
-                <Button onClick={handleDeleteExcel} variant="outline" className="text-rose-600 hover:text-rose-700"><Trash2 className="h-4 w-4 mr-1" />Excel'i Sil</Button>
+                <Button onClick={handleDeleteExcel} variant="outline" className="text-red-600 hover:text-red-700"><Trash2 className="h-4 w-4 mr-1" />Excel'i Sil</Button>
               </div>
 
               <Card>
                 <CardContent className="p-0 overflow-x-auto">
                   <table className="w-full text-sm">
-                    <thead className="bg-slate-50 border-b">
-                      <tr className="text-left text-slate-600">
+                    <thead className="bg-secondary border-b">
+                      <tr className="text-left text-muted-foreground">
                         <th className="p-3 w-10"></th>
                         <th className="p-3">Ürün</th>
                         <th className="p-3 text-right">Stok</th>
@@ -758,6 +888,7 @@ export default function Campaigns() {
                         <th className="p-3 text-right">Kampanya Fiyatı</th>
                         <th className="p-3 text-right">Net Kâr</th>
                         <th className="p-3 text-right">Kâr %</th>
+                        <th className="p-3 text-center min-w-[150px]">Barem Önerisi</th>
                         <th className="p-3 text-center">Detay</th>
                       </tr>
                     </thead>
@@ -770,25 +901,27 @@ export default function Campaigns() {
                         const overMax = item.max_price > 0 && parseFloat(item.campaign_price) > item.max_price;
                         const isSelected = item.selected_type === 'campaign';
                         return (
-                          <tr key={item.id || realIndex} className={`border-b hover:bg-slate-50 ${isSelected ? 'bg-indigo-50/40' : ''}`}>
+                          <tr key={item.id || realIndex} className={`border-b hover:bg-secondary ${isSelected ? 'bg-secondary' : ''}`}>
                             <td className="p-3"><input type="checkbox" checked={isSelected} onChange={() => handleSelect(realIndex)} className="h-4 w-4" /></td>
                             <td className="p-3">
-                              <div className="font-medium text-slate-800">{item.product_name || '-'}</div>
-                              <div className="text-xs text-slate-400">{item.barcode}{matched ? '' : ' · ⚠️ eşleşmedi'}</div>
+                              <div className="font-medium text-foreground">{item.product_name || '-'}</div>
+                              <div className="text-xs text-muted-foreground/70">{item.barcode}{matched ? '' : ' · ⚠️ eşleşmedi'}</div>
                             </td>
                             <td className="p-3 text-right">{item.current_stock}</td>
                             <td className="p-3 text-right">{Number(item.current_sale_price).toFixed(2)} ₺</td>
                             <td className="p-3 text-right font-medium">{Number(item.max_price).toFixed(2)} ₺</td>
                             <td className="p-3 text-right">
                               <Input type="number" value={item.campaign_price} onChange={(e) => handlePriceChange(realIndex, e.target.value)}
-                                className={`w-28 text-right ml-auto ${overMax ? 'border-rose-400' : ''}`} />
-                              {overMax && <div className="text-[10px] text-rose-500 mt-1">Max'ı aşıyor!</div>}
+                                className={`w-28 text-right ml-auto ${overMax ? 'border-red-400' : ''}`} />
+                              {overMax && <div className="text-[10px] text-red-500 mt-1">Max'ı aşıyor!</div>}
                             </td>
-                            <td className={`p-3 text-right font-semibold ${below ? 'text-rose-600' : 'text-emerald-600'}`}>{matched ? `${calc.profit.toFixed(2)} ₺` : '-'}</td>
-                            <td className={`p-3 text-right font-semibold ${below ? 'text-rose-600' : 'text-emerald-600'}`}>
+                            <td className={`p-3 text-right font-semibold ${below ? 'text-red-600' : 'text-green-600'}`}>{matched ? `${calc.profit.toFixed(2)} ₺` : '-'}</td>
+                            <td className={`p-3 text-right font-semibold ${below ? 'text-red-600' : 'text-green-600'}`}>
                               {matched ? `%${calc.profitRate.toFixed(1)}` : '-'}
-                              {below && <div className="text-[10px] text-rose-500">taban altı</div>}
+                              {matched && <BaremBadge barem={calc.baremUsed} className="ml-1" />}
+                              {below && <div className="text-[10px] text-red-500">taban altı</div>}
                             </td>
+                            <td className="p-3 text-center">{matched ? renderBaremOnerisi(item, realIndex) : <span className="text-muted-foreground/70 text-xs">-</span>}</td>
                             <td className="p-3 text-center"><Button size="sm" variant="ghost" onClick={() => openDetailModal(item)} disabled={!matched}><Info className="h-4 w-4" /></Button></td>
                           </tr>
                         );
@@ -801,7 +934,7 @@ export default function Campaigns() {
           )}
 
           {uploadedData.length === 0 && (
-            <Card><CardContent className="p-12 text-center text-slate-500">Bu kampanya için Excel yükleyin.</CardContent></Card>
+            <Card><CardContent className="p-12 text-center text-muted-foreground">Bu kampanya için Excel yükleyin.</CardContent></Card>
           )}
         </div>
 
@@ -818,14 +951,14 @@ export default function Campaigns() {
 
   // ===================== RENDER: KAMPANYA LİSTESİ + FORM =====================
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-indigo-50/30">
+    <div className="min-h-screen bg-secondary">
       <div className="max-w-[1200px] mx-auto px-6 py-8">
         <div className="mb-8 flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-slate-900">Kampanyalar</h1>
-            <p className="text-slate-500 mt-1">Kampanya oluşturun ve yönetin</p>
+            <h1 className="ph-title">Kampanyalar</h1>
+            <p className="text-muted-foreground mt-1">Kampanya oluşturun ve yönetin</p>
           </div>
-          <Button onClick={() => (showForm ? (resetForm(), setShowForm(false)) : openNew())} className="bg-indigo-600 hover:bg-indigo-700">
+          <Button onClick={() => (showForm ? (resetForm(), setShowForm(false)) : openNew())} className="bg-primary hover:bg-black dark:hover:bg-white/90">
             <Plus className="mr-2 h-4 w-4" />Yeni Kampanya
           </Button>
         </div>
@@ -878,7 +1011,7 @@ export default function Campaigns() {
                         </Select>
                       </div>
                     </div>
-                    <p className="text-xs text-slate-500 -mt-2">Sepet şartı yoksa (örn. düz %20 indirim) boş bırakın.</p>
+                    <p className="text-xs text-muted-foreground -mt-2">Sepet şartı yoksa (örn. düz %20 indirim) boş bırakın.</p>
                   </>
                 )}
 
@@ -905,14 +1038,14 @@ export default function Campaigns() {
                     <div className="relative">
                       <Input type="number" placeholder="Opsiyonel — örn. 40" value={formData.trendyol_coverage_rate}
                         onChange={(e) => setFormData({ ...formData, trendyol_coverage_rate: e.target.value === '' ? '' : parseFloat(e.target.value) })} />
-                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 font-medium">%</span>
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground font-medium">%</span>
                     </div>
-                    <p className="text-xs text-slate-500">Boş bırakılırsa karşılama yok sayılır. Örn: %40 → indirimin %40'ını Trendyol karşılar, kalanı satıcı.</p>
+                    <p className="text-xs text-muted-foreground">Boş bırakılırsa karşılama yok sayılır. Örn: %40 → indirimin %40'ını Trendyol karşılar, kalanı satıcı.</p>
                   </div>
                 )}
 
                 <div className="flex gap-3">
-                  <Button type="submit" className="bg-indigo-600 hover:bg-indigo-700">{editingId ? 'Güncelle' : 'Oluştur'}</Button>
+                  <Button type="submit" className="bg-primary hover:bg-black dark:hover:bg-white/90">{editingId ? 'Güncelle' : 'Oluştur'}</Button>
                   <Button type="button" variant="outline" onClick={() => { resetForm(); setShowForm(false); }}>İptal</Button>
                 </div>
               </form>
@@ -926,22 +1059,22 @@ export default function Campaigns() {
               <CardContent className="pt-6">
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1">
-                    <h3 className="text-lg font-semibold text-slate-900">{campaignTitle(campaign)}</h3>
+                    <h3 className="text-lg font-semibold text-foreground">{campaignTitle(campaign)}</h3>
                     <div className="flex gap-2 mt-2 flex-wrap">
-                      <Badge className="bg-indigo-100 text-indigo-700">{getTypeLabel(campaign.campaign_type)}</Badge>
+                      <Badge className="bg-secondary text-muted-foreground">{getTypeLabel(campaign.campaign_type)}</Badge>
                       {campaign.discount_type === 'percent'
                         ? <Badge variant="outline">%{campaign.discount_amount} indirim</Badge>
                         : <Badge variant="outline">{campaign.discount_amount} TL indirim</Badge>}
                       {campaign.cart_amount ? <Badge variant="outline">{campaign.cart_amount} TL {campaign.cart_condition === 'under' ? 'altı' : 'üzeri'}</Badge> : null}
                       {Number(campaign.trendyol_coverage_rate) > 0 ? <Badge className="bg-amber-100 text-amber-700">%{campaign.trendyol_coverage_rate} karşılama</Badge> : null}
-                      {campaign.is_active ? <Badge className="bg-green-100 text-green-700">Aktif</Badge> : <Badge className="bg-slate-200 text-slate-700">İnaktif</Badge>}
+                      {campaign.is_active ? <Badge className="bg-green-100 text-green-700">Aktif</Badge> : <Badge className="bg-border text-muted-foreground">İnaktif</Badge>}
                     </div>
-                    <p className="text-sm text-slate-500 mt-3">{safeDate(campaign.start_date)} - {safeDate(campaign.end_date)}</p>
+                    <p className="text-sm text-muted-foreground mt-3">{safeDate(campaign.start_date)} - {safeDate(campaign.end_date)}</p>
                   </div>
                   <div className="flex gap-2 shrink-0">
-                    <Button size="sm" className="bg-orange-500 hover:bg-orange-600" onClick={() => openManager(campaign)}><Plus className="h-4 w-4 mr-1" />Ürün Ekle</Button>
+                    <Button size="sm" className="bg-primary hover:bg-black dark:hover:bg-white/90" onClick={() => openManager(campaign)}><Plus className="h-4 w-4 mr-1" />Ürün Ekle</Button>
                     <Button size="sm" variant="outline" onClick={() => openEdit(campaign)}><Edit2 className="h-4 w-4" /></Button>
-                    <Button size="sm" variant="outline" className="text-rose-600 hover:text-rose-700" onClick={() => handleDelete(campaign.id)}><Trash2 className="h-4 w-4" /></Button>
+                    <Button size="sm" variant="outline" className="text-red-600 hover:text-red-700" onClick={() => handleDelete(campaign.id)}><Trash2 className="h-4 w-4" /></Button>
                   </div>
                 </div>
               </CardContent>
@@ -950,7 +1083,7 @@ export default function Campaigns() {
         </div>
 
         {campaigns.length === 0 && !showForm && (
-          <Card><CardContent className="p-12 text-center"><p className="text-slate-500">Henüz kampanya oluşturulmadı</p></CardContent></Card>
+          <Card><CardContent className="p-12 text-center"><p className="text-muted-foreground">Henüz kampanya oluşturulmadı</p></CardContent></Card>
         )}
       </div>
     </div>
