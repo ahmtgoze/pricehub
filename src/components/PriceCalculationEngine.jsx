@@ -641,14 +641,15 @@ export const calculateProductPrice = ({
     }
   }
   
+  // Fiyat yuvarlama kurali platform ayarindan gelir (kullanici belirler).
+  // Tanimli degilse eski davranis korunur: kurus < 0,50 ise ,49 degilse ,99.
   const roundToPrice = (price) => {
+    const kural = platform?.price_rounding || '49_99';
+    if (kural === 'yok') return Math.round(price * 100) / 100;
     const integer = Math.floor(price);
+    if (kural === 'hep_99') return integer + 0.99;
     const decimal = price - integer;
-    if (decimal < 0.50) {
-      return integer + 0.49;
-    } else {
-      return integer + 0.99;
-    }
+    return decimal < 0.50 ? integer + 0.49 : integer + 0.99;
   };
 
   const finalSalePrice = roundToPrice(result.salePriceInclVat);

@@ -199,6 +199,48 @@ console.log('\n═══ HEDEF KÂR ve YUVARLAMA ═══');
   dogru('21 fiyat ,49 veya ,99 ile bitiyor', kurus === 49 || kurus === 99, `fiyat: ${r.sale_price}`);
 }
 
+console.log('\n═══ FİYAT YUVARLAMA (platform ayarı) ═══');
+{
+  const kurus = (r) => Math.round((r.sale_price % 1) * 100);
+  const varsayilan = hesapla({ product: urun({ cost: 100, desi: 2 }), platform: TRENDYOL, commission: komisyon(20, 30) });
+  dogru('41 varsayılan kural → ,49 veya ,99',
+    [49, 99].includes(kurus(varsayilan)), `fiyat: ${varsayilan.sale_price}`);
+
+  const hep99 = hesapla({ product: urun({ cost: 100, desi: 2 }), platform: { ...TRENDYOL, price_rounding: 'hep_99' }, commission: komisyon(20, 30) });
+  esit('42 hep_99 → her zaman ,99', kurus(hep99), 99);
+
+  const yok = hesapla({ product: urun({ cost: 100, desi: 2 }), platform: { ...TRENDYOL, price_rounding: 'yok' }, commission: komisyon(20, 30) });
+  dogru('43 yuvarlama yok → ,49/,99 zorunlu değil',
+    typeof yok.sale_price === 'number' && yok.sale_price > 0, `fiyat: ${yok.sale_price}`);
+}
+
+console.log('\n═══ MİNİMUM KÂR TUTARI ═══');
+{
+  // KURAL: hedef kar ORANI dusuk bir tutar veriyorsa, minimum kar TUTARI
+  // devreye girer ve fiyat ona gore yukselir. Her kisit icin ayri fiyat
+  // hesaplanip EN YUKSEGI secilir; boylece hepsi birden saglanir.
+  const dusukHedef = hesapla({
+    product: urun({ cost: 100, desi: 2 }), platform: TRENDYOL,
+    commission: { commission_rate: 20, commission_vat_rate: 20, target_profit_rate: 5 },
+  });
+  const minimumlu = hesapla({
+    product: urun({ cost: 100, desi: 2 }), platform: TRENDYOL,
+    commission: { commission_rate: 20, commission_vat_rate: 20, target_profit_rate: 5, minimum_profit_amount: 50 },
+  });
+  dogru('37 hedef %5 → kâr düşük', dusukHedef.net_profit < 50, `kâr: ${dusukHedef.net_profit}`);
+  dogru('38 minimum 50 ₺ devreye girdi', minimumlu.net_profit >= 49.5, `kâr: ${minimumlu.net_profit}`);
+  dogru('39 minimum fiyatı yükseltti', minimumlu.sale_price > dusukHedef.sale_price,
+    `${dusukHedef.sale_price} → ${minimumlu.sale_price}`);
+}
+{
+  // Hedef kar ORANI zaten minimumun ustundeyse minimum bir sey degistirmez
+  const yuksekHedef = hesapla({
+    product: urun({ cost: 100, desi: 2 }), platform: TRENDYOL,
+    commission: { commission_rate: 20, commission_vat_rate: 20, target_profit_rate: 100, minimum_profit_amount: 10 },
+  });
+  dogru('40 hedef zaten yüksekse minimum etkisiz', yuksekHedef.net_profit > 90, `kâr: ${yuksekHedef.net_profit}`);
+}
+
 console.log('\n═══ KOMİSYON: ORAN KDV DAHİL ═══');
 {
   // Komisyon = satış fiyatı (KDV dahil) × oran  — üstüne KDV EKLENMEZ

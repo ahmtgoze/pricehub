@@ -115,7 +115,13 @@ trigger'ı ile **sıfır değerle** otomatik açılır; doldurmak kullanıcıya 
 
 - **Normal hedef kâr** — standart satışta hedeflenen oran
 - **İndirimli hedef kâr** — promosyon sayfalarında kabul edilen alt sınır
-- **Minimum kâr tutarı** — oran iyi görünse bile TL bazında alt sınır
+- **Minimum kâr tutarı** — TL bazında alt sınır
+
+**Nasıl birleşirler:** Her kısıt için ayrı bir fiyat hesaplanır ve **en
+yüksek olan** seçilir; böylece hepsi birden sağlanır. Örnek: hedef kâr oranı
+%X'ten 8 ₺ çıkıyorsa ama minimum 10 ₺ ise, fiyat 10 ₺ kârı verecek şekilde
+yükseltilir. Hem hedef oran hem hedef tutar girilmişse zaten minimumun altına
+düşülmez.
 
 ---
 
@@ -224,8 +230,12 @@ değerlendirmeye girer.
 ### Çoklu paket ve özel kargo
 
 - **Çoklu paket:** her paketin desisi ayrı hesaplanıp **toplanır**, barem yok
-- **Özel kargo:** her paket için desi ücreti **×2** + paket başına iade payı
-  (`return_cost_per_package` ayarı, varsayılan 180,096 ₺)
+- **Özel kargo:** her paket için desi ücreti **×2** + paket başına iade payı.
+  Tutar **Genel Ayarlar → Hesaplama**'dan belirlenir (varsayılan 180,096 ₺).
+  Senaryo: ürün müşterinin deposundan üretime, üretimden depoya, oradan
+  müşteriye gider — yani fazladan yol kat eder.
+- **Çift kargo:** üretimden depoya, depodan müşteriye giden ürünler için
+  işaretlenir; hesaplanan kargo bedeli **×2** olur.
 - **Paketleme maliyeti:** seçilen paketin `total_cost` değeridir. Çoklu pakette
   her paketin kendi maliyeti **toplanır**.
 - **Çift kargo** (`double_shipping`): hesaplanan kargo bedeli **×2**
@@ -278,11 +288,14 @@ Kaynak: `findSalePriceForTargetProfit`, `calculateProductPrice`
 2. Hepsini birden sağlaması için **en yüksek** fiyat seçilir
 3. Uygun barem seçenekleri denenir; **en düşük satış fiyatını** veren kazanır
    (eşitlikte Barem 1 tercih edilir)
-4. Fiyat yuvarlanır:
-   ```
-   kuruş < 0,50  →  ,49
-   kuruş ≥ 0,50  →  ,99
-   ```
+4. Fiyat yuvarlanır. **Kural platform ayarından gelir** (Platformlar →
+   Tüm Ayarlar → Fiyat Yuvarlama):
+
+   | Seçenek | Davranış |
+   |---|---|
+   | `49_99` (varsayılan) | kuruş < 0,50 → **,49** · değilse → **,99** |
+   | `hep_99` | her zaman **,99** |
+   | `yok` | yuvarlama yapılmaz |
 5. Yuvarlanmış fiyatla kırılım **yeniden** hesaplanır (gösterilen rakam budur)
 
 ---

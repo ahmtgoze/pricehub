@@ -76,6 +76,7 @@ export default function PlatformSettingsModal({
   }, [manualRates]);
 
   const [formData, setFormData] = useState({
+    price_rounding: '49_99',
     website_adapter: 'shopify',
     shipping_company_id: '',
     shipping_company_name: '',
@@ -112,6 +113,7 @@ export default function PlatformSettingsModal({
     const isWebsite = platform.platform_type === 'website';
 
     setFormData({
+      price_rounding: platform.price_rounding || '49_99',
       shipping_company_id: platform.shipping_company_id || '',
       shipping_company_name: platform.shipping_company_name || '',
       use_custom_shipping_price:
@@ -186,6 +188,7 @@ export default function PlatformSettingsModal({
     e.preventDefault();
 
     const payload = {
+      price_rounding: formData.price_rounding,
       website_adapter: formData.website_adapter,
       shipping_company_id: formData.shipping_company_id || (shippingCompanies[0]?.id ?? ''),
       shipping_company_name: formData.shipping_company_name || '',
@@ -370,6 +373,25 @@ export default function PlatformSettingsModal({
                   <h4 className="font-semibold text-foreground text-sm bg-secondary rounded-lg px-3 py-2">
                     {isAdmin ? '⚙️ Sistem Yönetim Ayarları' : 'Platform Bilgileri'}
                   </h4>
+
+                  {/* Fiyat yuvarlama — kullanici belirler, eskiden koda gomuluydu */}
+                  <div className="space-y-2 pb-4 mb-4 border-b border-border">
+                    <Label>Fiyat Yuvarlama</Label>
+                    <Select
+                      value={formData.price_rounding}
+                      onValueChange={(v) => setFormData({ ...formData, price_rounding: v })}
+                    >
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="49_99">Kuruş 0,50&apos;den küçükse ,49 — değilse ,99</SelectItem>
+                        <SelectItem value="hep_99">Her zaman ,99</SelectItem>
+                        <SelectItem value="yok">Yuvarlama yok</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground">
+                      Hesaplanan satış fiyatının küsuratı bu kurala göre ayarlanır.
+                    </p>
+                  </div>
 
                   {/* Kurumlar (Gelir) Vergisi */}
                   <div className="space-y-3">

@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/lib/AuthContext';
 import { supabase } from '@/api/supabaseClient';
+import { db } from '@/api/db';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   User, Lock, Users, ChevronRight, Check, Eye, EyeOff, Shield, Palette
-} from 'lucide-react';
+, Calculator } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -15,6 +16,7 @@ import { cn } from '@/lib/utils';
 const SECTIONS = [
   { id: 'account', label: 'Hesap', icon: User },
   { id: 'security', label: 'Güvenlik', icon: Lock },
+  { id: 'hesaplama', label: 'Hesaplama', icon: Calculator },
   { id: 'brand', label: 'Marka Ayarları', icon: Palette, adminOnly: true },
   { id: 'users', label: 'Kullanıcılar', icon: Users, adminOnly: true },
 ];
@@ -65,6 +67,7 @@ export default function Settings() {
         <div className="flex-1 min-w-0">
           {activeSection === 'account' && <AccountSection user={user} />}
           {activeSection === 'security' && <SecuritySection />}
+          {activeSection === 'hesaplama' && <HesaplamaSection />}
           {activeSection === 'brand' && isAdmin && <BrandSection />}
           {activeSection === 'users' && isAdmin && <UsersSection />}
         </div>
@@ -227,6 +230,71 @@ function BrandSection() {
           </div>
         </div>
       )}
+    </Card>
+  );
+}
+
+/* ─── Hesaplama ayarları ─── */
+
+// Ozel kargolu urunlerde paket basina eklenen iade payi. Senaryo:
+// musterinin deposundan uretime, uretimden depoya, depodan musteriye —
+// yani urun fazladan yol gidiyor. Tutar kullanicidan alinir; eskiden
+// koda gomulu 180,096 TL kullaniliyordu.
+const IADE_PAYI_ANAHTARI = 'return_cost_per_package';
+const IADE_PAYI_VARSAYILAN = 180.096;
+
+function HesaplamaSection() {
+  const queryClient = useQueryClient();
+  const [deger, setDeger] = useState('');
+
+  const { data: ayarlar = [], isLoading } = useQuery({
+    queryKey: ['settings'],
+    queryFn: () => db.entities.Settings.list('-created_at', 200),
+  });
+
+  const kayit = ayarlar.find((a) => a.setting_key === IADE_PAYI_ANAHTARI);
+
+  React.useEffect(() => {
+    setDeger(kayit ? String(kayit.setting_value) : String(IADE_PAYI_VARSAYILAN));
+  }, [kayit]);
+
+  const kaydet = useMutation({
+    mutationFn: async () => {
+      const sayi = parseFloat(String(deger).replace(',', '.'));
+      if (!Number.isFinite(sayi) || sayi < 0) throw new Error('Geçerli bir tutar gir (0 veya üzeri).');
+      if (kayit) return db.entities.Settings.update(kayit.id, { setting_value: String(sayi) });
+      return db.entities.Settings.create({
+        setting_key: IADE_PAYI_ANAHTARI,
+        setting_value: String(sayi),
+        description: 'Özel kargolu ürünlerde paket başına iade payı (₺)',
+      });
+    },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['settings'] }); toast.success('Kaydedildi.'); },
+    onError: (e) => toast.error(e.message || 'Kaydedilemedi.'),
+  });
+
+  return (
+    <Card title="Hesaplama Ayarları">
+      <div className="space-y-2 max-w-md">
+        <Label htmlFor="iade-payi">Özel kargo iade payı (paket başına, ₺)</Label>
+        <Input
+          id="iade-payi"
+          type="number"
+          min="0"
+          step="0.001"
+          value={deger}
+          onChange={(e) => setDeger(e.target.value)}
+          disabled={isLoading}
+        />
+        <p className="text-xs text-muted-foreground leading-relaxed">
+          Yalnızca <strong>özel kargo</strong> işaretli ürünlerde uygulanır. Ürün depodan üretime,
+          üretimden depoya, oradan müşteriye gittiği için paket başına bu tutar kargo maliyetine eklenir.
+          Boş bırakılırsa {IADE_PAYI_VARSAYILAN.toLocaleString('tr-TR')} ₺ kullanılır.
+        </p>
+        <Button onClick={() => kaydet.mutate()} disabled={kaydet.isPending || isLoading}>
+          {kaydet.isPending ? 'Kaydediliyor…' : 'Kaydet'}
+        </Button>
+      </div>
     </Card>
   );
 }
