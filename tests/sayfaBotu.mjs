@@ -11,8 +11,9 @@
  *   npm run bot:giris     → Chrome'u görünür açar; bir kez giriş yaparsın.
  *                           Oturum profile kaydedilir, sonraki çalışmalar
  *                           giriş istemez.
- *   npm run bot           → Tüm sayfaları sırayla test eder, rapor basar.
- *   npm run bot -- --yerel → Önizleme yerine http://localhost:5173 test eder.
+ *   npm run bot               → CANLI sistemi test eder, rapor basar.
+ *   npm run bot -- --onizleme → Dal önizlemesini test eder.
+ *   npm run bot -- --yerel    → http://localhost:5173 test eder.
  *
  * Çıkış kodu: hata varsa 1 (CI/otomasyon için).
  */
@@ -27,6 +28,7 @@ const CHROME = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
 const PROFIL = `${process.env.HOME}/.pricehub-bot-profili`;
 const PORT = 9333;
 
+const CANLI = 'https://pricehub-ashen.vercel.app';
 const ONIZLEME = 'https://pricehub-git-tema-apple-v2-ahmet-s-projects7.vercel.app';
 const YEREL = 'http://localhost:5173';
 
@@ -60,7 +62,9 @@ const SAYFALAR = [
 
 const argv = process.argv.slice(2);
 const girisModu = argv.includes('--giris');
-const taban = argv.includes('--yerel') ? YEREL : ONIZLEME;
+const taban = argv.includes('--yerel') ? YEREL
+           : argv.includes('--onizleme') ? ONIZLEME
+           : CANLI;
 
 /* ── Chrome başlat ───────────────────────────────────────────────────── */
 if (!existsSync(PROFIL)) mkdirSync(PROFIL, { recursive: true });
