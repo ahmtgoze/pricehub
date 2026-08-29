@@ -205,99 +205,6 @@ export default function MarketplaceProducts() {
     );
   };
 
-  // Sutun tanimlari. '__select' sistem sutunudur (gizlenemez).
-  // "Bağlı Ürün" hucresi acilir arama icerdigi icin tablo overflowVisible.
-  const pazaryeriKolonlari = [
-    {
-      id: '__select',
-      header: <Checkbox checked={selectedRows.size === filtered.length && filtered.length > 0} onCheckedChange={handleSelectAll} />,
-      cell: (row) => <Checkbox checked={selectedRows.has(row.id)} onCheckedChange={() => handleSelectRow(row.id)} />,
-    },
-    { id: 'platform_account', header: 'Platform', accessor: 'platform_account' },
-    ...(!isSelectedWebsite ? [
-      { id: 'barkod', header: 'Barkod', accessor: 'barkod' },
-      { id: 'model_code', header: 'Model Kodu', accessor: 'model_code' },
-    ] : []),
-    { id: 'platform_product_name', header: 'Ürün Adı', cell: (row) => <p className="font-medium">{row.platform_product_name}</p> },
-    {
-      id: 'matched_product',
-      header: 'Bağlı Ürün',
-      width: '280px',
-      cell: (row) => {
-        const matchedProduct = products.find(p => p.id === row.matched_product_id);
-        return (
-                              <div className="flex items-center gap-2">
-                                {matchedProduct ? (
-                                  <div className="flex-1">
-                                    <p className="text-sm font-medium">{matchedProduct.name}</p>
-                                    <p className="text-xs text-muted-foreground">{matchedProduct.sku}</p>
-                                  </div>
-                                ) : (
-                                  <div className="flex-1 space-y-1">
-                                    {activeSearchRow !== row.id && (() => {
-                                      const suggestion = getAutoSuggestion(row);
-                                      if (suggestion) {
-                                        return (
-                                          <div className="flex items-center gap-1">
-                                            <span className="text-xs text-muted-foreground bg-secondary border border-border rounded px-1.5 py-0.5">Öneri</span>
-                                            <button onClick={() => handleMatchProduct(row.id, suggestion.id)} className="text-xs text-foreground hover:underline">{suggestion.name}</button>
-                                          </div>
-                                        );
-                                      }
-                                      // Yüksek güvenli öneri yoksa top-3 aday göster
-                                      const topMatches = getTopSuggestions(row);
-                                      if (topMatches.length === 0) return null;
-                                      return (
-                                        <div className="space-y-0.5">
-                                          <span className="text-xs text-muted-foreground/70">Adaylar:</span>
-                                          {topMatches.map(({ product: p, score: s }) => (
-                                            <div key={p.id} className="flex items-center gap-1">
-                                              <span className="text-xs text-muted-foreground/70 shrink-0">%{s}</span>
-                                              <button onClick={() => handleMatchProduct(row.id, p.id)} className="text-xs text-muted-foreground hover:underline">{p.name}</button>                                            </div>
-                                          ))}
-                                        </div>
-                                      );
-                                    })()}
-                                    {activeSearchRow === row.id ? (
-                                      <div className="flex gap-1">
-                                        <select value={searchCriteria} onChange={e => setSearchCriteria(e.target.value)} className="text-xs border border-border rounded px-1 py-1 bg-card">
-                                          <option value="name">Ad</option>
-                                          <option value="sku">SKU</option>
-                                        </select>
-                                        <Input ref={inputRef} placeholder={searchCriteria === 'sku' ? 'SKU ara...' : 'Ürün adı ara...'} value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="text-xs" autoFocus />
-                                      </div>
-                                    ) : (
-                                      <button onClick={() => { setActiveSearchRow(row.id); setSearchQuery(''); }} className="text-xs text-muted-foreground/70 hover:text-muted-foreground flex items-center gap-1 border border-dashed border-border rounded px-2 py-1 w-full">
-                                        <Search className="w-3 h-3" />Ürün bul
-                                      </button>
-                                    )}
-                                  </div>
-                                )}
-                                {matchedProduct && (
-                                  <Button size="icon" variant="ghost" onClick={() => updateMutation.mutate({ id: row.id, data: { matched_product_id: null, status: 'not_matched' } })} className="h-6 w-6">
-                                    <X className="w-4 h-4" />
-                                  </Button>
-                                )}
-                              </div>
-        );
-      },
-    },
-    {
-      id: 'status',
-      header: 'Durum',
-      cell: (row) => (
-        <span className={`text-xs px-2 py-1 rounded ${row.status === 'matched' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-          {row.status === 'matched' ? 'Eşleştirildi' : 'Eşleşmedi'}
-        </span>
-      ),
-    },
-    // ── Eklenebilir sutunlar: varsayilanda gizli, panelden acilir ──
-    { id: 'brand', header: 'Marka', optional: true, cell: (row) => row.brand || '-' },
-    { id: 'category', header: 'Kategori', optional: true, cell: (row) => row.category || '-' },
-    { id: 'marketplace_sale_price', header: 'Satış Fiyatı', cell: (row) => row.marketplace_sale_price != null ? `₺${Number(row.marketplace_sale_price).toFixed(2)}` : '-' },
-    { id: 'stock_quantity', header: 'Stok', optional: true, cell: (row) => row.stock_quantity ?? '-' },
-    { id: 'variant_sku', header: 'Varyant SKU', optional: true, cell: (row) => row.variant_sku || '-' },
-  ];
 
   const handleFileUpload = async (e) => {
     if (!selectedPlatform) { toast.error('Platform seçiniz'); return; }
@@ -695,6 +602,100 @@ export default function MarketplaceProducts() {
     if (selectedRows.size === filtered.length && filtered.length > 0) setSelectedRows(new Set());
     else setSelectedRows(new Set(filtered.map(p => p.id)));
   };
+
+  // Sutun tanimlari. '__select' sistem sutunudur (gizlenemez).
+  // "Bağlı Ürün" hucresi acilir arama icerdigi icin tablo overflowVisible.
+  const pazaryeriKolonlari = [
+    {
+      id: '__select',
+      header: <Checkbox checked={selectedRows.size === filtered.length && filtered.length > 0} onCheckedChange={handleSelectAll} />,
+      cell: (row) => <Checkbox checked={selectedRows.has(row.id)} onCheckedChange={() => handleSelectRow(row.id)} />,
+    },
+    { id: 'platform_account', header: 'Platform', accessor: 'platform_account' },
+    ...(!isSelectedWebsite ? [
+      { id: 'barkod', header: 'Barkod', accessor: 'barkod' },
+      { id: 'model_code', header: 'Model Kodu', accessor: 'model_code' },
+    ] : []),
+    { id: 'platform_product_name', header: 'Ürün Adı', cell: (row) => <p className="font-medium">{row.platform_product_name}</p> },
+    {
+      id: 'matched_product',
+      header: 'Bağlı Ürün',
+      width: '280px',
+      cell: (row) => {
+        const matchedProduct = products.find(p => p.id === row.matched_product_id);
+        return (
+                              <div className="flex items-center gap-2">
+                                {matchedProduct ? (
+                                  <div className="flex-1">
+                                    <p className="text-sm font-medium">{matchedProduct.name}</p>
+                                    <p className="text-xs text-muted-foreground">{matchedProduct.sku}</p>
+                                  </div>
+                                ) : (
+                                  <div className="flex-1 space-y-1">
+                                    {activeSearchRow !== row.id && (() => {
+                                      const suggestion = getAutoSuggestion(row);
+                                      if (suggestion) {
+                                        return (
+                                          <div className="flex items-center gap-1">
+                                            <span className="text-xs text-muted-foreground bg-secondary border border-border rounded px-1.5 py-0.5">Öneri</span>
+                                            <button onClick={() => handleMatchProduct(row.id, suggestion.id)} className="text-xs text-foreground hover:underline">{suggestion.name}</button>
+                                          </div>
+                                        );
+                                      }
+                                      // Yüksek güvenli öneri yoksa top-3 aday göster
+                                      const topMatches = getTopSuggestions(row);
+                                      if (topMatches.length === 0) return null;
+                                      return (
+                                        <div className="space-y-0.5">
+                                          <span className="text-xs text-muted-foreground/70">Adaylar:</span>
+                                          {topMatches.map(({ product: p, score: s }) => (
+                                            <div key={p.id} className="flex items-center gap-1">
+                                              <span className="text-xs text-muted-foreground/70 shrink-0">%{s}</span>
+                                              <button onClick={() => handleMatchProduct(row.id, p.id)} className="text-xs text-muted-foreground hover:underline">{p.name}</button>                                            </div>
+                                          ))}
+                                        </div>
+                                      );
+                                    })()}
+                                    {activeSearchRow === row.id ? (
+                                      <div className="flex gap-1">
+                                        <select value={searchCriteria} onChange={e => setSearchCriteria(e.target.value)} className="text-xs border border-border rounded px-1 py-1 bg-card">
+                                          <option value="name">Ad</option>
+                                          <option value="sku">SKU</option>
+                                        </select>
+                                        <Input ref={inputRef} placeholder={searchCriteria === 'sku' ? 'SKU ara...' : 'Ürün adı ara...'} value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="text-xs" autoFocus />
+                                      </div>
+                                    ) : (
+                                      <button onClick={() => { setActiveSearchRow(row.id); setSearchQuery(''); }} className="text-xs text-muted-foreground/70 hover:text-muted-foreground flex items-center gap-1 border border-dashed border-border rounded px-2 py-1 w-full">
+                                        <Search className="w-3 h-3" />Ürün bul
+                                      </button>
+                                    )}
+                                  </div>
+                                )}
+                                {matchedProduct && (
+                                  <Button size="icon" variant="ghost" onClick={() => updateMutation.mutate({ id: row.id, data: { matched_product_id: null, status: 'not_matched' } })} className="h-6 w-6">
+                                    <X className="w-4 h-4" />
+                                  </Button>
+                                )}
+                              </div>
+        );
+      },
+    },
+    {
+      id: 'status',
+      header: 'Durum',
+      cell: (row) => (
+        <span className={`text-xs px-2 py-1 rounded ${row.status === 'matched' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+          {row.status === 'matched' ? 'Eşleştirildi' : 'Eşleşmedi'}
+        </span>
+      ),
+    },
+    // ── Eklenebilir sutunlar: varsayilanda gizli, panelden acilir ──
+    { id: 'brand', header: 'Marka', optional: true, cell: (row) => row.brand || '-' },
+    { id: 'category', header: 'Kategori', optional: true, cell: (row) => row.category || '-' },
+    { id: 'marketplace_sale_price', header: 'Satış Fiyatı', cell: (row) => row.marketplace_sale_price != null ? `₺${Number(row.marketplace_sale_price).toFixed(2)}` : '-' },
+    { id: 'stock_quantity', header: 'Stok', optional: true, cell: (row) => row.stock_quantity ?? '-' },
+    { id: 'variant_sku', header: 'Varyant SKU', optional: true, cell: (row) => row.variant_sku || '-' },
+  ];
 
   const handleDelete = async () => {
     await deleteMutation.mutateAsync(Array.from(selectedRows));
