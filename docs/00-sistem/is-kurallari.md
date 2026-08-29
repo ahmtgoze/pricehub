@@ -154,6 +154,25 @@ Bugünkü değerler:
 > ve HepsiBurada sayfaları Trendyol'un bantlarını uyguluyordu → kâr yanlış
 > çıkıyordu. Artık hepsi `baremKurali.js` üzerinden platformdan okur.
 
+### Bugün Kargoda ve barem — platforma göre DEĞİŞİR
+
+Bu, sistemin en kolay karıştırılan kuralı:
+
+| Platform | Bugün Kargoda AÇIK | Bugün Kargoda KAPALI |
+|---|---|---|
+| **Trendyol** | indirimli barem (46,49 / 84,49 ₺) | normal barem (88,00 / 94,49 ₺) |
+| **HepsiBurada** | barem (52,19 / 91,19 ₺) | **barem YOK → desi tarifesi** |
+
+Yani **HepsiBurada'da barem yalnızca Bugün Kargoda gönderilerde geçerlidir.**
+Bu yüzden sistemde HepsiBurada için sadece `same_day_delivery = true` barem
+kaydı vardır — bu bir eksik değil, **kuralın kendisidir**. Trendyol'da her iki
+kayıt da bulunur.
+
+> ⚠️ Tarife aranırken bu ayrım yapılmazsa, Bugün Kargoda kapalı bir
+> HepsiBurada ürününe de barem uygulanır ve **kâr olduğundan yüksek çıkar**.
+> Motor bunu `findBaremShippingRate` ile, promosyon sayfaları
+> `baremTarifesiSec` ile doğru yapar. İkisi de aynı mantıktadır.
+
 ### Tarife tipleri
 
 - **Sistem tarifesi** (`is_admin_created`) — admin tanımlar, herkes görür,
@@ -309,8 +328,4 @@ Raporlar arşivlenebilir.
 
 ## 12. Bilinen sınırlar
 
-- HepsiBurada'da **normal gönderi için barem kaydı yok** — yalnız "Bugün
-  Kargoda" kayıtları var. Bugün Kargoda kapalıyken motor barem bulamaz ve
-  desi tarifesine düşer. Trendyol'da her iki kayıt da mevcut.
-  *Kasıtlı değilse HepsiBurada maliyetleri olduğundan yüksek hesaplanıyor.*
 - Kargo tarifesi "dosya/evrak" gönderisi kavramını içermez.

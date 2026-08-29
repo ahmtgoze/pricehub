@@ -17,7 +17,7 @@ import { toast } from 'sonner';
 import * as XLSX from 'xlsx';
 import PriceDetailModal from '@/components/modals/PriceDetailModal';
 import BaremBadge from '@/components/ui/BaremBadge';
-import { baremSec, baremTavanFiyatlari } from '@/lib/baremKurali';
+import { baremSec, baremTavanFiyatlari, baremTarifesiSec } from '@/lib/baremKurali';
 
 const Campaign = db.entities.Campaign;
 let CampaignProduct;
@@ -435,7 +435,7 @@ export default function Campaigns() {
       // bantlari uygulaniyordu.
       const secilenBarem = baremSec(platform, matchedProduct, effPrice, matchedProduct?.desi);
       if (secilenBarem) {
-        const baremRate = platformShippingRates.find(r => r.rate_type === secilenBarem);
+        const baremRate = baremTarifesiSec(platformShippingRates, secilenBarem, matchedProduct?.same_day_delivery || false);
         if (baremRate) {
           shippingCost = baremRate.price;
           shippingVatRate = baremRate.vat_rate || 20;

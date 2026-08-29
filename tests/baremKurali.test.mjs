@@ -1,4 +1,4 @@
-import { baremKullanilabilir, baremBandi, baremSec, baremTavanFiyatlari } from '../src/lib/baremKurali.js';
+import { baremKullanilabilir, baremBandi, baremSec, baremTavanFiyatlari, baremTarifesiSec } from '../src/lib/baremKurali.js';
 
 let gecen = 0, kalan = 0;
 const esit = (ad, bulunan, beklenen) => {
@@ -57,6 +57,34 @@ esit('27 web sitesi her zaman null', baremSec(WEB, U, 100, 5), null);
 esit('28 TY tavanlari buyukten kucuge', baremTavanFiyatlari(TY), [299.99, 149.99]);
 esit('29 HB tavanlari', baremTavanFiyatlari(HB), [399.99, 199.99]);
 esit('30 tanimsiz platform bos liste', baremTavanFiyatlari({}), []);
+
+// --- Barem tarifesi secimi: Bugun Kargoda ayrimi ---
+// HepsiBurada'da barem YALNIZCA Bugun Kargoda'da gecerli → sistemde sadece
+// same_day kaydi var. Trendyol'da her iki kayit da var.
+const HB_TARIFELER = [
+  { rate_type: 'barem1', price: 52.19, same_day_delivery: true,  is_active: true },
+  { rate_type: 'barem2', price: 91.19, same_day_delivery: true,  is_active: true },
+];
+const TY_TARIFELER = [
+  { rate_type: 'barem1', price: 88.00, same_day_delivery: false, is_active: true },
+  { rate_type: 'barem1', price: 46.49, same_day_delivery: true,  is_active: true },
+  { rate_type: 'barem2', price: 94.49, same_day_delivery: false, is_active: true },
+  { rate_type: 'barem2', price: 84.49, same_day_delivery: true,  is_active: true },
+];
+
+esit('31 HB Bugün Kargoda AÇIK → barem uygulanir',
+  baremTarifesiSec(HB_TARIFELER, 'barem1', true)?.price, 52.19);
+esit('32 HB Bugün Kargoda KAPALI → barem YOK (desiye duser)',
+  baremTarifesiSec(HB_TARIFELER, 'barem1', false), null);
+esit('33 TY Bugün Kargoda KAPALI → normal barem',
+  baremTarifesiSec(TY_TARIFELER, 'barem1', false)?.price, 88.00);
+esit('34 TY Bugün Kargoda AÇIK → indirimli barem',
+  baremTarifesiSec(TY_TARIFELER, 'barem1', true)?.price, 46.49);
+esit('35 TY barem2 normal', baremTarifesiSec(TY_TARIFELER, 'barem2', false)?.price, 94.49);
+esit('36 TY barem2 Bugün Kargoda', baremTarifesiSec(TY_TARIFELER, 'barem2', true)?.price, 84.49);
+esit('37 pasif tarife secilmez',
+  baremTarifesiSec([{ rate_type: 'barem1', price: 10, same_day_delivery: false, is_active: false }], 'barem1', false), null);
+esit('38 tip yoksa null', baremTarifesiSec(TY_TARIFELER, null, false), null);
 
 console.log(`GECEN: ${gecen}   KALAN: ${kalan}`);
 if (kalan > 0) process.exit(1);

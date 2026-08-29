@@ -10,7 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import PriceDetailModal from '@/components/modals/PriceDetailModal';
-import { baremSec } from '@/lib/baremKurali';
+import { baremSec, baremTarifesiSec } from '@/lib/baremKurali';
 
 const Product = db.entities.Product;
 const Platform = db.entities.Platform;
@@ -105,7 +105,7 @@ export default function HBOwnCampaign() {
       // bantlari uygulaniyordu.
       const secilenBarem = baremSec(platform, product, price, product?.desi);
       if (secilenBarem) {
-        const baremRate = platformShippingRates.find(r => r.rate_type === secilenBarem);
+        const baremRate = baremTarifesiSec(platformShippingRates, secilenBarem, product?.same_day_delivery || false);
         if (baremRate) {
           shippingCost = baremRate.price;
           shippingVatRate = baremRate.vat_rate || 20;

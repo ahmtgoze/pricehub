@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { toast } from 'sonner';
 import * as XLSX from 'xlsx';
 import PriceDetailModal from '@/components/modals/PriceDetailModal';
-import { baremSec } from '@/lib/baremKurali';
+import { baremSec, baremTarifesiSec } from '@/lib/baremKurali';
 
 const Product = db.entities.Product;
 const Platform = db.entities.Platform;
@@ -173,7 +173,7 @@ export default function HBAdvantageOffers() {
       // bantlari uygulaniyordu.
       const secilenBarem = baremSec(platform, matchedProduct, price, matchedProduct?.desi);
       if (secilenBarem) {
-        const baremRate = platformShippingRates.find(r => r.rate_type === secilenBarem);
+        const baremRate = baremTarifesiSec(platformShippingRates, secilenBarem, matchedProduct?.same_day_delivery || false);
         if (baremRate) {
           shippingCost = baremRate.price;
           shippingVatRate = baremRate.vat_rate || 20;

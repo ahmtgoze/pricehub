@@ -71,3 +71,28 @@ export function baremTavanFiyatlari(platform) {
     .filter((v) => v !== null && v > 0);
   return [...new Set(tavanlar)].sort((a, b) => b - a);
 }
+
+/**
+ * Barem tarifesini secer — motordaki findBaremShippingRate ile AYNI mantik.
+ *
+ * NEDEN ONEMLI: HepsiBurada'da barem YALNIZCA "Bugun Kargoda" gonderilerde
+ * gecerlidir; bu yuzden sistemde HB icin sadece same_day_delivery=true barem
+ * kaydi vardir. Tarife aranirken bu ayrim yapilmazsa, Bugun Kargoda KAPALI
+ * bir HB urunune de barem uygulanir ve kar oldugundan YUKSEK cikar.
+ * Trendyol'da ise hem normal hem Bugun Kargoda barem kaydi bulunur.
+ */
+export function baremTarifesiSec(tarifeler, tip, bugunKargoda = false) {
+  if (!tip || !Array.isArray(tarifeler)) return null;
+  const aktif = (r) => r.is_active !== false;
+
+  if (bugunKargoda) {
+    const indirimli = tarifeler.find(
+      (r) => r.rate_type === tip && r.same_day_delivery === true && aktif(r)
+    );
+    if (indirimli) return indirimli;
+  }
+  // Normal tarife; yoksa barem uygulanmaz (null)
+  return tarifeler.find(
+    (r) => r.rate_type === tip && r.same_day_delivery !== true && aktif(r)
+  ) || null;
+}
