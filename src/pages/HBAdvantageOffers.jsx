@@ -166,14 +166,17 @@ export default function HBAdvantageOffers() {
       let shippingCost = 0;
       let shippingVatRate = 20;
       let baremUsed = 'desi';
-      const canUseBarem = !matchedProduct.special_shipping && !matchedProduct.multi_package;
-      if (canUseBarem && price > 0) {
-        if (price <= 149.99) {
-          const r = platformShippingRates.find((r) => r.rate_type === 'barem1');
-          if (r) { shippingCost = r.price; shippingVatRate = r.vat_rate || 20; baremUsed = 'barem1'; }
-        } else if (price <= 299.99) {
-          const r = platformShippingRates.find((r) => r.rate_type === 'barem2');
-          if (r) { shippingCost = r.price; shippingVatRate = r.vat_rate || 20; baremUsed = 'barem2'; }
+      // Barem kurallari ortak modulde (src/lib/baremKurali.js): sinirlar
+      // platform kaydindan okunur, desi tavani ve use_barem kontrol edilir.
+      // Once bu sayfaya sabit yazilmisti ve HepsiBurada'da Trendyol'un
+      // bantlari uygulaniyordu.
+      const secilenBarem = baremSec(platform, matchedProduct, price, matchedProduct?.desi);
+      if (secilenBarem) {
+        const baremRate = platformShippingRates.find(r => r.rate_type === secilenBarem);
+        if (baremRate) {
+          shippingCost = baremRate.price;
+          shippingVatRate = baremRate.vat_rate || 20;
+          baremUsed = secilenBarem;
         }
       }
       if (shippingCost === 0) {

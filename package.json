@@ -10,7 +10,7 @@
     "lint:fix": "eslint . --fix",
     "typecheck": "tsc -p ./jsconfig.json",
     "preview": "vite preview",
-    "test": "node tests/tabloSutunlari.test.mjs && node tests/widgetDuzeni.test.mjs && node tests/platformIstatistigi.test.mjs && node tests/tarihAraligi.test.mjs && node tests/vurguRengi.test.mjs"
+    "test": "node tests/tabloSutunlari.test.mjs && node tests/widgetDuzeni.test.mjs && node tests/platformIstatistigi.test.mjs && node tests/tarihAraligi.test.mjs && node tests/vurguRengi.test.mjs && node tests/baremKurali.test.mjs"
   },
   "dependencies": {
     "@hello-pangea/dnd": "^17.0.0",

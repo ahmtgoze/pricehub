@@ -291,15 +291,17 @@ export default function PlusProductCommissionTariff() {
       let shippingCost = 0;
       let shippingVatRate = 20;
       let baremUsed = 'desi';
-      const canUseBarem = !matchedProduct.special_shipping && !matchedProduct.multi_package;
-
-      if (canUseBarem && price > 0) {
-        if (price >= 0 && price <= 149.99) {
-          const baremRate = platformShippingRates.find(r => r.rate_type === 'barem1');
-          if (baremRate) { shippingCost = baremRate.price; shippingVatRate = baremRate.vat_rate || 20; baremUsed = 'barem1'; }
-        } else if (price >= 150 && price <= 299.99) {
-          const baremRate = platformShippingRates.find(r => r.rate_type === 'barem2');
-          if (baremRate) { shippingCost = baremRate.price; shippingVatRate = baremRate.vat_rate || 20; baremUsed = 'barem2'; }
+      // Barem kurallari ortak modulde (src/lib/baremKurali.js): sinirlar
+      // platform kaydindan okunur, desi tavani ve use_barem kontrol edilir.
+      // Once bu sayfaya sabit yazilmisti ve HepsiBurada'da Trendyol'un
+      // bantlari uygulaniyordu.
+      const secilenBarem = baremSec(platform, matchedProduct, price, matchedProduct?.desi);
+      if (secilenBarem) {
+        const baremRate = platformShippingRates.find(r => r.rate_type === secilenBarem);
+        if (baremRate) {
+          shippingCost = baremRate.price;
+          shippingVatRate = baremRate.vat_rate || 20;
+          baremUsed = secilenBarem;
         }
       }
 
@@ -839,13 +841,15 @@ export default function PlusProductCommissionTariff() {
                                 const currentCalc = calculateProfit(selectedPrice, currentCommission, item);
                                 if (currentCalc.baremUsed === 'barem1' || currentCalc.baremUsed === 'barem2') return <div className="text-center text-muted-foreground/70 text-xs">-</div>;
                                 let best = null;
-                                if (selectedPrice > 299.99) {
-                                  const c = calculateProfit(299.99, currentCommission, item);
-                                  if (c.baremUsed === 'barem2' && c.profitRate > currentCalc.profitRate) best = { price: 299.99, ...c, baremType: 'Barem 2' };
+                                // Esikler platform kaydindan; sabit yazilmisti.
+                                const [ustTavan, altTavan] = baremTavanFiyatlari(currentCalc.platform);
+                                if (ustTavan && selectedPrice > ustTavan) {
+                                  const c = calculateProfit(ustTavan, currentCommission, item);
+                                  if (c.baremUsed === 'barem2' && c.profitRate > currentCalc.profitRate) best = { price: ustTavan, ...c, baremType: 'Barem 2' };
                                 }
-                                if (selectedPrice > 149.99) {
-                                  const c = calculateProfit(149.99, currentCommission, item);
-                                  if (c.baremUsed === 'barem1' && c.profitRate > currentCalc.profitRate && (!best || c.profitRate > best.profitRate)) best = { price: 149.99, ...c, baremType: 'Barem 1' };
+                                if (altTavan && selectedPrice > altTavan) {
+                                  const c = calculateProfit(altTavan, currentCommission, item);
+                                  if (c.baremUsed === 'barem1' && c.profitRate > currentCalc.profitRate && (!best || c.profitRate > best.profitRate)) best = { price: altTavan, ...c, baremType: 'Barem 1' };
                                 }
                                 if (!best) return <div className="text-center text-muted-foreground/70 text-xs">-</div>;
                                 return (

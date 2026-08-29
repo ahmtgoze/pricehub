@@ -380,9 +380,9 @@ export default function Campaigns() {
     return parseFloat(commRec?.commission_rate) || parseFloat(item.current_commission) || 0;
   };
 
-  // Barem esikleri — calculateProfit icindeki degerlerle ayni.
-  const BAREM1_UST = 149.99;
-  const BAREM2_UST = 299.99;
+  // Barem esikleri platform kaydindan okunur (sayfaya sabit yazilmazdi).
+  const seciliPlatformKaydi = trendyolPlatforms.find(p => p.name === selectedPlatform) || trendyolPlatforms[0];
+  const [BAREM2_UST, BAREM1_UST] = baremTavanFiyatlari(seciliPlatformKaydi);
 
   /**
    * effectiveSellerPrice'in tersi: hedeflenen ETKIN fiyati veren kampanya
@@ -428,14 +428,17 @@ export default function Campaigns() {
       const extraCost = matchedProduct.extra_cost || 0;
 
       let shippingCost = 0, shippingVatRate = 20, baremUsed = 'desi';
-      const canUseBarem = !matchedProduct.special_shipping && !matchedProduct.multi_package;
-      if (canUseBarem && effPrice > 0) {
-        if (effPrice <= 149.99) {
-          const r = platformShippingRates.find(x => x.rate_type === 'barem1');
-          if (r) { shippingCost = r.price; shippingVatRate = r.vat_rate || 20; baremUsed = 'barem1'; }
-        } else if (effPrice >= 150 && effPrice <= 299.99) {
-          const r = platformShippingRates.find(x => x.rate_type === 'barem2');
-          if (r) { shippingCost = r.price; shippingVatRate = r.vat_rate || 20; baremUsed = 'barem2'; }
+      // Barem kurallari ortak modulde (src/lib/baremKurali.js): sinirlar
+      // platform kaydindan okunur, desi tavani ve use_barem kontrol edilir.
+      // Once bu sayfaya sabit yazilmisti ve HepsiBurada'da Trendyol'un
+      // bantlari uygulaniyordu.
+      const secilenBarem = baremSec(platform, matchedProduct, effPrice, matchedProduct?.desi);
+      if (secilenBarem) {
+        const baremRate = platformShippingRates.find(r => r.rate_type === secilenBarem);
+        if (baremRate) {
+          shippingCost = baremRate.price;
+          shippingVatRate = baremRate.vat_rate || 20;
+          baremUsed = secilenBarem;
         }
       }
       if (shippingCost === 0) {

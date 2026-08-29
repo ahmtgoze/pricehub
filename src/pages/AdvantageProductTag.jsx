@@ -347,15 +347,17 @@ export default function AdvantageProductTag() {
       let shippingCost = 0;
       let shippingVatRate = 20;
       let baremUsed = 'desi';
-      const canUseBarem = !matchedProduct.special_shipping && !matchedProduct.multi_package;
-
-      if (canUseBarem && price > 0) {
-        if (price >= 0 && price <= 149.99) {
-          const r = platformShippingRates.find(r => r.rate_type === 'barem1');
-          if (r) { shippingCost = r.price; shippingVatRate = r.vat_rate || 20; baremUsed = 'barem1'; }
-        } else if (price >= 150 && price <= 299.99) {
-          const r = platformShippingRates.find(r => r.rate_type === 'barem2');
-          if (r) { shippingCost = r.price; shippingVatRate = r.vat_rate || 20; baremUsed = 'barem2'; }
+      // Barem kurallari ortak modulde (src/lib/baremKurali.js): sinirlar
+      // platform kaydindan okunur, desi tavani ve use_barem kontrol edilir.
+      // Once bu sayfaya sabit yazilmisti ve HepsiBurada'da Trendyol'un
+      // bantlari uygulaniyordu.
+      const secilenBarem = baremSec(platformObj, matchedProduct, price, matchedProduct?.desi);
+      if (secilenBarem) {
+        const baremRate = platformShippingRates.find(r => r.rate_type === secilenBarem);
+        if (baremRate) {
+          shippingCost = baremRate.price;
+          shippingVatRate = baremRate.vat_rate || 20;
+          baremUsed = secilenBarem;
         }
       }
 
@@ -684,9 +686,10 @@ export default function AdvantageProductTag() {
   const uniqueCategories = [...new Set(uploadedData.map(item => item.category).filter(Boolean))].sort();
   const uniqueBrands = [...new Set(uploadedData.map(item => item.brand).filter(Boolean))].sort();
 
-  // Barem siniri: bu sayfanin kendi calculateProfit'i de ayni esikleri kullaniyor.
-  const BAREM1_UST = 149.99;
-  const BAREM2_UST = 299.99;
+  // Barem esikleri platform kaydindan okunur (sayfaya sabit yazilmazdi;
+  // HepsiBurada'da Trendyol'un esikleri uygulaniyordu).
+  const seciliPlatformKaydi = uniquePlatforms.find(p => p.name === selectedPlatform);
+  const [BAREM2_UST, BAREM1_UST] = baremTavanFiyatlari(seciliPlatformKaydi);
 
   /**
    * Barem onerisi: secili fiyat desi tarifesine dusuyorsa, fiyati barem

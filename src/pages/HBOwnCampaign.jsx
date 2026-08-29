@@ -98,10 +98,18 @@ export default function HBOwnCampaign() {
       }
 
       let shippingCost = 0, shippingVatRate = 20, baremUsed = 'desi';
-      const canUseBarem = !product.special_shipping && !product.multi_package;
-      if (canUseBarem && price > 0) {
-        if (price <= 149.99) { const r = platformShippingRates.find((r) => r.rate_type === 'barem1'); if (r) { shippingCost = r.price; shippingVatRate = r.vat_rate || 20; baremUsed = 'barem1'; } }
-        else if (price <= 299.99) { const r = platformShippingRates.find((r) => r.rate_type === 'barem2'); if (r) { shippingCost = r.price; shippingVatRate = r.vat_rate || 20; baremUsed = 'barem2'; } }
+      // Barem kurallari ortak modulde (src/lib/baremKurali.js): sinirlar
+      // platform kaydindan okunur, desi tavani ve use_barem kontrol edilir.
+      // Once bu sayfaya sabit yazilmisti ve HepsiBurada'da Trendyol'un
+      // bantlari uygulaniyordu.
+      const secilenBarem = baremSec(platform, product, price, product?.desi);
+      if (secilenBarem) {
+        const baremRate = platformShippingRates.find(r => r.rate_type === secilenBarem);
+        if (baremRate) {
+          shippingCost = baremRate.price;
+          shippingVatRate = baremRate.vat_rate || 20;
+          baremUsed = secilenBarem;
+        }
       }
       if (shippingCost === 0) {
         if (product.multi_package && product.packages) {

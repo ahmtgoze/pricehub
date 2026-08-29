@@ -579,24 +579,17 @@ export default function FlashProducts() {
       let shippingVatRate = 20;
       let baremUsed = 'desi';
 
-      const canUseBarem = !matchedProduct.special_shipping && !matchedProduct.multi_package;
-      
-      // Barem kontrolleri — Prices sayfasıyla aynı
-      if (canUseBarem && price > 0) {
-        if (price >= 0 && price <= 149.99) {
-          const baremRate = platformShippingRates.find(r => r.rate_type === 'barem1');
-          if (baremRate) {
-            shippingCost = baremRate.price;
-            shippingVatRate = baremRate.vat_rate || 20;
-            baremUsed = 'barem1';
-          }
-        } else if (price >= 150 && price <= 299.99) {
-          const baremRate = platformShippingRates.find(r => r.rate_type === 'barem2');
-          if (baremRate) {
-            shippingCost = baremRate.price;
-            shippingVatRate = baremRate.vat_rate || 20;
-            baremUsed = 'barem2';
-          }
+      // Barem kurallari ortak modulde (src/lib/baremKurali.js): sinirlar
+      // platform kaydindan okunur, desi tavani ve use_barem kontrol edilir.
+      // Once bu sayfaya sabit yazilmisti ve HepsiBurada'da Trendyol'un
+      // bantlari uygulaniyordu.
+      const secilenBarem = baremSec(platform, matchedProduct, price, matchedProduct?.desi);
+      if (secilenBarem) {
+        const baremRate = platformShippingRates.find(r => r.rate_type === secilenBarem);
+        if (baremRate) {
+          shippingCost = baremRate.price;
+          shippingVatRate = baremRate.vat_rate || 20;
+          baremUsed = secilenBarem;
         }
       }
 
@@ -1718,13 +1711,20 @@ export default function FlashProducts() {
 
                                 let bestBaremSuggestion = null;
 
-                                if (selectedPrice > 299.99) {
-                                  const barem2CommissionRate = getCommissionRate(item, 299.99);
+                                // Oneri fiyatlari platformun kendi barem tavanlarindan
+                                // geliyor; sayfaya sabit yazilmis 299,99 / 149,99
+                                // HepsiBurada'da yanlisti.
+                                const tavanlar = baremTavanFiyatlari(currentCalc.platform);
+                                const ustTavan = tavanlar[0];
+                                const altTavan = tavanlar[1];
+
+                                if (ustTavan && selectedPrice > ustTavan) {
+                                  const barem2CommissionRate = getCommissionRate(item, ustTavan);
                                   if (barem2CommissionRate !== null) {
-                                    const barem2Calc = calculateProfit(299.99, barem2CommissionRate, item);
+                                    const barem2Calc = calculateProfit(ustTavan, barem2CommissionRate, item);
                                     if (barem2Calc.baremUsed === 'barem2' && barem2Calc.profitRate > currentProfitRate) {
                                       bestBaremSuggestion = {
-                                        price: 299.99,
+                                        price: ustTavan,
                                         profit: barem2Calc.profit,
                                         profitRate: barem2Calc.profitRate,
                                         baremType: 'Barem 2',
@@ -1737,14 +1737,14 @@ export default function FlashProducts() {
                                   }
                                 }
 
-                                if (selectedPrice > 149.99) {
-                                  const barem1CommissionRate = getCommissionRate(item, 149.99);
+                                if (altTavan && selectedPrice > altTavan) {
+                                  const barem1CommissionRate = getCommissionRate(item, altTavan);
                                   if (barem1CommissionRate !== null) {
-                                    const barem1Calc = calculateProfit(149.99, barem1CommissionRate, item);
+                                    const barem1Calc = calculateProfit(altTavan, barem1CommissionRate, item);
                                     if (barem1Calc.baremUsed === 'barem1' && barem1Calc.profitRate > currentProfitRate) {
                                       if (!bestBaremSuggestion || barem1Calc.profitRate > bestBaremSuggestion.profitRate) {
                                         bestBaremSuggestion = {
-                                          price: 149.99,
+                                          price: altTavan,
                                           profit: barem1Calc.profit,
                                           profitRate: barem1Calc.profitRate,
                                           baremType: 'Barem 1',
