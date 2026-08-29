@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { toast } from 'sonner';
 import * as XLSX from 'xlsx';
 import PriceDetailModal from '@/components/modals/PriceDetailModal';
+import { baremSec } from '@/lib/baremKurali';
 
 const Product = db.entities.Product;
 const Platform = db.entities.Platform;

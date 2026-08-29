@@ -17,6 +17,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { toast } from 'sonner';
 import * as XLSX from 'xlsx';
 import BaremBadge from '@/components/ui/BaremBadge';
+import { baremSec, baremTavanFiyatlari } from '@/lib/baremKurali';
 
 export default function FlashProducts() {
   const [userEmail, setUserEmail] = useState(null);

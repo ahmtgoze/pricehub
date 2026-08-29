@@ -197,7 +197,15 @@ export default function MarketplaceProducts() {
   // Website duplicate: ürün adı aynı VE (SKU / Barkod / Model Kodu'ndan en az biri aynı)
   const isWebsiteDuplicate = (excelRow, existing) => {
     if (!normEq(excelRow.platform_product_name, existing.platform_product_name)) return false;
-    // Sutun tanimlari. '__select' sistem sutunudur (gizlenemez).
+
+    return (
+      normEq(excelRow.variant_sku, existing.variant_sku) ||
+      normEq(excelRow.barkod, existing.barkod) ||
+      normEq(excelRow.model_code, existing.model_code)
+    );
+  };
+
+  // Sutun tanimlari. '__select' sistem sutunudur (gizlenemez).
   // "Bağlı Ürün" hucresi acilir arama icerdigi icin tablo overflowVisible.
   const pazaryeriKolonlari = [
     {
@@ -290,13 +298,6 @@ export default function MarketplaceProducts() {
     { id: 'stock_quantity', header: 'Stok', optional: true, cell: (row) => row.stock_quantity ?? '-' },
     { id: 'variant_sku', header: 'Varyant SKU', optional: true, cell: (row) => row.variant_sku || '-' },
   ];
-
-  return (
-      normEq(excelRow.variant_sku, existing.variant_sku) ||
-      normEq(excelRow.barkod, existing.barkod) ||
-      normEq(excelRow.model_code, existing.model_code)
-    );
-  };
 
   const handleFileUpload = async (e) => {
     if (!selectedPlatform) { toast.error('Platform seçiniz'); return; }

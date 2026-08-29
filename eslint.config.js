@@ -35,6 +35,10 @@ export default [
       "unused-imports": pluginUnusedImports,
     },
     rules: {
+      // Tanimsiz degisken/import = calisma aninda ReferenceError, sayfa
+      // komple beyaz kalir. Derleme bunu YAKALAMIYOR; iki kez Flas Urunler
+      // sayfasi bu yuzden acilmadi. Bundan sonra lint durduruyor.
+      "no-undef": "error",
       "no-unused-vars": "off",
       "react/jsx-uses-vars": "error",
       "react/jsx-uses-react": "error",
