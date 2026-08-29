@@ -173,6 +173,30 @@ kayıt da bulunur.
 > Motor bunu `findBaremShippingRate` ile, promosyon sayfaları
 > `baremTarifesiSec` ile doğru yapar. İkisi de aynı mantıktadır.
 
+### Desi tarifesi nasıl bulunur?
+
+Kaynak: `findDesiShippingRate`
+
+1. Aktif desi tarifeleri küçükten büyüğe sıralanır
+2. Ürünün desisine **eşit veya ondan büyük en küçük** tarife seçilir
+   (örn. 4,2 desi → 5 desi tarifesi)
+3. **Ürünün desisi tüm tarifelerin üstündeyse en yüksek tarife kullanılır** —
+   hesap hata vermez, sessizce en pahalı tarifeye düşer
+
+> ⚠️ 3. madde önemli: 60 desilik bir ürün, tarife tablosu 40 desiye kadar
+> tanımlıysa **40 desi ücretiyle** hesaplanır. Gerçek kargo bedeli daha
+> yüksek olacağı için kâr olduğundan iyi görünür. Tarife tablosunun ürün
+> yelpazesini kapsaması gerekir.
+
+Desi tarifesinde `same_day_delivery` alanına **bakılmaz** — Bugün Kargoda
+ayrımı yalnızca baremde vardır.
+
+### Kargo firması kilidi
+
+Platform ayarında bir **kargo firması seçilmişse**, o platformda yalnızca
+o firmanın tarifeleri kullanılır. Firma seçili değilse tüm tarifeler
+değerlendirmeye girer.
+
 ### Tarife tipleri
 
 - **Sistem tarifesi** (`is_admin_created`) — admin tanımlar, herkes görür,
@@ -189,7 +213,9 @@ kayıt da bulunur.
 
 - **Çoklu paket:** her paketin desisi ayrı hesaplanıp **toplanır**, barem yok
 - **Özel kargo:** her paket için desi ücreti **×2** + paket başına iade payı
-  (`return_cost_per_package`, varsayılan 180,096 ₺)
+  (`return_cost_per_package` ayarı, varsayılan 180,096 ₺)
+- **Paketleme maliyeti:** seçilen paketin `total_cost` değeridir. Çoklu pakette
+  her paketin kendi maliyeti **toplanır**.
 - **Çift kargo** (`double_shipping`): hesaplanan kargo bedeli **×2**
 
 ---
@@ -263,10 +289,32 @@ Kendi Kampanyan (HepsiBurada).
 4. Excel'deki her fiyat kademesi için net kâr hesaplanır
 5. Kullanıcı kârlı kademeyi seçer (tek tek veya "Akıllı Otomatik Seç")
 
-### Komisyon önceliği
+### Komisyon önceliği (SIRALAMA ÖNEMLİ)
 
-Ürün **komisyon tarifesine** girmişse oradan gelen oran esas alınır;
-girmemişse kategori komisyonu kullanılır.
+Promosyon sayfalarında komisyon oranı şu sırayla aranır:
+
+1. **Ürün komisyon tarifesi** — Excel'de `has_commission_tariff = "Var"` ise:
+   ürünün barkodu ile tarife tablosuna bakılır ve **fiyatın hangi aralığa
+   düştüğü** bulunur (4 aralığa kadar). O aralığın komisyonu kullanılır.
+   *Yani aynı ürün, fiyatı değiştikçe farklı komisyon oranına tabi olabilir.*
+2. Tarifede eşleşen aralık yoksa veya oran 0 ise → **kategori komisyonu**
+3. O da yoksa → hesap yapılamaz
+
+> Bu sıralama kâr rakamını doğrudan değiştirir. "Var" yazan bir üründe
+> kategori komisyonunu kullanmak yanlış sonuç verir.
+
+### Pazaryeri ürün eşleştirme (tekrar tespiti)
+
+Aynı ürünün Excel'de iki kez gelmesi platform bazında farklı kurallarla
+tespit edilir:
+
+| Platform | Karşılaştırılan alanlar | Eşik |
+|---|---|---|
+| Trendyol | Barkod, Model Kodu, Marka, Kategori | **4'ten en az 3'ü** |
+| HepsiBurada | Satıcı Stok Kodu, SKU, Kategori, Marka, Barkod, Ürün Adı | **6'dan en az 5'i** |
+| Web Sitesi | Ürün adı **aynı olmalı** + (SKU / Barkod / Model Kodu'ndan en az biri) | — |
+
+Boş alan eşleşme sayılmaz (iki taraf da dolu olmalı).
 
 ### Barem öneri sütunu
 

@@ -237,5 +237,40 @@ console.log('\n═══ VERGİLER ═══');
   esit('27 web sitesinde stopaj HER ZAMAN 0', web.withholding_amount, 0);
 }
 
+console.log('\n═══ DESİ TARİFESİ SEÇİMİ ═══');
+{
+  const { findDesiShippingRate } = motor;
+  const tarifeler = [
+    { rate_type: 'desi', desi: 1, price: 100, is_active: true },
+    { rate_type: 'desi', desi: 5, price: 150, is_active: true },
+    { rate_type: 'desi', desi: 10, price: 200, is_active: true },
+  ];
+  esit('28 tam eşleşme', findDesiShippingRate(tarifeler, 5)?.price, 150);
+  esit('29 ara değer bir ÜSTTEKİ tarifeye yuvarlanır (4,2 → 5 desi)',
+    findDesiShippingRate(tarifeler, 4.2)?.price, 150);
+  // Tavan asilirsa hata vermez, en yuksek tarifeye duser — kar oldugundan
+  // iyi gorunebilir, tarife tablosu urun yelpazesini kapsamali.
+  esit('30 tavanı aşan desi → en yüksek tarife (sessizce)',
+    findDesiShippingRate(tarifeler, 99)?.price, 200);
+  esit('31 hiç tarife yoksa null', findDesiShippingRate([], 5), null);
+  esit('32 pasif tarife yok sayılır',
+    findDesiShippingRate([{ rate_type: 'desi', desi: 5, price: 150, is_active: false }], 5), null);
+}
+
+console.log('\n═══ KOMİSYON EŞLEŞTİRME ═══');
+{
+  const { findCommission } = motor;
+  const komisyonlar = [
+    { platform_id: 'p1', category_id: 'k1', commission_rate: 20, is_active: true },
+    { platform_id: 'p1', category_id: 'k2', commission_rate: 15, is_active: true },
+    { platform_id: 'p2', category_id: 'k1', commission_rate: 18, is_active: true },
+    { platform_id: 'p1', category_id: 'k3', commission_rate: 99, is_active: false },
+  ];
+  esit('33 platform + kategori eşleşmesi', findCommission(komisyonlar, 'p1', 'k1')?.commission_rate, 20);
+  esit('34 aynı kategori farklı platform', findCommission(komisyonlar, 'p2', 'k1')?.commission_rate, 18);
+  esit('35 pasif komisyon bulunmaz', findCommission(komisyonlar, 'p1', 'k3'), undefined);
+  esit('36 eşleşme yoksa undefined', findCommission(komisyonlar, 'p9', 'k9'), undefined);
+}
+
 console.log(`\nGECEN: ${gecen}   KALAN: ${kalan}`);
 if (kalan > 0) process.exit(1);
