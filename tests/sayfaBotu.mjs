@@ -136,7 +136,9 @@ async function sayfaTest(b, url, beklenen) {
   const { result } = await b.gonder('Runtime.evaluate', {
     expression: `JSON.stringify({
       metin: (document.body.innerText || '').trim().length,
-      baslik: (document.body.innerText || '').slice(0, 400),
+      // Menu 15 maddeyle ilk 400 karakteri dolduruyordu; beklenen basligi
+      // kacirip "supheli" diyordu. Sayfanin tamamina bakiyoruz.
+      icerik: (document.body.innerText || ''),
       adres: location.pathname
     })`,
     returnByValue: true,
@@ -146,7 +148,7 @@ async function sayfaTest(b, url, beklenen) {
   if (durum.adres.toLowerCase() === '/login') return { sonuc: 'GIRIS', not: 'Oturum yok — once: npm run bot:giris' };
   if (hatalar.length) return { sonuc: 'HATA', not: hatalar[0] };
   if (durum.metin < 40) return { sonuc: 'BOS', not: `Ekranda icerik yok (${durum.metin} karakter) — beyaz sayfa` };
-  if (beklenen && !durum.baslik.includes(beklenen)) {
+  if (beklenen && !durum.icerik.includes(beklenen)) {
     return { sonuc: 'SUPHE', not: `"${beklenen}" ekranda gorulmedi` };
   }
   return { sonuc: 'OK', not: `${durum.metin} karakter icerik` };
