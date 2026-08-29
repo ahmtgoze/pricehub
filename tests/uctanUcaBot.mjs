@@ -18,6 +18,7 @@
  * Cikis kodu: basarisiz adim varsa 1.
  */
 
+import { writeFileSync, unlinkSync } from 'node:fs';
 import { tarayiciAc, tabanSec, hataMetni, YOKSAY, bekle } from './tarayici.mjs';
 
 const argv  = process.argv.slice(2);
@@ -80,13 +81,29 @@ const TIKLA_TANIM = `
     return [...kok.querySelectorAll('button')]
       .find(b => ['Ekle', 'Kaydet'].includes(b.textContent.trim()));
   };
+
+  // Onay penceresindeki ONAY butonu. Sayfa arkasinda ayni metinli buton
+  // olabiliyor ("Sil (13)" hem arac cubugunda hem onayda) — bu yuzden
+  // arama alertdialog/dialog icine hapsedilir, Iptal de elenir.
+  window.__botOnay = () => {
+    const kok = document.querySelector('[role="alertdialog"]') || window.__botModal();
+    if (!kok) return null;
+    // Regex KULLANMA: bu blok bir template literal icinde tasiniyor ve
+    // orada \b kelime siniri degil BACKSPACE karakteri oluyor. /^Sil\b/
+    // bu yuzden hicbir zaman eslesmedi ve bot "buton yok" dedi.
+    return [...kok.querySelectorAll('button')]
+      .find(b => {
+        const t = b.textContent.trim();
+        return t === 'Sil' || t.startsWith('Sil (');
+      });
+  };
   'hazir';
 `;
 
 async function sayfayaGit(b, yol, beklenen) {
   b.olaylar.length = 0;
   await b.git(`${taban}${yol}`);
-  await bekle(4000);
+  await bekle(5000);
   await b.calistir(TIKLA_TANIM);
   const durum = await b.calistir(`JSON.stringify({
     adres: location.pathname,
@@ -151,6 +168,73 @@ sec = async (etiket, deger) => {
   if (!tiklandi) throw new Error(`secilemedi: ${etiket} -> ${deger}`);
 };
 
+/**
+ * Test kiracisindaki TUM urunleri toplu siler.
+ *
+ * Her kosu veri biraktigi icin "3 urun bekleniyordu" gibi dogrulamalar
+ * zamanla anlamsizlasiyordu. Bastaki temizlik her koseyi ayni bos noktadan
+ * baslatir. Yalnizca test kiracisinda calisir — izolasyon e-posta bazli
+ * oldugundan gercek veriye erisemez.
+ */
+async function testVerisiniTemizle() {
+  await sayfayaGit(b, '/Products', 'Ürünler');
+
+  const varMi = await b.calistir(
+    `!!document.querySelector('table tbody tr')`
+  );
+  if (!varMi) return 0;
+
+  await tikla(`document.querySelector('table thead input[type=checkbox]')
+            || document.querySelector('table thead button[role=checkbox]')`,
+    'tumunu sec kutucugu');
+  await bekle(1500);
+
+  const kacTane = await b.calistir(`(() => {
+    const m = (document.body.innerText || '').match(/(\\d+)\\s*ürün seçili/);
+    return m ? parseInt(m[1], 10) : 0;
+  })()`);
+  if (!kacTane) return 0;
+
+  await tikla(`[...document.querySelectorAll('button')]
+    .find(x => x.offsetParent && /^Sil \\(\\d+\\)$/.test(x.textContent.trim()))`,
+    'arac cubugu Sil (n)');
+  await bekle(1500);
+
+  await tikla(`window.__botOnay()`, 'onay penceresi Sil');
+
+  // "kac tanesini sectik" silindigi anlamina GELMEZ. Tablonun gercekten
+  // bosaldigini dogrula — aksi halde bot silmedigi seyi silindi sanar.
+  await bekleKosul(b, `!document.querySelector('table tbody tr')`, 30,
+    'tablo bosalsin');
+  return kacTane;
+}
+
+/**
+ * Tiklar; bulamazsa HATA VERIR.
+ *
+ * gercekTikla false donuyor ama donusu yok sayilinca bot sonraki adimda
+ * "pencere cikmadi" gibi yaniltici bir yerde patliyordu. Asil sebep bir
+ * onceki tiklamanin hic gerceklesmemis olmasiydi.
+ */
+async function tikla(secici, ad) {
+  const oldu = await b.gercekTikla(secici);
+  if (!oldu) {
+    // Ekranda ne oldugunu hata mesajina koy: yoksa "tiklanamadi" deyip
+    // sebebi ayri bir hata ayiklama turu gerektiriyor.
+    const goruntu = await b.calistir(`JSON.stringify({
+      roller: [...document.querySelectorAll('[role]')]
+        .map(e => e.getAttribute('role'))
+        .filter((v, i, a) => a.indexOf(v) === i),
+      pencere: document.querySelector('[role="alertdialog"], [role="dialog"]')
+        ?.innerText?.replace(/\\n+/g, ' / ').slice(0, 160) || 'pencere yok',
+      butonlar: [...document.querySelectorAll('[role="alertdialog"] button, [role="dialog"] button')]
+        .map(x => x.textContent.trim())
+    })`).catch(() => '(okunamadi)');
+    throw new Error(`tiklanamadi: ${ad} — ${goruntu}`);
+  }
+  return true;
+}
+
 let kritikHata = false;
 
 try {
@@ -161,6 +245,21 @@ try {
   } catch (e) {
     kaydet('Oturum ve Dashboard', 'HATA', e.message);
     throw e;   // oturum yoksa devami anlamsiz
+  }
+
+  /* ── 1b. Onceki kosulardan kalan test verisini temizle ─────────────── */
+  try {
+    const silinen = await testVerisiniTemizle();
+    kaydet('Eski test verisini temizle', 'OK',
+      silinen ? `${silinen} urun silindi` : 'zaten bostu');
+  } catch (e) {
+    kaydet('Eski test verisini temizle', 'HATA', e.message);
+  }
+
+  if (argv.includes('--temizle')) {
+    console.log('\n--temizle verildi: yalnizca temizlik yapildi, senaryolar atlandi.\n');
+    b.kapat();
+    process.exit(0);
   }
 
   /* ── 2. Kategori olustur ───────────────────────────────────────────── */
@@ -249,7 +348,62 @@ try {
     kritikHata = true;
   }
 
-  /* ── 5. Fiyatları Hesapla ──────────────────────────────────────────── */
+  /* ── 5. CSV ile toplu ürün yükleme ─────────────────────────────────── */
+  // Dosya alani gizli; isletim sistemi penceresi otomatize edilemez.
+  // CDP DOM.setFileInputFiles dosyayi dogrudan alana koyar.
+  const CSV_YOLU = '/tmp/pricehub-bot-urunler.csv';
+  try {
+    await sayfayaGit(b, '/Products', 'Ürünler');
+    await b.gonder('DOM.enable');
+
+    // BOM olmadan Excel Turkce karakterleri bozuyor.
+    writeFileSync(CSV_YOLU, '\ufeff' + [
+      'SKU,Ürün Adı,Maliyet,Desi,Kategori,KDV Oranı',
+      `${SKU}-CSV1,${URUN} CSV 1,50,1,${KATEGORI},20`,
+      `${SKU}-CSV2,${URUN} CSV 2,75,3,${KATEGORI},20`,
+    ].join('\n'), 'utf8');
+
+    const kondu = await b.dosyaSec('input[type=file]', CSV_YOLU);
+    if (!kondu) throw new Error('dosya alani bulunamadi');
+
+    await bekleKosul(b, metinVar(`${URUN} CSV 1`), 25, 'CSV urunleri listede gorunsun');
+    const ikisiDe = await b.calistir(metinVar(`${URUN} CSV 2`));
+    if (!ikisiDe) throw new Error('CSV satirlarindan yalnizca biri aktarildi');
+
+    kaydet('CSV ile toplu yükleme', 'OK', '2 satir aktarildi');
+  } catch (e) {
+    kaydet('CSV ile toplu yükleme', 'HATA', e.message);
+  } finally {
+    try { unlinkSync(CSV_YOLU); } catch { /* yoksay */ }
+  }
+
+  /* ── 6. Ürün arama / filtre ────────────────────────────────────────── */
+  try {
+    await sayfayaGit(b, '/Products', 'Ürünler');
+    const yazildi = await b.calistir(`(() => {
+      const ara = [...document.querySelectorAll('input')]
+        .find(i => (i.placeholder || '').includes('ara'));
+      if (!ara) return 'arama-kutusu-yok';
+      window.__botYaz(ara, ${JSON.stringify(SKU + '-CSV1')});
+      return 'ok';
+    })()`);
+    if (yazildi !== 'ok') throw new Error(yazildi);
+    await bekle(2000);
+
+    // Arama daraltmali: yalnizca CSV1 kalmali, CSV2 elenmelidir.
+    const durum = await b.calistir(`JSON.stringify({
+      csv1: ${metinVar(`${URUN} CSV 1`)},
+      csv2: ${metinVar(`${URUN} CSV 2`)}
+    })`);
+    const { csv1, csv2 } = JSON.parse(durum);
+    if (!csv1) throw new Error('aranan urun listede yok');
+    if (csv2) throw new Error('arama filtrelemiyor — eslesmeyen urun de listede');
+    kaydet('Ürün arama filtresi', 'OK', 'daraltma dogru');
+  } catch (e) {
+    kaydet('Ürün arama filtresi', 'HATA', e.message);
+  }
+
+  /* ── 7. Fiyatları Hesapla ──────────────────────────────────────────── */
   try {
     const d = await sayfayaGit(b, '/Prices', 'Fiyatlar');
 
@@ -277,6 +431,9 @@ try {
     // eksikse motor urunu sessizce atlar; bot bunu yesil gostermemeli.
     const adet = parseInt((ozet.match(/(\d+)\s*ürün/) || [])[1] ?? '0', 10);
     if (!adet) throw new Error(`hic fiyat uretilmedi — ${ozet}`);
+    // 1 manuel + 2 CSV urunu bekleniyor. Eksikse bir urun sessizce
+    // atlanmis demektir (komisyon yok, kargo tarifesi yok, kategori bos...).
+    if (adet < 3) throw new Error(`3 urun bekleniyordu, ${adet} hesaplandi — biri sessizce atlandi`);
 
     kaydet('Fiyatları Hesapla', 'OK', ozet);
   } catch (e) {
@@ -284,7 +441,34 @@ try {
     kritikHata = true;
   }
 
-  /* ── 6. Promosyon sayfası açılıyor mu ──────────────────────────────── */
+  /* ── 8. Ürün silme ─────────────────────────────────────────────────── */
+  // Hem silmenin calistigini dogrular hem de her kosuda biriken test
+  // verisini azaltir. Silinecek satir once arama ile tekillestirilir;
+  // aksi halde yanlis satirin cop kutusuna basilabilir.
+  try {
+    await sayfayaGit(b, '/Products', 'Ürünler');
+    const hedef = `${URUN} CSV 2`;
+
+    await b.calistir(`(() => {
+      const ara = [...document.querySelectorAll('input')].find(i => (i.placeholder || '').includes('ara'));
+      if (ara) window.__botYaz(ara, ${JSON.stringify(hedef)});
+      return 'ok';
+    })()`);
+    await bekle(2500);
+
+    await tikla(`document.querySelector('table tbody tr .lucide-trash2')?.closest('button')`,
+      'satir cop kutusu');
+    await bekle(1500);
+
+    // Onay penceresine hapset: sayfa arkasinda ayni metinli buton var.
+    await tikla(`window.__botOnay()`, 'onay penceresi Sil');
+    await bekleKosul(b, `!${metinVar(hedef)}`, 20, 'urun listeden kalksin');
+    kaydet('Ürün silme', 'OK', 'CSV 2 silindi, liste guncellendi');
+  } catch (e) {
+    kaydet('Ürün silme', 'HATA', e.message);
+  }
+
+  /* ── 9. Promosyon sayfası açılıyor mu ──────────────────────────────── */
   for (const [yol, ad, bek] of [
     ['/campaigns',           'Kampanyalar',          'Kampanyalar'],
     ['/AdvantageProductTag', 'Avantajlı Ürün Etiketi', 'Avantajlı'],

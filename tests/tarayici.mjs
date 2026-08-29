@@ -119,15 +119,23 @@ export class Baglanti {
    *
    * secici — sayfada calistirilacak, elementi dondurmesi gereken JS ifadesi.
    */
-  async gercekTikla(secici) {
-    const kutu = await this.calistir(`(() => {
-      const el = (${secici});
-      if (!el) return null;
-      el.scrollIntoView({ block: 'center', behavior: 'instant' });
-      const r = el.getBoundingClientRect();
-      if (!r.width || !r.height) return null;
-      return JSON.stringify({ x: r.left + r.width / 2, y: r.top + r.height / 2 });
-    })()`);
+  async gercekTikla(secici, saniye = 4) {
+    // Element hemen hazir olmayabilir: Radix pencereleri acilirken once
+    // DOM'a giriyor, olculebilir hale gelmesi bir animasyon suruyor. Tek
+    // seferlik bakan surum "buton yok" deyip yaniltiyordu.
+    let kutu = null;
+    for (let i = 0; i < saniye * 4; i++) {
+      kutu = await this.calistir(`(() => {
+        const el = (${secici});
+        if (!el) return null;
+        el.scrollIntoView({ block: 'center', behavior: 'instant' });
+        const r = el.getBoundingClientRect();
+        if (!r.width || !r.height) return null;
+        return JSON.stringify({ x: r.left + r.width / 2, y: r.top + r.height / 2 });
+      })()`);
+      if (kutu) break;
+      await bekle(250);
+    }
     if (!kutu) return false;
     const { x, y } = JSON.parse(kutu);
 
@@ -135,6 +143,26 @@ export class Baglanti {
     await this.gonder('Input.dispatchMouseEvent', { type: 'mouseMoved', x, y, button: 'none', clickCount: 0 });
     await this.gonder('Input.dispatchMouseEvent', { type: 'mousePressed',  x, y, button: 'left', clickCount: 1 });
     await this.gonder('Input.dispatchMouseEvent', { type: 'mouseReleased', x, y, button: 'left', clickCount: 1 });
+    return true;
+  }
+
+  /**
+   * Gizli <input type=file> alanina dosya yukler.
+   *
+   * "Ice Aktar" butonu gizli bir dosya alanini tetikliyor; isletim sistemi
+   * dosya penceresi otomatize edilemez. CDP DOM.setFileInputFiles dosyayi
+   * dogrudan alana koyar ve change olayini tetikler.
+   */
+  async dosyaSec(secici, dosyaYolu) {
+    // gonder() CDP zarfinin tamamini dondurur: { id, result }
+    const belge = await this.gonder('DOM.getDocument', { depth: -1 });
+    const kokId = belge?.result?.root?.nodeId;
+    if (!kokId) return false;
+
+    const bulunan = await this.gonder('DOM.querySelector', { nodeId: kokId, selector: secici });
+    const nodeId = bulunan?.result?.nodeId;
+    if (!nodeId) return false;
+    await this.gonder('DOM.setFileInputFiles', { nodeId, files: [dosyaYolu] });
     return true;
   }
 

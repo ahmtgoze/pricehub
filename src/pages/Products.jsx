@@ -285,16 +285,42 @@ export default function Products() {
   });
 
   const bulkDeleteMutation = useMutation({
+    // Onceki surum duz bir for dongusuydu ve onError yoktu: bir urun
+    // silinemezse dongu orada patlar, KALAN URUNLER HIC SILINMEZ ve
+    // kullanici HICBIR uyari gormezdi — secim bile ekranda kalirdi.
+    // Artik her urun ayri deneniyor, sonuc durustce raporlaniyor.
+    // (Savunma amacli: uretimde bu hatanin tetiklendigi gozlenmedi.)
     mutationFn: async (ids) => {
+      const basarili = [];
+      const basarisiz = [];
       for (const id of ids) {
-        await Product.delete(id);
+        try {
+          await Product.delete(id);
+          basarili.push(id);
+        } catch (err) {
+          const urun = products.find(p => p.id === id);
+          basarisiz.push({ ad: urun?.name || id, sebep: err?.message || 'bilinmeyen hata' });
+        }
       }
+      return { basarili, basarisiz };
     },
-    onSuccess: () => {
+    onSuccess: ({ basarili, basarisiz }) => {
       queryClient.invalidateQueries(['products']);
       setSelectedIds([]);
       setShowBulkDelete(false);
-      toast.success('Seçili ürünler silindi');
+
+      if (!basarisiz.length) {
+        toast.success(`${basarili.length} ürün silindi`);
+        return;
+      }
+      toast.warning(`${basarili.length} ürün silindi, ${basarisiz.length} tanesi silinemedi`, {
+        description: basarisiz.slice(0, 3).map(b => `${b.ad}: ${b.sebep}`).join(' · ')
+          + (basarisiz.length > 3 ? ` (+${basarisiz.length - 3} tane daha)` : ''),
+        duration: 10000,
+      });
+    },
+    onError: (err) => {
+      toast.error('Ürünler silinemedi', { description: err?.message || 'Bilinmeyen hata' });
     }
   });
 
