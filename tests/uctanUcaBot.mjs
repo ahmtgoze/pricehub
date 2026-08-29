@@ -179,9 +179,12 @@ sec = async (etiket, deger) => {
 async function testVerisiniTemizle() {
   await sayfayaGit(b, '/Products', 'Ürünler');
 
-  const varMi = await b.calistir(
-    `!!document.querySelector('table tbody tr')`
-  );
+  // Bos tabloda da bir satir kaliyor ("kayit yok" satiri). Veri satirini
+  // onay kutusundan ayirt ediyoruz; aksi halde "tablo bosaldi mi" kosulu
+  // hicbir zaman saglanmiyor ve temizlik zaman asimina ugruyordu.
+  const VERI_SATIRI = `document.querySelectorAll('table tbody tr input[type=checkbox]').length`;
+
+  const varMi = await b.calistir(`${VERI_SATIRI} > 0`);
   if (!varMi) return 0;
 
   await tikla(`document.querySelector('table thead input[type=checkbox]')
@@ -204,8 +207,7 @@ async function testVerisiniTemizle() {
 
   // "kac tanesini sectik" silindigi anlamina GELMEZ. Tablonun gercekten
   // bosaldigini dogrula — aksi halde bot silmedigi seyi silindi sanar.
-  await bekleKosul(b, `!document.querySelector('table tbody tr')`, 30,
-    'tablo bosalsin');
+  await bekleKosul(b, `${VERI_SATIRI} === 0`, 40, 'tablo bosalsin');
   return kacTane;
 }
 
