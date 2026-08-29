@@ -603,6 +603,91 @@ export default function MarketplaceProducts() {
     else setSelectedRows(new Set(filtered.map(p => p.id)));
   };
 
+
+  const handleDelete = async () => {
+    await deleteMutation.mutateAsync(Array.from(selectedRows));
+    setSelectedRows(new Set());
+    setDeleteDialogOpen(false);
+  };
+
+  const handleUnmatchSelected = async () => {
+    const ids = Array.from(selectedRows);
+    setProgressPopup({ title: 'Bağlar Kesiliyor', current: 0, total: ids.length, currentItemName: '' });
+    let done = 0;
+    for (const id of ids) {
+      const mp = marketplaceProducts.find(m => m.id === id);
+      try {
+        await db.functions.invoke('updateMarketplaceProduct', { id, data: { matched_product_id: null, status: 'not_matched' } });
+      } catch (e) {
+        // Kayıt bulunamazsa atla
+      }
+      done++;
+      setProgressPopup(prev => prev ? { ...prev, current: done, currentItemName: mp?.platform_product_name || '' } : null);
+      await new Promise(r => setTimeout(r, 150));
+    }
+    setProgressPopup(null);
+    queryClient.invalidateQueries({ queryKey: ['marketplaceProducts', userEmail] });
+    toast.success('Bağlantılar kesildi');
+    setSelectedRows(new Set());
+  };
+
+  const handleStockSyncDelete = async (ids) => {
+    const CHUNK = 10;
+    setProgressPopup({ title: 'Ürünler Siliniyor', current: 0, total: ids.length, currentItemName: '' });
+    let done = 0;
+    for (let i = 0; i < ids.length; i += CHUNK) {
+      const chunk = ids.slice(i, i + CHUNK);
+      await Promise.allSettled(chunk.map(id => db.entities.MarketplaceProduct.delete(id)));
+      done += chunk.length;
+      setProgressPopup(prev => prev ? { ...prev, current: done } : null);
+      if (i + CHUNK < ids.length) await new Promise(r => setTimeout(r, 300));
+    }
+    setProgressPopup(null);
+    setStockSyncItems(null);
+    queryClient.invalidateQueries({ queryKey: ['marketplaceProducts', userEmail] });
+    toast.success(`${ids.length} ürün silindi`);
+  };
+
+  const handleStockSyncPassive = async (ids) => {
+    for (const id of ids) {
+      await db.functions.invoke('updateMarketplaceProduct', { id, data: { stock_quantity: 0 } });
+    }
+    queryClient.invalidateQueries({ queryKey: ['marketplaceProducts', userEmail] });
+    toast.success(`${ids.length} ürün pasife alındı (stok: 0)`);
+  };
+
+  const autoMatchMutation = useMutation({
+    mutationFn: async () => {
+      let matchedCount = 0;
+      const toMatch = filtered.filter(mp => mp.status !== 'matched');
+
+      setProgressPopup({ title: 'Otomatik Eşleştirme', current: 0, total: toMatch.length, currentItemName: '' });
+
+      for (let mpIdx = 0; mpIdx < toMatch.length; mpIdx++) {
+        const mp = toMatch[mpIdx];
+        setProgressPopup(prev => prev ? { ...prev, current: mpIdx + 1, currentItemName: mp.platform_product_name || '-' } : null);
+
+        const { product: bestMatch, score: bestScore } = findBestMatch(mp, products);
+
+        if (bestMatch && bestScore >= MIN_AUTO_SCORE) {
+          await updateMutation.mutateAsync({ id: mp.id, data: { matched_product_id: bestMatch.id, status: 'matched' } });
+          matchedCount++;
+        }
+        // Düşük skorlu eşleşmeler otomatik uygulanmaz — kullanıcıya bırakılır
+      }
+      return matchedCount;
+    },
+    onSuccess: (count) => {
+      setProgressPopup(null);
+      if (count > 0) toast.success(`${count} ürün yüksek güvenle eşleştirildi`);
+      else toast.info('Yüksek güvenli otomatik eşleşme bulunamadı. Lütfen manuel eşleştirin.');
+    },
+    onError: (err) => { setProgressPopup(null); toast.error('Eşleştirme hatası: ' + err.message); }
+  });
+
+  const selectedPlatformObj = activePlatforms.find(p => p.name === selectedPlatform);
+  const isSelectedWebsite = selectedPlatformObj?.platform_type === 'website';
+
   // Sutun tanimlari. '__select' sistem sutunudur (gizlenemez).
   // "Bağlı Ürün" hucresi acilir arama icerdigi icin tablo overflowVisible.
   const pazaryeriKolonlari = [
@@ -696,90 +781,6 @@ export default function MarketplaceProducts() {
     { id: 'stock_quantity', header: 'Stok', optional: true, cell: (row) => row.stock_quantity ?? '-' },
     { id: 'variant_sku', header: 'Varyant SKU', optional: true, cell: (row) => row.variant_sku || '-' },
   ];
-
-  const handleDelete = async () => {
-    await deleteMutation.mutateAsync(Array.from(selectedRows));
-    setSelectedRows(new Set());
-    setDeleteDialogOpen(false);
-  };
-
-  const handleUnmatchSelected = async () => {
-    const ids = Array.from(selectedRows);
-    setProgressPopup({ title: 'Bağlar Kesiliyor', current: 0, total: ids.length, currentItemName: '' });
-    let done = 0;
-    for (const id of ids) {
-      const mp = marketplaceProducts.find(m => m.id === id);
-      try {
-        await db.functions.invoke('updateMarketplaceProduct', { id, data: { matched_product_id: null, status: 'not_matched' } });
-      } catch (e) {
-        // Kayıt bulunamazsa atla
-      }
-      done++;
-      setProgressPopup(prev => prev ? { ...prev, current: done, currentItemName: mp?.platform_product_name || '' } : null);
-      await new Promise(r => setTimeout(r, 150));
-    }
-    setProgressPopup(null);
-    queryClient.invalidateQueries({ queryKey: ['marketplaceProducts', userEmail] });
-    toast.success('Bağlantılar kesildi');
-    setSelectedRows(new Set());
-  };
-
-  const handleStockSyncDelete = async (ids) => {
-    const CHUNK = 10;
-    setProgressPopup({ title: 'Ürünler Siliniyor', current: 0, total: ids.length, currentItemName: '' });
-    let done = 0;
-    for (let i = 0; i < ids.length; i += CHUNK) {
-      const chunk = ids.slice(i, i + CHUNK);
-      await Promise.allSettled(chunk.map(id => db.entities.MarketplaceProduct.delete(id)));
-      done += chunk.length;
-      setProgressPopup(prev => prev ? { ...prev, current: done } : null);
-      if (i + CHUNK < ids.length) await new Promise(r => setTimeout(r, 300));
-    }
-    setProgressPopup(null);
-    setStockSyncItems(null);
-    queryClient.invalidateQueries({ queryKey: ['marketplaceProducts', userEmail] });
-    toast.success(`${ids.length} ürün silindi`);
-  };
-
-  const handleStockSyncPassive = async (ids) => {
-    for (const id of ids) {
-      await db.functions.invoke('updateMarketplaceProduct', { id, data: { stock_quantity: 0 } });
-    }
-    queryClient.invalidateQueries({ queryKey: ['marketplaceProducts', userEmail] });
-    toast.success(`${ids.length} ürün pasife alındı (stok: 0)`);
-  };
-
-  const autoMatchMutation = useMutation({
-    mutationFn: async () => {
-      let matchedCount = 0;
-      const toMatch = filtered.filter(mp => mp.status !== 'matched');
-
-      setProgressPopup({ title: 'Otomatik Eşleştirme', current: 0, total: toMatch.length, currentItemName: '' });
-
-      for (let mpIdx = 0; mpIdx < toMatch.length; mpIdx++) {
-        const mp = toMatch[mpIdx];
-        setProgressPopup(prev => prev ? { ...prev, current: mpIdx + 1, currentItemName: mp.platform_product_name || '-' } : null);
-
-        const { product: bestMatch, score: bestScore } = findBestMatch(mp, products);
-
-        if (bestMatch && bestScore >= MIN_AUTO_SCORE) {
-          await updateMutation.mutateAsync({ id: mp.id, data: { matched_product_id: bestMatch.id, status: 'matched' } });
-          matchedCount++;
-        }
-        // Düşük skorlu eşleşmeler otomatik uygulanmaz — kullanıcıya bırakılır
-      }
-      return matchedCount;
-    },
-    onSuccess: (count) => {
-      setProgressPopup(null);
-      if (count > 0) toast.success(`${count} ürün yüksek güvenle eşleştirildi`);
-      else toast.info('Yüksek güvenli otomatik eşleşme bulunamadı. Lütfen manuel eşleştirin.');
-    },
-    onError: (err) => { setProgressPopup(null); toast.error('Eşleştirme hatası: ' + err.message); }
-  });
-
-  const selectedPlatformObj = activePlatforms.find(p => p.name === selectedPlatform);
-  const isSelectedWebsite = selectedPlatformObj?.platform_type === 'website';
 
   return (
     <div className="min-h-screen bg-secondary p-6">
