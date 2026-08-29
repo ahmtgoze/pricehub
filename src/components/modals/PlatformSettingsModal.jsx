@@ -224,7 +224,7 @@ export default function PlatformSettingsModal({
     platform?.platform_type === 'trendyol'
       ? 'from-orange-500 to-orange-600'
       : platform?.platform_type === 'hepsiburada'
-      ? 'from-yellow-500 to-orange-500'
+      ? 'from-purple-500 to-purple-600'
       : 'from-gray-300 to-gray-400';
 
   return (
