@@ -278,11 +278,20 @@ kullanıcı yalnızca görür. Kullanıcı kendi web sitesi platformunu düzenle
 
 | Ayar | Davranış |
 |---|---|
-| Hizmet bedeli | `fixed_per_order` (sabit) veya `percent_of_sale` (yüzde) |
+| Hizmet bedeli | `fixed_per_order` (sabit) veya `percent_of_sale` (yüzde). **Platformdan platforma değişir; web sitesinde yoktur.** |
 | Bugün Kargoda hizmet bedeli | Bugün Kargoda açıksa **standart yerine** bu uygulanır |
-| Stopaj | Yalnız pazaryerlerinde; **web sitesinde her zaman 0** |
-| Kurumlar vergisi | Yalnız **kâr pozitifse**; varsayılan %25 |
+| Stopaj | **KDV'siz satış tutarı üzerinden %1.** Yalnız pazaryerlerinde; **web sitesinde her zaman 0** (kodda ayrıca zorlanır) |
+| Kurumlar vergisi | Yalnız **kâr pozitifse**. Limited şirket için **%25** varsayılan; kullanıcı değiştirebilir |
 | POS hizmet bedeli | Yalnız HepsiBurada ve Web Sitesi'nde, `has_pos_service_fee` açıksa |
+
+**Bugünkü değerler** (sistem yöneticisi ayarları — değişebilir, kod bunları
+veritabanından okur):
+
+| | Trendyol | HepsiBurada | Web Sitesi |
+|---|---|---|---|
+| Stopaj | %1 | %1 | **yok** |
+| Hizmet bedeli | 13,18 ₺ sipariş başına sabit | 12,60 ₺ sabit | **yok** |
+| Kurumlar vergisi | %25 | %25 | %25 |
 
 ### Bugün Kargoda
 
@@ -349,6 +358,23 @@ Kendi Kampanyan (HepsiBurada).
 4. Excel'deki her fiyat kademesi için net kâr hesaplanır
 5. Kullanıcı kârlı kademeyi seçer (tek tek veya "Akıllı Otomatik Seç")
 
+### Akıllı Otomatik Seç nasıl karar verir?
+
+Komisyonlar sayfasındaki **indirimli** hedeflere bakar — normal hedeflere
+değil: indirimli hedef kâr **oranı**, indirimli hedef kâr **tutarı** ve
+indirimli **minimum** kâr tutarı.
+
+1. Boş veya `0` olan hedef **tanımsız** sayılır — aksi halde 0 hedefi her
+   koşul sağlar ve en indirimli kademe yanlışlıkla seçilirdi
+2. Ürünün hiç indirimli hedefi tanımlı değilse ürün **atlanır**
+3. Kademeler **en indirimliden** başlanarak denenir
+4. İndirimli minimum kâr tutarının altında kalan kademeler **elenir**
+5. **Tanımlı olan tüm hedefler birden** sağlanmalıdır (sıkı kontrol)
+6. Koşulu sağlayan **ilk** kademede durulur
+
+> Sonuç: hedefleri sağlayan **en indirimli** kademe seçilir — kârı en yüksek
+> olan değil. Amaç, kâr hedefinden ödün vermeden en agresif indirimi bulmaktır.
+
 ### Komisyon önceliği (SIRALAMA ÖNEMLİ)
 
 Promosyon sayfalarında komisyon oranı şu sırayla aranır:
@@ -405,7 +431,9 @@ Düzenlenen Fiyatlar o fiyatı gösterir → Excel ile platforma yüklenir.
 - Zorunlu alanı boş satırlar **aktarılmaz**, hata listesinde gösterilir —
   sessizce eksik veri oluşmaz
 - Kullanıcı kendi şablonunu oluşturup kaydedebilir
-- **Sistem şablonları kullanıcı tarafından silinemez**
+- **Sabit (sistem) şablonları** aktif temadaki sayfaların kendi şablonlarıdır;
+  kullanıcı bunları **silemez ve değiştiremez** — kendi şablonunu oluşturup
+  hangi sütunun hangi sırayla çıkacağını belirleyebilir
 - İndirme özelliği yalnızca veri indirilen sayfalarda bulunur
 
 ---
