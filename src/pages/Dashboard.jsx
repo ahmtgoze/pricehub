@@ -14,12 +14,19 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { tariheGoreSuz } from '@/lib/tarihAraligi';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { Calendar as CalendarIcon } from 'lucide-react';
+import { format } from 'date-fns';
+import { tr } from 'date-fns/locale';
 
 export default function Dashboard() {
   const navigate = useNavigate();
   const [userEmail, setUserEmail] = useState(null);
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
+  // Tek takvimden secilen aralik. tariheGoreSuz 'YYYY-MM-DD' bekledigi icin
+  // secim aninda yerel gune gore metne cevriliyor (UTC kaymasi olmasin).
+  const [tarihAraligi, setTarihAraligi] = useState({ from: undefined, to: undefined });
+  const [takvimAnahtari, setTakvimAnahtari] = useState(0);
   const [newProductsList, setNewProductsList] = useState([]);
   const [showProductsList, setShowProductsList] = useState(false);
   const [customMinProfit, setCustomMinProfit] = useState('');
@@ -150,9 +157,14 @@ if (filteredByRange) {
 
   const negativeProfitTotal = useMemo(() => productPrices.filter(p => (p.profit_rate || 0) < 0).length, [productPrices]);
 
+  // Date -> 'YYYY-MM-DD' (yerel gune gore; toISOString UTC'ye kaydirirdi)
+  const gunMetni = (t) =>
+    t ? `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-${String(t.getDate()).padStart(2, '0')}` : '';
+
   const handleShowProducts = () => {
-    if (!startDate || !endDate) return;
-    setNewProductsList(tariheGoreSuz(products, startDate, endDate));
+    const { from, to } = tarihAraligi;
+    if (!from || !to) return;
+    setNewProductsList(tariheGoreSuz(products, gunMetni(from), gunMetni(to)));
     setShowProductsList(true);
   };
 
@@ -392,14 +404,35 @@ if (filteredByRange) {
                   <h2 className="text-[15px] font-semibold tracking-[-0.2px] mb-4">Tarihe Göre Eklenen Ürünler</h2>
                   <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-end w-full">
                     <div className="flex-1 min-w-0">
-                      <Label className="text-[11.5px] text-muted-foreground mb-[5px] block">Başlangıç</Label>
-                      <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="w-full" />
+                      <Label className="text-[11.5px] text-muted-foreground mb-[5px] block">Tarih Aralığı</Label>
+                      <Popover onOpenChange={(acik) => { if (acik) setTakvimAnahtari((k) => k + 1); }}>
+                        <PopoverTrigger asChild>
+                          <Button variant="outline" className="w-full justify-start text-left font-normal">
+                            <CalendarIcon className="mr-2 h-4 w-4 shrink-0" />
+                            {tarihAraligi.from ? (
+                              tarihAraligi.to
+                                ? <>{format(tarihAraligi.from, 'd MMM yyyy', { locale: tr })} - {format(tarihAraligi.to, 'd MMM yyyy', { locale: tr })}</>
+                                : format(tarihAraligi.from, 'd MMM yyyy', { locale: tr })
+                            ) : (
+                              <span className="text-muted-foreground">Tarih seçin</span>
+                            )}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            key={takvimAnahtari}
+                            mode="range"
+                            selected={tarihAraligi}
+                            onSelect={(aralik) => setTarihAraligi(aralik || { from: undefined, to: undefined })}
+                            defaultMonth={tarihAraligi.from || new Date()}
+                            numberOfMonths={2}
+                            locale={tr}
+                            classNames={{ day_today: 'bg-primary font-bold text-primary-foreground' }}
+                          />
+                        </PopoverContent>
+                      </Popover>
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <Label className="text-[11.5px] text-muted-foreground mb-[5px] block">Bitiş</Label>
-                      <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="w-full" />
-                    </div>
-                    <Button onClick={handleShowProducts} disabled={!startDate || !endDate} className="w-full sm:w-auto shrink-0">Listele</Button>
+                    <Button onClick={handleShowProducts} disabled={!tarihAraligi.from || !tarihAraligi.to} className="w-full sm:w-auto shrink-0">Listele</Button>
                   </div>
                   {showProductsList && (
                     <div className="mt-4">
