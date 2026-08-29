@@ -34,7 +34,13 @@ Kural ile kod çelişirse kod doğrudur, dosya düzeltilir.
      çalışma anı hatası** yakalar. `npm run build` bunları YAKALAMAZ:
      bu projede sayfalar üç kez böyle bozuldu ve derleme temiz geçti.
    - Bot bir kez `npm run bot:giris` ile giriş ister; oturum kalıcıdır.
-   - ESLint'te `no-undef` AÇIK — tanımsız değişkeni lint durdurur.
+   - ESLint'te `no-undef` **ve** `react/jsx-no-undef` AÇIK. İkisi de gerekli:
+     `no-undef` JSX etiket adlarını görmez, eksik bir `<Modal />` importu
+     sayfayı beyaz bırakır ve derleme temiz geçer.
+   - Son adım **unutulmuş dal kontrolü** (`npm run dallar`): `main`'e
+     girmemiş dal varsa uyarır — yerel *ve* GitHub'daki dallara bakar.
+     Bir tarife düzeltmesi böyle bir dalda unutulup aylarca canlıda hatalı
+     kod çalışmasına yol açtı. Uyarır, durdurmaz.
 
 ## Güvenli çalışma yöntemi (ZORUNLU)
 Büyük/riskli değişiklikler: **branch aç → Vercel önizleme linki (canlı dokunulmaz) → kullanıcı test edip ONAYLAR → main'e merge → canlı.** Sorun olursa Vercel tek-tık rollback. Doküman (.md) dosyaları uygulamaya dahil değildir → direkt main'e güvenle gidebilir, önizleme gerekmez.

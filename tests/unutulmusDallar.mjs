@@ -46,19 +46,27 @@ if (!calistir(`git rev-parse --verify ${ANA}`)) {
 
 const suanki = calistir('git rev-parse --abbrev-ref HEAD');
 
+// -a: UZAK dallar da taransin. Yereli temizleyip GitHub'da unutmak
+// mumkun; nitekim ahmtgoze-patch-1 ve feature/olcuye-gore-kiyas yalnizca
+// origin'de duruyordu ve yalnizca yerele bakan surum "temiz" diyordu.
 // %(refname:short) tirnaksiz birakilirsa kabuk parantezde patlar.
 let dallar;
 try {
-  dallar = calistirZorunlu(`git branch --no-merged ${ANA} --format='%(refname:short)'`)
+  dallar = calistirZorunlu(`git branch -a --no-merged ${ANA} --format='%(refname:short)'`)
     .split('\n')
     .map((d) => d.trim())
     .filter(Boolean)
-    .filter((d) => d !== ANA);
+    .filter((d) => d !== ANA && d !== `origin/${ANA}`)
+    .filter((d) => !d.includes('HEAD'));
 } catch (hata) {
   console.error('\nDal listesi alinamadi — kontrol yapilamadi:');
   console.error(String(hata.stderr || hata.message).trim());
   process.exit(1);
 }
+
+// Ayni dalin yerel + origin kopyasi varsa tek satir goster.
+const yereller = new Set(dallar.filter((d) => !d.startsWith('origin/')));
+dallar = dallar.filter((d) => !(d.startsWith('origin/') && yereller.has(d.slice(7))));
 
 console.log(`\nUnutulmus is kontrolu — "${ANA}" dalina girmemis dallar\n${'─'.repeat(74)}`);
 
@@ -78,8 +86,8 @@ for (const dal of dallar) {
 
 console.log(`\n  ${dallar.length} dal main disinda duruyor.`);
 console.log('  Uzerinde calismiyorsan ya main\'e al ya da sil:');
-console.log(`    git branch -d <dal>   (yerel)`);
-console.log(`    git push origin --delete <dal>   (GitHub)\n`);
+console.log(`    git branch -d <dal>              (yerel)`);
+console.log(`    git push origin --delete <dal>   (GitHub, "origin/" onekini yazma)\n`);
 
 // Uyari niteliginde: cikis kodu 0, kontrol zincirini kesmez.
 process.exit(0);
