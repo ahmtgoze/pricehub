@@ -17,6 +17,11 @@ import { toast } from 'sonner';
 const ShippingRate = db.entities.ShippingRate;
 const Platform = db.entities.Platform;
 
+// Platform ve kargo firması adlarını eşleştirmek için sadeleştirir.
+// "HepsiJet", "HEPSİJET" ve " hepsijet " aynı firmayı gösterir.
+const normalizeName = (value) =>
+  String(value ?? '').trim().toLocaleLowerCase('tr').replace(/\s+/g, ' ');
+
 export default function ShippingRates() {
   const queryClient = useQueryClient();
   const [userEmail, setUserEmail] = React.useState(null);
@@ -138,46 +143,65 @@ export default function ShippingRates() {
     const toCreate = [];
     const toUpdate = [];
     const errors = [];
+    let unchangedCount = 0;
+    // Bir tarife satırını birden fazla Excel satırının hedeflemesini engeller.
+    const claimedIds = new Map();
 
     for (let i = 0; i < data.length; i++) {
       const row = data[i];
       if (!row || Object.keys(row).length === 0) continue;
+      const rowNo = i + 2; // Excel'de 1. satır başlık
 
       const platformName = row['Platform'] || row.platform_name;
-      let platform = platforms.find(p => p.name?.toLowerCase() === platformName?.toLowerCase());
+      let platform = platforms.find(p => normalizeName(p.name) === normalizeName(platformName));
 
       if (!platform) {
-        const existingRate = shippingRates.find(r => r.platform_name?.toLowerCase() === platformName?.toLowerCase());
+        const existingRate = shippingRates.find(r => normalizeName(r.platform_name) === normalizeName(platformName));
         if (existingRate) platform = { id: existingRate.platform_id, name: existingRate.platform_name, platform_type: existingRate.platform_type };
       }
 
-      if (!platform) { errors.push(`Satır ${i + 1}: Platform bulunamadı: ${platformName}`); continue; }
+      if (!platform) { errors.push(`Satır ${rowNo}: Platform bulunamadı: ${platformName}`); continue; }
 
       const rateType = (row['Tarife Tipi'] || row.rate_type || 'desi').toLowerCase().trim();
       const isWebsite = platform.platform_type === 'website';
-      if (isWebsite && (rateType === 'barem1' || rateType === 'barem2')) { errors.push(`Satır ${i + 1}: Web sitesi için barem kullanılamaz`); continue; }
+      if (isWebsite && (rateType === 'barem1' || rateType === 'barem2')) { errors.push(`Satır ${rowNo}: Web sitesi için barem kullanılamaz`); continue; }
 
-      const sameDayDelivery = isWebsite ? false : (String(row['Bugün Kapında'] || 'false').toLowerCase() === 'true');
-      const desiValue = rateType === 'desi' ? parseFloat(row['Desi'] || row.desi || 0) : null;
-      const price = parseFloat(row['Ücret'] || row.price || 0);
+      const shippingCompany = String(row['Kargo Firması'] ?? row.shipping_company ?? '').trim();
+      if (!shippingCompany) { errors.push(`Satır ${rowNo}: Kargo firması boş`); continue; }
 
-      if (!price || price <= 0) { errors.push(`Satır ${i + 1}: Geçersiz fiyat`); continue; }
+      const sameDayDelivery = isWebsite ? false : (String(row['Bugün Kapında'] ?? 'false').toLowerCase() === 'true');
+      const desiValue = rateType === 'desi' ? parseFloat(row['Desi'] ?? row.desi ?? 0) : null;
+      if (rateType === 'desi' && !Number.isFinite(desiValue)) { errors.push(`Satır ${rowNo}: Geçersiz desi`); continue; }
+      const price = parseFloat(row['Ücret'] ?? row.price ?? 0);
 
+      if (!Number.isFinite(price) || price <= 0) { errors.push(`Satır ${rowNo}: Geçersiz fiyat`); continue; }
+
+      // Bir tarifeyi tekilleştiren anahtar: platform + KARGO FİRMASI + tarife tipi + bugün kapında + desi.
+      // Kargo firması bu eşleşmeye dahil olmazsa aynı desideki tüm firmalar tek satıra denk gelir.
       const existingRate = shippingRates.find(r =>
-        (r.platform_id === platform.id || (r.is_admin_created && r.platform_type === platform.platform_type)) &&
+        (r.platform_id === platform.id ||
+          (userRole === 'admin' && r.is_admin_created && r.platform_type === platform.platform_type)) &&
+        normalizeName(r.shipping_company) === normalizeName(shippingCompany) &&
         r.rate_type === rateType &&
         r.same_day_delivery === sameDayDelivery &&
-        (rateType !== 'desi' || r.desi === desiValue)
+        (rateType !== 'desi' || Number(r.desi) === desiValue)
       );
 
       if (existingRate) {
-        if (existingRate.price !== price) toUpdate.push({ id: existingRate.id, price });
+        const claimedBy = claimedIds.get(existingRate.id);
+        if (claimedBy) {
+          errors.push(`Satır ${rowNo}: ${shippingCompany} / ${rateType}${rateType === 'desi' ? ` / ${desiValue} desi` : ''} zaten ${claimedBy}. satırda var, atlandı`);
+          continue;
+        }
+        claimedIds.set(existingRate.id, rowNo);
+        if (Number(existingRate.price) !== price) toUpdate.push({ id: existingRate.id, price });
+        else unchangedCount++;
       } else {
         toCreate.push({
           platform_id: platform.id,
           platform_name: platform.name,
           platform_type: platform.platform_type || '',
-          shipping_company: row['Kargo Firması'] || row.shipping_company || '',
+          shipping_company: shippingCompany,
           rate_type: rateType,
           same_day_delivery: sameDayDelivery,
           desi: desiValue,
@@ -204,19 +228,36 @@ export default function ShippingRates() {
       }
     }
 
-    // Güncellemeleri paralel yap
+    // Güncellemeleri sınırlı eşzamanlılıkla yap — hepsini birden açmak
+    // bağlantıyı doyuruyor ve hatayı tek tek satıra bağlamayı zorlaştırıyor.
+    const UPDATE_BATCH = 25;
     let updateCount = 0;
-    await Promise.all(toUpdate.map(async ({ id, price }) => {
-      try { await ShippingRate.update(id, { price }); updateCount++; }
-      catch (e) { errors.push(`Güncelleme hatası: ${e.message}`); }
-    }));
+    for (let i = 0; i < toUpdate.length; i += UPDATE_BATCH) {
+      const chunk = toUpdate.slice(i, i + UPDATE_BATCH);
+      const results = await Promise.allSettled(chunk.map(({ id, price }) => ShippingRate.update(id, { price })));
+      results.forEach((res, idx) => {
+        if (res.status === 'fulfilled') updateCount++;
+        else errors.push(`Güncelleme hatası (id ${chunk[idx].id}): ${res.reason?.message || res.reason}`);
+      });
+    }
 
     queryClient.invalidateQueries(['shippingRates']);
     setImportProgress({ isImporting: false, current: 0, total: 0, estimatedSecondsLeft: null, startTime: null });
 
-    const total = successCount + updateCount;
-    if (total > 0) toast.success(`✅ ${total}/${data.length} tarife yüklendi\n➕ ${successCount} yeni\n🔄 ${updateCount} güncellendi`);
-    if (errors.length > 0) toast.error(`❌ ${errors.length} hata oluştu`);
+    const summary = [
+      `➕ ${successCount} yeni`,
+      `🔄 ${updateCount} güncellendi`,
+      unchangedCount > 0 ? `➖ ${unchangedCount} zaten güncel` : null,
+      errors.length > 0 ? `⚠️ ${errors.length} atlandı` : null,
+    ].filter(Boolean).join('\n');
+
+    if (successCount + updateCount + unchangedCount > 0) {
+      toast.success(`✅ ${data.length} satır işlendi\n${summary}`);
+    }
+    if (errors.length > 0) {
+      console.error('[Tarife içe aktarma] atlanan satırlar:', errors);
+      toast.error(`❌ ${errors.length} satır atlandı\n${errors.slice(0, 3).join('\n')}${errors.length > 3 ? `\n… (tamamı için konsol)` : ''}`);
+    }
   };
 
   const filteredRates = useMemo(() => {
