@@ -6,25 +6,26 @@ Komisyon, platformun bir satıştan aldığı pay oranıdır. PriceHub'da komisy
 
 Kaynak: `commissions` tablosu → `src/components/PriceCalculationEngine.jsx`
 
-## Komisyon KDV'si (ÖNEMLİ)
+## Komisyon KDV'si
 
-Her platformda komisyon üzerine **%20 KDV** eklenir. Motor bunu otomatik yapar:
+Komisyon oranı sisteme **KDV dahil** girilir. Motor bu oranın üzerine ikinci bir KDV **eklemez**:
 
 ```
-gerçek komisyon yükü = komisyon_oranı × 1,20
+komisyon tutarı = satış fiyatı × girilen oran        (oran KDV dahildir)
+komisyonun içindeki KDV = komisyon tutarı × 20 / 120  → indirilecek KDV
 ```
 
-Bu KDV aynı zamanda **indirilecek KDV** olarak geri yazılır, yani net etkisi sadece komisyon oranı kadardır. Buna rağmen nakit akışı hesabında ayrı görünür.
+Örnek: satış 699,00 ₺, oran %21,5 → komisyon 150,29 ₺. İçindeki 25,05 ₺ KDV, "Net KDV" satırında indirilecek KDV olarak geri yazılır. Oranın bir daha 1,20 ile çarpılması (180,35 ₺) **hatalıdır**.
 
-> ⚠️ HepsiBurada komisyon oranları Excel'de **KDV hariç** gelir. Ham oranı motora ver; motor ×1,20 ekler. Önceden elle çarpıp verme → çift KDV hatası olur.
+> ⚠️ Hepsiburada komisyon oranları platformun Excel'inde **KDV hariç** gelir. Bu oranlar sisteme girilmeden önce ×1,20 ile KDV dahil hale getirilir; motora her zaman KDV dahil oran verilir. Motor ayrıca KDV eklemediği için çift KDV oluşmaz.
 
 ## Platform farkları
 
-| Platform | Komisyon formatı | KDV durumu |
+| Platform | Excel'den gelen oran | Sisteme girilen oran |
 |---|---|---|
-| Trendyol | % (KDV dahil gibi görünür) | Motor ekler |
-| HepsiBurada | % (KDV hariç) | Motor ekler |
-| Web Sitesi | % (manuel) | Motor ekler |
+| Trendyol | KDV dahil | Olduğu gibi |
+| HepsiBurada | KDV hariç | ×1,20 yapılarak KDV dahil |
+| Web Sitesi | — (manuel) | KDV dahil |
 
 ## Eşleştirme mantığı
 
