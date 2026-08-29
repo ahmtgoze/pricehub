@@ -16,7 +16,7 @@ import { useBackgroundTask } from '@/lib/BackgroundTaskContext';
 import { useLocation } from 'react-router-dom';
 import PriceDetailModal from '@/components/modals/PriceDetailModal';
 import ProductHistoryModal from '@/components/modals/ProductHistoryModal';
-import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import DataTable from '@/components/ui/DataTable';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";

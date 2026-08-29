@@ -400,7 +400,7 @@ export default function Calculator() {
 
   return (
     <div className="min-h-screen bg-secondary">
-      <div className="max-w-[1200px] mx-auto px-6 py-8">
+      <div className="ph-page-flow mx-auto">
         <div className="mb-8">
           <h1 className="ph-title">Fiyat Hesaplayıcı</h1>
           <p className="text-muted-foreground mt-1">Fiyat çalışması yapın — bu sayfada hiçbir şey kaydedilmez</p>

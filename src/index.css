@@ -130,6 +130,14 @@
     max-width: 1600px;
   }
 
+  /* ph-page ile ayni cerceve, ama flex/gap yok. Bosluklarini kendi
+     margin'lari ile veren eski sayfalar icin: gecerken hizalama bozulmasin
+     diye. Yeni sayfa yazarken .ph-page kullan. */
+  .ph-page-flow {
+    @apply px-5 pt-6 pb-14 sm:px-10 sm:pt-[30px] sm:pb-[60px];
+    max-width: 1600px;
+  }
+
   /* Başlık satırı: solda başlık+alt metin, sağda aksiyon butonları */
   .ph-head {
     @apply flex flex-wrap items-end justify-between gap-5;

@@ -249,7 +249,7 @@ export default function Platforms() {
 
   return (
     <div className="min-h-screen bg-secondary">
-      <div className="max-w-[1400px] mx-auto px-6 py-8">
+      <div className="ph-page-flow mx-auto">
         <div className="mb-10">
           <h1 className="ph-title">Platformlar</h1>
           <p className="text-muted-foreground mt-1">Satış kanallarını aktif veya pasif yapın, kargo firması seçin</p>

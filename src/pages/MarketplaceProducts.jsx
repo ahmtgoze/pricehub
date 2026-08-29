@@ -783,8 +783,8 @@ export default function MarketplaceProducts() {
   ];
 
   return (
-    <div className="min-h-screen bg-secondary p-6">
-      <div className="max-w-7xl mx-auto">
+    <div className="min-h-screen bg-secondary">
+      <div className="ph-page-flow mx-auto">
         <div className="mb-8">
           <h1 className="ph-title">Pazaryeri Ürünleri</h1>
           <p className="text-muted-foreground">Pazaryeri ürünlerini sisteme yükleyin ve ana ürünlere bağlayın</p>

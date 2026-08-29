@@ -253,7 +253,7 @@ export default function UpdatedCosts() {
 
   return (
     <div className="min-h-screen bg-secondary">
-      <div className="max-w-[1400px] mx-auto px-3 sm:px-6 py-5 sm:py-8">
+      <div className="ph-page-flow mx-auto">
 
         {/* Başlık */}
         <div className="mb-6">

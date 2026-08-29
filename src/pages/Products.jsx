@@ -930,7 +930,7 @@ export default function Products() {
 
   return (
     <div className="min-h-screen bg-secondary">
-      <div className="max-w-[1400px] mx-auto px-3 sm:px-6 py-5 sm:py-8">
+      <div className="ph-page-flow mx-auto">
         {deletedCategory && (
           <Alert variant="destructive" className="mb-6">
             <AlertCircle className="h-4 w-4" />

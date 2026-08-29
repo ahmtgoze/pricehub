@@ -339,7 +339,7 @@ export default function Categories() {
 
   return (
     <div className="min-h-screen bg-secondary">
-      <div className="max-w-[1200px] mx-auto px-3 sm:px-6 py-5 sm:py-8">
+      <div className="ph-page-flow mx-auto">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
           <div>
             <h1 className="ph-title">Kategoriler</h1>
