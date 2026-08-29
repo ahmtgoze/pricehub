@@ -56,8 +56,11 @@ const TARIFELER = [
   tarife({ platform_type: 'hepsiburada', rate_type: 'barem2', price: 91.19, same_day_delivery: false }),
   ...Array.from({ length: 41 }, (_, d) =>
     tarife({ platform_type: 'hepsiburada', rate_type: 'desi', desi: d, price: 90 + d * 10 })),
+  // Web Sitesi'nde sistem tarifesi kullanilmaz; kullanicinin kendi MANUEL
+  // tarifesi gecerlidir (platform_id ile eslesir).
   ...Array.from({ length: 41 }, (_, d) =>
-    tarife({ platform_type: 'website', rate_type: 'desi', desi: d, price: 109 + d * 5 })),
+    tarife({ platform_id: 'p-web', rate_type: 'desi', desi: d, price: 109 + d * 5,
+             is_admin_created: false, is_manual: true })),
 ];
 
 /* ── Ürün ve komisyon kalıpları ─────────────────────────────────────── */
@@ -248,13 +251,29 @@ console.log('\n═══ DESİ TARİFESİ SEÇİMİ ═══');
   esit('28 tam eşleşme', findDesiShippingRate(tarifeler, 5)?.price, 150);
   esit('29 ara değer bir ÜSTTEKİ tarifeye yuvarlanır (4,2 → 5 desi)',
     findDesiShippingRate(tarifeler, 4.2)?.price, 150);
-  // Tavan asilirsa hata vermez, en yuksek tarifeye duser — kar oldugundan
-  // iyi gorunebilir, tarife tablosu urun yelpazesini kapsamali.
-  esit('30 tavanı aşan desi → en yüksek tarife (sessizce)',
-    findDesiShippingRate(tarifeler, 99)?.price, 200);
+  // KURAL: tarife yoksa fiyatlama YAPILMAZ. Eskiden en yuksek tarifeye
+  // dusuluyordu ve kar oldugundan iyi gorunuyordu.
+  esit('30 tavanı aşan desi → tarife YOK (null)',
+    findDesiShippingRate(tarifeler, 99), null);
   esit('31 hiç tarife yoksa null', findDesiShippingRate([], 5), null);
   esit('32 pasif tarife yok sayılır',
     findDesiShippingRate([{ rate_type: 'desi', desi: 5, price: 150, is_active: false }], 5), null);
+}
+
+// Tarifesi olmayan urun fiyatlanmamali — motor hata firlatir
+{
+  const azTarife = [
+    tarife({ platform_type: 'trendyol', rate_type: 'desi', desi: 5, price: 150 }),
+  ];
+  let hata = null;
+  try {
+    calculateProductPrice({
+      product: urun({ cost: 100, desi: 60 }), platform: { ...TRENDYOL, use_barem: false },
+      shippingRates: azTarife, commission: komisyon(20, 30),
+      packagingCost: 0, printingCost: 0, extraCost: 0, settings: [],
+    });
+  } catch (e) { hata = e.message; }
+  esit('32b tarifesiz ürün fiyatlanmaz', hata, 'KARGO_TARIFESI_YOK');
 }
 
 console.log('\n═══ KOMİSYON EŞLEŞTİRME ═══');

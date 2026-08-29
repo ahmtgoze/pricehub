@@ -333,7 +333,9 @@ export default function Prices() {
         const product = freshProducts[i];
         try {
           const calculatedPrices = calculateAllPlatformPrices({ product, platforms: freshActivePlatforms, shippingRates: freshShippingRates, commissions: freshCommissions, packages: freshPackages, packageItems: freshPackageItems, getPackageCost: getFreshPackageCost, settings: freshSettings, systemAdminPlatforms: freshAdminPlatforms });
-          if (calculatedPrices.length === 0) { failedProductsList.push({ id: product.id, name: product.name }); }
+          if (calculatedPrices.length === 0) {
+            failedProductsList.push({ id: product.id, name: product.name, sebep: hesaplanamamaSebebi(product, freshShippingRates, freshActivePlatforms, freshCommissions) });
+          }
           else {
             for (const calcPrice of calculatedPrices) {
               const existing = freshProductPrices.filter(pp => pp.product_id === product.id && pp.platform_id === calcPrice.platform_id);
@@ -342,7 +344,12 @@ export default function Prices() {
             }
             successCount++;
           }
-        } catch (err) { failedProductsList.push({ id: product.id, name: product.name }); }
+        } catch (err) {
+          const sebep = String(err?.message) === 'KARGO_TARIFESI_YOK'
+            ? `Kargo tarifesi yok (${product.desi || 0} desi)`
+            : hesaplanamamaSebebi(product, freshShippingRates, freshActivePlatforms, freshCommissions);
+          failedProductsList.push({ id: product.id, name: product.name, sebep });
+        }
       }
       const BATCH = 100;
       for (let i = 0; i < allToCreate.length; i += BATCH) await db.entities.ProductPrice.bulkCreate(allToCreate.slice(i, i + BATCH));
@@ -391,6 +398,30 @@ export default function Prices() {
       setPriceCalculationProgress({ isCalculating: false, current: 0, total: 0, title: '', estimatedSecondsLeft: null, startTime: null });
       stopFakeProgress(); finishTask();
     }
+  };
+
+  /**
+   * Bir urun neden fiyatlanamadi? Kullaniciya "hesaplanamadi" demek yerine
+   * ne yapmasi gerektigini soyleyebilmek icin.
+   */
+  const hesaplanamamaSebebi = (product, tarifeler, aktifPlatformlar, komisyonlar) => {
+    const desi = Number(product.desi) || 0;
+    const eksikTarife = aktifPlatformlar.filter((pl) => {
+      const platformTarifeleri = tarifeler.filter(
+        (r) => r.rate_type === 'desi' && r.is_active !== false && r.desi != null &&
+          (r.platform_type === pl.platform_type || r.platform_id === pl.id)
+      );
+      if (platformTarifeleri.length === 0) return true;
+      return !platformTarifeleri.some((r) => desi <= Number(r.desi));
+    });
+    if (eksikTarife.length > 0) {
+      return `Kargo tarifesi yok (${desi} desi) — ${eksikTarife.map((p) => p.name).join(', ')}`;
+    }
+    const komisyonVar = aktifPlatformlar.some((pl) =>
+      komisyonlar.some((c) => c.platform_id === pl.id && c.category_id === product.category_id && c.is_active !== false)
+    );
+    if (!komisyonVar) return 'Kategori komisyonu tanımlı değil';
+    return 'Hesaplanamadı';
   };
 
   const handleCalculateSingleProduct = async (originalProduct) => {
@@ -1092,7 +1123,21 @@ export default function Prices() {
               <AlertDialogTitle>{successModal.failedCount === 0 ? '✅ Başarılı' : '⚠️ Kısmi Başarı'}</AlertDialogTitle>
               <AlertDialogDescription className="space-y-2">
                 <p>{successModal.successCount} ürün için fiyatlar başarıyla hesaplandı.</p>
-                {successModal.failedCount > 0 && <p className="text-amber-600 font-medium">{successModal.failedCount} ürün hesaplanamadı.</p>}
+                {successModal.failedCount > 0 && (
+                  <>
+                    <p className="text-amber-600 font-medium">{successModal.failedCount} ürün hesaplanamadı:</p>
+                    {/* Sadece sayi degil, HANGI urun ve NEDEN — kullanici ne
+                        yapmasi gerektigini bilsin (orn. kargo tarifesi ekle). */}
+                    <div className="max-h-56 overflow-y-auto rounded-lg border border-border divide-y divide-border">
+                      {failedProducts.map((u) => (
+                        <div key={u.id} className="px-3 py-2">
+                          <p className="text-[13px] font-medium text-foreground">{u.name}</p>
+                          <p className="text-xs text-amber-700 dark:text-amber-300 mt-0.5">{u.sebep || 'Hesaplanamadı'}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                )}
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogAction onClick={() => setSuccessModal({ ...successModal, open: false })}>Tamam</AlertDialogAction>

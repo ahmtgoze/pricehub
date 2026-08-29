@@ -35,13 +35,15 @@ export const findDesiShippingRate = (shippingRates, desi) => {
     }
   }
   
-  // Eğer uygun tarife bulunamazsa en yüksek desi tarifesini kullan
-  if (desiRates.length > 0) {
-    return desiRates[desiRates.length - 1];
-  }
-  
+  // Urunun desisi tanimli en yuksek tarifenin de ustundeyse TARIFE YOKTUR.
+  // Eskiden burada en yuksek tarifeye dusuluyordu; bu, gercek kargo bedeli
+  // daha yuksek oldugu icin kari OLDUGUNDAN IYI gosteriyordu. Artik null
+  // donuyor ve urun fiyatlanmiyor, kullaniciya uyari veriliyor.
   return null;
 };
+
+/** Kargo tarifesi eksikligini anlatan hata (fiyatlama durdurulur). */
+export const KARGO_TARIFESI_YOK = 'KARGO_TARIFESI_YOK';
 
 /**
  * Barem kargo ücretini bul
@@ -524,30 +526,30 @@ export const calculateProductPrice = ({
 
           for (const pkg of productPackages) {
             const desiRate = findDesiShippingRate(platformShippingRates, pkg.desi || 0);
-            if (desiRate) {
-              const desiShippingCost = desiRate.price * 2;
-              shippingCost += desiShippingCost + returnCostPerPackage;
-              shippingVatRate = desiRate.vat_rate || 20;
-            }
+            if (!desiRate) throw new Error(KARGO_TARIFESI_YOK);
+            const desiShippingCost = desiRate.price * 2;
+            shippingCost += desiShippingCost + returnCostPerPackage;
+            shippingVatRate = desiRate.vat_rate || 20;
           }
         } else {
           for (const pkg of productPackages) {
             const desiRate = findDesiShippingRate(platformShippingRates, pkg.desi || 0);
-            if (desiRate) {
-              shippingCost += desiRate.price;
-              shippingVatRate = desiRate.vat_rate || 20;
-            }
+            if (!desiRate) throw new Error(KARGO_TARIFESI_YOK);
+            shippingCost += desiRate.price;
+            shippingVatRate = desiRate.vat_rate || 20;
           }
         }
       } else {
         const desiRate = findDesiShippingRate(platformShippingRates, product.desi || 0);
-        shippingCost = desiRate?.price || 0;
-        shippingVatRate = desiRate?.vat_rate || 20;
+        if (!desiRate) throw new Error(KARGO_TARIFESI_YOK);
+        shippingCost = desiRate.price;
+        shippingVatRate = desiRate.vat_rate || 20;
       }
     } else {
       const desiRate = findDesiShippingRate(platformShippingRates, product.desi || 0);
-      shippingCost = desiRate?.price || 0;
-      shippingVatRate = desiRate?.vat_rate || 20;
+      if (!desiRate) throw new Error(KARGO_TARIFESI_YOK);
+      shippingCost = desiRate.price;
+      shippingVatRate = desiRate.vat_rate || 20;
     }
 
     // ÇİFT KARGO: hesaplanan kargo bedelini 2 ile çarp (gerekirse)

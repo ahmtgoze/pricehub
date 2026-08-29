@@ -180,16 +180,28 @@ Kaynak: `findDesiShippingRate`
 1. Aktif desi tarifeleri küçükten büyüğe sıralanır
 2. Ürünün desisine **eşit veya ondan büyük en küçük** tarife seçilir
    (örn. 4,2 desi → 5 desi tarifesi)
-3. **Ürünün desisi tüm tarifelerin üstündeyse en yüksek tarife kullanılır** —
-   hesap hata vermez, sessizce en pahalı tarifeye düşer
+3. **Ürünün desisi tüm tarifelerin üstündeyse tarife YOKTUR** — o ürün
+   fiyatlanmaz ve kullanıcıya sebebiyle birlikte uyarı verilir:
+   *"Kargo tarifesi yok (60 desi) — Trendyol"*
 
-> ⚠️ 3. madde önemli: 60 desilik bir ürün, tarife tablosu 40 desiye kadar
-> tanımlıysa **40 desi ücretiyle** hesaplanır. Gerçek kargo bedeli daha
-> yüksek olacağı için kâr olduğundan iyi görünür. Tarife tablosunun ürün
-> yelpazesini kapsaması gerekir.
+> Önceden burada en yüksek tarifeye düşülüyordu; 60 desilik ürün 40 desi
+> ücretiyle hesaplanıyor ve gerçek kargo daha pahalı olduğu için **kâr
+> olduğundan iyi görünüyordu.** Artık sessizce yanlış fiyat üretmek yerine
+> ürün fiyatlanmıyor.
+
+Çoklu pakette **paketlerden birinin** bile tarifesi yoksa ürün fiyatlanmaz.
 
 Desi tarifesinde `same_day_delivery` alanına **bakılmaz** — Bugün Kargoda
 ayrımı yalnızca baremde vardır.
+
+### Web Sitesi tarifeleri MANUEL olmalıdır
+
+Web Sitesi platformunda **sistem tarifeleri kullanılmaz**; yalnızca
+kullanıcının kendi manuel tarifeleri (`is_manual = true`, `platform_id`
+eşleşmeli) geçerlidir. Kendi kargo anlaşman olduğu için doğrusu budur.
+
+> Web Sitesi'ne yalnızca sistem tarifesi tanımlıysa hiç tarife bulunamaz
+> ve ürünler fiyatlanmaz.
 
 ### Kargo firması kilidi
 
@@ -274,6 +286,16 @@ Kaynak: `findSalePriceForTargetProfit`, `calculateProductPrice`
 5. Yuvarlanmış fiyatla kırılım **yeniden** hesaplanır (gösterilen rakam budur)
 
 ---
+
+### Ürün neden fiyatlanamaz?
+
+"Fiyatları Hesapla" sonrası bir ürün listelenmiyorsa sebebi şunlardan biridir
+ve kullanıcıya **sebebiyle birlikte** gösterilir:
+
+| Sebep | Ne yapılmalı |
+|---|---|
+| Kargo tarifesi yok (N desi) | O platform için ürünün desisini kapsayan tarife eklenmeli |
+| Kategori komisyonu tanımlı değil | Komisyonlar sayfasından oran girilmeli |
 
 ## 7. Promosyon sayfaları
 
