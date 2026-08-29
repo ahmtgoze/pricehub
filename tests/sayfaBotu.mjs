@@ -160,9 +160,10 @@ await b.gonder('Log.enable');
 if (girisModu) {
   await b.gonder('Page.navigate', { url: `${taban}/login` });
   console.log(`\nChrome acildi. ${taban} adresinde giris yap.`);
-  console.log('Giris bitince bu pencereyi kapatma; terminalde Ctrl+C ile cik.');
+  console.log('Giris bitince Ctrl+C ile cikabilirsin; oturum profile kaydedilir.');
+  console.log('Pencere 45 dakika acik kalir.');
   console.log('Oturum kaydedildi; sonra "npm run bot" calistir.\n');
-  await bekle(1000 * 60 * 10);
+  await bekle(1000 * 60 * 45);   // pencere 45 dk acik kalir
   process.exit(0);
 }
 
