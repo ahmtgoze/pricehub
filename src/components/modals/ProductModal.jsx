@@ -14,6 +14,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Loader2, Plus, Trash2, ChevronDown, ChevronUp, Search } from "lucide-react";
+import { toast } from "sonner";
 
 const norm = (t) => (t || '').toLowerCase()
   .replace(/ş/g,'s').replace(/ç/g,'c').replace(/ğ/g,'g')
@@ -265,6 +266,19 @@ export default function ProductModal({
 
   const handleSubmit = (e) => {
     e.preventDefault();
+
+    // Kategori Radix Select ile seciliyor; Select yerel bir form alani
+    // olmadigi icin uzerindeki `required` calismiyordu. Dogrulama yoksa
+    // kategorisiz urun kaydediliyor ve sonra SESSIZCE hic fiyatlanmiyor:
+    // "Fiyatlari Hesapla" 0 urun icin basarili diyor, kullanici sebebini
+    // goremiyor. Bu yuzden burada aciktan engelliyoruz.
+    if (!form.category_id) {
+      toast.error('Kategori seçin', {
+        description: 'Kategorisi olmayan ürün fiyatlandırılamaz.',
+      });
+      return;
+    }
+
     const cat = categories.find(c => c.id === form.category_id);
     let validPkgs = form.multi_package
       ? form.packages.filter(pkg => pkg.desi && parseFloat(pkg.desi) > 0)

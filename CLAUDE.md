@@ -41,6 +41,16 @@ Kural ile kod çelişirse kod doğrudur, dosya düzeltilir.
      girmemiş dal varsa uyarır — yerel *ve* GitHub'daki dallara bakar.
      Bir tarife düzeltmesi böyle bir dalda unutulup aylarca canlıda hatalı
      kod çalışmasına yol açtı. Uyarır, durdurmaz.
+5. **Uçtan uca bot** (`npm run bot:test`) — `kontrol`'e dahil DEĞİL, çünkü
+   veri yazar. Sistemi gerçek kullanıcı gibi kullanır: kategori açar,
+   komisyon girer, ürün ekler, "Fiyatları Hesapla"ya basar ve **çıkan
+   fiyatı doğrular**. Boş test kiracısında çalışır
+   (`svsetiketplastik+bot@gmail.com`); izolasyon e-posta bazlı olduğu için
+   gerçek veriye dokunamaz. Bir kez `npm run bot:test:giris`.
+   - Radix Select/Dropdown sentetik olaylarla **açılıyor ama seçmiyor**;
+     `gercekTikla` (CDP Input) kullan. Bot bu yüzden bir tur boyunca
+     kategorisiz ürün kaydetti ve sorunu görünür kıldı.
+   - "0 ürün hesaplandı" **başarı sayılmaz**; bot bunu hata olarak bildirir.
 
 ## Güvenli çalışma yöntemi (ZORUNLU)
 Büyük/riskli değişiklikler: **branch aç → Vercel önizleme linki (canlı dokunulmaz) → kullanıcı test edip ONAYLAR → main'e merge → canlı.** Sorun olursa Vercel tek-tık rollback. Doküman (.md) dosyaları uygulamaya dahil değildir → direkt main'e güvenle gidebilir, önizleme gerekmez.
