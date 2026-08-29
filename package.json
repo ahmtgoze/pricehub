@@ -12,8 +12,9 @@
     "preview": "vite preview",
     "test": "node tests/tabloSutunlari.test.mjs && node tests/widgetDuzeni.test.mjs && node tests/platformIstatistigi.test.mjs && node tests/tarihAraligi.test.mjs && node tests/vurguRengi.test.mjs && node tests/baremKurali.test.mjs && node tests/motorSenaryolari.test.mjs && node tests/fiyatGuncelligi.test.mjs",
     "bot": "node tests/sayfaBotu.mjs",
+    "dallar": "node tests/unutulmusDallar.mjs",
     "bot:giris": "node tests/sayfaBotu.mjs --giris",
-    "kontrol": "npm run lint && npm run build && npm test && npm run bot",
+    "kontrol": "npm run lint && npm run build && npm test && npm run bot && npm run dallar",
     "kontrol:hizli": "npm run lint && npm run build && npm test"
   },
   "dependencies": {
