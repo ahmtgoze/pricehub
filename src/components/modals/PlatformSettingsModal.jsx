@@ -229,8 +229,8 @@ export default function PlatformSettingsModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-xl flex flex-col p-0 gap-0 max-h-[90dvh]">
-        <div className={`h-1 w-full bg-gradient-to-r ${platformColor} rounded-t-lg flex-shrink-0`} />
+      <DialogContent className="sm:max-w-xl flex flex-col p-0 gap-0 max-h-[90dvh] overflow-hidden">
+        <div className={`h-1 w-full bg-gradient-to-r ${platformColor} flex-shrink-0`} />
         <DialogHeader className="px-6 pt-4 pb-4 border-b border-border flex-shrink-0">
           <DialogTitle className="text-xl font-semibold flex items-center gap-2">
             {platform?.name} Ayarları
