@@ -97,6 +97,10 @@ satırında geri yazılır.
 | HepsiBurada | KDV **hariç** | **×1,20 yapılarak** KDV dahil |
 | Web Sitesi | — (kendi belirlersin) | KDV dahil |
 
+> **Web Sitesi komisyonu aslında sanal POS komisyonudur.** Kendi sitende
+> pazaryeri komisyonu yoktur; bankanın/sanal POS'un kestiği oran buraya
+> kategori komisyonu olarak girilir. Sistem onu komisyon gibi işler.
+
 > Örnek: HepsiBurada %17 diyorsa sisteme **20,4** girilir (17 × 1,20).
 > Sistemde bu değer zaten böyle duruyor.
 
@@ -110,6 +114,13 @@ Komisyon **kategori × platform** kombinasyonuna bağlıdır:
 
 Yeni kategori eklenince ilgili platformlar için komisyon satırları veritabanı
 trigger'ı ile **sıfır değerle** otomatik açılır; doldurmak kullanıcıya kalır.
+
+### Kategori silinirse
+
+Kategori silindiğinde o kategorinin **komisyonları da silinir**. O kategoriye
+bağlı ürünler komisyonsuz kalır ve fiyatlanamaz; hesaplamada
+*"Kategori komisyonu tanımlı değil"* hatasına düşerler. Ürünlere yeni bir
+kategori atanması gerekir.
 
 ### İki hedef kâr
 
@@ -300,6 +311,17 @@ Kaynak: `findSalePriceForTargetProfit`, `calculateProductPrice`
 
 ---
 
+### Fiyatlar kendiliğinden güncellenmez
+
+Ürün maliyeti, komisyon oranı veya hedef kâr değiştiğinde mevcut fiyatlar
+**otomatik yeniden hesaplanmaz**. Kullanıcının **Fiyatları Hesapla** demesi
+gerekir.
+
+Fiyatlar sayfasına girildiğinde sistem, her fiyat kaydının
+`calculation_details` alanındaki (hesaplama anındaki) değerleri bugünküyle
+karşılaştırır ve bayat fiyat varsa uyarı gösterir: kaç ürün etkilendi ve ne
+değişti (maliyet / komisyon / hedef kâr / baskı / ek maliyet).
+
 ### Ürün neden fiyatlanamaz?
 
 "Fiyatları Hesapla" sonrası bir ürün listelenmiyorsa sebebi şunlardan biridir
@@ -360,6 +382,19 @@ Artırıyorsa öneri gösterilir. Tavan fiyatları platform ayarından gelir.
 Öneri **yalnızca ekranda** gösterilir; sabit Excel şablonuna dahil değildir.
 
 ---
+
+## 7b. Pazaryeri ürünleri ve Düzenlenen Fiyatlar
+
+Pazaryerinden yüklenen ürünler sistemdeki **master ürünlerle eşleştirilir**
+(bağlanır). Bu bağ kurulduktan sonra:
+
+- **Düzenlenen Fiyatlar** sayfasında, pazaryeri ürününe bağlanmış master
+  ürünün **sistemde hesaplanmış fiyatı** gösterilir
+- Excel indirildiğinde de bu fiyat çıkar — dosya ilgili platforma yüklenerek
+  yeni fiyata geçiş sağlanır
+
+Yani akış şu: master üründe fiyat hesaplanır → pazaryeri ürünü ona bağlıdır →
+Düzenlenen Fiyatlar o fiyatı gösterir → Excel ile platforma yüklenir.
 
 ## 8. Excel içe/dışa aktarma
 

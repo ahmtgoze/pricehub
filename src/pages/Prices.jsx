@@ -20,6 +20,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescript
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import DataTable from '@/components/ui/DataTable';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { bayatFiyatlariBul, SEBEP_ETIKETLERI } from '@/lib/fiyatGuncelligi';
 
 export default function Prices() {
   const [userEmail, setUserEmail] = React.useState(null);
@@ -35,6 +36,7 @@ export default function Prices() {
   const [detailModal, setDetailModal] = useState({ open: false, product: null, platform: null });
   const [historyModal, setHistoryModal] = useState({ open: false, productId: null, productName: '' });
   const [failedProducts, setFailedProducts] = useState([]);
+  const [guncellikUyarisi, setGuncellikUyarisi] = useState(null);
   const [successModal, setSuccessModal] = useState({ open: false, successCount: 0, failedCount: 0 });
   const [priceCalculationProgress, setPriceCalculationProgress] = useState({ isCalculating: false, current: 0, total: 0, title: '', currentProductName: '', estimatedSecondsLeft: null, startTime: null });
   const [showProgressModal, setShowProgressModal] = useState(false);
@@ -404,6 +406,24 @@ export default function Prices() {
    * Bir urun neden fiyatlanamadi? Kullaniciya "hesaplanamadi" demek yerine
    * ne yapmasi gerektigini soyleyebilmek icin.
    */
+  /**
+   * Maliyet/komisyon degistikten sonra fiyatlar kendiliginden guncellenmiyor;
+   * kullanicinin "Fiyatlari Hesapla" demesi gerekiyor. Sayfaya girildiginde
+   * neyin bayatladigini soyluyoruz.
+   */
+  const bayatDurumu = React.useMemo(
+    () => bayatFiyatlariBul(productPrices, products, commissions),
+    [productPrices, products, commissions]
+  );
+
+  React.useEffect(() => {
+    if (bayatDurumu.bayatSayisi > 0 && guncellikUyarisi === null) {
+      setGuncellikUyarisi(bayatDurumu);
+    }
+    // yalnizca ilk tespitte acilsin; kullanici kapatinca tekrar acilmasin
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bayatDurumu.bayatSayisi]);
+
   const hesaplanamamaSebebi = (product, tarifeler, aktifPlatformlar, komisyonlar) => {
     const desi = Number(product.desi) || 0;
     const eksikTarife = aktifPlatformlar.filter((pl) => {
@@ -1116,6 +1136,44 @@ export default function Prices() {
 
         <PriceDetailModal open={detailModal.open} onClose={() => setDetailModal({ open: false, product: null, platform: null })} product={detailModal.product} platform={detailModal.platform} productPrices={productPrices} commissions={commissions} />
         <ProductHistoryModal open={historyModal.open} onClose={() => setHistoryModal({ open: false, productId: null, productName: '' })} productId={historyModal.productId} productName={historyModal.productName} />
+
+        {/* Fiyatlar bayatladiysa sayfaya girer girmez soyle */}
+        <AlertDialog open={!!guncellikUyarisi && !guncellikUyarisi.kapandi} onOpenChange={(a) => !a && setGuncellikUyarisi({ ...guncellikUyarisi, kapandi: true })}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>⚠️ Fiyatlar güncel değil</AlertDialogTitle>
+              <AlertDialogDescription className="space-y-3">
+                <p>
+                  Son hesaplamadan sonra bazı değerler değişti. <strong>{guncellikUyarisi?.bayatSayisi}</strong> ürünün
+                  fiyatı artık güncel değil.
+                </p>
+                <div className="rounded-lg border border-border divide-y divide-border">
+                  {Object.entries(guncellikUyarisi?.sebepler || {})
+                    .filter(([, adet]) => adet > 0)
+                    .map(([sebep, adet]) => (
+                      <div key={sebep} className="flex items-center justify-between px-3 py-2 text-[13px]">
+                        <span className="text-muted-foreground">{SEBEP_ETIKETLERI[sebep]} değişti</span>
+                        <span className="font-medium tabular-nums">{adet} fiyat kaydı</span>
+                      </div>
+                    ))}
+                </div>
+                <p className="text-[13px]">
+                  Doğru kâr rakamları için <strong>Fiyatları Hesapla</strong> demen gerekiyor.
+                </p>
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
+              <AlertDialogCancel onClick={() => setGuncellikUyarisi({ ...guncellikUyarisi, kapandi: true })}>
+                Sonra
+              </AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => { setGuncellikUyarisi({ ...guncellikUyarisi, kapandi: true }); handleCalculatePrices(); }}
+              >
+                Fiyatları Hesapla
+              </AlertDialogAction>
+            </div>
+          </AlertDialogContent>
+        </AlertDialog>
 
         <AlertDialog open={successModal.open} onOpenChange={(open) => !open && setSuccessModal({ ...successModal, open: false })}>
           <AlertDialogContent>
