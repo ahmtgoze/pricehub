@@ -13,7 +13,7 @@ import { downloadCSV } from '@/components/ImportExport';
 import { calculateAllPlatformPrices } from '@/components/PriceCalculationEngine';
 import { toast } from 'sonner';
 import { useBackgroundTask } from '@/lib/BackgroundTaskContext';
-import { hesaplamaYuzdesi, yazmaYuzdesi } from '@/lib/islemSeridi';
+import { hesaplamaYuzdesi, yazmaYuzdesi, sirayiBirak } from '@/lib/islemSeridi';
 import { useLocation } from 'react-router-dom';
 import PriceDetailModal from '@/components/modals/PriceDetailModal';
 import ProductHistoryModal from '@/components/modals/ProductHistoryModal';
@@ -383,7 +383,7 @@ export default function Prices() {
         // hic boyama yapamaz, serit %0'da donar ve sonunda birden kaybolur.
         if (i % 20 === 0) {
           updateTask(hesaplamaYuzdesi(i, total, HESAP_PAYI), 100);
-          await new Promise(r => setTimeout(r, 0));
+          await sirayiBirak();
         }
         const product = freshProducts[i];
         try {
@@ -563,7 +563,7 @@ export default function Prices() {
       for (let i = 0; i < failedProducts.length; i++) {
         if (i % 20 === 0) {
           updateTask(hesaplamaYuzdesi(i, total, HESAP_PAYI), 100);
-          await new Promise(r => setTimeout(r, 0));
+          await sirayiBirak();
         }
         const failedProduct = failedProducts[i];
         const product = freshProducts.find(p => p.id === failedProduct.id);

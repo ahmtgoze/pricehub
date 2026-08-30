@@ -41,3 +41,23 @@ export function yazmaYuzdesi(yazilan, toplam, pay = 30) {
   const oran = Math.min(1, Math.max(0, yazilan / toplam));
   return pay + Math.round(oran * (100 - pay));
 }
+
+/**
+ * Tarayiciya boyama sirasi verir.
+ *
+ * setTimeout(0) KULLANMA: Chrome arka plandaki sekmede zamanlayicilari en az
+ * 1 saniyeye kisar. Hesaplama dongusunde 20 uründe bir duraklarsak 453 urun
+ * icin bu +23 saniye demektir — kullanici pencereyi kapatip baska sekmeye
+ * gectiginde islem belirgin sekilde uzardi.
+ *
+ * MessageChannel kisilmaz; hem gorunur sekmede boyamaya izin verir hem arka
+ * planda islemi yavaslatmaz.
+ */
+export function sirayiBirak() {
+  return new Promise((c) => {
+    if (typeof MessageChannel === 'undefined') { setTimeout(c, 0); return; }
+    const k = new MessageChannel();
+    k.port1.onmessage = () => { k.port1.close(); c(); };
+    k.port2.postMessage(null);
+  });
+}
