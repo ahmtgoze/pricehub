@@ -329,11 +329,14 @@ export default function Prices() {
   /**
    * Ilerleme penceresini kapatir.
    *
-   * Once 600ms gecikmeliydi (sahte cubuk %100'u gostersin diye). Sonuc
-   * penceresi bu arada aciliyor ve iki Radix katmani ust uste binince
-   * ilerleme penceresinin kapanisi TAKILIYORDU: is bittigi halde arkada
-   * "%0" yazan pencere acik kaliyordu. Artik hemen kapaniyor ve sonuc
-   * penceresinden ONCE cagriliyor.
+   * Once 600ms gecikmeliydi; sahte cubugun %100'u gosterebilmesi icindi,
+   * gercek ilerlemeye gecince anlamini yitirdi. Sonuc penceresinden ONCE
+   * cagriliyor ki iki pencere bir an ust uste binmesin.
+   *
+   * NOT: otomatik testte "pencere kapanmiyor" gibi gorunuyordu; sebebi
+   * uygulama degil, sekmenin ARKA PLANDA olmasiydi. Chrome gizli sekmede
+   * CSS animasyonunu duraklatir, Radix bekledigi animationend'i alamaz ve
+   * elementi kaldirmaz. Gorunur pencerede boyle bir sorun yok.
    */
   const ilerlemeyiKapat = () => setShowProgressModal(false);
 
