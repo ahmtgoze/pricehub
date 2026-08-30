@@ -13,6 +13,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import * as XLSX from 'xlsx';
 import { toast } from 'sonner';
+import { useBackgroundTask } from '@/lib/BackgroundTaskContext';
+import { useIlerlemePenceresi } from '@/lib/useIlerlemePenceresi';
 import StockSyncModal from '@/components/marketplace/StockSyncModal';
 import UploadSummaryModal from '@/components/marketplace/UploadSummaryModal';
 import MissingProductsModal from '@/components/marketplace/MissingProductsModal';
@@ -72,6 +74,25 @@ export default function MarketplaceProducts() {
   const [showTrendyolGuide, setShowTrendyolGuide] = useState(false);
   const [showWebsiteGuide, setShowWebsiteGuide] = useState(false);
   const [progressPopup, setProgressPopup] = useState(null); // { title, current, total, currentItemName }
+  const ilerlemePenceresi = useIlerlemePenceresi(!!progressPopup);
+
+  // Ust bardaki seridi besle: pencere kapatilinca ilerleme buradan okunur.
+  // Bu sayfa gorevi kendi baslatmiyordu; popup durumundan turetiyoruz.
+  const { startTask, updateTask, finishTask } = useBackgroundTask();
+  const gorevBasladi = React.useRef(false);
+  React.useEffect(() => {
+    if (progressPopup) {
+      if (!gorevBasladi.current) {
+        gorevBasladi.current = true;
+        startTask('marketplace-islem', progressPopup.title, 'Pazaryeri Ürünleri',
+          'MarketplaceProducts', progressPopup.total);
+      }
+      updateTask(progressPopup.current, progressPopup.total);
+    } else if (gorevBasladi.current) {
+      gorevBasladi.current = false;
+      finishTask();
+    }
+  }, [progressPopup, startTask, updateTask, finishTask]);
   const [stockSyncItems, setStockSyncItems] = useState(null); // null | [{id, ...}]
   const [uploadSummary, setUploadSummary] = useState(null); // null | { newCount, updateCount, zeroStockCount, stockChangedCount, platform }
   const [missingItems, setMissingItems] = useState(null); // null | [{id, barkod, platform_product_name, ...}]
@@ -941,11 +962,29 @@ export default function MarketplaceProducts() {
         )}
 
         {/* İlerleme Popup */}
-        {progressPopup && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-            <div className="bg-card rounded-2xl shadow-2xl p-8 w-full max-w-md mx-4">
+        {/* Kapatilabilir: bu katmanin hic kapatma dugmesi yoktu ve ozel bir
+            div oldugu icin Escape de calismiyordu; kullanici islem bitene
+            kadar ekranda kilitli kaliyordu. Islem arka planda surer. */}
+        {progressPopup && ilerlemePenceresi.gorunur && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
+            onClick={ilerlemePenceresi.kapat}
+          >
+            <div className="bg-card rounded-2xl shadow-2xl p-8 w-full max-w-md mx-4 relative"
+                 onClick={(e) => e.stopPropagation()}>
+              <button
+                type="button"
+                onClick={ilerlemePenceresi.kapat}
+                title="Kapat"
+                aria-label="Kapat"
+                className="absolute right-4 top-4 text-muted-foreground/70 hover:text-foreground transition-colors"
+              >
+                <X className="h-4 w-4" />
+              </button>
               <h3 className="text-lg font-bold text-foreground mb-1">{progressPopup.title}</h3>
-              <p className="text-sm text-muted-foreground mb-4">Lütfen bekleyin, işlem devam ediyor...</p>
+              <p className="text-sm text-muted-foreground mb-4">
+                Bu pencereyi kapatabilirsiniz — işlem arka planda sürer.
+              </p>
               <div className="mb-3">
                 <div className="flex justify-between text-xs text-muted-foreground mb-1">
                   <span className="truncate max-w-xs">{progressPopup.currentItemName}</span>

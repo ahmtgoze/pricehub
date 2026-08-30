@@ -43,6 +43,7 @@ import * as XLSX from 'xlsx';
 import { calculateAllPlatformPrices } from '@/components/PriceCalculationEngine';
 import { toast } from 'sonner';
 import { useBackgroundTask } from '@/lib/BackgroundTaskContext';
+import { useIlerlemePenceresi } from '@/lib/useIlerlemePenceresi';
 import { useLocation } from 'react-router-dom';
 
 const Product = db.entities.Product;
@@ -78,6 +79,9 @@ export default function Products() {
 
   const [deletedCategory, setDeletedCategory] = React.useState(null);
   const { startTask, updateTask, finishTask } = useBackgroundTask();
+  const ilerlemePenceresi = useIlerlemePenceresi(
+    importProgress.isImporting && location.pathname === '/Products'
+  );
   const location = useLocation();
 
   React.useEffect(() => {
@@ -1148,7 +1152,9 @@ export default function Products() {
           isApplying={bulkUpdateMutation.isPending}
         />
 
-        <Dialog open={importProgress.isImporting && location.pathname === '/Products'}>
+        {/* Kapatilabilir: yukleme arka planda surer, ust bardaki serit
+            yuzdeyi gostermeye devam eder. */}
+        <Dialog open={ilerlemePenceresi.gorunur} onOpenChange={ilerlemePenceresi.acikligiDegistir}>
           <DialogContent className="max-w-sm">
             <DialogHeader>
               <DialogTitle>Excel İçe Aktarma İşleniyor...</DialogTitle>

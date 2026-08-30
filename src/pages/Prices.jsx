@@ -69,7 +69,7 @@ export default function Prices() {
   // Seçim
   const [selectedIds, setSelectedIds] = useState(new Set());
 
-  const { task, startTask, updateTask, finishTask } = useBackgroundTask();
+  const { task, startTask, updateTask, finishTask, setPanelAcik } = useBackgroundTask();
   const location = useLocation();
   const searchParams = new URLSearchParams(location.search);
   const unpricedFilter = searchParams.get('filter') === 'unpriced';
@@ -85,6 +85,12 @@ export default function Prices() {
   React.useEffect(() => {
     if (task && task.pageRoute === 'Prices') setShowProgressModal(true);
   }, [location.pathname]);
+
+  // Ust bardaki serit yalnizca pencere KAPALIYKEN cikar; ikisi ayni anda
+  // gorunurse ayni bilgi iki yerde tekrar eder.
+  React.useEffect(() => {
+    setPanelAcik(showProgressModal);
+  }, [showProgressModal, setPanelAcik]);
 
   React.useEffect(() => {
     if (task) {
@@ -1202,8 +1208,12 @@ export default function Prices() {
           </AlertDialogContent>
         </AlertDialog>
 
-        <Dialog open={showProgressModal} onOpenChange={() => {}}>
-          <DialogContent className="max-w-sm" onInteractOutside={(e) => e.preventDefault()}>
+        {/* Pencere KAPATILABILIR: hesaplama arka planda surer, ust bardaki
+            serit yuzdeyi gostermeye devam eder. Onceki surumde carpiya
+            basmak da disariya tiklamak da hicbir sey yapmiyordu ve
+            kullanici islem bitene kadar ekranda kilitli kaliyordu. */}
+        <Dialog open={showProgressModal} onOpenChange={(acik) => !acik && setShowProgressModal(false)}>
+          <DialogContent className="max-w-sm">
             <DialogHeader><DialogTitle>Fiyatlar Hesaplanıyor</DialogTitle></DialogHeader>
             <div className="space-y-4">
               <div className="w-full bg-secondary rounded-full h-4 overflow-hidden">
@@ -1211,7 +1221,9 @@ export default function Prices() {
               </div>
               <div className="text-center">
                 <p className="text-3xl font-bold text-foreground">%{fakeProgress}</p>
-                <p className="text-sm text-muted-foreground mt-1">Lütfen bekleyin...</p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Bu pencereyi kapatabilirsiniz — işlem arka planda sürer.
+                </p>
               </div>
             </div>
           </DialogContent>
