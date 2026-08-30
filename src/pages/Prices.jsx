@@ -326,9 +326,16 @@ export default function Prices() {
   // Once burada bir setInterval sahte yuzde uretiyordu (200ms'de +1, %90'da
   // durur). Gercek ilerleme bildirildigi icin kaldirildi: ekranda gordugun
   // yuzde artik gercekten islenen urun sayisi.
-  const ilerlemeyiKapat = () => {
-    setTimeout(() => setShowProgressModal(false), 600);
-  };
+  /**
+   * Ilerleme penceresini kapatir.
+   *
+   * Once 600ms gecikmeliydi (sahte cubuk %100'u gostersin diye). Sonuc
+   * penceresi bu arada aciliyor ve iki Radix katmani ust uste binince
+   * ilerleme penceresinin kapanisi TAKILIYORDU: is bittigi halde arkada
+   * "%0" yazan pencere acik kaliyordu. Artik hemen kapaniyor ve sonuc
+   * penceresinden ONCE cagriliyor.
+   */
+  const ilerlemeyiKapat = () => setShowProgressModal(false);
 
   const handleCalculatePrices = async () => {
     setCalculating(true);
@@ -435,6 +442,7 @@ export default function Prices() {
 
       await queryClient.invalidateQueries({ queryKey: ['productPrices', userEmail] });
       setFailedProducts(failedProductsList);
+      ilerlemeyiKapat();   // sonuc penceresi acilmadan once
       setSuccessModal({ open: true, successCount, failedCount: failedProductsList.length });
     } catch (error) { toast.error('Fiyat hesaplama hatası: ' + error.message); }
     finally {
