@@ -13,6 +13,8 @@ import FiltreEtiketi from '@/components/ui/FiltreEtiketi';
 import ShippingRateModal from '@/components/modals/ShippingRateModal';
 import ImportExport from '@/components/ImportExport';
 import { toast } from 'sonner';
+import { useBackgroundTask } from '@/lib/BackgroundTaskContext';
+import { useIlerlemePenceresi } from '@/lib/useIlerlemePenceresi';
 
 const ShippingRate = db.entities.ShippingRate;
 const Platform = db.entities.Platform;
@@ -43,6 +45,8 @@ export default function ShippingRates() {
   const [selectedIds, setSelectedIds] = useState([]);
   const [showBulkDelete, setShowBulkDelete] = useState(false);
   const [importProgress, setImportProgress] = useState({ isImporting: false, current: 0, total: 0, estimatedSecondsLeft: null, startTime: null });
+  const { startTask, updateTask, finishTask } = useBackgroundTask();
+  const ilerlemePenceresi = useIlerlemePenceresi(importProgress.isImporting);
 
   React.useEffect(() => {
     db.auth.me().then(user => {
@@ -139,6 +143,8 @@ export default function ShippingRates() {
 
   const handleImport = async (data) => {
     setImportProgress({ isImporting: true, current: 0, total: data.length, estimatedSecondsLeft: null, startTime: Date.now() });
+    // Ust bardaki serit icin: pencere kapatilirsa ilerleme buradan okunur.
+    startTask('rates-import', 'Kargo Tarifeleri Yükleniyor', 'Kargo Tarifeleri', 'ShippingRates', data.length);
 
     const toCreate = [];
     const toUpdate = [];
@@ -214,6 +220,7 @@ export default function ShippingRates() {
       }
 
       setImportProgress(prev => ({ ...prev, current: i + 1 }));
+      updateTask(i + 1, data.length);
     }
 
     // Toplu ekle (100'lük gruplar)
@@ -243,6 +250,7 @@ export default function ShippingRates() {
 
     queryClient.invalidateQueries(['shippingRates']);
     setImportProgress({ isImporting: false, current: 0, total: 0, estimatedSecondsLeft: null, startTime: null });
+    finishTask();
 
     const summary = [
       `➕ ${successCount} yeni`,
@@ -567,7 +575,8 @@ export default function ShippingRates() {
           </AlertDialogContent>
         </AlertDialog>
 
-        <Dialog open={importProgress.isImporting}>
+        {/* Kapatilabilir: islem arka planda surer. */}
+        <Dialog open={ilerlemePenceresi.gorunur} onOpenChange={ilerlemePenceresi.acikligiDegistir}>
           <DialogContent className="max-w-sm">
             <DialogHeader><DialogTitle>Excel İçe Aktarma İşleniyor...</DialogTitle></DialogHeader>
             <div className="space-y-4">

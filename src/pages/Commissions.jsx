@@ -33,6 +33,8 @@ import DataTable from '@/components/ui/DataTable';
 import CommissionModal from '@/components/modals/CommissionModal';
 import ImportExport from '@/components/ImportExport';
 import { toast } from 'sonner';
+import { useBackgroundTask } from '@/lib/BackgroundTaskContext';
+import { useIlerlemePenceresi } from '@/lib/useIlerlemePenceresi';
 
 const Commission = db.entities.Commission;
 const Platform = db.entities.Platform;
@@ -57,6 +59,8 @@ export default function Commissions() {
   const [sortType, setSortType] = useState('kategori_az');
   const [showMissingOnly, setShowMissingOnly] = useState(false);
   const [importProgress, setImportProgress] = useState({ isImporting: false, current: 0, total: 0 });
+  const { startTask, updateTask, finishTask } = useBackgroundTask();
+  const ilerlemePenceresi = useIlerlemePenceresi(importProgress.isImporting);
 
   useEffect(() => {
     db.auth.me().then(user => setUserEmail(user.email)).catch(() => {});
@@ -206,6 +210,8 @@ export default function Commissions() {
     }
 
     setImportProgress({ isImporting: true, current: 0, total: validRows.length });
+    // Ust bardaki serit icin: pencere kapatilirsa ilerleme buradan okunur.
+    startTask('commissions-import', 'Komisyonlar Yükleniyor', 'Komisyonlar', 'Commissions', validRows.length);
     const currentCommissions = await Commission.filter({ created_by: userEmail });
 
     let successCount = 0;
@@ -250,9 +256,11 @@ export default function Commissions() {
       }
 
       setImportProgress({ isImporting: true, current: i + 1, total: validRows.length });
+      updateTask(i + 1, validRows.length);
     }
 
     setImportProgress({ isImporting: false, current: 0, total: 0 });
+    finishTask();
     await queryClient.refetchQueries({ queryKey: ['commissions', userEmail] });
     toast.success(`✅ ${successCount + updateCount}/${validRows.length} komisyon işlendi\n➕ ${successCount} yeni  🔄 ${updateCount} güncellendi`);
   };
@@ -658,7 +666,8 @@ export default function Commissions() {
           </AlertDialogContent>
         </AlertDialog>
 
-        <Dialog open={importProgress.isImporting}>
+        {/* Kapatilabilir: islem arka planda surer. */}
+        <Dialog open={ilerlemePenceresi.gorunur} onOpenChange={ilerlemePenceresi.acikligiDegistir}>
           <DialogContent className="max-w-sm">
             <DialogHeader>
               <DialogTitle>Excel İçe Aktarma İşleniyor...</DialogTitle>
@@ -671,7 +680,9 @@ export default function Commissions() {
               <div className="w-full bg-border rounded-full h-3 overflow-hidden">
                 <div className="bg-primary h-3 rounded-full transition-all duration-300" style={{ width: `${(importProgress.current / (importProgress.total || 1)) * 100}%` }} />
               </div>
-              <p className="text-xs text-muted-foreground text-center">Lütfen bekleyin, veriler işleniyor...</p>
+              <p className="text-xs text-muted-foreground text-center">
+                Bu pencereyi kapatabilirsiniz — işlem arka planda sürer.
+              </p>
             </div>
           </DialogContent>
         </Dialog>

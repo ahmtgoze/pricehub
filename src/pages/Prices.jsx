@@ -13,6 +13,7 @@ import { downloadCSV } from '@/components/ImportExport';
 import { calculateAllPlatformPrices } from '@/components/PriceCalculationEngine';
 import { toast } from 'sonner';
 import { useBackgroundTask } from '@/lib/BackgroundTaskContext';
+import { hesaplamaYuzdesi, yazmaYuzdesi } from '@/lib/islemSeridi';
 import { useLocation } from 'react-router-dom';
 import PriceDetailModal from '@/components/modals/PriceDetailModal';
 import ProductHistoryModal from '@/components/modals/ProductHistoryModal';
@@ -40,8 +41,7 @@ export default function Prices() {
   const [successModal, setSuccessModal] = useState({ open: false, successCount: 0, failedCount: 0 });
   const [priceCalculationProgress, setPriceCalculationProgress] = useState({ isCalculating: false, current: 0, total: 0, title: '', currentProductName: '', estimatedSecondsLeft: null, startTime: null });
   const [showProgressModal, setShowProgressModal] = useState(false);
-  const [fakeProgress, setFakeProgress] = useState(0);
-  const fakeIntervalRef = React.useRef(null);
+
 
   // Filtre paneli
   const [showFilters, setShowFilters] = useState(false);
@@ -69,7 +69,7 @@ export default function Prices() {
   // Seçim
   const [selectedIds, setSelectedIds] = useState(new Set());
 
-  const { task, startTask, updateTask, finishTask } = useBackgroundTask();
+  const { task, yuzde, startTask, updateTask, finishTask, setPanelAcik } = useBackgroundTask();
   const location = useLocation();
   const searchParams = new URLSearchParams(location.search);
   const unpricedFilter = searchParams.get('filter') === 'unpriced';
@@ -85,6 +85,12 @@ export default function Prices() {
   React.useEffect(() => {
     if (task && task.pageRoute === 'Prices') setShowProgressModal(true);
   }, [location.pathname]);
+
+  // Ust bardaki serit yalnizca pencere KAPALIYKEN cikar; ikisi ayni anda
+  // gorunurse ayni bilgi iki yerde tekrar eder.
+  React.useEffect(() => {
+    setPanelAcik(showProgressModal);
+  }, [showProgressModal, setPanelAcik]);
 
   React.useEffect(() => {
     if (task) {
@@ -276,28 +282,59 @@ export default function Prices() {
   const isAllSelected = selectedIds.size === filteredProducts.length && filteredProducts.length > 0;
   const isPartialSelected = selectedIds.size > 0 && selectedIds.size < filteredProducts.length;
 
-  const startFakeProgress = () => {
-    setFakeProgress(0);
-    if (fakeIntervalRef.current) clearInterval(fakeIntervalRef.current);
-    let current = 0;
-    fakeIntervalRef.current = setInterval(() => {
-      current += 1;
-      if (current <= 90) setFakeProgress(current);
-    }, 200);
+  /**
+   * Cubuk TEK PARCA: 0'dan 100'e bir kez gider, asama degisince sifirlanmaz.
+   * Hesaplama ilk %HESAP_PAYI'ni, veritabanina yazma kalanini kaplar.
+   * Onceki surum yazma icin yeni gorev baslatiyordu; cubuk %100'e gelip
+   * 0'a dusuyor ve bozuk gorunuyordu.
+   *
+   * Pay neden 30: hesaplama tarayicida donuyor ve hizli bitiyor, yazma ise
+   * her kayit icin ag istegi oldugundan cok daha uzun suruyor.
+   */
+  const HESAP_PAYI = 30;
+
+  /** Hesaplanan fiyatlari yazar; cubugu %HESAP_PAYI'den 100'e tasir. */
+  const fiyatlariYaz = async (allToCreate, allToUpdate) => {
+    const BATCH = 100;
+    const toplamAdim = Math.ceil(allToCreate.length / BATCH) + allToUpdate.length;
+    if (toplamAdim === 0) { updateTask(100, 100); return; }
+
+    let yazilan = 0;
+    const bildir = () => updateTask(
+      yazmaYuzdesi(yazilan, toplamAdim, HESAP_PAYI),
+      100,
+      'Fiyatlar Kaydediliyor',
+    );
+    bildir();
+    for (let i = 0; i < allToCreate.length; i += BATCH) {
+      await db.entities.ProductPrice.bulkCreate(allToCreate.slice(i, i + BATCH));
+      yazilan++; bildir();
+    }
+    // PARALEL obekler. Tek tek `await` etmek ilerlemeyi guzel gosteriyordu
+    // ama yazmayi cok yavaslatiyordu: orijinal kod butun guncellemeleri
+    // Promise.all ile ayni anda gonderiyordu. 900 kayit x ~150ms sirayla
+    // dakikalar surerdi. Obek boyutu hem hizi hem ilerleme cozunurlugunu
+    // korur (~36 adim).
+    const ESZAMANLI = 25;
+    for (let i = 0; i < allToUpdate.length; i += ESZAMANLI) {
+      const obek = allToUpdate.slice(i, i + ESZAMANLI);
+      await Promise.all(obek.map(({ id, data }) => db.entities.ProductPrice.update(id, data)));
+      yazilan += obek.length; bildir();
+    }
   };
 
-  const stopFakeProgress = () => {
-    if (fakeIntervalRef.current) { clearInterval(fakeIntervalRef.current); fakeIntervalRef.current = null; }
-    setFakeProgress(100);
-    setTimeout(() => { setShowProgressModal(false); setFakeProgress(0); }, 600);
+  // Once burada bir setInterval sahte yuzde uretiyordu (200ms'de +1, %90'da
+  // durur). Gercek ilerleme bildirildigi icin kaldirildi: ekranda gordugun
+  // yuzde artik gercekten islenen urun sayisi.
+  const ilerlemeyiKapat = () => {
+    setTimeout(() => setShowProgressModal(false), 600);
   };
 
   const handleCalculatePrices = async () => {
     setCalculating(true);
     setCalculationProgress({ current: 0, total: 0 });
     setFailedProducts([]);
-    setFakeProgress(0);
-    startFakeProgress();
+
     await new Promise(r => setTimeout(r, 100));
     setShowProgressModal(true);
     try {
@@ -326,12 +363,18 @@ export default function Prices() {
       });
 
       const total = freshProducts.length;
-      startTask('calc-all-prices', 'Fiyatlar Hesaplanıyor', 'Fiyatlar', 'Prices', total);
+      startTask('calc-all-prices', 'Fiyatlar Hesaplanıyor', 'Fiyatlar', 'Prices', 100);
       let successCount = 0;
       const failedProductsList = [];
       const allToCreate = [];
       const allToUpdate = [];
       for (let i = 0; i < freshProducts.length; i++) {
+        // Bu dongu tamamen senkron: arada tarayiciya sira verilmezse React
+        // hic boyama yapamaz, serit %0'da donar ve sonunda birden kaybolur.
+        if (i % 20 === 0) {
+          updateTask(hesaplamaYuzdesi(i, total, HESAP_PAYI), 100);
+          await new Promise(r => setTimeout(r, 0));
+        }
         const product = freshProducts[i];
         try {
           const calculatedPrices = calculateAllPlatformPrices({ product, platforms: freshActivePlatforms, shippingRates: freshShippingRates, commissions: freshCommissions, packages: freshPackages, packageItems: freshPackageItems, getPackageCost: getFreshPackageCost, settings: freshSettings, systemAdminPlatforms: freshAdminPlatforms });
@@ -353,9 +396,8 @@ export default function Prices() {
           failedProductsList.push({ id: product.id, name: product.name, sebep });
         }
       }
-      const BATCH = 100;
-      for (let i = 0; i < allToCreate.length; i += BATCH) await db.entities.ProductPrice.bulkCreate(allToCreate.slice(i, i + BATCH));
-      await Promise.all(allToUpdate.map(({ id, data }) => db.entities.ProductPrice.update(id, data)));
+      updateTask(HESAP_PAYI, 100);
+      await fiyatlariYaz(allToCreate, allToUpdate);
 
       // Güncelleme raporlarını kaydet
       try {
@@ -398,7 +440,7 @@ export default function Prices() {
     finally {
       setCalculating(false); setCalculationProgress({ current: 0, total: 0 });
       setPriceCalculationProgress({ isCalculating: false, current: 0, total: 0, title: '', estimatedSecondsLeft: null, startTime: null });
-      stopFakeProgress(); finishTask();
+      ilerlemeyiKapat(); finishTask();
     }
   };
 
@@ -492,8 +534,8 @@ export default function Prices() {
     setCalculationProgress({ current: 0, total });
     setShowProgressModal(true);
     setPriceCalculationProgress(prev => ({ ...prev, isCalculating: true, title: 'Başarısız Ürünler Hesaplanıyor' }));
-    startFakeProgress();
-    startTask('calc-failed-prices', 'Başarısız Ürünler Hesaplanıyor', 'Fiyatlar', 'Prices', total);
+
+    startTask('calc-failed-prices', 'Başarısız Ürünler Hesaplanıyor', 'Fiyatlar', 'Prices', 100);
     try {
       const [freshShippingRates, freshUserPlatforms, freshProductPrices, freshPackages, freshPackageItems, freshProducts, freshCommissions, freshSettings, freshAdminPlatforms] = await Promise.all([
         db.entities.ShippingRate.list('-id', 10000), db.entities.Platform.filter({ created_by: userEmail }),
@@ -508,6 +550,10 @@ export default function Prices() {
       let successCount = 0;
       const stillFailedProducts = [];
       for (let i = 0; i < failedProducts.length; i++) {
+        if (i % 20 === 0) {
+          updateTask(hesaplamaYuzdesi(i, total, HESAP_PAYI), 100);
+          await new Promise(r => setTimeout(r, 0));
+        }
         const failedProduct = failedProducts[i];
         const product = freshProducts.find(p => p.id === failedProduct.id);
         if (!product) continue;
@@ -522,9 +568,8 @@ export default function Prices() {
           successCount++;
         } catch (err) { stillFailedProducts.push(failedProduct); }
       }
-      const BATCH = 100;
-      for (let i = 0; i < allToCreate.length; i += BATCH) await db.entities.ProductPrice.bulkCreate(allToCreate.slice(i, i + BATCH));
-      await Promise.all(allToUpdate.map(({ id, data }) => db.entities.ProductPrice.update(id, data)));
+      updateTask(HESAP_PAYI, 100);
+      await fiyatlariYaz(allToCreate, allToUpdate);
       await queryClient.invalidateQueries({ queryKey: ['productPrices', userEmail] });
       setFailedProducts(stillFailedProducts);
       if (stillFailedProducts.length > 0) toast.warning(`${successCount} ürün hesaplandı, ${stillFailedProducts.length} hala hesaplanamadı.`);
@@ -533,7 +578,7 @@ export default function Prices() {
     finally {
       setCalculating(false); setCalculationProgress({ current: 0, total: 0 });
       setPriceCalculationProgress({ isCalculating: false, current: 0, total: 0, title: '', estimatedSecondsLeft: null, startTime: null });
-      stopFakeProgress(); finishTask();
+      ilerlemeyiKapat(); finishTask();
     }
   };
 
@@ -1202,16 +1247,22 @@ export default function Prices() {
           </AlertDialogContent>
         </AlertDialog>
 
-        <Dialog open={showProgressModal} onOpenChange={() => {}}>
-          <DialogContent className="max-w-sm" onInteractOutside={(e) => e.preventDefault()}>
+        {/* Pencere KAPATILABILIR: hesaplama arka planda surer, ust bardaki
+            serit yuzdeyi gostermeye devam eder. Onceki surumde carpiya
+            basmak da disariya tiklamak da hicbir sey yapmiyordu ve
+            kullanici islem bitene kadar ekranda kilitli kaliyordu. */}
+        <Dialog open={showProgressModal} onOpenChange={(acik) => !acik && setShowProgressModal(false)}>
+          <DialogContent className="max-w-sm">
             <DialogHeader><DialogTitle>Fiyatlar Hesaplanıyor</DialogTitle></DialogHeader>
             <div className="space-y-4">
               <div className="w-full bg-secondary rounded-full h-4 overflow-hidden">
-                <div className="bg-primary h-4 rounded-full transition-all duration-300" style={{ width: `${fakeProgress}%` }} />
+                <div className="bg-primary h-4 rounded-full transition-all duration-300" style={{ width: `${yuzde ?? 0}%` }} />
               </div>
               <div className="text-center">
-                <p className="text-3xl font-bold text-foreground">%{fakeProgress}</p>
-                <p className="text-sm text-muted-foreground mt-1">Lütfen bekleyin...</p>
+                <p className="text-3xl font-bold text-foreground">%{yuzde ?? 0}</p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Bu pencereyi kapatabilirsiniz — işlem arka planda sürer.
+                </p>
               </div>
             </div>
           </DialogContent>

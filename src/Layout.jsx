@@ -31,7 +31,8 @@ import {
   Moon,
 } from 'lucide-react';
 import NotificationCenter from '@/components/notifications/NotificationCenter';
-import BackgroundTaskWidget from '@/components/BackgroundTaskWidget';
+import BackgroundTaskBar from '@/components/BackgroundTaskBar';
+import { useBackgroundTask } from '@/lib/BackgroundTaskContext';
 import HelpPanel from '@/components/HelpPanel';
 import { useTheme } from '@/lib/useTheme';
 import { cn } from "@/lib/utils";
@@ -168,6 +169,8 @@ function GroupHeader({ label, isOpen, onToggle, hasActive }) {
 
 export default function Layout({ children, currentPageName }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { task, panelAcik } = useBackgroundTask() || {};
+  const islemSuruyor = !!task && !panelAcik;
   const [helpOpen, setHelpOpen] = useState(false);
   const { degistir: temaDegistir, koyuMu } = useTheme();
 
@@ -359,7 +362,13 @@ export default function Layout({ children, currentPageName }) {
           <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(true)}>
             <Menu className="h-6 w-6" />
           </Button>
-          <span className="font-semibold text-foreground flex-1 ml-3">{MARKA_ADI}</span>
+          {/* Dar ekranda ikisi yan yana sigmiyor: islem varken serit,
+              yoksa marka adi gosterilir. */}
+          <div className="flex-1 ml-3 min-w-0">
+            {islemSuruyor
+              ? <BackgroundTaskBar />
+              : <span className="font-semibold text-foreground">{MARKA_ADI}</span>}
+          </div>
           <div className="flex items-center gap-1">
             <NotificationCenter />
             <BarButton onClick={() => setHelpOpen(true)} title="Nasıl kullanılır?">
@@ -381,6 +390,8 @@ export default function Layout({ children, currentPageName }) {
 
         {/* Masaüstü üst bar */}
         <div className="hidden lg:flex items-center justify-end gap-1 h-[52px] px-6 border-b border-border bg-card/70 backdrop-blur-xl backdrop-saturate-150 flex-shrink-0">
+          {/* Arka planda suren islem: solda, diger butonlar sagda kalir */}
+          <div className="mr-auto"><BackgroundTaskBar /></div>
           <NotificationCenter />
           <button
             onClick={() => setHelpOpen(true)}
@@ -412,7 +423,6 @@ export default function Layout({ children, currentPageName }) {
         </main>
       </div>
 
-      <BackgroundTaskWidget />
 
       <HelpPanel
         pageName={currentPageName}
