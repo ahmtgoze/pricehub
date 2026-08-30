@@ -310,9 +310,16 @@ export default function Prices() {
       await db.entities.ProductPrice.bulkCreate(allToCreate.slice(i, i + BATCH));
       yazilan++; bildir();
     }
-    for (const { id, data } of allToUpdate) {
-      await db.entities.ProductPrice.update(id, data);
-      yazilan++; bildir();
+    // PARALEL obekler. Tek tek `await` etmek ilerlemeyi guzel gosteriyordu
+    // ama yazmayi cok yavaslatiyordu: orijinal kod butun guncellemeleri
+    // Promise.all ile ayni anda gonderiyordu. 900 kayit x ~150ms sirayla
+    // dakikalar surerdi. Obek boyutu hem hizi hem ilerleme cozunurlugunu
+    // korur (~36 adim).
+    const ESZAMANLI = 25;
+    for (let i = 0; i < allToUpdate.length; i += ESZAMANLI) {
+      const obek = allToUpdate.slice(i, i + ESZAMANLI);
+      await Promise.all(obek.map(({ id, data }) => db.entities.ProductPrice.update(id, data)));
+      yazilan += obek.length; bildir();
     }
   };
 
