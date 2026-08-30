@@ -1,6 +1,7 @@
 import React from 'react';
 import { Loader2 } from 'lucide-react';
 import { useBackgroundTask } from '@/lib/BackgroundTaskContext';
+import { seritGorunur } from '@/lib/islemSeridi';
 
 /**
  * Ust bardaki islem seridi.
@@ -15,7 +16,7 @@ import { useBackgroundTask } from '@/lib/BackgroundTaskContext';
 export default function BackgroundTaskBar() {
   const { task, yuzde, panelAcik } = useBackgroundTask() || {};
 
-  if (!task || panelAcik) return null;
+  if (!seritGorunur(task, panelAcik)) return null;
 
   return (
     <div

@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useCallback } from 'react';
+import { yuzdeHesapla } from '@/lib/islemSeridi';
 
 const BackgroundTaskContext = createContext(null);
 
@@ -33,9 +34,7 @@ export function BackgroundTaskProvider({ children }) {
   }, []);
 
   /** Yuzde — total bilinmiyorsa null (serit belirsiz durum gosterir). */
-  const yuzde = task && task.total > 0
-    ? Math.min(100, Math.round((task.current / task.total) * 100))
-    : null;
+  const yuzde = task ? yuzdeHesapla(task.current, task.total) : null;
 
   return (
     <BackgroundTaskContext.Provider
