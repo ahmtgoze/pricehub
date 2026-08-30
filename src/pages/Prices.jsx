@@ -13,6 +13,7 @@ import { downloadCSV } from '@/components/ImportExport';
 import { calculateAllPlatformPrices } from '@/components/PriceCalculationEngine';
 import { toast } from 'sonner';
 import { useBackgroundTask } from '@/lib/BackgroundTaskContext';
+import { hesaplamaYuzdesi, yazmaYuzdesi } from '@/lib/islemSeridi';
 import { useLocation } from 'react-router-dom';
 import PriceDetailModal from '@/components/modals/PriceDetailModal';
 import ProductHistoryModal from '@/components/modals/ProductHistoryModal';
