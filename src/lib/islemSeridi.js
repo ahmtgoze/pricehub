@@ -19,3 +19,25 @@ export function yuzdeHesapla(current, total) {
 export function seritGorunur(task, panelAcik) {
   return !!task && !panelAcik;
 }
+
+/**
+ * Iki asamali islemde tek parca yuzde.
+ *
+ * Fiyat hesaplama once tarayicida hesaplar (hizli), sonra veritabanina
+ * yazar (yavas, her kayit bir ag istegi). Ikisi ayri gorev olarak
+ * gosterilince cubuk %100'e gelip 0'a dusuyor ve BOZUK gorunuyordu.
+ * Burasi ikisini tek bir 0-100 araligina oturtur; deger asla geri gitmez.
+ *
+ * pay — hesaplama asamasinin kapladigi yuzde (kalani yazma asamasidir)
+ */
+export function hesaplamaYuzdesi(islenen, toplam, pay = 30) {
+  if (!Number.isFinite(toplam) || toplam <= 0) return 0;
+  const oran = Math.min(1, Math.max(0, islenen / toplam));
+  return Math.round(oran * pay);
+}
+
+export function yazmaYuzdesi(yazilan, toplam, pay = 30) {
+  if (!Number.isFinite(toplam) || toplam <= 0) return 100;
+  const oran = Math.min(1, Math.max(0, yazilan / toplam));
+  return pay + Math.round(oran * (100 - pay));
+}

@@ -282,26 +282,36 @@ export default function Prices() {
   const isPartialSelected = selectedIds.size > 0 && selectedIds.size < filteredProducts.length;
 
   /**
-   * Hesaplanan fiyatlari veritabanina yazar ve ilerlemeyi bildirir.
+   * Cubuk TEK PARCA: 0'dan 100'e bir kez gider, asama degisince sifirlanmaz.
+   * Hesaplama ilk %HESAP_PAYI'ni, veritabanina yazma kalanini kaplar.
+   * Onceki surum yazma icin yeni gorev baslatiyordu; cubuk %100'e gelip
+   * 0'a dusuyor ve bozuk gorunuyordu.
    *
-   * Yazma da uzun suruyor. Ayri bir asama olarak gosterilmezse serit
-   * hesaplama sonunda %100'de takili kalir ve kullanici "bitti ama
-   * kapanmiyor" sanir. Iki hesaplama akisinda da ayni kod vardi.
+   * Pay neden 30: hesaplama tarayicida donuyor ve hizli bitiyor, yazma ise
+   * her kayit icin ag istegi oldugundan cok daha uzun suruyor.
    */
-  const fiyatlariYaz = async (allToCreate, allToUpdate, gorevId, gorevAdi) => {
+  const HESAP_PAYI = 30;
+
+  /** Hesaplanan fiyatlari yazar; cubugu %HESAP_PAYI'den 100'e tasir. */
+  const fiyatlariYaz = async (allToCreate, allToUpdate) => {
     const BATCH = 100;
     const toplamAdim = Math.ceil(allToCreate.length / BATCH) + allToUpdate.length;
-    if (toplamAdim === 0) return;
+    if (toplamAdim === 0) { updateTask(100, 100); return; }
 
-    startTask(gorevId, gorevAdi, 'Fiyatlar', 'Prices', toplamAdim);
     let yazilan = 0;
+    const bildir = () => updateTask(
+      yazmaYuzdesi(yazilan, toplamAdim, HESAP_PAYI),
+      100,
+      'Fiyatlar Kaydediliyor',
+    );
+    bildir();
     for (let i = 0; i < allToCreate.length; i += BATCH) {
       await db.entities.ProductPrice.bulkCreate(allToCreate.slice(i, i + BATCH));
-      updateTask(++yazilan, toplamAdim);
+      yazilan++; bildir();
     }
     for (const { id, data } of allToUpdate) {
       await db.entities.ProductPrice.update(id, data);
-      updateTask(++yazilan, toplamAdim);
+      yazilan++; bildir();
     }
   };
 
@@ -345,7 +355,7 @@ export default function Prices() {
       });
 
       const total = freshProducts.length;
-      startTask('calc-all-prices', 'Fiyatlar Hesaplanıyor', 'Fiyatlar', 'Prices', total);
+      startTask('calc-all-prices', 'Fiyatlar Hesaplanıyor', 'Fiyatlar', 'Prices', 100);
       let successCount = 0;
       const failedProductsList = [];
       const allToCreate = [];
@@ -354,7 +364,7 @@ export default function Prices() {
         // Bu dongu tamamen senkron: arada tarayiciya sira verilmezse React
         // hic boyama yapamaz, serit %0'da donar ve sonunda birden kaybolur.
         if (i % 20 === 0) {
-          updateTask(i, total);
+          updateTask(hesaplamaYuzdesi(i, total, HESAP_PAYI), 100);
           await new Promise(r => setTimeout(r, 0));
         }
         const product = freshProducts[i];
@@ -378,8 +388,8 @@ export default function Prices() {
           failedProductsList.push({ id: product.id, name: product.name, sebep });
         }
       }
-      updateTask(total, total);
-      await fiyatlariYaz(allToCreate, allToUpdate, 'calc-all-prices-yaz', 'Fiyatlar Kaydediliyor');
+      updateTask(HESAP_PAYI, 100);
+      await fiyatlariYaz(allToCreate, allToUpdate);
 
       // Güncelleme raporlarını kaydet
       try {
@@ -517,7 +527,7 @@ export default function Prices() {
     setShowProgressModal(true);
     setPriceCalculationProgress(prev => ({ ...prev, isCalculating: true, title: 'Başarısız Ürünler Hesaplanıyor' }));
 
-    startTask('calc-failed-prices', 'Başarısız Ürünler Hesaplanıyor', 'Fiyatlar', 'Prices', total);
+    startTask('calc-failed-prices', 'Başarısız Ürünler Hesaplanıyor', 'Fiyatlar', 'Prices', 100);
     try {
       const [freshShippingRates, freshUserPlatforms, freshProductPrices, freshPackages, freshPackageItems, freshProducts, freshCommissions, freshSettings, freshAdminPlatforms] = await Promise.all([
         db.entities.ShippingRate.list('-id', 10000), db.entities.Platform.filter({ created_by: userEmail }),
@@ -533,7 +543,7 @@ export default function Prices() {
       const stillFailedProducts = [];
       for (let i = 0; i < failedProducts.length; i++) {
         if (i % 20 === 0) {
-          updateTask(i, total);
+          updateTask(hesaplamaYuzdesi(i, total, HESAP_PAYI), 100);
           await new Promise(r => setTimeout(r, 0));
         }
         const failedProduct = failedProducts[i];
@@ -550,8 +560,8 @@ export default function Prices() {
           successCount++;
         } catch (err) { stillFailedProducts.push(failedProduct); }
       }
-      updateTask(total, total);
-      await fiyatlariYaz(allToCreate, allToUpdate, 'calc-failed-prices-yaz', 'Fiyatlar Kaydediliyor');
+      updateTask(HESAP_PAYI, 100);
+      await fiyatlariYaz(allToCreate, allToUpdate);
       await queryClient.invalidateQueries({ queryKey: ['productPrices', userEmail] });
       setFailedProducts(stillFailedProducts);
       if (stillFailedProducts.length > 0) toast.warning(`${successCount} ürün hesaplandı, ${stillFailedProducts.length} hala hesaplanamadı.`);

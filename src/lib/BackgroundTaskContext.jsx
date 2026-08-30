@@ -24,8 +24,16 @@ export function BackgroundTaskProvider({ children }) {
     setPanelAcik(true);
   }, []);
 
-  const updateTask = useCallback((current, total) => {
-    setTask(prev => (prev ? { ...prev, current, total: total ?? prev.total } : prev));
+  /**
+   * Sayaci ilerletir. Ad da verilebilir: islem asama degistirdiginde
+   * (hesaplama -> kaydetme) gorevi yeniden BASLATMAK yerine sadece adi
+   * degistiriyoruz. startTask cagirmak sayaci sifirlar ve kullanici
+   * cubugun %100'den 0'a dusup yeniden baslamasini bozukluk sanir.
+   */
+  const updateTask = useCallback((current, total, name) => {
+    setTask(prev => (prev
+      ? { ...prev, current, total: total ?? prev.total, name: name ?? prev.name }
+      : prev));
   }, []);
 
   const finishTask = useCallback(() => {
