@@ -182,6 +182,22 @@ export class Baglanti {
   }
 
   kapat() { try { this.chrome?.kill(); } catch { /* yoksay */ } }
+
+  /**
+   * Chrome'u DUZGUN kapatir ve diske yazmasini bekler.
+   *
+   * kill() ile oldurulunce Chrome localStorage'i diske flush edemiyor ve
+   * yeni acilan oturum GIRIS YAPILMAMIS geliyordu — giris ekraninda
+   * oturum acmak bu yuzden ise yaramiyordu. Browser.close duzgun kapanis
+   * yapar, veriler kalici olur.
+   */
+  async duzgunKapat() {
+    try {
+      await this.gonder('Browser.close');
+      await bekle(1500);
+    } catch { /* zaten kapanmis olabilir */ }
+    this.kapat();
+  }
 }
 
 /** Konsol hatasi/istisna metnini cikarir; null ise hata degil. */

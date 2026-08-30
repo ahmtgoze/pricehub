@@ -168,11 +168,39 @@ await b.gonder('Log.enable');
 if (girisModu) {
   await b.gonder('Page.navigate', { url: `${taban}/login` });
   console.log(`\nChrome acildi. ${taban} adresinde giris yap.`);
-  console.log('Giris bitince Ctrl+C ile cikabilirsin; oturum profile kaydedilir.');
-  console.log('Pencere 45 dakika acik kalir.');
-  console.log('Oturum kaydedildi; sonra "npm run bot" calistir.\n');
-  await bekle(1000 * 60 * 45);   // pencere 45 dk acik kalir
-  process.exit(0);
+  console.log('Giris tamamlaninca pencere KENDILIGINDEN kapanir.');
+  console.log('(Ctrl+C ile oldurme: Chrome oturumu diske yazamadan kapanir');
+  console.log(' ve giris kaydedilmez — bu tuzaga bir kez dusuldu.)\n');
+
+  // Girisi bekle: /login disina cikildiginda oturum acilmistir.
+  //
+  // TUM sekmelere bakilir. Google girisi YENI SEKME aciyor; ilk sekme
+  // /login'de takili kaliyor. Yalnizca bagli oldugumuz sekmeye bakan surum
+  // girisi hic algilamadi.
+  const girisYapildiMi = async () => {
+    try {
+      const r = await fetch(`http://127.0.0.1:${PORT}/json/list`);
+      return (await r.json()).some((t) =>
+        t.type === 'page' &&
+        t.url.startsWith(taban) &&
+        !/\/login\/?$/i.test(new URL(t.url).pathname + '/'),
+      );
+    } catch { return false; }
+  };
+
+  for (let i = 0; i < 45 * 30; i++) {          // 45 dakika
+    await bekle(2000);
+    if (await girisYapildiMi()) {
+      console.log('Giris algilandi. Oturum diske yaziliyor...');
+      await bekle(2500);                        // uygulama oturumu yazsin
+      await b.duzgunKapat();                    // kill degil: flush icin sart
+      console.log('Oturum kaydedildi. Simdi: npm run bot\n');
+      process.exit(0);
+    }
+  }
+  console.log('45 dakika doldu, giris algilanmadi.\n');
+  await b.duzgunKapat();
+  process.exit(1);
 }
 
 console.log(`\nSayfa Botu — ${taban}\n${'─'.repeat(74)}`);
