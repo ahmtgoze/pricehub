@@ -463,12 +463,15 @@ if (filteredByRange) {
                   <div className="space-y-3">
                     {unlistedByPlatform.map(({ platformType, name, listedCount, unlistedCount, unlistedProducts }) => (
                       <div key={platformType} className={`rounded-xl border overflow-hidden ${platformColors[platformType]}`}>
-                        <button onClick={() => setExpandedPlatform(expandedPlatform === platformType ? null : platformType)} className="w-full flex items-center justify-between px-4 py-3">
-                          <div className="flex items-center gap-3">
-                            <span className={`font-semibold text-sm ${platformTextColors[platformType]}`}>{name}</span>
-                            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${platformBadgeColors[platformType]}`}>{listedCount} listelendi</span>
-                            {unlistedCount > 0 && <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-red-100 text-red-700">{unlistedCount} listelenmemiş</span>}
-                            {unlistedCount === 0 && <CheckCircle2 className="h-4 w-4 text-muted-foreground/60" />}
+                        <button onClick={() => setExpandedPlatform(expandedPlatform === platformType ? null : platformType)} className="w-full flex items-center justify-between gap-2 px-4 py-3 text-left">
+                          {/* Dar kartta ad + iki rozet tek satira sigmiyordu ve
+                              rozetler kesiliyordu. flex-wrap ile alt satira
+                              geciyorlar; min-w-0 olmadan daralma da olmuyordu. */}
+                          <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 min-w-0 flex-1">
+                            <span className={`font-semibold text-sm truncate max-w-full ${platformTextColors[platformType]}`}>{name}</span>
+                            <span className={`text-xs px-2 py-0.5 rounded-full font-medium whitespace-nowrap ${platformBadgeColors[platformType]}`}>{listedCount} listelendi</span>
+                            {unlistedCount > 0 && <span className="text-xs px-2 py-0.5 rounded-full font-medium whitespace-nowrap bg-red-100 text-red-700">{unlistedCount} listelenmemiş</span>}
+                            {unlistedCount === 0 && <CheckCircle2 className="h-4 w-4 text-muted-foreground/60 shrink-0" />}
                           </div>
                           {unlistedCount > 0 && (expandedPlatform === platformType ? <ChevronUp className="h-4 w-4 text-muted-foreground shrink-0" /> : <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />)}
                         </button>

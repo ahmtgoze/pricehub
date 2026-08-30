@@ -310,17 +310,17 @@ export default function Prices() {
       await db.entities.ProductPrice.bulkCreate(allToCreate.slice(i, i + BATCH));
       yazilan++; bildir();
     }
-    // PARALEL obekler. Tek tek `await` etmek ilerlemeyi guzel gosteriyordu
-    // ama yazmayi cok yavaslatiyordu: orijinal kod butun guncellemeleri
-    // Promise.all ile ayni anda gonderiyordu. 900 kayit x ~150ms sirayla
-    // dakikalar surerdi. Obek boyutu hem hizi hem ilerleme cozunurlugunu
-    // korur (~36 adim).
-    const ESZAMANLI = 25;
-    for (let i = 0; i < allToUpdate.length; i += ESZAMANLI) {
-      const obek = allToUpdate.slice(i, i + ESZAMANLI);
-      await Promise.all(obek.map(({ id, data }) => db.entities.ProductPrice.update(id, data)));
-      yazilan += obek.length; bildir();
-    }
+    // Hepsi AYNI ANDA gonderilir — orijinal davranis buydu ve en hizlisi.
+    // Ilerleme, her istek tamamlandikca sayilir; boylece hiz feda edilmeden
+    // gercek ilerleme gosterilir.
+    //
+    // Once 25'lik obekler halinde gonderiyordum: 900 kayit 36 tura bolununce
+    // yazma belirgin sekilde uzuyordu. Obege gerek yok, sayaci beklemeye
+    // degil tamamlanmaya baglamak yetiyor.
+    await Promise.all(allToUpdate.map(async ({ id, data }) => {
+      await db.entities.ProductPrice.update(id, data);
+      yazilan++; bildir();
+    }));
   };
 
   // Once burada bir setInterval sahte yuzde uretiyordu (200ms'de +1, %90'da
