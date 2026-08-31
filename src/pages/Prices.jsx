@@ -315,11 +315,13 @@ export default function Prices() {
     // "TypeError: Failed to fetch" ile dustu: ~900 es zamanli baglanti
     // kaldirilamiyor. Obeklere bolmek ise her turda en yavas istegi bekletip
     // yazmayi uzatiyordu. Havuz sabit sayida istegi surekli akista tutar.
-    // Es zamanlilik olcumle secildi (453 urun / ~900 guncelleme, canli):
-    //   900 (hepsi birden) → "Failed to fetch", 86. istekte dustu
-    //     8                → 35,5 sn, hatasiz
-    //    32                → asagidaki olcum
-    // Hedef: hata vermeden mumkun olan en hizli deger.
+    // Es zamanlilik OLCUMLE secildi (453 urun / ~900 guncelleme, canli):
+    //   900 (hepsi birden) → "TypeError: Failed to fetch", 86. istekte dustu
+    //     8                → 35,5 sn, hatasiz ama gereksiz yavas
+    //    32                → 16,3 / 16,4 / 16,4 sn, uc kosuda da hatasiz
+    // Yani 32, hepsini birden gondermek kadar hizli ama kirilgan degil.
+    // Degistirmeden once yeniden olc; dusuk deger yavaslatir, yuksek deger
+    // baglanti doygunluguna geri dondurur.
     const { basarisiz } = await havuzdaCalistir(
       allToUpdate,
       32,
