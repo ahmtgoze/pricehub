@@ -97,6 +97,38 @@ export default function HBBasketCampaigns() {
 
   const donemHazir = !!(selectedPlatform && donem);
 
+  // Son secilen donem tarayicida hatirlanir. Kullanici baska sayfaya gidip
+  // dondugunde tarih araligini tekrar secmek zorunda kalmasin; aralik
+  // dolunca asagidaki etki kayitli calismayi da geri yukler.
+  const DONEM_ANAHTARI = 'hbSepetSonDonem';
+
+  React.useEffect(() => {
+    try {
+      const ham = window.localStorage.getItem(DONEM_ANAHTARI);
+      if (!ham) return;
+      const kayit = JSON.parse(ham);
+      const bas = kayit?.from ? new Date(kayit.from) : null;
+      const bit = kayit?.to ? new Date(kayit.to) : null;
+      if (!bas || !bit || Number.isNaN(bas.getTime()) || Number.isNaN(bit.getTime())) return;
+      setDateRangeValue({ from: bas, to: bit });
+    } catch {
+      // Gizli sekmede/depolama kapaliyken erisim hata atabilir; sayfa
+      // hatirlamadan da calismali.
+    }
+  }, []);
+
+  React.useEffect(() => {
+    if (!donem) return;
+    try {
+      window.localStorage.setItem(DONEM_ANAHTARI, JSON.stringify({
+        from: dateRangeValue.from.toISOString(),
+        to: dateRangeValue.to.toISOString(),
+      }));
+    } catch {
+      // Hatirlayamamak islevi bozmaz.
+    }
+  }, [donem?.baslangic, donem?.bitis]);
+
   // Donem secilince o donemin kayitli calismasi geri yuklenir; Excel'i
   // yeniden yuklemeye gerek kalmaz.
   React.useEffect(() => {
@@ -237,6 +269,43 @@ export default function HBBasketCampaigns() {
     }
   }
 
+  // Bir donemin kayitlarini yeniler: once o donemin eskileri silinir,
+  // sonra yeni satirlar yazilir. Kopya kalmaz.
+  const donemeYaz = async (satirlar) => {
+    const eskiler = kayitliKampanyalar.filter(
+      (r) => r.platform_account === selectedPlatform &&
+             r.start_date === donem.baslangic && r.end_date === donem.bitis
+    );
+    await havuzdaCalistir(eskiler, 16, (r) => tekrarDene(() => BasketEntity.delete(r.id)));
+
+    const yazilacak = satirlar.map((it) => ({
+      platform_account: selectedPlatform,
+      start_date: donem.baslangic,
+      end_date: donem.bitis,
+      product_name: it.product_name || '',
+      brand: it.brand || '',
+      seller_stock_code: it.seller_stock_code || '',
+      hb_sku: it.hb_sku || '',
+      barcode: it.barcode || '',
+      category: it.category || '',
+      stock: it.stock || 0,
+      max_price: it.max_price || 0,
+      current_price: it.current_price || 0,
+      current_commission: it.current_commission || 0,
+      discounted_commission: it.discounted_commission || 0,
+      campaign_price: it.campaign_price || 0,
+      selected: !!it.selected,
+      matched_product_id: it.matched_product_id || null,
+      excel_file_url: it.excel_file_url || null,
+    }));
+
+    const { basarisiz } = await havuzdaCalistir(
+      yazilacak, 16, (kayit) => tekrarDene(() => BasketEntity.create(kayit))
+    );
+    queryClient.invalidateQueries({ queryKey: ['hbBasketCampaigns'] });
+    return { toplam: yazilacak.length, basarisiz: basarisiz.length };
+  };
+
   const handleFileUpload = (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -301,7 +370,20 @@ export default function HBBasketCampaigns() {
         }).filter((it) => it.seller_stock_code || it.product_name);
 
         setUploadedData(parsed);
-        toast.success(`${parsed.length} ürün yüklendi`);
+
+        // KENDILIGINDEN KAYDEDILIR. Aksi halde kullanici sayfadan ayrilinca
+        // yukledigi her sey kayboluyordu; donem secilince geri gelmesi de
+        // kayda bagli.
+        setKaydediliyor(true);
+        try {
+          const { toplam, basarisiz } = await donemeYaz(parsed);
+          if (basarisiz > 0) toast.warning(`${parsed.length} ürün yüklendi · ${basarisiz} kayıt yazılamadı`);
+          else toast.success(`${toplam} ürün yüklendi ve ${donem.baslangic} – ${donem.bitis} dönemine kaydedildi`);
+        } catch (kayitHatasi) {
+          toast.warning(`${parsed.length} ürün yüklendi ama kaydedilemedi: ${kayitHatasi?.message || kayitHatasi}`);
+        } finally {
+          setKaydediliyor(false);
+        }
       } catch (error) {
         toast.error('Excel dosyası okunamadı: ' + error.message);
       }
@@ -369,53 +451,43 @@ export default function HBBasketCampaigns() {
   // Disa aktarim: dosyada YALNIZCA kampanyaya girecek urunler kalir,
   // secilmeyenlerin satiri silinir. Kural ve gerekce icin bkz.
   // src/lib/hbSepetDisaAktarim.js
-  // Secimleri donem anahtariyla kaydeder. Once o donemin eski kayitlari
-  // silinir; boylece ikinci kayit kopya birakmaz.
+  // Secimleri elle kaydetme. Yukleme zaten kendiliginden kaydediyor; bu
+  // buton fiyat/secim degisikliklerini yazmak icin.
   const handleSaveSelections = async () => {
     if (!donemHazir) { toast.error('Platform ve tarih aralığı seçin'); return; }
     if (uploadedData.length === 0) { toast.error('Kaydedilecek liste yok'); return; }
+    setKaydediliyor(true);
+    try {
+      const { toplam, basarisiz } = await donemeYaz(uploadedData);
+      if (basarisiz > 0) toast.error(`${toplam - basarisiz} kayıt yazıldı, ${basarisiz} tanesi başarısız`);
+      else toast.success(`${toplam} ürün ${donem.baslangic} – ${donem.bitis} dönemine kaydedildi`);
+    } catch (hata) {
+      toast.error('Kaydetme sırasında hata: ' + (hata?.message || hata));
+    } finally {
+      setKaydediliyor(false);
+    }
+  };
+
+  // Temizle yalnizca ekrani bosaltmaz; o donemin KAYITLARINI da siler.
+  // Aksi halde sayfadan cikip donunce temizlenen liste geri geliyordu.
+  const handleClear = async () => {
+    setUploadedData([]);
+    setOriginalExcelData(null);
+    if (!donemHazir) { toast.success('Liste temizlendi'); return; }
+
+    const eskiler = kayitliKampanyalar.filter(
+      (r) => r.platform_account === selectedPlatform &&
+             r.start_date === donem.baslangic && r.end_date === donem.bitis
+    );
+    if (eskiler.length === 0) { toast.success('Liste temizlendi'); return; }
 
     setKaydediliyor(true);
     try {
-      const eskiler = kayitliKampanyalar.filter(
-        (r) => r.platform_account === selectedPlatform &&
-               r.start_date === donem.baslangic && r.end_date === donem.bitis
-      );
       await havuzdaCalistir(eskiler, 16, (r) => tekrarDene(() => BasketEntity.delete(r.id)));
-
-      const yazilacak = uploadedData.map((it) => ({
-        platform_account: selectedPlatform,
-        start_date: donem.baslangic,
-        end_date: donem.bitis,
-        product_name: it.product_name || '',
-        brand: it.brand || '',
-        seller_stock_code: it.seller_stock_code || '',
-        hb_sku: it.hb_sku || '',
-        barcode: it.barcode || '',
-        category: it.category || '',
-        stock: it.stock || 0,
-        max_price: it.max_price || 0,
-        current_price: it.current_price || 0,
-        current_commission: it.current_commission || 0,
-        discounted_commission: it.discounted_commission || 0,
-        campaign_price: it.campaign_price || 0,
-        selected: !!it.selected,
-        matched_product_id: it.matched_product_id || null,
-        excel_file_url: it.excel_file_url || null,
-      }));
-
-      const { basarisiz } = await havuzdaCalistir(
-        yazilacak, 16, (kayit) => tekrarDene(() => BasketEntity.create(kayit))
-      );
       queryClient.invalidateQueries({ queryKey: ['hbBasketCampaigns'] });
-
-      if (basarisiz.length > 0) {
-        toast.error(`${yazilacak.length - basarisiz.length} kayıt yazıldı, ${basarisiz.length} tanesi başarısız`);
-      } else {
-        toast.success(`${yazilacak.length} ürün ${donem.baslangic} – ${donem.bitis} dönemine kaydedildi`);
-      }
+      toast.success(`Liste ve ${donem.baslangic} – ${donem.bitis} dönemine ait ${eskiler.length} kayıt silindi`);
     } catch (hata) {
-      toast.error('Kaydetme sırasında hata: ' + (hata?.message || hata));
+      toast.error('Kayıtlar silinemedi: ' + (hata?.message || hata));
     } finally {
       setKaydediliyor(false);
     }
@@ -530,7 +602,7 @@ export default function HBBasketCampaigns() {
               {uploadedData.length > 0 && (
                 <>
                   <Button onClick={handleSmartAutoSelect} className="bg-primary hover:bg-black dark:hover:bg-white/90 text-primary-foreground gap-2"><Sparkles className="h-4 w-4" />Max Fiyatla Seç</Button>
-                  <Button variant="outline" onClick={() => { setUploadedData([]); setOriginalExcelData(null); toast.success('Liste temizlendi'); }} className="text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:bg-rose-950/30"><Trash2 className="mr-2 h-4 w-4" />Temizle</Button>
+                  <Button variant="outline" onClick={handleClear} disabled={kaydediliyor} className="text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:bg-rose-950/30"><Trash2 className="mr-2 h-4 w-4" />Temizle</Button>
                   <Button variant="outline" onClick={() => setUploadedData(uploadedData.map((i) => ({ ...i, selected: false })))}>Seçimleri Kaldır</Button>
                   <Button variant="outline" onClick={handleSaveSelections} disabled={kaydediliyor}><Save className="mr-2 h-4 w-4" />{kaydediliyor ? 'Kaydediliyor...' : 'Seçimleri Kaydet'}</Button>
                   <Button variant="outline" onClick={handleExport}><Download className="mr-2 h-4 w-4" />Excel İndir ({selectedCount})</Button>
