@@ -193,16 +193,31 @@ export function otomatikGenislikler(satirlar, { enAz = 8, enCok = 60 } = {}) {
 }
 
 /**
- * HB SKU sutununun basligi HB'nin sablonunda BOSTUR.
+ * HB'nin SKU sutun basligi.
  *
- * Dosyayi acan kisi basliksiz bir sutun goruyor ve SKU'nun eksik oldugunu
- * saniyor. Bu fonksiyon o sutunu bulur ki disa aktarimda basligi
- * doldurulabilsin.
+ * NICIN SABIT YAZILI: bu baslik sablonda ZENGIN METIN olarak saklaniyor
+ * (<r> parcalari, her birinde xmlns) ve kullandigimiz Excel kutuphanesi bu
+ * yapiyi cozemiyor — hucreyi degeri YOKMUS gibi okuyor. Hicbir okuma
+ * secenegi (cellStyles, cellText) kurtarmiyor. Biz de bos yaziyorduk ve
+ * HepsiBurada dosyayi "Hatali islem - Sema hatasi" ile reddediyordu.
+ *
+ * Sablondaki tum hucreler icinde SADECE bu birini okuyamiyor; digerleri
+ * dogru geliyor.
+ *
+ * HB bu metni degistirirse burasi da guncellenmeli.
+ */
+export const SKU_BASLIGI =
+  'SKU (Kampanyaya dahil etmek istemediğiniz ürün kodlarını excelden silmeniz gerekmektedir)';
+
+/**
+ * Kutuphanenin okuyamadigi SKU basligini bulur.
  *
  * Sutun, "Satıcı stok kodu"nun HEMEN SAGINDAKI bos baslikli sutundur.
- * Konum degil ILISKI esas alinir; HB sutun sirasini degistirirse de bulunur.
+ * Konum degil ILISKI esas alinir. Baslik DOLU okunabildiyse (kutuphane
+ * ileride duzeltilirse ya da HB dosyayi degistirirse) null doner ve
+ * uzerine YAZILMAZ.
  *
- * @returns sutun indeksi, ya da boyle bir sutun yoksa null
+ * @returns sutun indeksi, ya da doldurulacak bir sutun yoksa null
  */
 export function bosSkuSutunu(baslikSatiri) {
   const basliklar = (baslikSatiri || []).map(sadelestir);
@@ -213,7 +228,5 @@ export function bosSkuSutunu(baslikSatiri) {
 
   const sonraki = stokKodu + 1;
   if (sonraki >= basliklar.length) return null;
-  // Yalnizca GERCEKTEN bos olan baslik doldurulur; dolu basligin uzerine
-  // yazmak sablonu bozar.
   return basliklar[sonraki] === '' ? sonraki : null;
 }
