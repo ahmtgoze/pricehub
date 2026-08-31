@@ -21,6 +21,8 @@ import { kampanyaSayfasiniKur } from '@/lib/hbSepetDisaAktarim';
 import { kdvDahilOran, komisyonEtiketi } from '@/lib/hbKomisyon';
 import { havuzdaCalistir, tekrarDene } from '@/lib/istekHavuzu';
 import { aciklamalardanIndirim, indirimliFiyat, indirimEtiketi } from '@/lib/hbSepetIndirimi';
+import { hedefleriCoz, hedefVarMi, hedefTutuyorMu, komisyonBul } from '@/lib/hedefKarSecimi';
+import { gecerliMaliyet } from '@/lib/gecerliMaliyet';
 
 const Product = db.entities.Product;
 const Platform = db.entities.Platform;
@@ -65,6 +67,10 @@ export default function HBBasketCampaigns() {
   // Musterinin sepette aldigi indirim (satici karsilar). Komisyon
   // indiriminden ayridir; kar bu indirimli tutardan hesaplanir.
   const [kampanyaIndirimi, setKampanyaIndirimi] = useState(null);
+  // Sayfa uzerinden verilen ek alt sinirlar. Komisyon kaydindaki hedeflerin
+  // USTUNE biner; ikisi de saglanmadan urun secilmez.
+  const [minKarOrani, setMinKarOrani] = useState('');
+  const [minKarTutari, setMinKarTutari] = useState('');
 
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCategory, setFilterCategory] = useState('');
@@ -261,7 +267,7 @@ export default function HBBasketCampaigns() {
 
       const breakdown = calculatePriceBreakdown({
         salePriceInclVat: parseFloat(price),
-        productCost: parseFloat(matchedProduct.cost) || 0,
+        productCost: gecerliMaliyet(matchedProduct),
         productVatRate: parseFloat(matchedProduct.vat_rate) || 20,
         shippingCost: parseFloat(shippingCost) || 0,
         shippingVatRate: parseFloat(shippingVatRate) || 20,
@@ -432,23 +438,52 @@ export default function HBBasketCampaigns() {
   const kampanyaKari = (fiyat, item) =>
     calculateProfit(odenecekFiyat(fiyat), item.discounted_commission, item);
 
+  // Fiyat yine girilebilecek MAX fiyattir; secim olcusu ise Komisyonlar
+  // sayfasindaki INDIRIMLI hedeflerdir (is-kurallari "Akilli Otomatik Sec").
+  // Onceki hal "kar sifirin ustundeyse sec" diyordu; %1 karla kampanyaya
+  // girmek anlamli degil, ustelik komisyon KDV'si ve sepet indirimi
+  // duzeltildikten sonra marjlar iyice daraldi.
   const handleSmartAutoSelect = () => {
-    // Her eşleşen ürün için kampanya fiyatını max fiyata çek (indirimli komisyonla en yüksek kâr) ve kârlıysa seç
-    let count = 0, skippedNoMatch = 0;
-    const updated = uploadedData.map((item) => {
-      if (!getMatchedProduct(item)) { skippedNoMatch++; return item; }
-      const price = item.max_price || item.current_price || 0;
-      if (price <= 0) return item;
-      const { profit } = kampanyaKari(price, item);
-      if (profit > 0) { count++; return { ...item, campaign_price: price, selected: true }; }
-      return { ...item, campaign_price: price };
+    const sayac = { secilen: 0, eslesmeyen: 0, hedefsiz: 0, tutmayan: 0, zatenSecili: 0, fiyatsiz: 0 };
+    const ekOran = parseFloat(minKarOrani) || 0;
+    const ekTutar = parseFloat(minKarTutari) || 0;
+
+    const guncel = uploadedData.map((item) => {
+      // Elle yapilmis secim korunur; "Secimleri Kaldir" ile sifirlanabilir.
+      if (item.selected) { sayac.zatenSecili++; return item; }
+
+      const urun = getMatchedProduct(item);
+      if (!urun) { sayac.eslesmeyen++; return item; }
+
+      const fiyat = item.max_price || item.current_price || 0;
+      if (fiyat <= 0) { sayac.fiyatsiz++; return item; }
+
+      const hedefler = hedefleriCoz(komisyonBul(commissions, hbPlatforms, urun));
+      if (!hedefVarMi(hedefler)) { sayac.hedefsiz++; return { ...item, campaign_price: fiyat }; }
+
+      const { profit, profitRate } = kampanyaKari(fiyat, item);
+      const { uygun } = hedefTutuyorMu(profit, profitRate, hedefler);
+
+      // Sayfadaki ek alt sinirlar
+      const ekUygun = (ekOran <= 0 || profitRate >= ekOran) && (ekTutar <= 0 || profit >= ekTutar);
+
+      if (uygun && ekUygun) { sayac.secilen++; return { ...item, campaign_price: fiyat, selected: true }; }
+      sayac.tutmayan++;
+      return { ...item, campaign_price: fiyat };
     });
-    setUploadedData(updated);
-    const parts = [];
-    if (count > 0) parts.push(`✅ ${count} ürün seçildi (max fiyat + indirimli komisyon)`);
-    if (skippedNoMatch > 0) parts.push(`⚠️ ${skippedNoMatch} ürün eşleşmedi`);
-    if (count === 0) toast.warning(parts.join(' • ') || 'Kârlı ürün bulunamadı');
-    else toast.success(parts.join(' • '));
+
+    setUploadedData(guncel);
+
+    const parcalar = [];
+    if (sayac.secilen > 0) parcalar.push(`✅ ${sayac.secilen} ürün seçildi`);
+    if (sayac.zatenSecili > 0) parcalar.push(`${sayac.zatenSecili} zaten seçili`);
+    if (sayac.tutmayan > 0) parcalar.push(`${sayac.tutmayan} hedef kârı tutmadı`);
+    if (sayac.hedefsiz > 0) parcalar.push(`⚠️ ${sayac.hedefsiz} üründe indirimli hedef tanımlı değil`);
+    if (sayac.eslesmeyen > 0) parcalar.push(`⚠️ ${sayac.eslesmeyen} ürün eşleşmedi`);
+    if (sayac.fiyatsiz > 0) parcalar.push(`⚠️ ${sayac.fiyatsiz} üründe fiyat yok`);
+
+    if (sayac.secilen === 0) toast.warning(parcalar.join(' • ') || 'Hedefi tutan ürün bulunamadı');
+    else toast.success(parcalar.join(' • '));
   };
 
   const openDetailModal = (price, commissionRate, item) => {
@@ -470,7 +505,7 @@ export default function HBBasketCampaigns() {
         barem_used: calc.baremUsed || 'none',
       },
       calculationDetails: {
-        productCost: matchedProduct?.cost || 0,
+        productCost: gecerliMaliyet(matchedProduct),
         productVatRate: matchedProduct?.vat_rate || 20,
         commissionRate,
         packagingCost: calc.breakdown?.packagingCost || 0,
@@ -654,7 +689,11 @@ export default function HBBasketCampaigns() {
               <input id="hbBasketUpload" type="file" accept=".xlsx,.xls" onChange={handleFileUpload} className="hidden" />
               {uploadedData.length > 0 && (
                 <>
-                  <Button onClick={handleSmartAutoSelect} className="bg-primary hover:bg-black dark:hover:bg-white/90 text-primary-foreground gap-2"><Sparkles className="h-4 w-4" />Max Fiyatla Seç</Button>
+                  <div className="flex items-center gap-2">
+                    <Input type="number" placeholder="Min Kâr Oranı (%)" value={minKarOrani} onChange={(e) => setMinKarOrani(e.target.value)} className="h-10 w-40" />
+                    <Input type="number" placeholder="Min Kâr Tutarı (₺)" value={minKarTutari} onChange={(e) => setMinKarTutari(e.target.value)} className="h-10 w-40" />
+                    <Button onClick={handleSmartAutoSelect} className="bg-primary hover:bg-black dark:hover:bg-white/90 text-primary-foreground gap-2"><Sparkles className="h-4 w-4" />Max Fiyatla Seç</Button>
+                  </div>
                   <Button variant="outline" onClick={handleClear} disabled={kaydediliyor} className="text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:bg-rose-950/30"><Trash2 className="mr-2 h-4 w-4" />Temizle</Button>
                   <Button variant="outline" onClick={() => setUploadedData(uploadedData.map((i) => ({ ...i, selected: false })))}>Seçimleri Kaldır</Button>
                   <Button variant="outline" onClick={handleSaveSelections} disabled={kaydediliyor}><Save className="mr-2 h-4 w-4" />{kaydediliyor ? 'Kaydediliyor...' : 'Seçimleri Kaydet'}</Button>

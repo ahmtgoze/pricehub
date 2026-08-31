@@ -18,6 +18,7 @@ import * as XLSX from 'xlsx';
 import PriceDetailModal from '@/components/modals/PriceDetailModal';
 import BaremBadge from '@/components/ui/BaremBadge';
 import { baremSec, baremTavanFiyatlari, baremTarifesiSec } from '@/lib/baremKurali';
+import { gecerliMaliyet } from '@/lib/gecerliMaliyet';
 
 const Campaign = db.entities.Campaign;
 let CampaignProduct;
@@ -466,7 +467,7 @@ export default function Campaigns() {
 
       const breakdown = calculatePriceBreakdown({
         salePriceInclVat: parseFloat(effPrice),
-        productCost: parseFloat(matchedProduct.cost) || 0,
+        productCost: gecerliMaliyet(matchedProduct),
         productVatRate: parseFloat(matchedProduct.vat_rate) || 20,
         shippingCost: parseFloat(shippingCost) || 0,
         shippingVatRate: parseFloat(shippingVatRate) || 20,
@@ -671,7 +672,7 @@ export default function Campaigns() {
         barem_used: calc.baremUsed || 'none',
       },
       calculationDetails: {
-        productCost: matchedProduct?.cost || 0,
+        productCost: gecerliMaliyet(matchedProduct),
         productVatRate: matchedProduct?.vat_rate || 20,
         commissionRate: calc.commissionRate || 0,
         corporateTaxRate: (calc.platform?.corporate_tax_rate ?? 25),
