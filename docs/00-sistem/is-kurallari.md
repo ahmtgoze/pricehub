@@ -501,7 +501,7 @@ yeniden seçmek gerekmez.
 
 Tablo: `hb_basket_campaigns` (RLS ile `created_by` bazlı izoleli — kural 1)
 
-### Sepet Kampanyaları — "Max Fiyatla Seç" nasıl karar verir?
+### Sepet Kampanyaları — "Akıllı Otomatik Seç" nasıl karar verir?
 
 Fiyat olarak HB'nin verdiği **girilebilecek max fiyat** yazılır (kampanyada
 fiyat ne kadar yüksekse satıcıya o kadar çok kalır). Seçim ölçüsü ise
@@ -518,8 +518,9 @@ ile aynı mantık:
 
 Kâr, sepet indirimi düşülmüş tutardan hesaplanır (bkz. bir üstteki bölüm).
 
-> **Önceki hal:** ölçü yalnızca "kâr sıfırın üstünde mi" idi; 1 kuruş kârla
-> bile ürün kampanyaya giriyordu. 2026-09-01'de hedef kâra bağlandı.
+> **Önceki hal:** buton "Max Fiyatla Seç" adındaydı ve ölçü yalnızca "kâr
+> sıfırın üstünde mi" idi; 1 kuruş kârla bile ürün kampanyaya giriyordu.
+> 2026-09-01'de hedef kâra bağlandı ve diğer sayfalarla aynı ada getirildi.
 
 ### Sepet indirimi kârı düşürür (komisyon indiriminden AYRIDIR)
 

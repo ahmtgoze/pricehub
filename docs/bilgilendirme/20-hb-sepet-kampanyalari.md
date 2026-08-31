@@ -30,8 +30,7 @@ HepsiBurada sepet kampanyası Excel'ini yükler, indirimli komisyon uygulandığ
 | Toplu Seç | Görüntülenen ürünleri toplu işaretler |
 | Seçimleri Kaydet | Seçimleri veritabanına kaydeder |
 | Dışa Aktar | HepsiBurada'ya yüklenecek Excel indirir; "Kampanyanın uygulanacağı fiyat" sütunu dolu gelir |
-| Min Kâr Oranı Uygula | Seçili ürünlere minimum kâr oranı filtresi uygular |
-| Min Kâr Tutarı Uygula | Seçili ürünlere minimum kâr tutarı filtresi uygular |
+| Min Kâr Oranı / Min Kâr Tutarı | Akıllı Otomatik Seç'e ek alt sınır verir; komisyon hedeflerinin üstüne biner |
 
 ---
 
@@ -73,22 +72,36 @@ HepsiBurada sepet kampanyası Excel'ini yükler, indirimli komisyon uygulandığ
 
 ## Akıllı Otomatik Seç Mantığı
 
-- Her ürün için **Max fiyat sınırı içinde** kalarak Komisyonlar sayfasındaki indirimli hedef kâra ulaşan fiyat bulunur
-- Max fiyatın altına kâr sağlamak mümkün değilse ürün seçilmez
+- Fiyat, HB'nin verdiği **girilebilecek max fiyata** çekilir (fiyat ne kadar yüksekse satıcıya o kadar çok kalır)
+- Seçim ölçüsü Komisyonlar sayfasındaki **indirimli hedeflerdir**: hedef kâr oranı, hedef kâr tutarı, minimum kâr tutarı
+- Boş veya `0` olan hedef **tanımsız** sayılır; hiç hedefi olmayan ürün **atlanır**
+- **Tanımlı olan tüm hedefler birden** sağlanmalıdır
+- Sayfadaki Min Kâr Oranı / Min Kâr Tutarı alanları doldurulmuşsa ayrıca onlar da sağlanmalıdır
+- Elle seçilmiş ürünlere **dokunulmaz**
+- Kâr, **sepet indirimi düşülmüş** tutardan ve **geçerli maliyetten** (baz maliyet kuralı) hesaplanır
 
 ---
 
 ## HepsiBurada Komisyon Notu
 
-Hem normal hem kampanya komisyon oranları Excel'de **KDV hariç** gelir. Sistem her ikisine de %20 KDV ekleyerek gerçek maliyet hesaplar. Kâr dökümünde her ikisi de gösterilir.
+Hem normal hem kampanya komisyon oranları Excel'de **KDV hariç** gelir. Sistem okuduğu anda her ikisini de ×1,20 yaparak KDV dahil hale getirir; motor komisyon oranını KDV dahil bekler.
+
+Etikette iki oran birden gösterilir: **`%20,4 (HB %17)`** — soldaki hesaba giren gerçek oran, parantezdeki HB panelinde görünen ham oran.
 
 ---
 
 ## Excel Formatı (HepsiBurada'dan İndirilen)
 
-"Listelerim" sheet'inde beklenen sütunlar: `HB SKU | Satıcı Stok Kodu | Barkod | Ürün Adı | Kategori | Stok | Güncel Fiyat | Normal Komisyon | Kampanya Komisyonu | Girebileceğiniz Max. Fiyat | Kampanyanın Uygulanacağı Fiyat`
+"Listelerim" sayfasındaki sütunlar (gerçek dosyadan, sırasıyla):
 
-Dışa aktarılan Excel'de "Kampanyanın Uygulanacağı Fiyat" sütunu doldurulmuş olarak gelir.
+`Ürün Adı | Marka | Satıcı stok kodu | SKU | Barkod | Kategori | Stok | Girebileceğiniz max. fiyat | Mevcut satış fiyatı | Güncel Komisyon Oranı | İndirimli Komisyon Oranı | Kampanyanın uygulanacağı fiyat`
+
+Dosyanın ikinci sayfası **"Açıklamalar"**: her sütunun ne olduğunu anlatır ve
+`EK BİLGİLER → Kampanyanın İndirimi` satırında **sepet indirimi** yazar
+(örn. "Sepette %15 İndirim"). Sistem bu satırı okuyup kâra yansıtır.
+
+Dışa aktarılan Excel'de "Kampanyanın uygulanacağı fiyat" sütunu doldurulur ve
+**yalnızca kampanyaya alınan ürünler** kalır; diğer satırlar silinir.
 
 ---
 

@@ -692,7 +692,7 @@ export default function HBBasketCampaigns() {
                   <div className="flex items-center gap-2">
                     <Input type="number" placeholder="Min Kâr Oranı (%)" value={minKarOrani} onChange={(e) => setMinKarOrani(e.target.value)} className="h-10 w-40" />
                     <Input type="number" placeholder="Min Kâr Tutarı (₺)" value={minKarTutari} onChange={(e) => setMinKarTutari(e.target.value)} className="h-10 w-40" />
-                    <Button onClick={handleSmartAutoSelect} className="bg-primary hover:bg-black dark:hover:bg-white/90 text-primary-foreground gap-2"><Sparkles className="h-4 w-4" />Max Fiyatla Seç</Button>
+                    <Button onClick={handleSmartAutoSelect} className="bg-primary hover:bg-black dark:hover:bg-white/90 text-primary-foreground gap-2"><Sparkles className="h-4 w-4" />Akıllı Otomatik Seç</Button>
                   </div>
                   <Button variant="outline" onClick={handleClear} disabled={kaydediliyor} className="text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:bg-rose-950/30"><Trash2 className="mr-2 h-4 w-4" />Temizle</Button>
                   <Button variant="outline" onClick={() => setUploadedData(uploadedData.map((i) => ({ ...i, selected: false })))}>Seçimleri Kaldır</Button>
