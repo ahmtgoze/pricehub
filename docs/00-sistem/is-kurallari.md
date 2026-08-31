@@ -486,6 +486,17 @@ birebir korumaz.
 
 Aynı döneme ikinci kez kaydedilirse önceki kayıtlar silinir, kopya bırakılmaz.
 
+**Yükleme kendiliğinden kaydeder.** Excel yüklenir yüklenmez satırlar o döneme
+yazılır; kullanıcı "Kaydet"e basmadan sayfadan ayrılsa bile çalışması durur.
+"Seçimleri Kaydet" butonu sonradan yapılan fiyat/seçim değişikliklerini yazmak
+içindir.
+
+**Temizle** yalnızca ekranı boşaltmaz, o dönemin **kayıtlarını da siler** —
+aksi halde sayfadan çıkıp dönünce temizlenen liste geri gelirdi.
+
+Son seçilen dönem tarayıcıda hatırlanır; sayfaya dönüldüğünde tarih aralığını
+yeniden seçmek gerekmez.
+
 > Bu, **Plus Tarifesi** sayfasındaki desenin aynısıdır.
 
 Tablo: `hb_basket_campaigns` (RLS ile `created_by` bazlı izoleli — kural 1)
