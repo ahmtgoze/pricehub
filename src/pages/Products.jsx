@@ -44,6 +44,7 @@ import { calculateAllPlatformPrices } from '@/components/PriceCalculationEngine'
 import { toast } from 'sonner';
 import { useBackgroundTask } from '@/lib/BackgroundTaskContext';
 import { useIlerlemePenceresi } from '@/lib/useIlerlemePenceresi';
+import { yayilimPlani } from '@/lib/maliyetYayilimi';
 import { useLocation } from 'react-router-dom';
 
 const Product = db.entities.Product;
@@ -198,21 +199,13 @@ export default function Products() {
         }
       }
 
-      // Zincire yeni eklenenleri güncelle + maliyet senkronizasyonu (oran bazlı)
+      // Zincire yeni eklenenlerin UYELIGI. Maliyet yayilimi asagida, tek
+      // yerde ve GECISLI yapiliyor.
       const oldCost = parseFloat(editingProduct?.cost) || 0;
       const newCost = parseFloat(saveData.cost) || 0;
-      const costRatio = oldCost > 0 ? newCost / oldCost : 1;
 
       for (const memberId of _chainMembers) {
-        const member = products.find(p => p.id === memberId);
-        if (!member) continue;
-        const memberNewCost = oldCost > 0
-          ? Math.round(parseFloat(member.cost) * costRatio * 100) / 100
-          : parseFloat(member.cost);
-        await Product.update(memberId, {
-          chain_group_id: newChainGroupId,
-          cost: memberNewCost,
-        });
+        await Product.update(memberId, { chain_group_id: newChainGroupId });
       }
 
       // Zincir tutarsızlığı kontrolü
@@ -266,12 +259,44 @@ export default function Products() {
         }
       }
 
-      // Eşleştirmeye yeni eklenenleri güncelle + maliyet senkronizasyonu
+      // Eşleştirmeye yeni eklenenlerin UYELIGI.
       for (const memberId of _matchMembers) {
-        await Product.update(memberId, {
-          match_group_id: newMatchGroupId,
-          cost: saveData.cost,
+        await Product.update(memberId, { match_group_id: newMatchGroupId });
+      }
+
+      // ── Maliyet yayilimi (GECISLI) ────────────────────────────────────
+      // Onceki surum tek adim ilerliyordu: Lila 100 duzenlenince Beyaz 100
+      // (eslestirme) ve Lila 500/1000 (zincir) guncelleniyor, ama Beyaz 500
+      // guncellenmiyordu — iki adim uzakta kaliyordu ve renkler arasinda
+      // kalici maliyet farki olusuyordu. Artik tek bir oran, baglantilar
+      // boyunca ulasilan TUM urunlere uygulaniyor.
+      if (productId && newCost !== oldCost) {
+        const guncelUrunler = products.map((p) => {
+          if (p.id === productId) {
+            return { ...p, cost: newCost,
+                     chain_group_id: newChainGroupId, match_group_id: newMatchGroupId };
+          }
+          const zincirde = _chainMembers.includes(p.id);
+          const esleseninde = _matchMembers.includes(p.id);
+          if (!zincirde && !esleseninde) return p;
+          return { ...p,
+            chain_group_id: zincirde ? newChainGroupId : p.chain_group_id,
+            match_group_id: esleseninde ? newMatchGroupId : p.match_group_id };
         });
+
+        const plan = yayilimPlani(guncelUrunler, productId, oldCost, newCost);
+        if (plan.length > 0) {
+          const OBEK = 20;   // hepsini birden gondermek baglantiyi doyuruyor
+          for (let i = 0; i < plan.length; i += OBEK) {
+            await Promise.all(plan.slice(i, i + OBEK).map(
+              (d) => Product.update(d.id, { cost: d.yeniMaliyet })
+            ));
+          }
+          toast.info(`${plan.length} bağlı ürünün maliyeti de güncellendi`, {
+            description: 'Eşleştirme ve adet zinciri boyunca yayıldı.',
+            duration: 7000,
+          });
+        }
       }
 
       return savedProduct;
