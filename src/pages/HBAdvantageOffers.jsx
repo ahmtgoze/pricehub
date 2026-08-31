@@ -15,6 +15,7 @@ import PriceDetailModal from '@/components/modals/PriceDetailModal';
 import { baremSec, baremTarifesiSec } from '@/lib/baremKurali';
 import { kdvDahilOran, komisyonEtiketi } from '@/lib/hbKomisyon';
 import { gecerliMaliyet } from '@/lib/gecerliMaliyet';
+import { hedefleriCoz, hedefVarMi, hedefTutuyorMu, komisyonBul } from '@/lib/hedefKarSecimi';
 
 const Product = db.entities.Product;
 const Platform = db.entities.Platform;
@@ -308,25 +309,58 @@ export default function HBAdvantageOffers() {
     return getCurrentCommission(item);
   };
 
+  // Komisyonlar sayfasindaki INDIRIMLI hedeflere gore secer.
+  //
+  // ONCEKI HAL YANLISTI: hedeflere HIC bakmiyordu; kari sifirin ustunde olan
+  // kademelerden kari EN YUKSEK olani seciyordu. Kural ise tersini soyluyor:
+  // "hedefleri saglayan EN INDIRIMLI kademe secilir — kari en yuksek olan
+  // degil. Amac, kar hedefinden odun vermeden en agresif indirimi bulmaktir."
+  // (is-kurallari.md, "Akilli Otomatik Sec"). Diger alti sayfa boyle
+  // calisiyordu, yalnizca bu sayfa disarida kalmisti.
   const handleSmartAutoSelect = () => {
-    let count = 0, skippedNoMatch = 0;
-    const updated = uploadedData.map((item) => {
-      if (item.selected_tier !== 'none' || (item.manual_price && item.manual_price > 0)) return item;
-      if (!getMatchedProduct(item)) { skippedNoMatch++; return item; }
-      const candidates = [1, 2, 3]
+    const sayac = { secilen: 0, eslesmeyen: 0, hedefsiz: 0, tutmayan: 0, zatenSecili: 0 };
+
+    const guncel = uploadedData.map((item) => {
+      if (item.selected_tier !== 'none' || (item.manual_price && item.manual_price > 0)) {
+        sayac.zatenSecili++; return item;
+      }
+      const urun = getMatchedProduct(item);
+      if (!urun) { sayac.eslesmeyen++; return item; }
+
+      const hedefler = hedefleriCoz(komisyonBul(commissions, hbPlatforms, urun));
+      if (!hedefVarMi(hedefler)) { sayac.hedefsiz++; return item; }
+
+      // EN INDIRIMLIDEN basla: dusuk fiyat = musteriye daha derin indirim.
+      // Kademe adina (1/2/3) degil fiyata gore siralanir; adlandirma
+      // degisse de kural bozulmaz.
+      const adaylar = [1, 2, 3]
         .map((n) => ({ tier: `tier${n}`, ...tierInfo(item, n) }))
-        .filter((c) => c.price > 0)
-        .map((c) => ({ ...c, ...calculateProfit(c.price, c.commission, item) }));
-      const best = candidates.filter((c) => c.profit > 0).sort((a, b) => b.profit - a.profit)[0];
-      if (best) { count++; return { ...item, selected_tier: best.tier, selected_price: best.price }; }
+        .filter((c) => c.price > 0 && c.commission > 0)
+        .sort((a, b) => a.price - b.price);
+
+      for (const aday of adaylar) {
+        const { profit, profitRate } = calculateProfit(aday.price, aday.commission, item);
+        const { uygun } = hedefTutuyorMu(profit, profitRate, hedefler);
+        if (uygun) {
+          sayac.secilen++;
+          return { ...item, selected_tier: aday.tier, selected_price: aday.price };
+        }
+      }
+      sayac.tutmayan++;
       return item;
     });
-    setUploadedData(updated);
-    const parts = [];
-    if (count > 0) parts.push(`✅ ${count} teklif seçildi`);
-    if (skippedNoMatch > 0) parts.push(`⚠️ ${skippedNoMatch} ürün eşleşmedi`);
-    if (count === 0) toast.warning(parts.join(' • ') || 'Kârlı teklif bulunamadı');
-    else toast.success(parts.join(' • '));
+
+    setUploadedData(guncel);
+
+    const parcalar = [];
+    if (sayac.secilen > 0) parcalar.push(`✅ ${sayac.secilen} teklif seçildi`);
+    if (sayac.zatenSecili > 0) parcalar.push(`${sayac.zatenSecili} zaten seçili/manuel`);
+    if (sayac.tutmayan > 0) parcalar.push(`${sayac.tutmayan} hedef kârı tutmadı`);
+    if (sayac.hedefsiz > 0) parcalar.push(`⚠️ ${sayac.hedefsiz} üründe indirimli hedef tanımlı değil`);
+    if (sayac.eslesmeyen > 0) parcalar.push(`⚠️ ${sayac.eslesmeyen} ürün eşleşmedi`);
+
+    if (sayac.secilen === 0) toast.warning(parcalar.join(' • ') || 'Hedefi tutan teklif bulunamadı');
+    else toast.success(parcalar.join(' • '));
   };
 
   const openDetailModal = (price, commissionRate, item) => {
