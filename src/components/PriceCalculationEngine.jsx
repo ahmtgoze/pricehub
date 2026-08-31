@@ -5,6 +5,16 @@
  */
 
 // KDV dahil fiyattan KDV hariç fiyatı hesapla
+/**
+ * Sayiya cevirir; bos/gecersiz ise null.
+ * Supabase numeric alanlari metin olarak gelebiliyor.
+ */
+const sayiyaCevir = (d) => {
+  if (d === null || d === undefined || d === '') return null;
+  const n = Number(d);
+  return Number.isFinite(n) ? n : null;
+};
+
 export const removeVat = (priceWithVat, vatRate) => {
   return priceWithVat / (1 + vatRate / 100);
 };
@@ -411,6 +421,14 @@ export const calculateProductPrice = ({
   let result = null;
   let candidates = [];
 
+  // Fiyat hesabinda KULLANILAN kargo tarifeleri. Fiyat kaydina yazilir ki
+  // sonradan "tarife zamlandi mi" kontrolu, tarife secme mantigini burada
+  // ikinci kez yazmadan yapilabilsin. Cok paketli urunde birden fazla olur.
+  const kullanilanTarifeler = [];
+  const tarifeyiNotEt = (r) => {
+    if (r?.id != null) kullanilanTarifeler.push({ id: r.id, price: r.price });
+  };
+
   if (hasOverrideShipping) {
     const ovShippingCost = overrideShippingCost * shippingMultiplier;
     const overrideResult = findSalePriceForTargetProfit({
@@ -435,6 +453,7 @@ export const calculateProductPrice = ({
   if (!result && canUseBarem) {
     const barem1Rate = findBaremShippingRate(platformShippingRates, 'barem1', effectiveSameDayDelivery);
     if (barem1Rate) {
+      tarifeyiNotEt(barem1Rate);
       const barem1Cost = barem1Rate.price * shippingMultiplier;
       const barem1Result = findSalePriceForTargetProfit({
         productCost: product.cost,
@@ -465,6 +484,7 @@ export const calculateProductPrice = ({
     
     const barem2Rate = findBaremShippingRate(platformShippingRates, 'barem2', effectiveSameDayDelivery);
     if (barem2Rate) {
+      tarifeyiNotEt(barem2Rate);
       const barem2Cost = barem2Rate.price * shippingMultiplier;
       const barem2Result = findSalePriceForTargetProfit({
         productCost: product.cost,
@@ -527,6 +547,7 @@ export const calculateProductPrice = ({
           for (const pkg of productPackages) {
             const desiRate = findDesiShippingRate(platformShippingRates, pkg.desi || 0);
             if (!desiRate) throw new Error(KARGO_TARIFESI_YOK);
+            tarifeyiNotEt(desiRate);
             const desiShippingCost = desiRate.price * 2;
             shippingCost += desiShippingCost + returnCostPerPackage;
             shippingVatRate = desiRate.vat_rate || 20;
@@ -535,6 +556,7 @@ export const calculateProductPrice = ({
           for (const pkg of productPackages) {
             const desiRate = findDesiShippingRate(platformShippingRates, pkg.desi || 0);
             if (!desiRate) throw new Error(KARGO_TARIFESI_YOK);
+            tarifeyiNotEt(desiRate);
             shippingCost += desiRate.price;
             shippingVatRate = desiRate.vat_rate || 20;
           }
@@ -542,12 +564,14 @@ export const calculateProductPrice = ({
       } else {
         const desiRate = findDesiShippingRate(platformShippingRates, product.desi || 0);
         if (!desiRate) throw new Error(KARGO_TARIFESI_YOK);
+        tarifeyiNotEt(desiRate);
         shippingCost = desiRate.price;
         shippingVatRate = desiRate.vat_rate || 20;
       }
     } else {
       const desiRate = findDesiShippingRate(platformShippingRates, product.desi || 0);
       if (!desiRate) throw new Error(KARGO_TARIFESI_YOK);
+      tarifeyiNotEt(desiRate);
       shippingCost = desiRate.price;
       shippingVatRate = desiRate.vat_rate || 20;
     }
@@ -703,6 +727,16 @@ export const calculateProductPrice = ({
       shippingCost: Math.round(result.shippingCost * 100) / 100,
       doubleShipping: !!product.double_shipping,
       baremUsed: result.baremUsed,
+
+      // Bayatlama kontrolu icin: fiyat hesaplandiginda gecerli olan girdiler.
+      // Bunlar olmadan "kargo zamlandi mi, hizmet bedeli degisti mi" sorusu
+      // ancak tarife secme mantigini ikinci kez yazarak cevaplanabilirdi.
+      kullanilanTarifeler,                                   // [{ id, price }]
+      serviceFeeType: platform.service_fee_type ?? null,
+      serviceFeeAmount: sayiyaCevir(platform.service_fee_amount),
+      sameDayServiceFeeAmount: sayiyaCevir(platform.same_day_delivery_service_fee),
+      corporateTaxRate: sayiyaCevir(platform.corporate_tax_rate),
+      withholdingRate: platform.has_withholding ? sayiyaCevir(platform.withholding_rate) : 0,
       saleVat: Math.round(finalBreakdown.saleVat * 100) / 100,
       productVat: Math.round(finalBreakdown.productVat * 100) / 100,
       printingVat: Math.round(finalBreakdown.printingVat * 100) / 100,

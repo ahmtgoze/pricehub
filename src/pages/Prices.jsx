@@ -158,6 +158,12 @@ export default function Prices() {
     enabled: !!userEmail
   });
 
+  // Bayatlama kontrolu kargo zammini da gormeli.
+  const { data: kargoTarifeleri = [] } = useQuery({
+    queryKey: ['shippingRates'],
+    queryFn: () => db.entities.ShippingRate.list('-id'),
+  });
+
   const { data: packageItems = [] } = useQuery({
     queryKey: ['packageItems', userEmail],
     queryFn: () => db.entities.PackageItem.filter({ created_by: userEmail }),
@@ -509,10 +515,33 @@ export default function Prices() {
    * kullanicinin "Fiyatlari Hesapla" demesi gerekiyor. Sayfaya girildiginde
    * neyin bayatladigini soyluyoruz.
    */
-  const bayatDurumu = React.useMemo(
-    () => bayatFiyatlariBul(productPrices, products, commissions),
-    [productPrices, products, commissions]
-  );
+  const bayatDurumu = React.useMemo(() => {
+    // Hizmet bedeli ve barem ayarlari SISTEM YONETICISI platformundan gelir;
+    // fiyat da o birlesik ayarla hesaplandi. Kurumlar vergisi ise kullanicinin
+    // kendi platformunda. Karsilastirma ayni birlesimle yapilmali.
+    const birlesikPlatformlar = allPlatforms.map((p) => {
+      const yonetici = adminPlatforms.find((a) => a.platform_type === p.platform_type);
+      return yonetici
+        ? { ...p,
+            service_fee_type: yonetici.service_fee_type,
+            service_fee_amount: yonetici.service_fee_amount,
+            same_day_delivery_service_fee: yonetici.same_day_delivery_service_fee }
+        : p;
+    });
+
+    const paketMaliyeti = (urun) => {
+      if (!urun?.package_id) return 0;
+      return packageItems
+        .filter((i) => i.package_id === urun.package_id && i.is_active !== false)
+        .reduce((t, i) => t + (i.cost || 0), 0);
+    };
+
+    return bayatFiyatlariBul(productPrices, products, commissions, {
+      kargoTarifeleri,
+      platformlar: birlesikPlatformlar,
+      paketMaliyeti,
+    });
+  }, [productPrices, products, commissions, kargoTarifeleri, allPlatforms, adminPlatforms, packageItems]);
 
   React.useEffect(() => {
     if (bayatDurumu.bayatSayisi > 0 && guncellikUyarisi === null) {
