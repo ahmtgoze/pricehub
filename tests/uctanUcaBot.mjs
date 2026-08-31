@@ -280,6 +280,15 @@ try {
     if (yazildi !== 'ok') throw new Error(yazildi);
 
     await b.gercekTikla(`window.__botKaydet()`);
+    await bekle(2500);
+
+    // Liste uzunsa yeni kayit ilk sayfada gorunmeyebilir (her kosu bir
+    // kategori birakiyor, 23 tane birikmisti). Once ARA, sonra dogrula.
+    await b.calistir(`(() => {
+      const ara = [...document.querySelectorAll('input')].find(i => (i.placeholder || '').includes('ara'));
+      if (ara) window.__botYaz(ara, ${JSON.stringify(KATEGORI)});
+      return 'ok';
+    })()`);
     await bekleKosul(b, metinVar(KATEGORI), 15, 'kategori listede gorunsun');
     kaydet('Kategori olusturma', 'OK', KATEGORI);
   } catch (e) {
