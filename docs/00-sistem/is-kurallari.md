@@ -501,6 +501,27 @@ yeniden seçmek gerekmez.
 
 Tablo: `hb_basket_campaigns` (RLS ile `created_by` bazlı izoleli — kural 1)
 
+### Sepet Kampanyaları — "Akıllı Otomatik Seç" nasıl karar verir?
+
+Fiyat olarak HB'nin verdiği **girilebilecek max fiyat** yazılır (kampanyada
+fiyat ne kadar yüksekse satıcıya o kadar çok kalır). Seçim ölçüsü ise
+Komisyonlar sayfasındaki **indirimli hedeflerdir** — "Akıllı Otomatik Seç"
+ile aynı mantık:
+
+1. Elle seçilmiş ürünlere **dokunulmaz**
+2. Sistem ürünüyle eşleşmeyen atlanır (maliyet bilinmeden kâr hesaplanamaz)
+3. İndirimli hedef kâr oranı/tutarı **hiç tanımlı değilse ürün atlanır**
+4. İndirimli minimum kâr tutarının altı elenir
+5. **Tanımlı olan tüm hedefler birden** sağlanmalıdır
+6. Sayfadaki **Min Kâr Oranı / Min Kâr Tutarı** alanları doldurulmuşsa
+   bunlar da ayrıca sağlanmalıdır (komisyon hedeflerinin üstüne biner)
+
+Kâr, sepet indirimi düşülmüş tutardan hesaplanır (bkz. bir üstteki bölüm).
+
+> **Önceki hal:** buton "Max Fiyatla Seç" adındaydı ve ölçü yalnızca "kâr
+> sıfırın üstünde mi" idi; 1 kuruş kârla bile ürün kampanyaya giriyordu.
+> 2026-09-01'de hedef kâra bağlandı ve diğer sayfalarla aynı ada getirildi.
+
 ### Sepet indirimi kârı düşürür (komisyon indiriminden AYRIDIR)
 
 Sepet kampanyası **iki ayrı şey** verir, karıştırılmamalıdır:
@@ -621,8 +642,31 @@ düşer ve hangi üyenin ne kadar saptığı yazılır.
 > Amaç: 100'lük paket birim 1,20 ₺ iken 500'lük paketin birim 1,80 ₺ olması
 > gibi durumların gözden kaçmaması.
 
-Referanslı üründe **baz maliyet** ürün maliyetinden yüksekse hesaplamada baz
-maliyet kullanılır.
+### Geçerli maliyet (baz maliyet kuralı)
+
+Hesaba giren maliyet her yerde şu kuralla bulunur:
+
+```
+geçerli maliyet = (referanslı VE baz maliyet > maliyet) ? baz maliyet : maliyet
+```
+
+Yani **baz maliyet daha yüksekse o**, **daha düşükse ürünün kendi maliyeti**
+kullanılır. Ürünün referansı yoksa (`ref_product_id` ve `ref_product_id_size`
+boşsa) baz maliyete **bakılmaz** — eski bir kayıttan kalmış olabilir.
+
+Bu kural **bütün promosyon sayfalarında** geçerlidir: Sepet Kampanyaları,
+Avantajlı Teklifler, Kendi Kampanyan, Flaş Ürünler, Avantajlı Ürün Etiketi,
+Plus Tarifesi, Komisyon Tarifesi ve Kampanyalar.
+
+> **Geçmiş hata:** kural fiyat motorunun ana yolunda uygulanıyordu ama
+> promosyon sayfalarının hepsi kendi kâr hesabını yapıyor ve doğrudan
+> `product.cost` okuyordu. Referanslı ürünlerde maliyet olduğundan düşük
+> alınıyor, kâr olduğundan yüksek görünüyordu. Sistemde 510 ürün ölçüye göre
+> referanslı olduğu için etki genişti. 2026-09-01'de 9 sayfada düzeltildi.
+
+> Hesaplayıcı sayfası hariçtir: orada maliyeti kullanıcı elle girer.
+
+Kaynak: `src/lib/gecerliMaliyet.js` (testleri: `tests/gecerliMaliyet.test.mjs`)
 
 ## 11c. Karma paketler (bundle)
 

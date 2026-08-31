@@ -18,6 +18,7 @@ import { toast } from 'sonner';
 import * as XLSX from 'xlsx';
 import BaremBadge from '@/components/ui/BaremBadge';
 import { baremSec, baremTavanFiyatlari, baremTarifesiSec } from '@/lib/baremKurali';
+import { gecerliMaliyet } from '@/lib/gecerliMaliyet';
 
 export default function FlashProducts() {
   const [userEmail, setUserEmail] = useState(null);
@@ -636,7 +637,7 @@ export default function FlashProducts() {
 
       const breakdown = calculatePriceBreakdown({
         salePriceInclVat: parseFloat(price),
-        productCost: parseFloat(matchedProduct.cost) || 0,
+        productCost: gecerliMaliyet(matchedProduct),
         productVatRate: parseFloat(matchedProduct.vat_rate) || 20,
         shippingCost: parseFloat(shippingCost) || 0,
         shippingVatRate: parseFloat(shippingVatRate) || 20,
@@ -1578,7 +1579,7 @@ export default function FlashProducts() {
                                                         barem_used: calc.baremUsed
                                                       },
                                                       calculationDetails: {
-                                                        productCost: calc.matchedProduct.cost,
+                                                        productCost: gecerliMaliyet(calc.matchedProduct),
                                                         productVatRate: calc.matchedProduct.vat_rate || 20,
                                                         commissionRate: commissionRate24h
                                                       }
@@ -1657,7 +1658,7 @@ export default function FlashProducts() {
                                                         barem_used: calc.baremUsed
                                                       },
                                                       calculationDetails: {
-                                                        productCost: calc.matchedProduct.cost,
+                                                        productCost: gecerliMaliyet(calc.matchedProduct),
                                                         productVatRate: calc.matchedProduct.vat_rate || 20,
                                                         commissionRate: commissionRate3h
                                                       }
@@ -1804,7 +1805,7 @@ export default function FlashProducts() {
                                                 barem_used: bestBaremSuggestion.baremType === 'Barem 1' ? 'barem1' : 'barem2'
                                               },
                                               calculationDetails: {
-                                                productCost: bestBaremSuggestion.matchedProduct.cost,
+                                                productCost: gecerliMaliyet(bestBaremSuggestion.matchedProduct),
                                                 productVatRate: bestBaremSuggestion.matchedProduct.vat_rate || 20,
                                                 commissionRate: bestBaremSuggestion.commissionRate
                                               }
@@ -1882,7 +1883,7 @@ export default function FlashProducts() {
                                                        barem_used: calc.baremUsed
                                                      },
                                                      calculationDetails: {
-                                                       productCost: calc.matchedProduct.cost,
+                                                       productCost: gecerliMaliyet(calc.matchedProduct),
                                                        productVatRate: calc.matchedProduct.vat_rate || 20,
                                                        commissionRate: manualCommissionRate
                                                      }

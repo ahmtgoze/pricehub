@@ -14,6 +14,7 @@ import * as XLSX from 'xlsx';
 import PriceDetailModal from '@/components/modals/PriceDetailModal';
 import { baremSec, baremTarifesiSec } from '@/lib/baremKurali';
 import { kdvDahilOran, komisyonEtiketi } from '@/lib/hbKomisyon';
+import { gecerliMaliyet } from '@/lib/gecerliMaliyet';
 
 const Product = db.entities.Product;
 const Platform = db.entities.Platform;
@@ -207,7 +208,7 @@ export default function HBAdvantageOffers() {
 
       const breakdown = calculatePriceBreakdown({
         salePriceInclVat: parseFloat(price),
-        productCost: parseFloat(matchedProduct.cost) || 0,
+        productCost: gecerliMaliyet(matchedProduct),
         productVatRate: parseFloat(matchedProduct.vat_rate) || 20,
         shippingCost: parseFloat(shippingCost) || 0,
         shippingVatRate: parseFloat(shippingVatRate) || 20,
@@ -347,7 +348,7 @@ export default function HBAdvantageOffers() {
         barem_used: calc.baremUsed || 'none',
       },
       calculationDetails: {
-        productCost: matchedProduct?.cost || 0,
+        productCost: gecerliMaliyet(matchedProduct),
         productVatRate: matchedProduct?.vat_rate || 20,
         commissionRate,
         packagingCost: calc.breakdown?.packagingCost || 0,
