@@ -10,7 +10,7 @@
     "lint:fix": "eslint . --fix",
     "typecheck": "tsc -p ./jsconfig.json",
     "preview": "vite preview",
-    "test": "node tests/tabloSutunlari.test.mjs && node tests/widgetDuzeni.test.mjs && node tests/platformIstatistigi.test.mjs && node tests/tarihAraligi.test.mjs && node tests/vurguRengi.test.mjs && node tests/baremKurali.test.mjs && node tests/motorSenaryolari.test.mjs && node tests/fiyatGuncelligi.test.mjs && node tests/islemSeridi.test.mjs && node tests/istekHavuzu.test.mjs",
+    "test": "node tests/tabloSutunlari.test.mjs && node tests/widgetDuzeni.test.mjs && node tests/platformIstatistigi.test.mjs && node tests/tarihAraligi.test.mjs && node tests/vurguRengi.test.mjs && node tests/baremKurali.test.mjs && node tests/motorSenaryolari.test.mjs && node tests/fiyatGuncelligi.test.mjs && node tests/islemSeridi.test.mjs && node tests/istekHavuzu.test.mjs && node tests/paketAtama.test.mjs",
     "bot": "node tests/sayfaBotu.mjs",
     "dallar": "node tests/unutulmusDallar.mjs",
     "bot:test:giris": "node tests/testHesabiGiris.mjs",

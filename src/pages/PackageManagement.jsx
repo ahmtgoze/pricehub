@@ -15,7 +15,8 @@ import DataTable from "@/components/ui/DataTable";
 import SearchInput from '@/components/ui/SearchInput';
 import FiltreEtiketi from '@/components/ui/FiltreEtiketi';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Trash2, Edit2, Loader2 } from "lucide-react";
+import { Plus, Trash2, Edit2, Loader2, Wand2, X, Package as PaketIkonu } from "lucide-react";
+import { otomatikAtamaPlani, paketeAtananlar, araligiVar } from '@/lib/paketAtama';
 import { toast } from "sonner";
 
 export default function PackageManagement() {
@@ -37,6 +38,37 @@ export default function PackageManagement() {
   const { data: packageItems = [] } = useQuery({
     queryKey: ['packageItems'],
     queryFn: () => db.entities.PackageItem.list('-created_date'),
+  });
+
+  // Otomatik atama ve "atanan urunler" listesi icin
+  const { data: products = [] } = useQuery({
+    queryKey: ['products'],
+    queryFn: () => db.entities.Product.list('-created_date'),
+  });
+
+  const [atananlarPaketi, setAtananlarPaketi] = useState(null);   // liste modali
+  const [atamaOnayi, setAtamaOnayi] = useState(null);             // { paket, plan }
+
+  /** Bir urunun paketini degistirir (atama ya da listeden cikarma). */
+  const paketAtaMutation = useMutation({
+    mutationFn: async ({ urunIdleri, paketId }) => {
+      // Sinirli es zamanlilik: yuzlerce urun ayni anda gonderilince
+      // baglanti doyuyor ve "Failed to fetch" aliniyor.
+      const OBEK = 20;
+      for (let i = 0; i < urunIdleri.length; i += OBEK) {
+        await Promise.all(urunIdleri.slice(i, i + OBEK).map(
+          (id) => db.entities.Product.update(id, { package_id: paketId })
+        ));
+      }
+      return urunIdleri.length;
+    },
+    onSuccess: (adet) => {
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+      toast.success(`${adet} ürün güncellendi`, {
+        description: 'Fiyatlar sayfasından "Fiyatları Hesapla" demeyi unutmayın.',
+      });
+    },
+    onError: (e) => toast.error('Güncellenemedi', { description: e?.message }),
   });
 
   const createPackageMutation = useMutation({
@@ -133,6 +165,25 @@ export default function PackageManagement() {
     { header: 'Grup', accessor: 'group' },
     { id: 'desi_araligi', header: 'Desi Aralığı', cell: (row) => row.desi_min && row.desi_max ? `${row.desi_min} - ${row.desi_max}` : '-' },
     { id: 'toplam_maliyet', header: 'Toplam Maliyet', cell: (row) => `${getPackageTotal(row.id).toFixed(2)} TL` },
+    {
+      id: 'atanan_urun',
+      header: 'Atanan Ürün',
+      cell: (row) => {
+        const adet = paketeAtananlar(products, row.id).length;
+        return (
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-7 px-2 gap-1.5 text-[13px]"
+            onClick={() => setAtananlarPaketi(row)}
+            title="Atanan ürünleri gör"
+          >
+            <PaketIkonu className="h-3.5 w-3.5 text-muted-foreground" />
+            {adet}
+          </Button>
+        );
+      },
+    },
     { 
       id: 'aktif',
       header: 'Aktif', 
@@ -143,6 +194,18 @@ export default function PackageManagement() {
       header: 'İşlemler',
       cell: (row) => (
         <div className="flex gap-2">
+          {/* Desi araligi tanimli degilse kime atanacagi belli olmaz. */}
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={!araligiVar(row) || paketAtaMutation.isPending}
+            title={araligiVar(row)
+              ? `Desi ${row.desi_min}-${row.desi_max} aralığındaki ürünlere ata`
+              : 'Önce paketin desi aralığını girin'}
+            onClick={() => setAtamaOnayi({ paket: row, plan: otomatikAtamaPlani(products, row) })}
+          >
+            <Wand2 className="h-4 w-4" />
+          </Button>
           <Button
             size="sm"
             variant="outline"
@@ -309,6 +372,101 @@ export default function PackageManagement() {
         onSave={handleSaveItem}
         isSaving={createItemMutation.isPending || updateItemMutation.isPending}
       />
+
+      {/* ── Otomatik atama onayi ──────────────────────────────────────── */}
+      <Dialog open={!!atamaOnayi} onOpenChange={(a) => !a && setAtamaOnayi(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader><DialogTitle>Otomatik Paket Atama</DialogTitle></DialogHeader>
+          {atamaOnayi && (
+            <div className="flex flex-col gap-4">
+              <p className="text-sm text-muted-foreground">
+                <span className="font-medium text-foreground">{atamaOnayi.paket.name}</span> paketi,
+                desi <span className="font-medium text-foreground">
+                  {atamaOnayi.paket.desi_min}–{atamaOnayi.paket.desi_max}
+                </span> aralığındaki ürünlere atanacak.
+              </p>
+
+              <div className="rounded-xl border border-border divide-y divide-border">
+                <div className="flex items-center justify-between px-4 py-2.5">
+                  <span className="text-sm">Atanacak ürün</span>
+                  <span className="text-sm font-semibold tabular-nums">{atamaOnayi.plan.atanacak.length}</span>
+                </div>
+                <div className="flex items-center justify-between px-4 py-2.5">
+                  <span className="text-sm text-muted-foreground">Zaten bu pakette</span>
+                  <span className="text-sm tabular-nums text-muted-foreground">{atamaOnayi.plan.zatenBu.length}</span>
+                </div>
+                <div className="flex items-center justify-between px-4 py-2.5">
+                  <span className="text-sm text-muted-foreground">Başka pakette (dokunulmaz)</span>
+                  <span className="text-sm tabular-nums text-muted-foreground">{atamaOnayi.plan.cakisan.length}</span>
+                </div>
+              </div>
+
+              {atamaOnayi.plan.cakisan.length > 0 && (
+                <p className="text-xs text-muted-foreground">
+                  Başka bir pakete elle atanmış ürünlerin üzerine yazılmaz. Değiştirmek
+                  isterseniz o ürünleri önce mevcut paketlerinin listesinden çıkarın.
+                </p>
+              )}
+
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => setAtamaOnayi(null)}>İptal</Button>
+                <Button
+                  disabled={atamaOnayi.plan.atanacak.length === 0 || paketAtaMutation.isPending}
+                  onClick={() => {
+                    paketAtaMutation.mutate({
+                      urunIdleri: atamaOnayi.plan.atanacak.map((u) => u.id),
+                      paketId: atamaOnayi.paket.id,
+                    });
+                    setAtamaOnayi(null);
+                  }}
+                >
+                  {paketAtaMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  {atamaOnayi.plan.atanacak.length} ürüne ata
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Pakete atanmis urunler; buradan cikarilabilir ─────────────── */}
+      <Dialog open={!!atananlarPaketi} onOpenChange={(a) => !a && setAtananlarPaketi(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>{atananlarPaketi?.name} — Atanan Ürünler</DialogTitle>
+          </DialogHeader>
+          {atananlarPaketi && (() => {
+            const atananlar = paketeAtananlar(products, atananlarPaketi.id);
+            if (atananlar.length === 0) {
+              return <p className="ph-empty">Bu pakete atanmış ürün yok.</p>;
+            }
+            return (
+              <div className="flex flex-col gap-2 max-h-[60vh] overflow-y-auto pr-1">
+                {atananlar.map((u) => (
+                  <div key={u.id}
+                       className="flex items-center justify-between gap-3 px-3 py-2 rounded-xl bg-secondary">
+                    <div className="min-w-0">
+                      <p className="text-[13.5px] font-medium truncate">{u.name}</p>
+                      <p className="text-xs text-muted-foreground font-mono-numeric truncate">
+                        {u.sku} · {u.desi} desi
+                      </p>
+                    </div>
+                    <Button
+                      size="sm" variant="ghost"
+                      className="h-8 w-8 p-0 shrink-0 text-muted-foreground hover:text-destructive"
+                      title="Paketten çıkar"
+                      disabled={paketAtaMutation.isPending}
+                      onClick={() => paketAtaMutation.mutate({ urunIdleri: [u.id], paketId: null })}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            );
+          })()}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
