@@ -21,7 +21,9 @@
  *
  *   nth_percent  : "2. urune %50" -> 1. urun tam, 2. urun yarim
  *                  ortalama = fiyat x (1 - oran/100 / N)
- *   nth_tl       : "2. urune 50 TL" -> yalnizca 2. urunden 50 TL iner
+ *   nth_tl       : "3. urunde 20 TL indirim" -> yalnizca 3. urunden 20 TL
+ *                  iner (kullanici teyit etti). 200 TL'lik urun icin:
+ *                  200 + 200 + 180 = 580 -> birim ortalama 193,33
  *                  ortalama = fiyat - tutar / N
  *   buy_x_pay_y  : X al Y ode -> ortalama = fiyat x Y / X
  *

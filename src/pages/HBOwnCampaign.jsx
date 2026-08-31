@@ -31,7 +31,7 @@ const CAMPAIGN_TYPES = [
   { value: 'cart_tl', label: 'Sepette TL indirim' },
   { value: 'buy_x_pay_y', label: 'Sepette X al Y öde' },
   { value: 'nth_percent', label: 'X. ürün % indirimi' },
-  { value: 'nth_tl', label: 'X. ürün Y TL indirimi' },
+  { value: 'nth_tl', label: 'X. üründe Y TL indirim' },
 ];
 
 export default function HBOwnCampaign() {
@@ -331,7 +331,10 @@ export default function HBOwnCampaign() {
                 <div className="space-y-2">
                   <Label>Kaçıncı Ürün</Label>
                   <Input type="number" min="2" value={kacinciUrun} onChange={(e) => setKacinciUrun(e.target.value)} placeholder="örn. 2" />
-                  <p className="text-[11px] text-muted-foreground">İndirim sadece bu üründe geçerli; öncekiler tam fiyat.</p>
+                  <p className="text-[11px] text-muted-foreground">
+                    İndirim <strong>sadece bu sıradaki</strong> üründe geçerli; öncekiler tam fiyat.
+                    Tabloda ürün başına ortalama etkin fiyat gösterilir.
+                  </p>
                 </div>
               )}
 
