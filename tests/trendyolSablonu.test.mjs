@@ -27,8 +27,19 @@ console.log('\n═══ SATIRLAR ═══');
   esit('fiyat kurusa yuvarlanir', r[0][1], 123.46);
   // STOK BOS: pazaryeri listesi yuklendigi andaki fotograf geri yazilirsa
   // o tarihten sonra degisen gercek stok eski degere donerdi.
-  esit('stok bos birakilir', r[0][2], null);
-  esit('stok 0 olsa da bos', r[1][2], null);
+  esit('varsayilan: stok bos birakilir', r[0][2], null);
+  esit('varsayilan: stok 0 olsa da bos', r[1][2], null);
+
+  // Kullanici bilerek acarsa stok yazilir.
+  const rs = trendyolSatirlari(f, { stokAktar: true });
+  esit('stokAktar acikken yazilir', rs[0][2], 7);
+  esit('stok 0 da yazilir', rs[1][2], 0);
+  esit('ondalik stok tam sayiya iner',
+    trendyolSatirlari([{ barkod: '1', system_price: 5, stock_quantity: 3.9 }], { stokAktar: true })[0][2], 3);
+  esit('negatif stok yazilmaz',
+    trendyolSatirlari([{ barkod: '1', system_price: 5, stock_quantity: -2 }], { stokAktar: true })[0][2], null);
+  esit('stok yoksa bos',
+    trendyolSatirlari([{ barkod: '1', system_price: 5 }], { stokAktar: true })[0][2], null);
 }
 
 console.log('\n═══ BARKOD ZORUNLU ═══');

@@ -218,6 +218,11 @@ export default function UpdatedPrices() {
     }
   };
 
+  // Trendyol sablonunda stok sutunu var ama varsayilan olarak BOS gonderilir:
+  // buradaki stok, pazaryeri listesi yuklendigi andaki fotograf. Kullanici
+  // bilerek acabilsin diye secenek olarak duruyor.
+  const [stokAktar, setStokAktar] = useState(false);
+
   const handleExcelDownload = async () => {
     if (!selectedPlatform) { toast.error('Lütfen önce platform seçin'); return; }
     if (updatedPrices.length === 0) { toast.error('İndirilecek güncellenen fiyat yok'); return; }
@@ -279,7 +284,7 @@ export default function UpdatedPrices() {
       // ── Trendyol ────────────────────────────────────────────────────
       // Panel dosyayi KENDI sablonuna gore okuyor. Onceki surum "Fiyatlar"
       // adli bir sayfaya baska basliklar yaziyordu; Trendyol kabul etmiyordu.
-      const satirlar = trendyolSatirlari(updatedPrices);
+      const satirlar = trendyolSatirlari(updatedPrices, { stokAktar });
       if (satirlar.length === 0) {
         toast.error('Barkodu olan güncellenmiş fiyat yok');
         return;
@@ -457,9 +462,23 @@ export default function UpdatedPrices() {
               <RefreshCw className="w-4 h-4 mr-2" />Güncelle
             </Button>
             {selectedPlatform && (
-              <Button onClick={handleExcelDownload} disabled={updatedPrices.length === 0} className="bg-green-600 hover:bg-green-700">
-                <Download className="w-4 h-4 mr-2" />Excel'e Aktar
-              </Button>
+              <div className="flex items-center gap-3">
+                {!isWebsite && !isHepsiburada && (
+                  <label className="flex items-center gap-2 text-[13px] text-muted-foreground cursor-pointer select-none"
+                         title="Stok, pazaryeri listesini yüklediğiniz andaki değerdir. Listeyi yeni yüklemediyseniz Trendyol'daki güncel stok eski değere döner.">
+                    <input
+                      type="checkbox"
+                      checked={stokAktar}
+                      onChange={(e) => setStokAktar(e.target.checked)}
+                      className="h-4 w-4 cursor-pointer accent-foreground"
+                    />
+                    Stok adetlerini de yaz
+                  </label>
+                )}
+                <Button onClick={handleExcelDownload} disabled={updatedPrices.length === 0} className="bg-green-600 hover:bg-green-700">
+                  <Download className="w-4 h-4 mr-2" />Excel'e Aktar
+                </Button>
+              </div>
             )}
           </div>
         </div>

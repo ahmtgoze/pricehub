@@ -43,17 +43,29 @@ export const TRENDYOL_DROPDOWN = [
 /**
  * Fiyat satirlarini sablon duzenine cevirir.
  *
- * STOK SUTUNU BOS BIRAKILIR. Sablonun kendi notu "yalnizca degistirilmek
- * istenenleri doldurun" diyor; buradaki stok, pazaryeri listesi yuklendigi
- * andaki fotograf. Geri yazilirsa o tarihten sonra degisen gercek stok
- * ESKI degere donerdi. Bu sayfanin isi fiyat guncellemek.
+ * STOK VARSAYILAN OLARAK BOS. Sablonun kendi notu "yalnizca degistirilmek
+ * istenenleri doldurun" diyor. Buradaki stok, pazaryeri listesi yuklendigi
+ * andaki fotograftir; geri yazilirsa o tarihten sonra satilan ya da eklenen
+ * gercek stok ESKI degere doner. Kullanici bilerek isterse stokAktar ile
+ * acabilir — o zaman listeyi yeni yukledigine emin olmali.
  *
  * Barkodu olmayan satir atlanir: barkod zorunlu, olmadan satir islenmez.
  */
-export function trendyolSatirlari(fiyatlar) {
+export function trendyolSatirlari(fiyatlar, { stokAktar = false } = {}) {
   return (fiyatlar || [])
     .filter((f) => f && f.barkod != null && String(f.barkod).trim() !== '')
-    .map((f) => [String(f.barkod).trim(), yuvarla(f.system_price), null]);
+    .map((f) => [
+      String(f.barkod).trim(),
+      yuvarla(f.system_price),
+      stokAktar ? (tamSayi(f.stock_quantity) ?? null) : null,
+    ]);
+}
+
+/** Stok adedi: negatif ve gecersiz degerler yazilmaz. */
+function tamSayi(deger) {
+  const n = Number(deger);
+  if (!Number.isFinite(n) || n < 0) return null;
+  return Math.trunc(n);
 }
 
 /** Kurusa yuvarlar; gecersizse null (hucre bos kalir). */
