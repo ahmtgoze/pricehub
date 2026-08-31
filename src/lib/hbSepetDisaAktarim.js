@@ -157,3 +157,63 @@ export function satirPlani(aoa, secimler) {
 
   return { tutulacak, silinen, fiyatSutunu, skuSutunu, hata: null };
 }
+
+/**
+ * Sutun genisliklerini icerige gore hesaplar.
+ *
+ * NICIN VAR: temiz bir dosya uretiyoruz (yuklenen dosyanin bicimi, renkleri,
+ * aciklama balonlari ve gomulu resimleri tasinmiyor — tasinmaya calisildiginda
+ * Excel dosyayi "bozuk" diye acmiyordu). Genislik verilmezse butun sutunlar
+ * varsayilan dar genislikte gelir ve uzun urun adlari gorunmez.
+ *
+ * En uzun hucrenin karakter sayisi esas alinir; cok dar ve cok genis
+ * uclar sinirlanir.
+ */
+export function otomatikGenislikler(satirlar, { enAz = 8, enCok = 60 } = {}) {
+  const liste = Array.isArray(satirlar) ? satirlar : [];
+  if (liste.length === 0) return [];
+
+  const sutunSayisi = liste.reduce((en, s) => Math.max(en, (s || []).length), 0);
+  const genislikler = [];
+
+  for (let sutun = 0; sutun < sutunSayisi; sutun++) {
+    let enUzun = 0;
+    for (const satir of liste) {
+      const deger = satir?.[sutun];
+      if (deger === null || deger === undefined) continue;
+      // Satir sonu iceren basliklarda en uzun PARCA belirleyicidir
+      for (const parca of String(deger).split('\n')) {
+        if (parca.length > enUzun) enUzun = parca.length;
+      }
+    }
+    // +2: kenar boslugu, yoksa metin hucreye yapisik duruyor
+    genislikler.push({ wch: Math.min(enCok, Math.max(enAz, enUzun + 2)) });
+  }
+  return genislikler;
+}
+
+/**
+ * HB SKU sutununun basligi HB'nin sablonunda BOSTUR.
+ *
+ * Dosyayi acan kisi basliksiz bir sutun goruyor ve SKU'nun eksik oldugunu
+ * saniyor. Bu fonksiyon o sutunu bulur ki disa aktarimda basligi
+ * doldurulabilsin.
+ *
+ * Sutun, "Satıcı stok kodu"nun HEMEN SAGINDAKI bos baslikli sutundur.
+ * Konum degil ILISKI esas alinir; HB sutun sirasini degistirirse de bulunur.
+ *
+ * @returns sutun indeksi, ya da boyle bir sutun yoksa null
+ */
+export function bosSkuSutunu(baslikSatiri) {
+  const basliklar = (baslikSatiri || []).map(sadelestir);
+  const stokKodu = basliklar.findIndex(
+    (b) => b.toLocaleLowerCase('tr') === 'satıcı stok kodu'
+  );
+  if (stokKodu === -1) return null;
+
+  const sonraki = stokKodu + 1;
+  if (sonraki >= basliklar.length) return null;
+  // Yalnizca GERCEKTEN bos olan baslik doldurulur; dolu basligin uzerine
+  // yazmak sablonu bozar.
+  return basliklar[sonraki] === '' ? sonraki : null;
+}

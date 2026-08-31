@@ -17,8 +17,7 @@ import { toast } from 'sonner';
 import * as XLSX from 'xlsx';
 import PriceDetailModal from '@/components/modals/PriceDetailModal';
 import { baremSec, baremTarifesiSec } from '@/lib/baremKurali';
-import { satirPlani } from '@/lib/hbSepetDisaAktarim';
-import { stilleriYazmayaHazirla } from '@/lib/excelStil';
+import { kampanyaSayfasiniKur, otomatikGenislikler, bosSkuSutunu } from '@/lib/hbSepetDisaAktarim';
 import { kdvDahilOran, komisyonEtiketi } from '@/lib/hbKomisyon';
 import { havuzdaCalistir, tekrarDene } from '@/lib/istekHavuzu';
 import { aciklamalardanIndirim, indirimliFiyat, indirimEtiketi } from '@/lib/hbSepetIndirimi';
@@ -167,7 +166,7 @@ export default function HBBasketCampaigns() {
       .then((r) => r.arrayBuffer())
       .then((ab) => {
         const baytlar = new Uint8Array(ab);
-        const wb = XLSX.read(baytlar, { type: 'array', cellStyles: true });
+        const wb = XLSX.read(baytlar, { type: 'array' });
         const sn = wb.SheetNames.find((n) => norm(n) === 'Listelerim') || wb.SheetNames[0];
         setOriginalExcelData({ workbook: wb, sheetName: sn, bytes: baytlar });
       })
@@ -340,7 +339,7 @@ export default function HBBasketCampaigns() {
         // Ham bayt dizisi saklanir: disa aktarim yuklenen dosyanin
         // KENDISINI acip duzenler, kopyasindan yeniden uretmez.
         const hamBaytlar = new Uint8Array(event.target.result);
-        const workbook = XLSX.read(hamBaytlar, { type: 'array', cellStyles: true });
+        const workbook = XLSX.read(hamBaytlar, { type: 'array' });
         let sheetName = workbook.SheetNames.find((n) => norm(n) === 'Listelerim');
         if (!sheetName) {
           sheetName = workbook.SheetNames.find((n) => {
@@ -565,76 +564,57 @@ export default function HBBasketCampaigns() {
     }
   };
 
-  // Disa aktarim: YUKLENEN DOSYA ACILIR, icinden kampanyaya girmeyen
-  // satirlar SILINIR, ayni dosya geri verilir. Hicbir sey yeniden kurulmaz.
+  // Disa aktarim: kampanyaya girecek urunlerden TEMIZ bir dosya uretir.
   //
-  // Onceki surum satirlari duz degerlerden yeniden kuruyordu (aoa_to_sheet);
-  // sutun genislikleri, satir yukseklikleri ve sayfa ayarlari dusuyor, dosya
-  // HB'nin verdigi sablona benzemiyordu.
+  // NICIN TEMIZ: once yuklenen dosyanin kendisi duzenlenip veriliyordu ki
+  // bicim korunsun. Ama HB'nin dosyasinda gomulu resim, aciklama balonlari
+  // ve VML cizimleri var; kutuphane bunlari yazarken referanslari tutarsiz
+  // birakiyor ve Excel dosyayi "icinde sorun var" diye aciyordu. Renk/bicim
+  // kurtarilamadigi gibi dosya da bozuluyordu.
   //
-  // Her disa aktarim, saklanan HAM DOSYADAN yeniden okunur: boylece ikinci
-  // indirme birincinin uzerine binmez ve kaynak hicbir zaman bozulmaz.
+  // Artik yalnizca DEGERLER yazilir: iki sayfa (urun listesi + Açıklamalar),
+  // dogru basliklar, dogru sutun sirasi ve icerige gore otomatik sutun
+  // genisligi. Panel dosyayi bu haliyle sorunsuz okur.
   const handleExport = () => {
     if (uploadedData.length === 0 || !originalExcelData?.bytes) {
       toast.error('Yüklenmiş Excel bulunamadı'); return;
     }
     const { bytes, sheetName } = originalExcelData;
 
-    const kitap = XLSX.read(bytes, { type: 'array', cellStyles: true });
-    const sayfa = kitap.Sheets[sheetName];
-    if (!sayfa) { toast.error(`"${sheetName}" sayfası dosyada bulunamadı`); return; }
+    const kaynak = XLSX.read(bytes, { type: 'array' });
+    const listeSayfasi = kaynak.Sheets[sheetName];
+    if (!listeSayfasi) { toast.error(`"${sheetName}" sayfası dosyada bulunamadı`); return; }
 
-    const aoa = XLSX.utils.sheet_to_json(sayfa, { header: 1, defval: '' });
-    const { tutulacak, silinen, fiyatSutunu, hata } = satirPlani(aoa, uploadedData);
+    const aoa = XLSX.utils.sheet_to_json(listeSayfasi, { header: 1, defval: '' });
+    const { satirlar, yazilan, silinen, hata } = kampanyaSayfasiniKur(aoa, uploadedData);
     if (hata) { toast.error(hata); return; }
-    if (tutulacak.length === 0) { toast.error('Kampanyaya girecek ürün seçilmedi; dosya oluşturulmadı'); return; }
+    if (yazilan === 0) { toast.error('Kampanyaya girecek ürün seçilmedi; dosya oluşturulmadı'); return; }
 
-    const aralik = XLSX.utils.decode_range(sayfa['!ref']);
-    const kalanSatirlar = [0, ...tutulacak.map((t) => t.kaynakSatir)];  // 0 = baslik
+    const kitap = XLSX.utils.book_new();
 
-    // Kalan satirlarin hucreleri yukari kaydirilir; hucre NESNELERI aynen
-    // tasinir, icerigi/bicimi degismez.
-    const tasinan = {};
-    kalanSatirlar.forEach((kaynakSatir, hedefSatir) => {
-      for (let sutun = aralik.s.c; sutun <= aralik.e.c; sutun++) {
-        const hucre = sayfa[XLSX.utils.encode_cell({ r: kaynakSatir, c: sutun })];
-        if (hucre) tasinan[XLSX.utils.encode_cell({ r: hedefSatir, c: sutun })] = hucre;
-      }
-    });
-
-    // Yalnizca HUCRELER degistirilir. "!" ile baslayan sayfa ayarlari
-    // (!cols genislikler, !merges, !autofilter, !margins...) yerinde kalir.
-    for (const anahtar of Object.keys(sayfa)) {
-      if (!anahtar.startsWith('!')) delete sayfa[anahtar];
-    }
-    Object.assign(sayfa, tasinan);
-
-    // Kampanya fiyatlari yazilir (hucrenin bicimi korunur, degeri degisir)
-    tutulacak.forEach((t, i) => {
-      const adres = XLSX.utils.encode_cell({ r: i + 1, c: fiyatSutunu });
-      const hucre = sayfa[adres] || {};
-      delete hucre.w;   // onbellekteki metin gosterimi, yoksa eski deger gorunur
-      delete hucre.h;
-      delete hucre.r;
-      sayfa[adres] = { ...hucre, v: t.fiyat, t: 'n' };
-    });
-
-    sayfa['!ref'] = XLSX.utils.encode_range({
-      s: { r: 0, c: aralik.s.c },
-      e: { r: tutulacak.length, c: aralik.e.c },
-    });
-    // Satir yukseklikleri de kalan satirlara gore kaydirilir
-    if (sayfa['!rows']) {
-      sayfa['!rows'] = kalanSatirlar.map((r) => sayfa['!rows'][r]);
+    // 1. sayfa: HB'nin aciklama sayfasi (varsa) — degerleriyle tasinir
+    const aciklamaAdi = kaynak.SheetNames.find((n) => norm(n).startsWith('Açıklama'));
+    if (aciklamaAdi) {
+      const aciklamaAoa = XLSX.utils.sheet_to_json(kaynak.Sheets[aciklamaAdi], { header: 1, defval: '' });
+      const aciklamaSayfasi = XLSX.utils.aoa_to_sheet(aciklamaAoa);
+      aciklamaSayfasi['!cols'] = otomatikGenislikler(aciklamaAoa);
+      XLSX.utils.book_append_sheet(kitap, aciklamaSayfasi, aciklamaAdi);
     }
 
-    // Okunan stiller DUZ bicimde gelir, yazici IC ICE bekler; cevrilmezse
-    // sablonun renkleri sessizce dusuyordu.
-    stilleriYazmayaHazirla(kitap);
+    // HB'nin sablonunda SKU sutununun basligi BOS geliyor; dosyayi acan
+    // kisi sutunu basliksiz gorup SKU'nun eksik oldugunu saniyordu.
+    // Yalnizca gercekten bos olan baslik doldurulur.
+    const skuSutunu = bosSkuSutunu(satirlar[0]);
+    if (skuSutunu !== null) satirlar[0][skuSutunu] = 'SKU';
+
+    // 2. sayfa: kampanyaya alinan urunler
+    const urunSayfasi = XLSX.utils.aoa_to_sheet(satirlar);
+    urunSayfasi['!cols'] = otomatikGenislikler(satirlar);
+    XLSX.utils.book_append_sheet(kitap, urunSayfasi, sheetName);
 
     XLSX.writeFile(kitap, 'hepsiburada-sepet-kampanyalari.xlsx');
     toast.success(
-      `${tutulacak.length} ürün kampanyaya alındı` +
+      `${yazilan} ürün kampanyaya alındı` +
       (silinen > 0 ? ` · ${silinen} ürün dosyadan çıkarıldı` : '') +
       ' · Excel indirildi'
     );

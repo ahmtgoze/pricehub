@@ -1,4 +1,4 @@
-import { sadelestir, sutunlariBul, kampanyaSayfasiniKur, satirPlani }
+import { sadelestir, sutunlariBul, kampanyaSayfasiniKur, satirPlani, otomatikGenislikler, bosSkuSutunu }
   from '../src/lib/hbSepetDisaAktarim.js';
 
 let gecen = 0, kalan = 0;
@@ -137,6 +137,46 @@ console.log('\n═══ SATIR PLANI (bicim korumak icin kaynak satir yerleri) �
 }
 esit('sutun yoksa hata', satirPlani([['Ürün Adı']], []).hata, '"Kampanyanın uygulanacağı fiyat" sütunu bulunamadı');
 esit('bos sayfa', satirPlani([], []).hata, 'Excel sayfası boş');
+
+
+console.log('\n═══ OTOMATIK SUTUN GENISLIGI ═══');
+{
+  const r = otomatikGenislikler([['Ad', 'Cok Uzun Bir Urun Adi Burada'], ['x', 'kisa']]);
+  esit('sutun sayisi', r.length, 2);
+  esit('kisa sutun en az degerde', r[0].wch, 8);
+  esit('uzun sutun icerige gore', r[1].wch, 'Cok Uzun Bir Urun Adi Burada'.length + 2);
+}
+{
+  // Cok uzun metin ust sinirla kisitlanir; yoksa sutun ekrana sigmaz
+  const uzun = 'a'.repeat(200);
+  esit('ust sinir', otomatikGenislikler([[uzun]])[0].wch, 60);
+}
+{
+  // Satir sonu iceren baslikta en uzun PARCA esas alinir
+  const r = otomatikGenislikler([['Teklif 1\nKatilabileceginiz Maximum Fiyat']]);
+  esit('satir sonu bolunur', r[0].wch, 'Katilabileceginiz Maximum Fiyat'.length + 2);
+}
+{
+  // Satirlarin sutun sayisi farkli olabilir
+  const r = otomatikGenislikler([['a'], ['b', 'cccccccccccc']]);
+  esit('en genis satira gore', r.length, 2);
+}
+esit('bos veri', otomatikGenislikler([]), []);
+esit('gecersiz veri', otomatikGenislikler(null), []);
+esit('null hucreler', otomatikGenislikler([[null, undefined]]).map((g) => g.wch), [8, 8]);
+esit('sayilar da olculur', otomatikGenislikler([[1234567890123]])[0].wch, 15);
+
+
+console.log('\n═══ BOS SKU BASLIGI ═══');
+// HB sablonunda "Satıcı stok kodu"nun sagindaki sutun SKU'dur ama basligi bos
+esit('gercek sablonda bulunur', bosSkuSutunu(BASLIK), 3);
+esit('yazim farkli olsa da', bosSkuSutunu(['Satıcı Stok Kodu', '', 'Barkod']), 1);
+// Dolu basligin uzerine YAZILMAZ
+esit('dolu baslik korunur', bosSkuSutunu(['Satıcı stok kodu', 'SKU', 'Barkod']), null);
+esit('stok kodu yoksa', bosSkuSutunu(['Ürün Adı', '']), null);
+esit('stok kodu son sutunsa', bosSkuSutunu(['Barkod', 'Satıcı stok kodu']), null);
+esit('bos girdi', bosSkuSutunu([]), null);
+esit('gecersiz girdi', bosSkuSutunu(null), null);
 
 console.log(`\nGECEN: ${gecen}   KALAN: ${kalan}`);
 process.exit(kalan ? 1 : 0);
