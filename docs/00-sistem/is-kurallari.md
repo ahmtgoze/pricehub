@@ -501,6 +501,43 @@ yeniden seçmek gerekmez.
 
 Tablo: `hb_basket_campaigns` (RLS ile `created_by` bazlı izoleli — kural 1)
 
+### Sepet indirimi kârı düşürür (komisyon indiriminden AYRIDIR)
+
+Sepet kampanyası **iki ayrı şey** verir, karıştırılmamalıdır:
+
+| | Ne yapar | Kime yarar |
+|---|---|---|
+| **Komisyon indirimi** | HB'nin aldığı oran düşer (örn. %17 → %9) | **Bize** |
+| **Sepet indirimi** | Müşteri sepette daha az öder (örn. %15) | **Müşteriye** — bedelini satıcı karşılar |
+
+> **Kâr, girilen fiyattan değil, müşterinin ÖDEDİĞİ tutardan hesaplanır.**
+>
+> ```
+> ödenen = girilen fiyat × (1 − sepet indirimi)
+> ```
+>
+> Örnek: 4.532,99 ₺ girilir, "Sepette %15 İndirim" varsa müşteri
+> **3.853,04 ₺** öder. Kâr bu tutardan hesaplanır.
+
+Sepet indirimi, HB Excel'inin **"Açıklamalar"** sayfasından okunur:
+
+```
+EK BİLGİLER
+Kampanyanın İndirimi | Sepette %15 İndirim
+```
+
+Yüzde (`%15`) ve tutar (`50 TL`) biçimleri desteklenir. İndirim
+**çözülemezse uydurulmaz**: kâr girilen fiyattan hesaplanır ve sayfada sarı
+uyarı çıkar — gerçek kârın daha düşük olabileceği açıkça yazılır.
+
+Dışa aktarılan Excel'e **girilen fiyat** yazılır, indirimli tutar değil;
+indirimi HB kendisi uygular.
+
+> **Geçmiş hata:** bu indirim hiç hesaba katılmıyordu; %15'lik bir kampanyada
+> kâr olduğundan belirgin şekilde yüksek görünüyordu. 2026-09-01'de eklendi.
+
+Kaynak: `src/lib/hbSepetIndirimi.js` (testleri: `tests/hbSepetIndirimi.test.mjs`)
+
 ### Şablona dokunulmaz
 
 - Sütun **eklenmez**, sütun **sırası değişmez**, başlık satırı **aynen** korunur

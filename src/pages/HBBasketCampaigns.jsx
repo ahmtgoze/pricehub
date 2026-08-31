@@ -20,6 +20,7 @@ import { baremSec, baremTarifesiSec } from '@/lib/baremKurali';
 import { kampanyaSayfasiniKur } from '@/lib/hbSepetDisaAktarim';
 import { kdvDahilOran, komisyonEtiketi } from '@/lib/hbKomisyon';
 import { havuzdaCalistir, tekrarDene } from '@/lib/istekHavuzu';
+import { aciklamalardanIndirim, indirimliFiyat, indirimEtiketi } from '@/lib/hbSepetIndirimi';
 
 const Product = db.entities.Product;
 const Platform = db.entities.Platform;
@@ -61,6 +62,9 @@ export default function HBBasketCampaigns() {
   const [dateRangeValue, setDateRangeValue] = useState({ from: undefined, to: undefined });
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [kaydediliyor, setKaydediliyor] = useState(false);
+  // Musterinin sepette aldigi indirim (satici karsilar). Komisyon
+  // indiriminden ayridir; kar bu indirimli tutardan hesaplanir.
+  const [kampanyaIndirimi, setKampanyaIndirimi] = useState(null);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCategory, setFilterCategory] = useState('');
@@ -140,6 +144,14 @@ export default function HBBasketCampaigns() {
     if (donemKayitlari.length === 0) return;
 
     setUploadedData(donemKayitlari.map((r) => ({ ...r, selected: !!r.selected })));
+
+    // Indirim de geri yuklenmeli; yoksa kar yanlis (yuksek) gorunur.
+    const indirimli = donemKayitlari.find((r) => r.campaign_discount_type);
+    setKampanyaIndirimi(indirimli
+      ? { tur: indirimli.campaign_discount_type,
+          deger: Number(indirimli.campaign_discount_value) || 0,
+          ham: indirimli.campaign_discount_raw || '' }
+      : null);
 
     // Disa aktarim HB'nin sablonuna yazdigi icin kaynak dosya da gerekli.
     const excelli = donemKayitlari.find((r) => r.excel_file_url);
@@ -297,6 +309,9 @@ export default function HBBasketCampaigns() {
       selected: !!it.selected,
       matched_product_id: it.matched_product_id || null,
       excel_file_url: it.excel_file_url || null,
+      campaign_discount_type: it.campaign_discount_type || null,
+      campaign_discount_value: it.campaign_discount_value || 0,
+      campaign_discount_raw: it.campaign_discount_raw || null,
     }));
 
     const { basarisiz } = await havuzdaCalistir(
@@ -325,6 +340,14 @@ export default function HBBasketCampaigns() {
         const worksheet = workbook.Sheets[sheetName];
         const jsonData = XLSX.utils.sheet_to_json(worksheet);
         setOriginalExcelData({ workbook, sheetName });
+
+        // Musteri indirimi "Açıklamalar" sayfasindaki "Kampanyanın İndirimi"
+        // satirinda duruyor (orn. "Sepette %15 İndirim"). Kar bundan etkilenir.
+        const aciklamaSayfasi = workbook.SheetNames.find((n) => norm(n).startsWith('Açıklama'));
+        const indirim = aciklamaSayfasi
+          ? aciklamalardanIndirim(XLSX.utils.sheet_to_json(workbook.Sheets[aciklamaSayfasi], { header: 1, defval: '' }))
+          : null;
+        setKampanyaIndirimi(indirim);
 
         // Kaynak dosya depoya alinir. Donem sonra tekrar acildiginda disa
         // aktarim HB'nin KENDI sablonuna yazmak zorunda; satirlardan yeniden
@@ -361,6 +384,9 @@ export default function HBBasketCampaigns() {
             start_date: donem.baslangic,
             end_date: donem.bitis,
             excel_file_url: excelUrl,
+            campaign_discount_type: indirim?.tur || null,
+            campaign_discount_value: indirim?.deger || 0,
+            campaign_discount_raw: indirim?.ham || null,
           };
           const matched = getMatchedProduct(item);
           item.matched_product_id = matched?.id || null;
@@ -399,6 +425,13 @@ export default function HBBasketCampaigns() {
     setUploadedData((prev) => prev.map((it) => (it === item ? { ...it, selected: !it.selected } : it)));
   };
 
+  // Musterinin gercekte odedigi tutar. Kar bundan hesaplanir; girilen
+  // fiyattan hesaplamak kari oldugundan yuksek gosterir.
+  const odenecekFiyat = (fiyat) => indirimliFiyat(fiyat, kampanyaIndirimi);
+
+  const kampanyaKari = (fiyat, item) =>
+    calculateProfit(odenecekFiyat(fiyat), item.discounted_commission, item);
+
   const handleSmartAutoSelect = () => {
     // Her eşleşen ürün için kampanya fiyatını max fiyata çek (indirimli komisyonla en yüksek kâr) ve kârlıysa seç
     let count = 0, skippedNoMatch = 0;
@@ -406,7 +439,7 @@ export default function HBBasketCampaigns() {
       if (!getMatchedProduct(item)) { skippedNoMatch++; return item; }
       const price = item.max_price || item.current_price || 0;
       if (price <= 0) return item;
-      const { profit } = calculateProfit(price, item.discounted_commission, item);
+      const { profit } = kampanyaKari(price, item);
       if (profit > 0) { count++; return { ...item, campaign_price: price, selected: true }; }
       return { ...item, campaign_price: price };
     });
@@ -473,6 +506,7 @@ export default function HBBasketCampaigns() {
   const handleClear = async () => {
     setUploadedData([]);
     setOriginalExcelData(null);
+    setKampanyaIndirimi(null);
     if (!donemHazir) { toast.success('Liste temizlendi'); return; }
 
     const eskiler = kayitliKampanyalar.filter(
@@ -594,6 +628,25 @@ export default function HBBasketCampaigns() {
                 </Popover>
               </div>
             </div>
+            {uploadedData.length > 0 && (
+              kampanyaIndirimi?.tur ? (
+                <div className="flex items-start gap-3 rounded-xl border border-blue-200 dark:border-blue-900/50 bg-blue-50 dark:bg-blue-950/30 p-3">
+                  <Info className="h-4 w-4 mt-0.5 text-blue-600 shrink-0" />
+                  <p className="text-sm text-blue-900 dark:text-blue-200 leading-relaxed">
+                    <strong>{indirimEtiketi(kampanyaIndirimi)}</strong> — müşteri girdiğiniz fiyatı değil,
+                    indirimli tutarı öder. Kâr bu tutardan hesaplanıyor.
+                  </p>
+                </div>
+              ) : (
+                <div className="flex items-start gap-3 rounded-xl border border-amber-200 dark:border-amber-900/50 bg-amber-50 dark:bg-amber-950/30 p-3">
+                  <AlertCircle className="h-4 w-4 mt-0.5 text-amber-600 shrink-0" />
+                  <p className="text-sm text-amber-900 dark:text-amber-200 leading-relaxed">
+                    Kampanya indirimi okunamadı{kampanyaIndirimi?.ham ? ` ("${kampanyaIndirimi.ham}")` : ''} —
+                    kâr, girdiğiniz fiyattan hesaplanıyor. Sepette indirim varsa gerçek kâr daha düşük olacaktır.
+                  </p>
+                </div>
+              )
+            )}
             <div className="flex flex-wrap gap-3">
               <Button onClick={() => document.getElementById('hbBasketUpload').click()} disabled={!donemHazir} className="bg-primary hover:bg-black dark:hover:bg-white/90">
                 <Upload className="mr-2 h-4 w-4" />{uploadedData.length > 0 ? 'Yeni Excel Yükle' : 'Excel Yükle'}
@@ -659,7 +712,7 @@ export default function HBBasketCampaigns() {
                         const matchedProduct = getMatchedProduct(item);
                         const currentCalc = item.current_price ? calculateProfit(item.current_price, item.current_commission, item) : { profit: 0, profitRate: 0 };
                         const overMax = item.max_price > 0 && item.campaign_price > item.max_price;
-                        const campCalc = item.campaign_price ? calculateProfit(item.campaign_price, item.discounted_commission, item) : { profit: 0, profitRate: 0 };
+                        const campCalc = item.campaign_price ? kampanyaKari(item.campaign_price, item) : { profit: 0, profitRate: 0 };
                         return (
                           <tr key={index} className={`border-b hover:bg-secondary ${item.selected ? 'bg-secondary' : ''}`}>
                             <td className="p-3 text-center">
@@ -683,9 +736,12 @@ export default function HBBasketCampaigns() {
                               <div className={`border rounded-lg p-2 ${item.selected ? 'border-primary bg-card' : 'border-border'}`}>
                                 <div className="flex items-center gap-1 mb-1">
                                   <Input type="number" step="0.01" value={item.campaign_price || ''} onChange={(e) => handleCampaignPriceChange(item, e.target.value)} placeholder="Fiyat" className="h-8 text-xs" />
-                                  <Button size="sm" variant="ghost" className="h-5 w-5 p-0 shrink-0" onClick={() => openDetailModal(item.campaign_price, item.discounted_commission, item)}><Info className="h-3 w-3" /></Button>
+                                  <Button size="sm" variant="ghost" className="h-5 w-5 p-0 shrink-0" onClick={() => openDetailModal(odenecekFiyat(item.campaign_price), item.discounted_commission, item)}><Info className="h-3 w-3" /></Button>
                                 </div>
                                 <div className="text-[11px] text-muted-foreground">Kom: {commLabel(item.discounted_commission)}</div>
+                                {item.campaign_price > 0 && kampanyaIndirimi?.tur && (
+                                  <div className="text-[11px] text-muted-foreground">Müşteri öder: ₺{odenecekFiyat(item.campaign_price).toFixed(2)}</div>
+                                )}
                                 {item.campaign_price > 0 && (
                                   <div className={`text-xs font-semibold ${campCalc.profit > 0 ? 'text-emerald-600' : 'text-rose-600'}`}>{campCalc.profit > 0 ? '+' : ''}₺{campCalc.profit.toFixed(2)} (%{campCalc.profitRate.toFixed(1)})</div>
                                 )}
