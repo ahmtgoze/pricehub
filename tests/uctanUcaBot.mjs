@@ -208,7 +208,30 @@ async function testVerisiniTemizle() {
   // "kac tanesini sectik" silindigi anlamina GELMEZ. Tablonun gercekten
   // bosaldigini dogrula — aksi halde bot silmedigi seyi silindi sanar.
   await bekleKosul(b, `${VERI_SATIRI} === 0`, 40, 'tablo bosalsin');
+
+  // Kategoriler de temizlenir. Onceden yalnizca urunler siliniyordu ve her
+  // kosu bir kategori birakiyordu; 24 tane birikip yeni kaydin listede
+  // gorunmesini engelledi.
+  await eskiKategorileriSil();
   return kacTane;
+}
+
+/** Onceki kosulardan kalan "BOT " kategorilerini siler. */
+async function eskiKategorileriSil() {
+  await sayfayaGit(b, '/Categories', 'Kategoriler');
+  for (let tur = 0; tur < 40; tur++) {
+    const bulundu = await b.gercekTikla(
+      `[...document.querySelectorAll('table tbody tr')]
+         .find(tr => tr.innerText.startsWith('BOT '))
+         ?.querySelector('.lucide-trash2')?.closest('button')`,
+      1,
+    );
+    if (!bulundu) return tur;          // kalmadi
+    await bekle(900);
+    if (!(await b.gercekTikla(`window.__botOnay()`, 2))) return tur;
+    await bekle(1200);
+  }
+  return 40;
 }
 
 /**
