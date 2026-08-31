@@ -12,6 +12,9 @@ import { Label } from '@/components/ui/label';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
 import * as XLSX from 'xlsx';
+import { TRENDYOL_SAYFA, TRENDYOL_DROPDOWN_SAYFA, TRENDYOL_BASLIKLAR,
+         TRENDYOL_NOT, TRENDYOL_DROPDOWN, trendyolSatirlari, barkodsuzlar }
+  from '@/lib/trendyolSablonu';
 import FiltreEtiketi from '@/components/ui/FiltreEtiketi';
 
 const HEPSIBURADA_FIYAT_ADIMLARI = [
@@ -273,16 +276,40 @@ export default function UpdatedPrices() {
       XLSX.writeFile(wb, `${selectedPlatform.replace(/\s+/g, '_')}_guncellenmis_fiyatlar.xlsx`);
 
     } else {
-      // Trendyol
-      exportData = updatedPrices.map(p => ({
-        'Barkod': p.barkod,
-        'Piyasa Satış Fiyatı (KDV Dahil)': p.system_price,
-        'Trendyol\'da Satılacak Fiyat (KDV Dahil)': p.system_price,
-        'Ürün Stok Adedi': p.stock_quantity || 0
-      }));
-      const ws = XLSX.utils.json_to_sheet(exportData);
-      XLSX.utils.book_append_sheet(wb, ws, 'Fiyatlar');
+      // ── Trendyol ────────────────────────────────────────────────────
+      // Panel dosyayi KENDI sablonuna gore okuyor. Onceki surum "Fiyatlar"
+      // adli bir sayfaya baska basliklar yaziyordu; Trendyol kabul etmiyordu.
+      const satirlar = trendyolSatirlari(updatedPrices);
+      if (satirlar.length === 0) {
+        toast.error('Barkodu olan güncellenmiş fiyat yok');
+        return;
+      }
+
+      const ws = XLSX.utils.aoa_to_sheet([TRENDYOL_BASLIKLAR, ...satirlar]);
+
+      // E1'deki aciklama notu ve birlesik hucre (E1:T1)
+      XLSX.utils.sheet_add_aoa(ws, [[TRENDYOL_NOT]], { origin: 'E1' });
+      ws['!merges'] = [{ s: { r: 0, c: 4 }, e: { r: 0, c: 19 } }];
+      ws['!cols'] = [{ wch: 12.5 }, { wch: 12.5 }, { wch: 12.5 }];
+
+      XLSX.utils.book_append_sheet(wb, ws, TRENDYOL_SAYFA);
+
+      // Sablonun ikinci sayfasi da bulunmali
+      XLSX.utils.book_append_sheet(
+        wb,
+        XLSX.utils.aoa_to_sheet(TRENDYOL_DROPDOWN),
+        TRENDYOL_DROPDOWN_SAYFA
+      );
+
       XLSX.writeFile(wb, `${selectedPlatform.replace(/\s+/g, '_')}_guncellenmis_fiyatlar.xlsx`);
+
+      const atlanan = barkodsuzlar(updatedPrices).length;
+      if (atlanan > 0) {
+        toast.warning(`${atlanan} ürün barkodsuz olduğu için dosyaya eklenmedi`, {
+          description: 'Trendyol barkodu zorunlu tutuyor.',
+          duration: 8000,
+        });
+      }
     }
 
     toast.success('Excel indirildi');
