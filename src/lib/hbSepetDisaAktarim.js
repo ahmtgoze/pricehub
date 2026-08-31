@@ -157,3 +157,37 @@ export function satirPlani(aoa, secimler) {
 
   return { tutulacak, silinen, fiyatSutunu, skuSutunu, hata: null };
 }
+
+/**
+ * Sutun genisliklerini icerige gore hesaplar.
+ *
+ * NICIN VAR: temiz bir dosya uretiyoruz (yuklenen dosyanin bicimi, renkleri,
+ * aciklama balonlari ve gomulu resimleri tasinmiyor — tasinmaya calisildiginda
+ * Excel dosyayi "bozuk" diye acmiyordu). Genislik verilmezse butun sutunlar
+ * varsayilan dar genislikte gelir ve uzun urun adlari gorunmez.
+ *
+ * En uzun hucrenin karakter sayisi esas alinir; cok dar ve cok genis
+ * uclar sinirlanir.
+ */
+export function otomatikGenislikler(satirlar, { enAz = 8, enCok = 60 } = {}) {
+  const liste = Array.isArray(satirlar) ? satirlar : [];
+  if (liste.length === 0) return [];
+
+  const sutunSayisi = liste.reduce((en, s) => Math.max(en, (s || []).length), 0);
+  const genislikler = [];
+
+  for (let sutun = 0; sutun < sutunSayisi; sutun++) {
+    let enUzun = 0;
+    for (const satir of liste) {
+      const deger = satir?.[sutun];
+      if (deger === null || deger === undefined) continue;
+      // Satir sonu iceren basliklarda en uzun PARCA belirleyicidir
+      for (const parca of String(deger).split('\n')) {
+        if (parca.length > enUzun) enUzun = parca.length;
+      }
+    }
+    // +2: kenar boslugu, yoksa metin hucreye yapisik duruyor
+    genislikler.push({ wch: Math.min(enCok, Math.max(enAz, enUzun + 2)) });
+  }
+  return genislikler;
+}
