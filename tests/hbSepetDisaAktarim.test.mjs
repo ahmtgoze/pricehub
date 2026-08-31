@@ -1,4 +1,4 @@
-import { sadelestir, sutunlariBul, kampanyaSayfasiniKur, satirPlani, otomatikGenislikler, bosSkuSutunu }
+import { sadelestir, sutunlariBul, kampanyaSayfasiniKur, satirPlani, otomatikGenislikler, bosSkuSutunu, SKU_BASLIGI }
   from '../src/lib/hbSepetDisaAktarim.js';
 
 let gecen = 0, kalan = 0;
@@ -173,6 +173,19 @@ esit('gercek sablonda bulunur', bosSkuSutunu(BASLIK), 3);
 esit('yazim farkli olsa da', bosSkuSutunu(['Satıcı Stok Kodu', '', 'Barkod']), 1);
 // Dolu basligin uzerine YAZILMAZ
 esit('dolu baslik korunur', bosSkuSutunu(['Satıcı stok kodu', 'SKU', 'Barkod']), null);
+esit('stok kodu yoksa', bosSkuSutunu(['Ürün Adı', '']), null);
+esit('stok kodu son sutunsa', bosSkuSutunu(['Barkod', 'Satıcı stok kodu']), null);
+esit('bos girdi', bosSkuSutunu([]), null);
+esit('gecersiz girdi', bosSkuSutunu(null), null);
+
+
+console.log('\n═══ OKUNAMAYAN SKU BASLIGI ═══');
+// Sablonda zengin metin oldugu icin kutuphane bos okuyor; geri yazilmali
+esit('gercek sablonda bulunur', bosSkuSutunu(BASLIK), 3);
+esit('baslik metni', SKU_BASLIGI.startsWith('SKU (Kampanyaya dahil etmek istemediğiniz'), true);
+esit('yazim farkli olsa da', bosSkuSutunu(['Satıcı Stok Kodu', '', 'Barkod']), 1);
+// Baslik okunabildiyse UZERINE YAZILMAZ
+esit('dolu baslik korunur', bosSkuSutunu(['Satıcı stok kodu', SKU_BASLIGI, 'Barkod']), null);
 esit('stok kodu yoksa', bosSkuSutunu(['Ürün Adı', '']), null);
 esit('stok kodu son sutunsa', bosSkuSutunu(['Barkod', 'Satıcı stok kodu']), null);
 esit('bos girdi', bosSkuSutunu([]), null);
