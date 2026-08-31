@@ -44,7 +44,7 @@ import { calculateAllPlatformPrices } from '@/components/PriceCalculationEngine'
 import { toast } from 'sonner';
 import { useBackgroundTask } from '@/lib/BackgroundTaskContext';
 import { useIlerlemePenceresi } from '@/lib/useIlerlemePenceresi';
-import { yayilimPlani } from '@/lib/maliyetYayilimi';
+import { yayilimPlani, bazMaliyetPlani } from '@/lib/maliyetYayilimi';
 import { useLocation } from 'react-router-dom';
 
 const Product = db.entities.Product;
@@ -294,6 +294,32 @@ export default function Products() {
           }
           toast.info(`${plan.length} bağlı ürünün maliyeti de güncellendi`, {
             description: 'Eşleştirme ve adet zinciri boyunca yayıldı.',
+            duration: 7000,
+          });
+        }
+
+        // ── Referans alanlarin BAZ MALIYETI ────────────────────────────
+        // Baz maliyet yalnizca urunun kendisi kaydedilirken hesaplaniyordu.
+        // Referans alinan urunun maliyeti degisince bagimlinin baz maliyeti
+        // eski degerde kaliyor ve fiyat aylar oncesinin maliyetinden
+        // uretilmeye devam ediyordu. Hem OZELLIGE hem OLCUYE gore referans
+        // kapsanir.
+        const degisenIdler = [productId, ...plan.map((d) => d.id)];
+        const sonMaliyetler = guncelUrunler.map((p) => {
+          if (p.id === productId) return { ...p, cost: newCost };
+          const d = plan.find((x) => x.id === p.id);
+          return d ? { ...p, cost: d.yeniMaliyet } : p;
+        });
+
+        const bazPlan = bazMaliyetPlani(sonMaliyetler, degisenIdler);
+        if (bazPlan.length > 0) {
+          const OBEK2 = 20;
+          for (let i = 0; i < bazPlan.length; i += OBEK2) {
+            await Promise.all(bazPlan.slice(i, i + OBEK2).map(
+              (d) => Product.update(d.id, { base_cost: d.yeniBaz })
+            ));
+          }
+          toast.info(`${bazPlan.length} referanslı ürünün baz maliyeti yenilendi`, {
             duration: 7000,
           });
         }
