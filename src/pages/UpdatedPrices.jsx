@@ -16,6 +16,7 @@ import { TRENDYOL_SAYFA, TRENDYOL_DROPDOWN_SAYFA, TRENDYOL_BASLIKLAR,
          TRENDYOL_NOT, TRENDYOL_DROPDOWN, trendyolSatirlari, barkodsuzlar }
   from '@/lib/trendyolSablonu';
 import FiltreEtiketi from '@/components/ui/FiltreEtiketi';
+import { Link } from 'react-router-dom';
 
 const HEPSIBURADA_FIYAT_ADIMLARI = [
   'Bu sayfada sağ üstteki "Sırala" butonuna tıklayarak "Değişim Oranı (Yüksekten Düşüğe)" veya "Değişim Tutarı (Yüksekten Düşüğe)" seçeneğini seçin.',
@@ -76,10 +77,14 @@ export default function UpdatedPrices() {
 
   const { data: marketplaceProducts = [], refetch: refetchMarketplace } = useQuery({
     queryKey: ['marketplaceProducts', userEmail],
-    queryFn: () => db.entities.MarketplaceProduct.filter({ created_by: userEmail }, '-updated_date', 10000),
+    // Pazaryeri Urunleri sayfasiyla AYNI sorgu. Ayni anahtar tek bir onbellek
+    // gozudur; farkli cekis tanimlari birakilirsa hangi sayfa once acilirsa
+    // onun verisi digerine de gider. Onceden burada '-updated_date', 10000
+    // siniri vardi: kayit sayisi 10.000'i asinca iki sayfa FARKLI veri
+    // gosterecekti.
+    queryFn: () => db.entities.MarketplaceProduct.filter({ created_by: userEmail }),
     enabled: !!userEmail,
-    staleTime: 0,
-    cacheTime: 0
+    staleTime: 0
   });
 
   const { data: productPrices = [], refetch: refetchPrices } = useQuery({
@@ -507,7 +512,11 @@ export default function UpdatedPrices() {
                 <span className="text-sm font-semibold text-foreground">Toplam: {updatedPrices.length} ürün</span>
                 {eslesmeyenSayisi > 0 && (
                   <span className="text-sm text-amber-700 dark:text-amber-400">
-                    · {eslesmeyenSayisi} ürün eşleşmediği için listede yok
+                    ·{' '}
+                    <Link to="/MarketplaceProducts" className="underline underline-offset-2 hover:text-amber-800 dark:hover:text-amber-300">
+                      {eslesmeyenSayisi} ürün eşleşmediği için listede yok
+                    </Link>
+                    <span className="text-muted-foreground"> — eşleştirmek için tıklayın</span>
                   </span>
                 )}
                 {selectedRows.size > 0 && <span className="text-sm text-muted-foreground">{selectedRows.size} seçildi</span>}
