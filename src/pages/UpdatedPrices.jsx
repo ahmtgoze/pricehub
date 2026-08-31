@@ -135,6 +135,17 @@ export default function UpdatedPrices() {
   const isWebsite = selectedPlatformObj?.platform_type === 'website';
   const isHepsiburada = selectedPlatformObj?.platform_type === 'hepsiburada';
 
+  // Bu sayfa yalnizca sistem urunuyle ESLESMIS pazaryeri kayitlarini
+  // listeler; eslesmeyende maliyet ve kategori bilinmedigi icin fiyat
+  // uretilemez. Kullanici "neden tam urun sayisi yok" diye soruyordu,
+  // sebebi hicbir yerde yazmiyordu.
+  const eslesmeyenSayisi = useMemo(() => {
+    if (!selectedPlatform) return 0;
+    return marketplaceProducts.filter(
+      (m) => m.platform_account === selectedPlatform && m.status !== 'matched'
+    ).length;
+  }, [marketplaceProducts, selectedPlatform]);
+
   const updatedPrices = useMemo(() => {
     if (!selectedPlatform) return [];
 
@@ -494,6 +505,11 @@ export default function UpdatedPrices() {
             <div className="rounded-[18px] border border-border bg-card p-4 mb-4 flex items-center justify-between flex-wrap gap-3">
               <div className="flex items-center gap-4">
                 <span className="text-sm font-semibold text-foreground">Toplam: {updatedPrices.length} ürün</span>
+                {eslesmeyenSayisi > 0 && (
+                  <span className="text-sm text-amber-700 dark:text-amber-400">
+                    · {eslesmeyenSayisi} ürün eşleşmediği için listede yok
+                  </span>
+                )}
                 {selectedRows.size > 0 && <span className="text-sm text-muted-foreground">{selectedRows.size} seçildi</span>}
               </div>
               <FiltreEtiketi ad="Sırala">

@@ -8,7 +8,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import { Upload, X, Search, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
+import { Upload, X, Search, Trash2, ChevronDown, ChevronUp, AlertTriangle } from 'lucide-react';
+import { tekrarEdenSkular, sayimOzeti } from '@/lib/tekrarEdenSku';
 import { Checkbox } from '@/components/ui/checkbox';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import * as XLSX from 'xlsx';
@@ -591,6 +592,27 @@ export default function MarketplaceProducts() {
 
   const [sortBy, setSortBy] = useState('name');
 
+  // Ayni urun kodunun iki kez kayitli olmasi, sayfadaki kayit sayisi ile
+  // satici panelindeki urun sayisinin tutmamasina yol acar ve sebebi
+  // gorunmez. Genellikle kod BIR TARAFTA degistirilince olur: ice aktarma
+  // eski kodu eslestiremez, YENI kayit acar, eskisi de durur.
+  const secilenHesabinKayitlari = useMemo(
+    () => (selectedPlatform
+      ? marketplaceProducts.filter((m) => m.platform_account === selectedPlatform)
+      : marketplaceProducts),
+    [marketplaceProducts, selectedPlatform]
+  );
+
+  const tekrarlar = useMemo(
+    () => tekrarEdenSkular(secilenHesabinKayitlari),
+    [secilenHesabinKayitlari]
+  );
+
+  const sayim = useMemo(
+    () => sayimOzeti(secilenHesabinKayitlari),
+    [secilenHesabinKayitlari]
+  );
+
   const filtered = useMemo(() => {
     let result = marketplaceProducts;
     if (selectedPlatform) result = result.filter(m => m.platform_account === selectedPlatform);
@@ -897,6 +919,37 @@ export default function MarketplaceProducts() {
             )}
           </div>
         </div>
+
+        {selectedPlatform && tekrarlar.length > 0 && (
+          <div className="mb-4 rounded-[18px] border border-amber-200 dark:border-amber-900/50 bg-amber-50 dark:bg-amber-950/30 p-4">
+            <div className="flex items-start gap-3">
+              <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+              <div className="min-w-0">
+                <h3 className="font-semibold text-amber-900 dark:text-amber-200 text-sm">
+                  {tekrarlar.length} ürün kodu birden fazla kez kayıtlı
+                </h3>
+                <p className="text-amber-800 dark:text-amber-300/90 text-sm mt-1 leading-relaxed">
+                  Bu yüzden sayfada <strong>{sayim.kayit} kayıt</strong> görünüyor ama gerçekte
+                  <strong> {sayim.benzersiz} ürün</strong> var — <strong>{sayim.fazla} fazla</strong>.
+                  Genellikle ürün kodu bir tarafta değiştirilince olur: içe aktarma eski kodu
+                  eşleştiremez, yeni kayıt açar, eskisi de kalır. Doğru olanı bırakıp diğerini silin.
+                </p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {tekrarlar.slice(0, 12).map((t) => (
+                    <span key={t.sku} className="text-xs font-mono bg-amber-100 dark:bg-amber-900/40 text-amber-900 dark:text-amber-200 rounded px-2 py-1">
+                      {t.sku} <span className="opacity-70">×{t.adet}</span>
+                    </span>
+                  ))}
+                  {tekrarlar.length > 12 && (
+                    <span className="text-xs text-amber-800 dark:text-amber-300/90 self-center">
+                      ve {tekrarlar.length - 12} tane daha
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {selectedPlatform && (
           <>
