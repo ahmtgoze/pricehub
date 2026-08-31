@@ -17,7 +17,7 @@ import { toast } from 'sonner';
 import * as XLSX from 'xlsx';
 import PriceDetailModal from '@/components/modals/PriceDetailModal';
 import { baremSec, baremTarifesiSec } from '@/lib/baremKurali';
-import { kampanyaSayfasiniKur, otomatikGenislikler } from '@/lib/hbSepetDisaAktarim';
+import { kampanyaSayfasiniKur, otomatikGenislikler, bosSkuSutunu } from '@/lib/hbSepetDisaAktarim';
 import { kdvDahilOran, komisyonEtiketi } from '@/lib/hbKomisyon';
 import { havuzdaCalistir, tekrarDene } from '@/lib/istekHavuzu';
 import { aciklamalardanIndirim, indirimliFiyat, indirimEtiketi } from '@/lib/hbSepetIndirimi';
@@ -600,6 +600,12 @@ export default function HBBasketCampaigns() {
       aciklamaSayfasi['!cols'] = otomatikGenislikler(aciklamaAoa);
       XLSX.utils.book_append_sheet(kitap, aciklamaSayfasi, aciklamaAdi);
     }
+
+    // HB'nin sablonunda SKU sutununun basligi BOS geliyor; dosyayi acan
+    // kisi sutunu basliksiz gorup SKU'nun eksik oldugunu saniyordu.
+    // Yalnizca gercekten bos olan baslik doldurulur.
+    const skuSutunu = bosSkuSutunu(satirlar[0]);
+    if (skuSutunu !== null) satirlar[0][skuSutunu] = 'SKU';
 
     // 2. sayfa: kampanyaya alinan urunler
     const urunSayfasi = XLSX.utils.aoa_to_sheet(satirlar);

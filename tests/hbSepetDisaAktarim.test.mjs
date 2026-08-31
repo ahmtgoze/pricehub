@@ -1,4 +1,4 @@
-import { sadelestir, sutunlariBul, kampanyaSayfasiniKur, satirPlani, otomatikGenislikler }
+import { sadelestir, sutunlariBul, kampanyaSayfasiniKur, satirPlani, otomatikGenislikler, bosSkuSutunu }
   from '../src/lib/hbSepetDisaAktarim.js';
 
 let gecen = 0, kalan = 0;
@@ -165,6 +165,18 @@ esit('bos veri', otomatikGenislikler([]), []);
 esit('gecersiz veri', otomatikGenislikler(null), []);
 esit('null hucreler', otomatikGenislikler([[null, undefined]]).map((g) => g.wch), [8, 8]);
 esit('sayilar da olculur', otomatikGenislikler([[1234567890123]])[0].wch, 15);
+
+
+console.log('\n═══ BOS SKU BASLIGI ═══');
+// HB sablonunda "Satıcı stok kodu"nun sagindaki sutun SKU'dur ama basligi bos
+esit('gercek sablonda bulunur', bosSkuSutunu(BASLIK), 3);
+esit('yazim farkli olsa da', bosSkuSutunu(['Satıcı Stok Kodu', '', 'Barkod']), 1);
+// Dolu basligin uzerine YAZILMAZ
+esit('dolu baslik korunur', bosSkuSutunu(['Satıcı stok kodu', 'SKU', 'Barkod']), null);
+esit('stok kodu yoksa', bosSkuSutunu(['Ürün Adı', '']), null);
+esit('stok kodu son sutunsa', bosSkuSutunu(['Barkod', 'Satıcı stok kodu']), null);
+esit('bos girdi', bosSkuSutunu([]), null);
+esit('gecersiz girdi', bosSkuSutunu(null), null);
 
 console.log(`\nGECEN: ${gecen}   KALAN: ${kalan}`);
 process.exit(kalan ? 1 : 0);

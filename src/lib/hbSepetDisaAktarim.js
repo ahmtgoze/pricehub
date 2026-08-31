@@ -191,3 +191,29 @@ export function otomatikGenislikler(satirlar, { enAz = 8, enCok = 60 } = {}) {
   }
   return genislikler;
 }
+
+/**
+ * HB SKU sutununun basligi HB'nin sablonunda BOSTUR.
+ *
+ * Dosyayi acan kisi basliksiz bir sutun goruyor ve SKU'nun eksik oldugunu
+ * saniyor. Bu fonksiyon o sutunu bulur ki disa aktarimda basligi
+ * doldurulabilsin.
+ *
+ * Sutun, "Satıcı stok kodu"nun HEMEN SAGINDAKI bos baslikli sutundur.
+ * Konum degil ILISKI esas alinir; HB sutun sirasini degistirirse de bulunur.
+ *
+ * @returns sutun indeksi, ya da boyle bir sutun yoksa null
+ */
+export function bosSkuSutunu(baslikSatiri) {
+  const basliklar = (baslikSatiri || []).map(sadelestir);
+  const stokKodu = basliklar.findIndex(
+    (b) => b.toLocaleLowerCase('tr') === 'satıcı stok kodu'
+  );
+  if (stokKodu === -1) return null;
+
+  const sonraki = stokKodu + 1;
+  if (sonraki >= basliklar.length) return null;
+  // Yalnizca GERCEKTEN bos olan baslik doldurulur; dolu basligin uzerine
+  // yazmak sablonu bozar.
+  return basliklar[sonraki] === '' ? sonraki : null;
+}
