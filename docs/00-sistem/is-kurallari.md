@@ -49,7 +49,7 @@ Satış fiyatı **KDV dahil** verilir. Sırasıyla düşülür:
 | 7 | Stopaj | yalnız pazaryerlerinde (§5) |
 | 8 | Hizmet bedeli | platform ayarına göre (§5) |
 | 9 | İşlem bedeli | platformda tanımlıysa |
-| 10 | POS hizmet bedeli | HepsiBurada ve Web Sitesi (§5) |
+| 10 | POS hizmet bedeli | **yalnız HepsiBurada** (§5) |
 | 11 | **Net KDV** | §4 |
 | = | **Vergi öncesi net kâr** | |
 | 12 | Kurumlar (gelir) vergisi | yalnız kâr POZİTİFSE (§5) |
@@ -313,7 +313,7 @@ kullanıcı yalnızca görür. Kullanıcı kendi web sitesi platformunu düzenle
 | Bugün Kargoda hizmet bedeli | Bugün Kargoda açıksa **standart yerine** bu uygulanır |
 | Stopaj | Bir **vergidir** — üzerine KDV eklenmez, Net KDV hesabına da girmez. Matrahı KDV'siz satış tutarıdır, oran %1. Yalnız pazaryerlerinde; **web sitesinde her zaman 0** (kodda ayrıca zorlanır) |
 | Kurumlar vergisi | Yalnız **kâr pozitifse**. Limited şirket için **%25** varsayılan; kullanıcı değiştirebilir |
-| POS hizmet bedeli | Yalnız HepsiBurada ve Web Sitesi'nde, `has_pos_service_fee` açıksa |
+| POS hizmet bedeli | **Yalnız HepsiBurada'da vardır.** Kod `has_pos_service_fee` açık olan HepsiBurada ve Web Sitesi'ne izin verir, ama Web Sitesi'nde bu anahtar kapalıdır ve **açılmamalıdır** — sanal POS kesintisi orada zaten komisyon olarak giriliyor, ikisi birden çift kesinti olur |
 
 **Bugünkü değerler** (sistem yöneticisi ayarları — değişebilir, kod bunları
 veritabanından okur):
@@ -322,7 +322,62 @@ veritabanından okur):
 |---|---|---|---|
 | Stopaj | %1 | %1 | **yok** |
 | Hizmet bedeli | 13,18 ₺ sipariş başına sabit | 12,60 ₺ sabit | **yok** |
+| POS hizmet bedeli | **yok** | **%0,0096** | **yok** |
 | Kurumlar vergisi | %25 | %25 | %25 |
+| Barem | açık | açık | kapalı (manuel tarife) |
+
+### Platform bazında maliyet kalemleri
+
+Satış fiyatından sırayla düşülenler. **Sırası önemli değildir** (hepsi
+toplanıp düşülür) ama hangi kalemin hangi platformda olduğu önemlidir.
+
+**Trendyol**
+
+1. Ürün maliyeti — *geçerli maliyet kuralı* (baz maliyet ≥ maliyet ise baz)
+2. Baskı maliyeti + ek maliyet
+3. Kargo — **barem** varsa barem tarifesi, yoksa desi tarifesi
+4. Paketleme maliyeti
+5. Komisyon — oran sisteme **KDV dahil** girilir
+6. Stopaj %1 — KDV'siz satış üzerinden, **üzerine KDV eklenmez**
+7. Hizmet bedeli — 13,18 ₺ sipariş başına (Bugün Kargoda açıksa indirimlisi)
+8. Net KDV
+9. Kurumlar vergisi %25 — **yalnız kâr pozitifse**
+
+> **POS hizmet bedeli yalnızca HepsiBurada'ya aittir.** Trendyol'da yoktur —
+> platform ayarında açılsa bile kod uygulamaz.
+
+**HepsiBurada**
+
+Trendyol'un aynısı, **iki fark** ile:
+
+- **Komisyon KDV hariç gelir** → sisteme/hesaba **×1,20** yapılarak girer
+  (HB "%17" diyorsa gerçek oran %20,4). Excel'den okunanlar için de geçerli.
+- **POS hizmet bedeli vardır — bu kalem yalnızca HepsiBurada'da bulunur.**
+  Satış fiyatının **%0,0096**'sı. Hizmet bedelinden **ayrı** bir kalemdir;
+  ikisi birden düşülür, karıştırılmamalıdır.
+
+Hizmet bedeli 12,60 ₺ sipariş başına.
+
+**Web Sitesi**
+
+1. Ürün maliyeti — *geçerli maliyet kuralı*
+2. Baskı maliyeti + ek maliyet
+3. Kargo — **barem yok**, tarifeler manuel girilir
+4. Paketleme maliyeti
+5. "Komisyon" — aslında **sanal POS komisyonudur**; kategori komisyonu
+   olarak girilir, KDV dahil
+6. Net KDV
+7. Kurumlar vergisi %25 — yalnız kâr pozitifse
+
+> Web Sitesi'nde **stopaj yoktur** (kodda ayrıca zorlanır), **hizmet bedeli
+> yoktur** ve **POS hizmet bedeli de yoktur**. Sanal POS kesintisi zaten
+> komisyon olarak giriliyor; ayrıca POS hizmet bedeli açmak çift kesinti olur.
+> Kod bu anahtarı Web Sitesi için teknik olarak destekler ama **açılmamalıdır**.
+
+> Kâr dökümü penceresinde bu kalemlerin hepsi tek tek görünür. **Geçmiş
+> hata:** POS hizmet bedeli satırı, promosyon sayfaları pencereye bu değeri
+> hiç göndermediği için görünmüyordu — kârdan düşülüyordu ama dökümde yoktu.
+> 2026-09-01'de 8 sayfada düzeltildi.
 
 ### Bugün Kargoda
 

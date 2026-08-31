@@ -216,7 +216,7 @@ export default function HBOwnCampaign() {
     setDetailModal({
       open: true, product,
       priceData: { sale_price: price, net_profit: calc.profit, profit_rate: calc.profitRate, shipping_cost: calc.breakdown?.shippingCost || 0, packaging_cost: calc.breakdown?.packagingCost || 0, commission_amount: calc.breakdown?.commissionAmount || 0, withholding_amount: calc.breakdown?.withholdingAmount || 0, service_fee: calc.breakdown?.serviceFee || 0, net_vat: calc.breakdown?.netVat || 0, barem_used: calc.baremUsed || 'none' },
-      calculationDetails: { productCost: gecerliMaliyet(product), productVatRate: product?.vat_rate || 20, commissionRate, packagingCost: calc.breakdown?.packagingCost || 0, printingCost: product?.printing_cost || 0, extraCost: product?.extra_cost || 0, shippingCost: calc.breakdown?.shippingCost || 0 },
+      calculationDetails: { productCost: gecerliMaliyet(product), productVatRate: product?.vat_rate || 20, commissionRate, packagingCost: calc.breakdown?.packagingCost || 0, printingCost: product?.printing_cost || 0, extraCost: product?.extra_cost || 0, shippingCost: calc.breakdown?.shippingCost || 0, posServiceFee: calc.breakdown?.posServiceFee || 0 },
     });
   };
 
