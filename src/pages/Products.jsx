@@ -79,10 +79,15 @@ export default function Products() {
 
   const [deletedCategory, setDeletedCategory] = React.useState(null);
   const { startTask, updateTask, finishTask } = useBackgroundTask();
+
+  const location = useLocation();
+  // DIKKAT: location'dan SONRA gelmeli. Once ustunde duruyordu ve
+  // `isImporting && location...` kisa devre yaptigi icin sayfa acilisinda
+  // patlamiyordu — ama Excel yuklemesi baslar baslamaz TDZ hatasi verip
+  // sayfayi cokertiyordu.
   const ilerlemePenceresi = useIlerlemePenceresi(
     importProgress.isImporting && location.pathname === '/Products'
   );
-  const location = useLocation();
 
   React.useEffect(() => {
     db.auth.me().then(user => setUserEmail(user.email)).catch(() => {});

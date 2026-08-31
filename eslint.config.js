@@ -43,6 +43,20 @@ export default [
       // Fiyatlar sayfasi eksik AlertDialogCancel importu yuzunden beyaz
       // kaldi ve lint bunu yakalamadi. Bu kural JSX tarafini kapatiyor.
       "react/jsx-no-undef": "error",
+      // TANIMLANMADAN ONCE KULLANMA. no-undef bunu GORMEZ: degisken vardir,
+      // yalnizca henuz baslatilmamistir (temporal dead zone). Bu projede uc
+      // kez sayfa cokertti — Pazaryeri Urunleri'nde iki kez, Urunler'de
+      // Excel yuklemesi sirasinda bir kez. Sonuncusu kisa devre yuzunden
+      // sayfa acilisinda gorunmuyor, yalnizca yukleme baslayinca patliyordu.
+      // UYARI seviyesinde: mevcut 40 kullanimin cogu zararsiz (JSX icinde ya
+      // da tiklamayla calisan fonksiyonlarda; o an tanimlar tamamlanmis
+      // oluyor). ESLint ikisini ayirt edemiyor, hepsini hata yapmak 25
+      // dosyayi kazancsiz yere degistirmek olurdu.
+      // Gercekten tehlikeli desen: bir const'un BASLATICISINDA baska bir
+      // const'u kullanmak. Urunler sayfasinda Excel yuklemesini boyle
+      // cokerttim; kisa devre yuzunden sayfa acilisinda gorunmuyordu.
+      // Asil yakalayan uctan uca bot oldu (CSV adimi).
+      "no-use-before-define": ["warn", { functions: false, classes: false, variables: true }],
       "no-unused-vars": "off",
       "react/jsx-uses-vars": "error",
       "react/jsx-uses-react": "error",
