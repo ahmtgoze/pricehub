@@ -13,6 +13,8 @@ import { toast } from 'sonner';
 import * as XLSX from 'xlsx';
 import PriceDetailModal from '@/components/modals/PriceDetailModal';
 import { baremSec, baremTarifesiSec } from '@/lib/baremKurali';
+import { kampanyaSayfasiniKur } from '@/lib/hbSepetDisaAktarim';
+import { kdvDahilOran, komisyonEtiketi } from '@/lib/hbKomisyon';
 
 const Product = db.entities.Product;
 const Platform = db.entities.Platform;
@@ -36,10 +38,11 @@ const parseNum = (v) => {
   const n = parseFloat(String(v ?? '').replace(/\./g, '').replace(',', '.'));
   return isNaN(n) ? 0 : n;
 };
-// HB komisyonları KDV hariç gelir; kasadan çıkan gerçek oran = ham × 1,20
-// HepsiBurada komisyonlari sisteme zaten KDV DAHIL giriliyor;
-// etikette bir daha KDV eklemek yaniltiyordu.
-const commLabel = (rate) => `%${rate || 0}`;
+// Oranlar HB'nin Excel'inden HAM (KDV haric) geliyor ve okundugu anda
+// kdvDahilOran ile cevriliyor; buradaki deger artik KDV dahildir.
+// Etikette HB'nin panelde gosterdigi ham oran da parantezde yazilir.
+// Ayrinti ve gecmis: src/lib/hbKomisyon.js
+const commLabel = komisyonEtiketi;
 
 export default function HBBasketCampaigns() {
   const [userEmail, setUserEmail] = useState(null);
@@ -211,8 +214,8 @@ export default function HBBasketCampaigns() {
             stock: parseNum(row['Stok']),
             max_price: parseNum(row['Girebileceğiniz max. fiyat']),
             current_price: parseNum(row['Mevcut satış fiyatı']),
-            current_commission: parsePercent(row['Güncel Komisyon Oranı']),
-            discounted_commission: parsePercent(row['İndirimli Komisyon Oranı']),
+            current_commission: kdvDahilOran(parsePercent(row['Güncel Komisyon Oranı'])),
+            discounted_commission: kdvDahilOran(parsePercent(row['İndirimli Komisyon Oranı'])),
             campaign_price: 0,
             selected: false,
           };
@@ -289,31 +292,35 @@ export default function HBBasketCampaigns() {
     });
   };
 
+  // Disa aktarim: dosyada YALNIZCA kampanyaya girecek urunler kalir,
+  // secilmeyenlerin satiri silinir. Kural ve gerekce icin bkz.
+  // src/lib/hbSepetDisaAktarim.js
   const handleExport = () => {
     if (uploadedData.length === 0 || !originalExcelData) { toast.error('Yüklenmiş Excel bulunamadı'); return; }
     const { workbook, sheetName } = originalExcelData;
-    const worksheet = workbook.Sheets[sheetName];
-    const range = XLSX.utils.decode_range(worksheet['!ref']);
-    const headerCol = {};
-    let fillCol;
-    for (let C = range.s.c; C <= range.e.c; C++) {
-      const h = norm(worksheet[XLSX.utils.encode_cell({ r: range.s.r, c: C })]?.v);
-      if (h) headerCol[h] = C;
-      if (h.startsWith('Kampanyanın uygulanacağı fiyat')) fillCol = C;
+
+    const aoa = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { header: 1, defval: '' });
+    const { satirlar, yazilan, silinen, hata } = kampanyaSayfasiniKur(aoa, uploadedData);
+    if (hata) { toast.error(hata); return; }
+    if (yazilan === 0) { toast.error('Kampanyaya girecek ürün seçilmedi; dosya oluşturulmadı'); return; }
+
+    // Yeni dosya kurulur. Kaynak calisma kitabi DEGISTIRILMEZ: kullanici
+    // secimini duzeltip tekrar indirebilmeli, ikinci indirme birincinin
+    // uzerine binmemeli.
+    const yeniSayfa = XLSX.utils.aoa_to_sheet(satirlar);
+    const yeniKitap = XLSX.utils.book_new();
+    for (const ad of workbook.SheetNames) {
+      // HB'nin "Açıklamalar" sayfasi oldugu gibi tasinir; panel dosyayi
+      // kendi sablonuna gore okuyor, sayfa cikarmak riskli.
+      XLSX.utils.book_append_sheet(yeniKitap, ad === sheetName ? yeniSayfa : workbook.Sheets[ad], ad);
     }
-    const skuCol = headerCol['Satıcı stok kodu'] ?? headerCol['Satıcı Stok Kodu'];
-    if (fillCol === undefined) { toast.error('"Kampanyanın uygulanacağı fiyat" sütunu bulunamadı'); return; }
-    let written = 0;
-    for (let R = range.s.r + 1; R <= range.e.r; R++) {
-      const sku = String(worksheet[XLSX.utils.encode_cell({ r: R, c: skuCol })]?.v ?? '').trim();
-      const item = uploadedData.find((i) => i.seller_stock_code === sku);
-      if (item && item.selected && item.campaign_price > 0) {
-        worksheet[XLSX.utils.encode_cell({ r: R, c: fillCol })] = { v: item.campaign_price, t: 'n' };
-        written++;
-      }
-    }
-    XLSX.writeFile(workbook, `hepsiburada-sepet-kampanyalari.xlsx`);
-    toast.success(`${written} ürün için kampanya fiyatı yazıldı, Excel indirildi`);
+
+    XLSX.writeFile(yeniKitap, 'hepsiburada-sepet-kampanyalari.xlsx');
+    toast.success(
+      `${yazilan} ürün kampanyaya alındı` +
+      (silinen > 0 ? ` · ${silinen} ürün dosyadan çıkarıldı` : '') +
+      ' · Excel indirildi'
+    );
   };
 
   const allCategories = [...new Set(uploadedData.map((it) => getMatchedProduct(it)?.category_name || it.category).filter(Boolean))].sort();
@@ -429,9 +436,9 @@ export default function HBBasketCampaigns() {
                         <th className="p-3 text-center font-semibold w-10">Seç</th>
                         <th className="p-3 text-left font-semibold min-w-[200px]">Ürün</th>
                         <th className="p-3 text-center font-semibold">Stok</th>
-                        <th className="p-3 text-center font-semibold min-w-[160px]">Mevcut (komisyon yok indirimi)</th>
-                        <th className="p-3 text-center font-semibold min-w-[120px]">Max Fiyat</th>
-                        <th className="p-3 text-center font-semibold min-w-[210px]">Kampanya Fiyatı (indirimli komisyon)</th>
+                        <th className="p-3 text-center font-semibold min-w-[160px]">Mevcut Satış Fiyatı</th>
+                        <th className="p-3 text-center font-semibold min-w-[150px]">Kampanyaya Dahil Edilebilecek Maksimum Fiyat</th>
+                        <th className="p-3 text-center font-semibold min-w-[210px]">Kampanyalı Fiyat</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -469,7 +476,7 @@ export default function HBBasketCampaigns() {
                                 {item.campaign_price > 0 && (
                                   <div className={`text-xs font-semibold ${campCalc.profit > 0 ? 'text-emerald-600' : 'text-rose-600'}`}>{campCalc.profit > 0 ? '+' : ''}₺{campCalc.profit.toFixed(2)} (%{campCalc.profitRate.toFixed(1)})</div>
                                 )}
-                                {overMax && <Badge variant="outline" className="mt-1 text-[10px] text-rose-600 border-rose-300">Max fiyatı aşıyor!</Badge>}
+                                {overMax && <Badge variant="outline" className="mt-1 text-[10px] text-rose-600 border-rose-300">Maksimum fiyatı aşıyor!</Badge>}
                               </div>
                             </td>
                           </tr>
