@@ -430,6 +430,37 @@ Pazaryerinden yüklenen ürünler sistemdeki **master ürünlerle eşleştirilir
 Yani akış şu: master üründe fiyat hesaplanır → pazaryeri ürünü ona bağlıdır →
 Düzenlenen Fiyatlar o fiyatı gösterir → Excel ile platforma yüklenir.
 
+## 7c. Sepet Kampanyaları — dışa aktarım kuralı
+
+HepsiBurada "Sepet Kampanyaları" Excel'i dışa aktarılırken:
+
+> **Dosyada yalnızca kampanyaya girecek ürünler kalır. Kampanyaya dahil
+> edilmeyen ürünlerin satırı dosyadan SİLİNİR.**
+
+Fiyat hücresini boş bırakıp satırı dosyada tutmak yeterli değildir — satır
+dosyada durduğu sürece o ürün panele gönderilmiş olur. Kampanya dışında
+kalmanın tek net ifadesi satırın silinmesidir.
+
+Seçili olsa bile **kampanya fiyatı 0 veya geçersiz** olan ürün de silinir;
+fiyatsız ürün kampanyaya giremez.
+
+Hiç ürün seçilmemişse **dosya üretilmez**, uyarı verilir.
+
+### Şablona dokunulmaz
+
+- Sütun **eklenmez**, sütun **sırası değişmez**, başlık satırı **aynen** korunur
+- HB'nin dosyadaki "Açıklamalar" sayfası olduğu gibi taşınır
+- Panel dosyayı kendi şablonuna göre okur; şablon dışına çıkan dosya reddedilir
+
+### Tarih bilgisi Excel'de YOKTUR
+
+HB'nin sepet kampanyası Excel'inde kampanya başlangıç/bitiş tarihi **yer almaz**
+(dosyanın kendi "Açıklamalar" sayfası da sütunları tek tek sayar, tarih geçmez).
+Kampanya dönemi HepsiBurada panelinde, kampanyaya katılırken belirlenir. Bu
+yüzden dosyaya tarih sütunu **eklenmemelidir**.
+
+Kaynak: `src/lib/hbSepetDisaAktarim.js` (testleri: `tests/hbSepetDisaAktarim.test.mjs`)
+
 ## 8. Excel içe/dışa aktarma
 
 - Sütunlar **başlık adına göre** eşleştirilir; sıra önemli değildir
