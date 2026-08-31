@@ -501,6 +501,36 @@ düşer ve hangi üyenin ne kadar saptığı yazılır.
 Referanslı üründe **baz maliyet** ürün maliyetinden yüksekse hesaplamada baz
 maliyet kullanılır.
 
+## 11c. Karma paketler (bundle)
+
+Bazı ürünler **karma pakettir**: aynı ölçü ve tipteki poşetin birden fazla
+renginden toplanıp tek ürün olarak satılır. Örnek: 18x25 cepsiz renkli
+kargo poşetinden her renkten 100'er adet → 300'lük tek paket.
+
+**Kural:**
+
+```
+karma paket maliyeti = birim maliyet × paket adedi
+```
+
+Buradaki birim maliyet, **tekli ürünün birim maliyetiyle aynıdır**. Karma
+paket olduğu için ayrı/farklı bir birim maliyet oluşmaz.
+
+**Sistemde nasıl kuruludur:** karma paketler ayrı bir mekanizmayla değil,
+ilgili tekli ürünün **adet zincirine üye yapılarak** bağlanmıştır
+(`chain_group_id`). Zincir zaten "birim maliyet eşittir" kuralını
+işlettiği için karma paketin maliyeti kendiliğinden doğru hesaplanır ve
+tekli üründe maliyet değişince karma paket de otomatik güncellenir.
+
+**Hangi renge bağlanır:** **Lila-Pembe**. Sebep: bu renk neredeyse her
+zaman stokta olduğu için zincirin kökü olarak en güvenilir olanıdır.
+Renk seçimi maliyeti etkilemez — zincirdeki tüm renklerin birim maliyeti
+zaten eşittir.
+
+> Karma paketin adedi (`unit_quantity`) **paketteki toplam adet** olmalıdır,
+> renk sayısı değil. Yanlış adet girilirse zincir birim maliyeti bozulur ve
+> "Zincir Tutarsızlığı" kaydı düşer.
+
 ## 12. Bilinen sınırlar
 
 - Kargo tarifesi "dosya/evrak" gönderisi kavramını içermez.
