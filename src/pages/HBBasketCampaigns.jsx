@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { db } from '@/api/db';
-import { useQuery } from '@tanstack/react-query';
-import { Upload, Download, Filter, AlertCircle, Info, Trash2, Sparkles } from 'lucide-react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { Upload, Download, Filter, AlertCircle, Info, Trash2, Sparkles, Calendar as CalendarIcon, Save } from 'lucide-react';
 import { calculatePriceBreakdown, findDesiShippingRate } from '@/components/PriceCalculationEngine';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,18 +9,24 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { format } from 'date-fns';
+import { tr } from 'date-fns/locale';
 import { toast } from 'sonner';
 import * as XLSX from 'xlsx';
 import PriceDetailModal from '@/components/modals/PriceDetailModal';
 import { baremSec, baremTarifesiSec } from '@/lib/baremKurali';
 import { kampanyaSayfasiniKur } from '@/lib/hbSepetDisaAktarim';
 import { kdvDahilOran, komisyonEtiketi } from '@/lib/hbKomisyon';
+import { havuzdaCalistir, tekrarDene } from '@/lib/istekHavuzu';
 
 const Product = db.entities.Product;
 const Platform = db.entities.Platform;
 const Commission = db.entities.Commission;
 const ShippingRate = db.entities.ShippingRate;
 const MarketplaceProduct = db.entities.MarketplaceProduct;
+const BasketEntity = db.entities.HBBasketCampaign;
 
 const norm = (s) => String(s ?? '').replace(/\s+/g, ' ').trim();
 const normalizeRow = (row) => {
@@ -45,10 +51,16 @@ const parseNum = (v) => {
 const commLabel = komisyonEtiketi;
 
 export default function HBBasketCampaigns() {
+  const queryClient = useQueryClient();
   const [userEmail, setUserEmail] = useState(null);
   const [selectedPlatform, setSelectedPlatform] = useState('');
   const [uploadedData, setUploadedData] = useState([]);
   const [originalExcelData, setOriginalExcelData] = useState(null);
+  // Kampanya donemi. HB kampanyalari belirli tarih araliginda gecerlidir;
+  // secimler bu aralik anahtariyla saklanir (Plus Tarifesi ile ayni desen).
+  const [dateRangeValue, setDateRangeValue] = useState({ from: undefined, to: undefined });
+  const [calendarOpen, setCalendarOpen] = useState(false);
+  const [kaydediliyor, setKaydediliyor] = useState(false);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCategory, setFilterCategory] = useState('');
@@ -68,6 +80,48 @@ export default function HBBasketCampaigns() {
   const { data: packages = [] } = useQuery({ queryKey: ['packages'], queryFn: () => db.entities.Package.list(), enabled: !!userEmail });
   const { data: settings = [] } = useQuery({ queryKey: ['settings', userEmail], queryFn: () => db.entities.Settings.filter({ created_by: userEmail }), enabled: !!userEmail });
   const { data: marketplaceProducts = [] } = useQuery({ queryKey: ['marketplaceProducts', userEmail], queryFn: () => MarketplaceProduct.filter({ created_by: userEmail }), enabled: !!userEmail });
+  const { data: kayitliKampanyalar = [] } = useQuery({
+    queryKey: ['hbBasketCampaigns', userEmail],
+    queryFn: () => BasketEntity.filter({ created_by: userEmail }),
+    enabled: !!userEmail,
+  });
+
+  // Secili donemin 'yyyy-MM-dd' metinleri. Aralik tamamlanmadan null.
+  const donem = React.useMemo(() => {
+    if (!dateRangeValue?.from || !dateRangeValue?.to) return null;
+    return {
+      baslangic: format(dateRangeValue.from, 'yyyy-MM-dd'),
+      bitis: format(dateRangeValue.to, 'yyyy-MM-dd'),
+    };
+  }, [dateRangeValue?.from, dateRangeValue?.to]);
+
+  const donemHazir = !!(selectedPlatform && donem);
+
+  // Donem secilince o donemin kayitli calismasi geri yuklenir; Excel'i
+  // yeniden yuklemeye gerek kalmaz.
+  React.useEffect(() => {
+    if (!donemHazir) return;
+    const donemKayitlari = kayitliKampanyalar.filter(
+      (r) => r.platform_account === selectedPlatform &&
+             r.start_date === donem.baslangic && r.end_date === donem.bitis
+    );
+    if (donemKayitlari.length === 0) return;
+
+    setUploadedData(donemKayitlari.map((r) => ({ ...r, selected: !!r.selected })));
+
+    // Disa aktarim HB'nin sablonuna yazdigi icin kaynak dosya da gerekli.
+    const excelli = donemKayitlari.find((r) => r.excel_file_url);
+    if (!excelli) return;
+    fetch(excelli.excel_file_url)
+      .then((r) => r.arrayBuffer())
+      .then((ab) => {
+        const wb = XLSX.read(new Uint8Array(ab), { type: 'array' });
+        const sn = wb.SheetNames.find((n) => norm(n) === 'Listelerim') || wb.SheetNames[0];
+        setOriginalExcelData({ workbook: wb, sheetName: sn });
+      })
+      .catch((e) => console.error('Excel geri yuklenemedi:', e));
+  }, [kayitliKampanyalar, selectedPlatform, donem?.baslangic, donem?.bitis]);
+
 
   const uniquePlatforms = platforms.filter((p, idx, arr) => arr.findIndex((x) => x.id === p.id) === idx);
   const hbPlatforms = uniquePlatforms
@@ -187,8 +241,9 @@ export default function HBBasketCampaigns() {
     const file = e.target.files[0];
     if (!file) return;
     if (!selectedPlatform) { toast.error('Lütfen önce platform seçin'); return; }
+    if (!donem) { toast.error('Lütfen kampanyanın tarih aralığını seçin'); return; }
     const reader = new FileReader();
-    reader.onload = (event) => {
+    reader.onload = async (event) => {
       try {
         const workbook = XLSX.read(event.target.result, { type: 'binary' });
         let sheetName = workbook.SheetNames.find((n) => norm(n) === 'Listelerim');
@@ -201,6 +256,21 @@ export default function HBBasketCampaigns() {
         const worksheet = workbook.Sheets[sheetName];
         const jsonData = XLSX.utils.sheet_to_json(worksheet);
         setOriginalExcelData({ workbook, sheetName });
+
+        // Kaynak dosya depoya alinir. Donem sonra tekrar acildiginda disa
+        // aktarim HB'nin KENDI sablonuna yazmak zorunda; satirlardan yeniden
+        // kurmak sablonu birebir korumaz.
+        let excelUrl = null;
+        try {
+          const tampon = XLSX.write(workbook, { type: 'array', bookType: 'xlsx', bookSST: true });
+          const blob = new Blob([new Uint8Array(tampon)], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+          const dosya = new File([blob], file.name || 'sepet-kampanyasi.xlsx', { type: blob.type });
+          excelUrl = (await db.integrations.Core.UploadFile({ file: dosya })).file_url;
+        } catch (yuklemeHatasi) {
+          // Depoya yazilamazsa sayfa yine calisir; yalnizca donem geri
+          // yuklendiginde Excel'i tekrar secmek gerekir.
+          console.error('Excel depoya yuklenemedi:', yuklemeHatasi);
+        }
 
         const parsed = jsonData.map((raw) => {
           const row = normalizeRow(raw);
@@ -218,6 +288,10 @@ export default function HBBasketCampaigns() {
             discounted_commission: kdvDahilOran(parsePercent(row['İndirimli Komisyon Oranı'])),
             campaign_price: 0,
             selected: false,
+            platform_account: selectedPlatform,
+            start_date: donem.baslangic,
+            end_date: donem.bitis,
+            excel_file_url: excelUrl,
           };
           const matched = getMatchedProduct(item);
           item.matched_product_id = matched?.id || null;
@@ -295,6 +369,58 @@ export default function HBBasketCampaigns() {
   // Disa aktarim: dosyada YALNIZCA kampanyaya girecek urunler kalir,
   // secilmeyenlerin satiri silinir. Kural ve gerekce icin bkz.
   // src/lib/hbSepetDisaAktarim.js
+  // Secimleri donem anahtariyla kaydeder. Once o donemin eski kayitlari
+  // silinir; boylece ikinci kayit kopya birakmaz.
+  const handleSaveSelections = async () => {
+    if (!donemHazir) { toast.error('Platform ve tarih aralığı seçin'); return; }
+    if (uploadedData.length === 0) { toast.error('Kaydedilecek liste yok'); return; }
+
+    setKaydediliyor(true);
+    try {
+      const eskiler = kayitliKampanyalar.filter(
+        (r) => r.platform_account === selectedPlatform &&
+               r.start_date === donem.baslangic && r.end_date === donem.bitis
+      );
+      await havuzdaCalistir(eskiler, 16, (r) => tekrarDene(() => BasketEntity.delete(r.id)));
+
+      const yazilacak = uploadedData.map((it) => ({
+        platform_account: selectedPlatform,
+        start_date: donem.baslangic,
+        end_date: donem.bitis,
+        product_name: it.product_name || '',
+        brand: it.brand || '',
+        seller_stock_code: it.seller_stock_code || '',
+        hb_sku: it.hb_sku || '',
+        barcode: it.barcode || '',
+        category: it.category || '',
+        stock: it.stock || 0,
+        max_price: it.max_price || 0,
+        current_price: it.current_price || 0,
+        current_commission: it.current_commission || 0,
+        discounted_commission: it.discounted_commission || 0,
+        campaign_price: it.campaign_price || 0,
+        selected: !!it.selected,
+        matched_product_id: it.matched_product_id || null,
+        excel_file_url: it.excel_file_url || null,
+      }));
+
+      const { basarisiz } = await havuzdaCalistir(
+        yazilacak, 16, (kayit) => tekrarDene(() => BasketEntity.create(kayit))
+      );
+      queryClient.invalidateQueries({ queryKey: ['hbBasketCampaigns'] });
+
+      if (basarisiz.length > 0) {
+        toast.error(`${yazilacak.length - basarisiz.length} kayıt yazıldı, ${basarisiz.length} tanesi başarısız`);
+      } else {
+        toast.success(`${yazilacak.length} ürün ${donem.baslangic} – ${donem.bitis} dönemine kaydedildi`);
+      }
+    } catch (hata) {
+      toast.error('Kaydetme sırasında hata: ' + (hata?.message || hata));
+    } finally {
+      setKaydediliyor(false);
+    }
+  };
+
   const handleExport = () => {
     if (uploadedData.length === 0 || !originalExcelData) { toast.error('Yüklenmiş Excel bulunamadı'); return; }
     const { workbook, sheetName } = originalExcelData;
@@ -367,7 +493,7 @@ export default function HBBasketCampaigns() {
         )}
 
         <Card className="mb-6">
-          <CardHeader><CardTitle>Platform ve Dosya</CardTitle></CardHeader>
+          <CardHeader><CardTitle>Platform, Dönem ve Dosya</CardTitle></CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
@@ -381,9 +507,23 @@ export default function HBBasketCampaigns() {
                   </Select>
                 )}
               </div>
+              <div className="space-y-2">
+                <Label>Kampanya Tarih Aralığı *</Label>
+                <Popover open={calendarOpen} onOpenChange={(open) => { if (open) setDateRangeValue({ from: undefined, to: undefined }); setCalendarOpen(open); }}>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className="w-full justify-start text-left font-normal">
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {dateRangeValue?.from ? (dateRangeValue.to ? (<>{format(dateRangeValue.from, 'd MMM yyyy', { locale: tr })} - {format(dateRangeValue.to, 'd MMM yyyy', { locale: tr })}</>) : format(dateRangeValue.from, 'd MMM yyyy', { locale: tr })) : <span>Başlangıç ve bitiş tarihi seçin</span>}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar mode="range" selected={dateRangeValue} onSelect={(range) => { setDateRangeValue(range || { from: undefined, to: undefined }); if (range?.from && range?.to && range.from.getTime() !== range.to.getTime()) setCalendarOpen(false); }} defaultMonth={new Date()} numberOfMonths={2} locale={tr} classNames={{ day_today: "bg-primary font-bold text-primary-foreground" }} />
+                  </PopoverContent>
+                </Popover>
+              </div>
             </div>
             <div className="flex flex-wrap gap-3">
-              <Button onClick={() => document.getElementById('hbBasketUpload').click()} disabled={!selectedPlatform} className="bg-primary hover:bg-black dark:hover:bg-white/90">
+              <Button onClick={() => document.getElementById('hbBasketUpload').click()} disabled={!donemHazir} className="bg-primary hover:bg-black dark:hover:bg-white/90">
                 <Upload className="mr-2 h-4 w-4" />{uploadedData.length > 0 ? 'Yeni Excel Yükle' : 'Excel Yükle'}
               </Button>
               <input id="hbBasketUpload" type="file" accept=".xlsx,.xls" onChange={handleFileUpload} className="hidden" />
@@ -392,6 +532,7 @@ export default function HBBasketCampaigns() {
                   <Button onClick={handleSmartAutoSelect} className="bg-primary hover:bg-black dark:hover:bg-white/90 text-primary-foreground gap-2"><Sparkles className="h-4 w-4" />Max Fiyatla Seç</Button>
                   <Button variant="outline" onClick={() => { setUploadedData([]); setOriginalExcelData(null); toast.success('Liste temizlendi'); }} className="text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:bg-rose-950/30"><Trash2 className="mr-2 h-4 w-4" />Temizle</Button>
                   <Button variant="outline" onClick={() => setUploadedData(uploadedData.map((i) => ({ ...i, selected: false })))}>Seçimleri Kaldır</Button>
+                  <Button variant="outline" onClick={handleSaveSelections} disabled={kaydediliyor}><Save className="mr-2 h-4 w-4" />{kaydediliyor ? 'Kaydediliyor...' : 'Seçimleri Kaydet'}</Button>
                   <Button variant="outline" onClick={handleExport}><Download className="mr-2 h-4 w-4" />Excel İndir ({selectedCount})</Button>
                 </>
               )}

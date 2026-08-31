@@ -472,6 +472,24 @@ fiyatsız ürün kampanyaya giremez.
 
 Hiç ürün seçilmemişse **dosya üretilmez**, uyarı verilir.
 
+### Kampanya dönemi (tarih aralığı)
+
+HepsiBurada sepet kampanyaları **belirli bir tarih aralığında** geçerlidir
+(örn. 10.08.2026 – 30.09.2026). Sayfada bu aralık **zorunludur**: platform ve
+tarih aralığı seçilmeden Excel yüklenemez.
+
+Seçimler `platform + başlangıç + bitiş` anahtarıyla saklanır. Aynı aralık
+tekrar seçildiğinde önceki çalışma **geri yüklenir** — Excel'i yeniden
+yüklemeye gerek kalmaz. Yüklenen dosya da depoya alınır, çünkü dışa aktarım
+HB'nin kendi şablonuna yazmak zorundadır; satırlardan yeniden kurmak şablonu
+birebir korumaz.
+
+Aynı döneme ikinci kez kaydedilirse önceki kayıtlar silinir, kopya bırakılmaz.
+
+> Bu, **Plus Tarifesi** sayfasındaki desenin aynısıdır.
+
+Tablo: `hb_basket_campaigns` (RLS ile `created_by` bazlı izoleli — kural 1)
+
 ### Şablona dokunulmaz
 
 - Sütun **eklenmez**, sütun **sırası değişmez**, başlık satırı **aynen** korunur
