@@ -775,29 +775,28 @@ export default function HBBasketCampaigns() {
                             <td className="p-3 text-center font-semibold text-muted-foreground">₺{(item.max_price || 0).toFixed(2)}</td>
                             <td className="p-3">
                               <div className={`border rounded-lg p-2 ${item.selected ? 'border-primary bg-card' : 'border-border'}`}>
-                                <div className="flex items-center gap-1 mb-1">
-                                  <Input type="number" step="0.01" value={item.campaign_price || ''} onChange={(e) => handleCampaignPriceChange(item, e.target.value)} placeholder="Fiyat" className="h-8 text-xs" />
-                                  <Button size="sm" variant="ghost" className="h-5 w-5 p-0 shrink-0" onClick={() => openDetailModal(odenecekFiyat(item.campaign_price), item.discounted_commission, item)}><Info className="h-3 w-3" /></Button>
-                                </div>
-                                <div className="text-[11px] text-muted-foreground">Kom: {commLabel(item.discounted_commission)}</div>
-                                {item.campaign_price > 0 && (
-                                  <div className={`text-xs font-semibold ${campCalc.profit > 0 ? 'text-emerald-600' : 'text-rose-600'}`}>{campCalc.profit > 0 ? '+' : ''}₺{campCalc.profit.toFixed(2)} (%{campCalc.profitRate.toFixed(1)})</div>
-                                )}
+                                <Input type="number" step="0.01" value={item.campaign_price || ''} onChange={(e) => handleCampaignPriceChange(item, e.target.value)} placeholder="Fiyat" className="h-8 text-xs" />
                                 {overMax && <Badge variant="outline" className="mt-1 text-[10px] text-rose-600 border-rose-300">Maksimum fiyatı aşıyor!</Badge>}
                               </div>
                             </td>
                             <td className="p-3 text-center">
                               {item.campaign_price > 0 ? (
                                 <>
-                                  <div className="font-semibold text-foreground">₺{odenecekFiyat(item.campaign_price).toFixed(2)}</div>
-                                  {kampanyaIndirimi?.tur ? (
-                                    <div className="text-[11px] text-muted-foreground">{indirimEtiketi(kampanyaIndirimi)}</div>
-                                  ) : (
-                                    <div className="text-[11px] text-muted-foreground">indirim yok</div>
-                                  )}
+                                  <div className="flex items-center justify-center gap-1">
+                                    <span className="font-semibold text-foreground">₺{odenecekFiyat(item.campaign_price).toFixed(2)}</span>
+                                    <Button size="sm" variant="ghost" className="h-5 w-5 p-0 shrink-0" onClick={() => openDetailModal(odenecekFiyat(item.campaign_price), item.discounted_commission, item)}><Info className="h-3 w-3" /></Button>
+                                  </div>
+                                  <div className="text-[11px] text-muted-foreground">
+                                    {kampanyaIndirimi?.tur ? indirimEtiketi(kampanyaIndirimi) : 'indirim yok'}
+                                  </div>
+                                  <div className="text-[11px] text-muted-foreground">Kom: {commLabel(item.discounted_commission)}</div>
+                                  <div className={`text-xs font-semibold ${campCalc.profit > 0 ? 'text-emerald-600' : 'text-rose-600'}`}>{campCalc.profit > 0 ? '+' : ''}₺{campCalc.profit.toFixed(2)} (%{campCalc.profitRate.toFixed(1)})</div>
                                 </>
                               ) : (
-                                <span className="text-muted-foreground">-</span>
+                                <div className="text-muted-foreground">
+                                  <div>-</div>
+                                  <div className="text-[11px]">Kom: {commLabel(item.discounted_commission)}</div>
+                                </div>
                               )}
                             </td>
                           </tr>
