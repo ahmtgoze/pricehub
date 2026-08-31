@@ -688,12 +688,11 @@ export default function HBBasketCampaigns() {
               </div>
               <div className="space-y-2">
                 <Label>Kampanya Tarih Aralığı *</Label>
-                {/* Takvim acilinca secili aralik SILINMEZ. Onceden acilista
-                    sifirlaniyordu (Plus Tarifesi'nden kopyalanmis davranis):
-                    donem hatirlanmis olsa bile takvime dokunmak yetiyor,
-                    secim ucuyor ve yukleme butonu kapaniyordu. Yeni bir
-                    aralik secmek isteyen zaten uzerine tikliyor. */}
-                <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
+                {/* Takvimi ACMAK, yeni bir donem baslatmak demektir: secili
+                    aralik sifirlanir. Kullanici karari — "yeni tarih, yeni
+                    excel". Mevcut donemle yeni dosya yuklemek isteyen zaten
+                    takvime dokunmuyor; donem localStorage'dan hatirlaniyor. */}
+                <Popover open={calendarOpen} onOpenChange={(acik) => { if (acik) setDateRangeValue({ from: undefined, to: undefined }); setCalendarOpen(acik); }}>
                   <PopoverTrigger asChild>
                     <Button variant="outline" className="w-full justify-start text-left font-normal">
                       <CalendarIcon className="mr-2 h-4 w-4" />
@@ -704,22 +703,14 @@ export default function HBBasketCampaigns() {
                     <Calendar
                       mode="range"
                       selected={dateRangeValue}
-                      onSelect={(aralik, secilenGun) => {
-                        // Tam bir aralik varken bir gune tiklanirsa BASTAN
-                        // baslatilir. Takvigin kendi davranisi mevcut araligi
-                        // genisletip daraltmak; donem degistirmek isteyen
-                        // kullanici icin kafa karistiriciydi.
-                        if (dateRangeValue?.from && dateRangeValue?.to && secilenGun) {
-                          setDateRangeValue({ from: secilenGun, to: undefined });
-                          return;
-                        }
+                      onSelect={(aralik) => {
                         setDateRangeValue(aralik || { from: undefined, to: undefined });
                         // Aralik tamamlandiginda takvim kendiliginden kapanir
                         if (aralik?.from && aralik?.to && aralik.from.getTime() !== aralik.to.getTime()) {
                           setCalendarOpen(false);
                         }
                       }}
-                      defaultMonth={dateRangeValue?.from || new Date()}
+                      defaultMonth={new Date()}
                       numberOfMonths={2}
                       locale={tr}
                       classNames={{ day_today: "bg-primary font-bold text-primary-foreground" }}
