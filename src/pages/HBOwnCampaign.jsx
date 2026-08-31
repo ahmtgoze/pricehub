@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { db } from '@/api/db';
 import { useQuery } from '@tanstack/react-query';
-import { Filter, AlertCircle, Info, Megaphone } from 'lucide-react';
+import { Filter, AlertCircle, Info, Megaphone, Download, Sparkles } from 'lucide-react';
 import { calculatePriceBreakdown, findDesiShippingRate } from '@/components/PriceCalculationEngine';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -12,6 +12,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import PriceDetailModal from '@/components/modals/PriceDetailModal';
 import { baremSec, baremTarifesiSec } from '@/lib/baremKurali';
 import { gecerliMaliyet } from '@/lib/gecerliMaliyet';
+import { kampanyaFiyati, ALT_LIMIT_SECENEKLERI } from '@/lib/hbKampanyaIndirimi';
+import { skuSayfasi, ACIKLAMA_SATIRLARI, ACIKLAMA_SAYFASI, SKU_SAYFASI } from '@/lib/hbSkuSablonu';
+import * as XLSX from 'xlsx';
+import { toast } from 'sonner';
 
 const Product = db.entities.Product;
 const Platform = db.entities.Platform;
@@ -36,6 +40,13 @@ export default function HBOwnCampaign() {
   const [campaignType, setCampaignType] = useState('cart_percent');
   const [discountPercent, setDiscountPercent] = useState('');
   const [discountTl, setDiscountTl] = useState('');
+  // HB ekranindaki alanlar: alisveris alt limiti, sepette maksimum indirim
+  // tutari (tavan) ve urune ozel turlerde kacinci urun.
+  const [altLimit, setAltLimit] = useState('0');
+  const [tavan, setTavan] = useState('');
+  const [kacinciUrun, setKacinciUrun] = useState('2');
+  // Kampanyaya dahil edilecek urunler; HB'ye SKU listesi olarak gider
+  const [secililer, setSecililer] = useState(new Set());
   const [buyX, setBuyX] = useState('3');
   const [payY, setPayY] = useState('2');
   const [commissionDiscount, setCommissionDiscount] = useState('');
@@ -63,6 +74,13 @@ export default function HBOwnCampaign() {
     .filter((p, idx, arr) => arr.findIndex((x) => x.name === p.name) === idx);
   const hasHepsiburada = hbPlatforms.length > 0;
   const hbPlatform = hbPlatforms.find((p) => p.name === selectedPlatform) || hbPlatforms[0];
+
+  // HB SKU'lari pazaryeri kayitlarinda; sablona bu deger yaziliyor.
+  const { data: marketplaceProducts = [] } = useQuery({
+    queryKey: ['marketplaceProducts', userEmail],
+    queryFn: () => db.entities.MarketplaceProduct.filter({ created_by: userEmail }),
+    enabled: !!userEmail,
+  });
 
   React.useEffect(() => {
     if (hbPlatforms.length >= 1 && !selectedPlatform) setSelectedPlatform(hbPlatforms[0].name);
@@ -148,23 +166,22 @@ export default function HBOwnCampaign() {
     } catch (e) { return { profit: 0, profitRate: 0, breakdown: null }; }
   }
 
-  const applyCampaign = (price) => {
-    const dp = parseFloat(discountPercent) || 0;
-    const dt = parseFloat(discountTl) || 0;
-    const x = parseInt(buyX) || 0, y = parseInt(payY) || 0;
-    switch (campaignType) {
-      case 'cart_percent':
-      case 'nth_percent':
-        return Math.max(0, price * (1 - dp / 100));
-      case 'cart_tl':
-      case 'nth_tl':
-        return Math.max(0, price - dt);
-      case 'buy_x_pay_y':
-        return x > 0 ? Math.max(0, price * (y / x)) : price;
-      default:
-        return price;
-    }
+  // Kampanya modeli ortak modulde: her turun kar etkisi farkli hesaplanir.
+  // Onceki surum hepsini "indirimi her urune uygula" diye isliyordu; urune
+  // ozel turlerde kar ciddi sekilde DUSUK gorunuyordu (orn. "2. urune %50"
+  // her urune %50 saniliyordu, oysa yalnizca 2. urun indirimli).
+  const kampanya = {
+    tur: campaignType,
+    oran: discountPercent,
+    tutar: discountTl,
+    altLimit,
+    tavan,
+    kacinci: kacinciUrun,
+    alX: buyX,
+    odeY: payY,
   };
+
+  const applyCampaign = (price) => kampanyaFiyati(price, kampanya);
 
   // HB fiyatı olan ürünleri satırlara dök
   const rows = productPrices
@@ -178,9 +195,53 @@ export default function HBOwnCampaign() {
       const campPrice = applyCampaign(basePrice);
       const current = calculateProfit(basePrice, baseCommission, product);
       const campaign = calculateProfit(campPrice, effCommission, product);
-      return { product, basePrice, campPrice, baseCommission, effCommission, current, campaign };
+      const pazaryeri = marketplaceProducts.find(
+        (m) => String(m.matched_product_id) === String(product.id) && m.hb_sku
+      );
+      return { product, basePrice, campPrice, baseCommission, effCommission, current, campaign,
+               hbSku: pazaryeri?.hb_sku || '' };
     })
     .filter(Boolean);
+
+  const secimiDegistir = (urunId) => {
+    setSecililer((onceki) => {
+      const yeni = new Set(onceki);
+      if (yeni.has(urunId)) yeni.delete(urunId); else yeni.add(urunId);
+      return yeni;
+    });
+  };
+
+  /** Kampanyada kar eden ve HB SKU'su olan urunleri isaretler. */
+  const karlilariSec = () => {
+    const uygun = rows.filter((r) => r.campaign.profit > 0 && r.hbSku);
+    setSecililer(new Set(uygun.map((r) => r.product.id)));
+    const skusuz = rows.filter((r) => r.campaign.profit > 0 && !r.hbSku).length;
+    if (uygun.length === 0) toast.warning('Kâr eden ürün bulunamadı');
+    else toast.success(`${uygun.length} ürün seçildi` + (skusuz > 0 ? ` · ${skusuz} üründe HB SKU yok` : ''));
+  };
+
+  /**
+   * HB'nin SKU sablonunu uretir: iki sayfa (Açıklama + Skus).
+   * Indirim orani, alt limit, butce gibi ayarlar dosyaya GIRMEZ; onlari
+   * HB kendi ekraninda soruyor. Dosya yalnizca "hangi urunler dahil".
+   */
+  const skuListesiIndir = () => {
+    const secilenSatirlar = rows.filter((r) => secililer.has(r.product.id));
+    if (secilenSatirlar.length === 0) { toast.error('Önce kampanyaya girecek ürünleri seçin'); return; }
+
+    const { satirlar, yazilan, atlanan } = skuSayfasi(secilenSatirlar.map((r) => r.hbSku));
+    if (yazilan === 0) { toast.error('Seçili ürünlerin hiçbirinde HB SKU yok; dosya oluşturulmadı'); return; }
+
+    const kitap = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(kitap, XLSX.utils.aoa_to_sheet(ACIKLAMA_SATIRLARI), ACIKLAMA_SAYFASI);
+    const skuSayfa = XLSX.utils.aoa_to_sheet(satirlar);
+    skuSayfa['!cols'] = [{ wch: 22 }];
+    XLSX.utils.book_append_sheet(kitap, skuSayfa, SKU_SAYFASI);
+    XLSX.writeFile(kitap, 'hepsiburada-kampanya-skulari.xlsx');
+
+    toast.success(`${yazilan} SKU indirildi` + (atlanan > 0 ? ` · ${atlanan} ürün atlandı (SKU yok)` : ''));
+  };
+
 
   const allCategories = [...new Set(rows.map((r) => r.product.category_name).filter(Boolean))].sort();
   const filteredRows = rows.filter((r) => {
@@ -265,12 +326,64 @@ export default function HBOwnCampaign() {
                 </div>
               )}
 
+              {/* Urune ozel turlerde indirim yalnizca N. urune uygulanir */}
+              {(campaignType === 'nth_percent' || campaignType === 'nth_tl') && (
+                <div className="space-y-2">
+                  <Label>Kaçıncı Ürün</Label>
+                  <Input type="number" min="2" value={kacinciUrun} onChange={(e) => setKacinciUrun(e.target.value)} placeholder="örn. 2" />
+                  <p className="text-[11px] text-muted-foreground">İndirim sadece bu üründe geçerli; öncekiler tam fiyat.</p>
+                </div>
+              )}
+
+              {/* Sepet kampanyalarinda HB "alisveris alt limiti" soruyor */}
+              {(campaignType === 'cart_percent' || campaignType === 'cart_tl') && (
+                <div className="space-y-2">
+                  <Label>Alışveriş Alt Limiti (₺)</Label>
+                  <Select value={altLimit} onValueChange={setAltLimit}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {ALT_LIMIT_SECENEKLERI.map((d) => (
+                        <SelectItem key={d} value={String(d)}>{d === 0 ? 'Limit yok' : `₺${d.toLocaleString('tr-TR')}`}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-[11px] text-muted-foreground">İndirim bu tutara ulaşıldığında aktif olur.</p>
+                </div>
+              )}
+
+              {/* Yuzde indiriminde HB tavan soruyor: "%15 ama en fazla 100 TL" */}
+              {campaignType === 'cart_percent' && (
+                <div className="space-y-2">
+                  <Label>Sepette Maksimum İndirim Tutarı (₺)</Label>
+                  <Input type="number" value={tavan} onChange={(e) => setTavan(e.target.value)} placeholder="örn. 100" />
+                  <p className="text-[11px] text-muted-foreground">Boş bırakılırsa sınırsız indirim varsayılır.</p>
+                </div>
+              )}
+
               <div className="space-y-2">
                 <Label>Komisyon İndirimi (%) <span className="text-xs text-muted-foreground/70">opsiyonel</span></Label>
                 <Input type="number" value={commissionDiscount} onChange={(e) => setCommissionDiscount(e.target.value)} placeholder="örn. 7" />
               </div>
             </div>
-            <p className="text-xs text-muted-foreground/70 mt-3">Not: "X al Y öde" ürün başına ortalama birim fiyatı (Y/X) baz alır. Komisyon indirimi girersen, kampanya kârı düşük komisyonla hesaplanır.</p>
+            <div className="flex flex-wrap gap-3 mt-4">
+              <Button onClick={karlilariSec} className="bg-primary hover:bg-black dark:hover:bg-white/90 text-primary-foreground gap-2">
+                <Sparkles className="h-4 w-4" />Kâr Edenleri Seç
+              </Button>
+              <Button variant="outline" onClick={skuListesiIndir} disabled={secililer.size === 0}>
+                <Download className="mr-2 h-4 w-4" />SKU Listesi İndir ({secililer.size})
+              </Button>
+              {secililer.size > 0 && (
+                <Button variant="outline" onClick={() => setSecililer(new Set())}>Seçimleri Kaldır</Button>
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground/70 mt-3">
+              Ürüne özel türlerde indirim yalnızca belirttiğin sıradaki ürüne uygulanır; tabloda ürün
+              başına <strong>ortalama</strong> etkin fiyat gösterilir. "X al Y öde" için ortalama birim
+              fiyat Y/X'tir. Komisyon indirimi girersen kampanya kârı düşük komisyonla hesaplanır.
+              <br />
+              <strong>SKU Listesi İndir</strong>, HepsiBurada'nın kampanya şablonunu üretir — indirim
+              oranı, alt limit ve bütçe dosyaya girmez, onları HB kendi ekranında sorar.
+            </p>
           </CardContent>
         </Card>
 
@@ -311,6 +424,7 @@ export default function HBOwnCampaign() {
                   <table className="w-full text-sm">
                     <thead className="bg-secondary border-b">
                       <tr>
+                        <th className="p-3 text-center font-semibold w-10">Seç</th>
                         <th className="p-3 text-left font-semibold min-w-[200px]">Ürün</th>
                         <th className="p-3 text-center font-semibold min-w-[150px]">Mevcut</th>
                         <th className="p-3 text-center font-semibold min-w-[170px]">Kampanya Sonrası</th>
@@ -322,9 +436,23 @@ export default function HBOwnCampaign() {
                         const diff = r.campaign.profit - r.current.profit;
                         return (
                           <tr key={i} className={`border-b hover:bg-secondary ${r.campaign.profit < 0 ? 'bg-rose-50 dark:bg-rose-950/30/50' : ''}`}>
+                            <td className="p-3 text-center">
+                              {/* HB SKU'su olmayan urun kampanya dosyasina yazilamaz */}
+                              <input
+                                type="checkbox"
+                                checked={secililer.has(r.product.id)}
+                                onChange={() => secimiDegistir(r.product.id)}
+                                disabled={!r.hbSku}
+                                title={r.hbSku ? '' : 'Bu üründe HB SKU yok'}
+                                className="h-4 w-4 cursor-pointer accent-gray-900"
+                              />
+                            </td>
                             <td className="p-3">
                               <div className="font-medium text-foreground">{r.product.name}</div>
                               <div className="text-xs text-muted-foreground font-mono">{r.product.sku}</div>
+                              {r.hbSku
+                                ? <div className="text-xs text-muted-foreground/70 font-mono">HB: {r.hbSku}</div>
+                                : <div className="text-xs text-rose-500">HB SKU yok</div>}
                               <div className="text-xs text-muted-foreground/70">{r.product.category_name}</div>
                             </td>
                             <td className="p-3 text-center">
