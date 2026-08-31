@@ -104,3 +104,56 @@ export function kampanyaSayfasiniKur(aoa, secimler) {
 
   return { satirlar, yazilan, silinen, hata: null };
 }
+
+/**
+ * Hangi KAYNAK satirlarin korunacagini soyler.
+ *
+ * kampanyaSayfasiniKur satirlari yeniden kurar (duz degerler). Bu ise
+ * satirin Excel'deki YERINI dondurur; boylece cagiran taraf hucreleri
+ * orijinalinden OLDUGU GIBI tasiyabilir ve bicim/genislik korunur.
+ *
+ * @returns {
+ *   tutulacak: [{ kaynakSatir, fiyat }],  kaynakSatir 0-tabanli (0 = baslik)
+ *   silinen, fiyatSutunu, skuSutunu, hata
+ * }
+ */
+export function satirPlani(aoa, secimler) {
+  const tumSatirlar = Array.isArray(aoa) ? aoa : [];
+  if (tumSatirlar.length === 0) {
+    return { tutulacak: [], silinen: 0, fiyatSutunu: null, skuSutunu: null, hata: 'Excel sayfası boş' };
+  }
+
+  const { skuSutunu, fiyatSutunu } = sutunlariBul(tumSatirlar[0]);
+  if (fiyatSutunu === null) {
+    return { tutulacak: [], silinen: 0, fiyatSutunu: null, skuSutunu: null,
+             hata: '"Kampanyanın uygulanacağı fiyat" sütunu bulunamadı' };
+  }
+  if (skuSutunu === null) {
+    return { tutulacak: [], silinen: 0, fiyatSutunu, skuSutunu: null,
+             hata: '"Satıcı stok kodu" sütunu bulunamadı' };
+  }
+
+  const secili = new Map();
+  for (const sec of secimler || []) {
+    const kod = sadelestir(sec?.seller_stock_code);
+    const fiyat = Number(sec?.campaign_price);
+    if (!kod || !sec?.selected) continue;
+    if (!Number.isFinite(fiyat) || fiyat <= 0) continue;
+    secili.set(kod, fiyat);
+  }
+
+  const tutulacak = [];
+  let silinen = 0;
+
+  for (let i = 1; i < tumSatirlar.length; i++) {
+    const satir = tumSatirlar[i];
+    const kod = sadelestir(satir?.[skuSutunu]);
+    if (!kod && (satir || []).every((h) => sadelestir(h) === '')) continue;
+
+    const fiyat = secili.get(kod);
+    if (fiyat === undefined) { silinen++; continue; }
+    tutulacak.push({ kaynakSatir: i, fiyat });
+  }
+
+  return { tutulacak, silinen, fiyatSutunu, skuSutunu, hata: null };
+}

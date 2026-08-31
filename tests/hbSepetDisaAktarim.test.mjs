@@ -1,4 +1,4 @@
-import { sadelestir, sutunlariBul, kampanyaSayfasiniKur }
+import { sadelestir, sutunlariBul, kampanyaSayfasiniKur, satirPlani }
   from '../src/lib/hbSepetDisaAktarim.js';
 
 let gecen = 0, kalan = 0;
@@ -111,6 +111,32 @@ console.log('\n═══ SUTUN BULUNAMAZSA DURDURULUR ═══');
 }
 esit('bos sayfa', kampanyaSayfasiniKur([], []).hata, 'Excel sayfası boş');
 esit('gecersiz girdi', kampanyaSayfasiniKur(null, null).hata, 'Excel sayfası boş');
+
+
+console.log('\n═══ SATIR PLANI (bicim korumak icin kaynak satir yerleri) ═══');
+{
+  const aoa = [BASLIK, satir('A1','Bir'), satir('A2','Iki'), satir('A3','Uc')];
+  const r = satirPlani(aoa, [
+    { seller_stock_code: 'A1', campaign_price: 450, selected: true },
+    { seller_stock_code: 'A2', campaign_price: 400, selected: false },
+    { seller_stock_code: 'A3', campaign_price: 480, selected: true },
+  ]);
+  esit('hata yok', r.hata, null);
+  esit('kaynak satir yerleri', r.tutulacak.map((t) => t.kaynakSatir), [1, 3]);
+  esit('fiyatlar', r.tutulacak.map((t) => t.fiyat), [450, 480]);
+  esit('silinen', r.silinen, 1);
+  esit('fiyat sutunu', r.fiyatSutunu, 11);
+  esit('sku sutunu', r.skuSutunu, 2);
+}
+{
+  // Bos satir atlanir ama silinen sayilmaz; sonraki satirin YERI kaymaz
+  const aoa = [BASLIK, satir('A1','Bir'), ['','','','','','','','','','','',''], satir('A2','Iki')];
+  const r = satirPlani(aoa, [{ seller_stock_code: 'A2', campaign_price: 460, selected: true }]);
+  esit('bos satir atlandi, yer dogru', r.tutulacak.map((t) => t.kaynakSatir), [3]);
+  esit('bos satir silinen sayilmaz', r.silinen, 1);
+}
+esit('sutun yoksa hata', satirPlani([['Ürün Adı']], []).hata, '"Kampanyanın uygulanacağı fiyat" sütunu bulunamadı');
+esit('bos sayfa', satirPlani([], []).hata, 'Excel sayfası boş');
 
 console.log(`\nGECEN: ${gecen}   KALAN: ${kalan}`);
 process.exit(kalan ? 1 : 0);
