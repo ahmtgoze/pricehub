@@ -47,30 +47,45 @@
  *
  * The mainPage value must match a key in the PAGES object exactly.
  */
-import AdvantageProductTag from './pages/AdvantageProductTag';
-import Calculator from './pages/Calculator';
-import Categories from './pages/Categories';
-import Commissions from './pages/Commissions';
-import Dashboard from './pages/Dashboard';
-import FlashProducts from './pages/FlashProducts';
-import HBAdvantageOffers from './pages/HBAdvantageOffers';
-import HBBasketCampaigns from './pages/HBBasketCampaigns';
-import HBOwnCampaign from './pages/HBOwnCampaign';
-import Help from './pages/Help';
-import MarketplaceProducts from './pages/MarketplaceProducts';
-import PackageManagement from './pages/PackageManagement';
-import Platforms from './pages/Platforms';
-import Prices from './pages/Prices';
-import Products from './pages/Products';
-import ShippingRates from './pages/ShippingRates';
-import TrendyolPriceRange from './pages/TrendyolPriceRange';
-import UpdateReports from './pages/UpdateReports';
-import UpdatedCosts from './pages/UpdatedCosts';
-import UpdatedPrices from './pages/UpdatedPrices';
-import Settings from './pages/Settings';
-import ViewCustomize from './pages/ViewCustomize';
+import { lazy } from 'react';
 import __Layout from './Layout.jsx';
 
+/**
+ * SAYFALAR TEMBEL YUKLENIR.
+ *
+ * Onceden 23 sayfa da statik import ediliyordu; hepsi TEK pakete giriyor ve
+ * kullanici hangi sayfayi acarsa acsin tamamini indiriyordu (2,89 MB /
+ * gzip 878 KB). Excel kutuphanesi gibi agir bagimliliklar da bu pakete
+ * dahildi.
+ *
+ * lazy() ile her sayfa kendi parcasina ayrilir; yalnizca acilan sayfa
+ * indirilir. Yukleme sirasinda App.jsx'teki <Suspense> devreye girer.
+ */
+
+
+
+const AdvantageProductTag = lazy(() => import('./pages/AdvantageProductTag'));
+const Calculator = lazy(() => import('./pages/Calculator'));
+const Categories = lazy(() => import('./pages/Categories'));
+const Commissions = lazy(() => import('./pages/Commissions'));
+const Dashboard = lazy(() => import('./pages/Dashboard'));
+const FlashProducts = lazy(() => import('./pages/FlashProducts'));
+const HBAdvantageOffers = lazy(() => import('./pages/HBAdvantageOffers'));
+const HBBasketCampaigns = lazy(() => import('./pages/HBBasketCampaigns'));
+const HBOwnCampaign = lazy(() => import('./pages/HBOwnCampaign'));
+const Help = lazy(() => import('./pages/Help'));
+const MarketplaceProducts = lazy(() => import('./pages/MarketplaceProducts'));
+const PackageManagement = lazy(() => import('./pages/PackageManagement'));
+const Platforms = lazy(() => import('./pages/Platforms'));
+const Prices = lazy(() => import('./pages/Prices'));
+const Products = lazy(() => import('./pages/Products'));
+const ShippingRates = lazy(() => import('./pages/ShippingRates'));
+const TrendyolPriceRange = lazy(() => import('./pages/TrendyolPriceRange'));
+const UpdateReports = lazy(() => import('./pages/UpdateReports'));
+const UpdatedCosts = lazy(() => import('./pages/UpdatedCosts'));
+const UpdatedPrices = lazy(() => import('./pages/UpdatedPrices'));
+const Settings = lazy(() => import('./pages/Settings'));
+const ViewCustomize = lazy(() => import('./pages/ViewCustomize'));
 
 export const PAGES = {
     "AdvantageProductTag": AdvantageProductTag,
