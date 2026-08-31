@@ -406,6 +406,28 @@ indirimli **minimum** kâr tutarı.
 > Sonuç: hedefleri sağlayan **en indirimli** kademe seçilir — kârı en yüksek
 > olan değil. Amaç, kâr hedefinden ödün vermeden en agresif indirimi bulmaktır.
 
+### Bu kural hangi sayfalarda geçerli?
+
+**Hepsinde.** "Akıllı Otomatik Seç" butonu bulunan yedi sayfanın tamamı aynı
+üç hedefe bakar: indirimli hedef kâr **oranı**, indirimli hedef kâr **tutarı**,
+indirimli **minimum** kâr tutarı.
+
+| Sayfa | Kademe sırası |
+|---|---|
+| Sepet Kampanyaları | tek fiyat (girilebilecek max fiyat) |
+| Avantajlı Teklifler | Teklif 1-2-3, **fiyata göre en ucuzdan** |
+| Avantajlı Ürün Etiketi | Süper Avantaj → Çok Avantaj → Avantaj |
+| Flaş Ürünler | kademeler en indirimliden |
+| Plus Tarifesi | tek fiyat (Plus limiti) |
+| Komisyon Tarifesi | kademeler en indirimliden |
+| Kampanyalar | kampanya fiyatı (`isBelowFloor` ile aynı üç hedef) |
+
+> **Geçmiş hata:** **Avantajlı Teklifler** sayfası bu kuralın dışında kalmıştı.
+> Hedeflere hiç bakmıyor, kârı sıfırın üstünde olan kademelerden **kârı en
+> yüksek** olanı seçiyordu — yani hem hedef denetimi yoktu, hem de kuralın
+> tersine en az indirimli kademeyi seçme eğilimindeydi. 2026-09-01'de
+> düzeltildi.
+
 ### Komisyon önceliği (SIRALAMA ÖNEMLİ)
 
 Promosyon sayfalarında komisyon oranı şu sırayla aranır:
