@@ -14,6 +14,7 @@ import { calculateAllPlatformPrices } from '@/components/PriceCalculationEngine'
 import { toast } from 'sonner';
 import { useBackgroundTask } from '@/lib/BackgroundTaskContext';
 import { hesaplamaYuzdesi, yazmaYuzdesi, sirayiBirak } from '@/lib/islemSeridi';
+import { havuzdaCalistir, tekrarDene } from '@/lib/istekHavuzu';
 import { useLocation } from 'react-router-dom';
 import PriceDetailModal from '@/components/modals/PriceDetailModal';
 import ProductHistoryModal from '@/components/modals/ProductHistoryModal';
@@ -310,17 +311,26 @@ export default function Prices() {
       await db.entities.ProductPrice.bulkCreate(allToCreate.slice(i, i + BATCH));
       yazilan++; bildir();
     }
-    // Hepsi AYNI ANDA gonderilir — orijinal davranis buydu ve en hizlisi.
-    // Ilerleme, her istek tamamlandikca sayilir; boylece hiz feda edilmeden
-    // gercek ilerleme gosterilir.
-    //
-    // Once 25'lik obekler halinde gonderiyordum: 900 kayit 36 tura bolununce
-    // yazma belirgin sekilde uzuyordu. Obege gerek yok, sayaci beklemeye
-    // degil tamamlanmaya baglamak yetiyor.
-    await Promise.all(allToUpdate.map(async ({ id, data }) => {
-      await db.entities.ProductPrice.update(id, data);
-      yazilan++; bildir();
-    }));
+    // SINIRLI es zamanlilik. Hepsini birden gondermek (Promise.all) canlida
+    // "TypeError: Failed to fetch" ile dustu: ~900 es zamanli baglanti
+    // kaldirilamiyor. Obeklere bolmek ise her turda en yavas istegi bekletip
+    // yazmayi uzatiyordu. Havuz sabit sayida istegi surekli akista tutar.
+    const { basarisiz } = await havuzdaCalistir(
+      allToUpdate,
+      8,
+      ({ id, data }) => tekrarDene(() => db.entities.ProductPrice.update(id, data)),
+      () => { yazilan++; bildir(); },
+    );
+
+    // Tek bir yazma hatasi butun hesaplamayi cope atmasin; ama sessizce de
+    // gecilmesin — o urunlerin fiyati KAYDEDILMEDI.
+    if (basarisiz.length) {
+      console.error('Kaydedilemeyen fiyat sayisi:', basarisiz.length, basarisiz[0]?.hata);
+      toast.warning(`${basarisiz.length} fiyat kaydedilemedi`, {
+        description: 'Bağlantı sorunu olabilir. "Fiyatları Hesapla" ile tekrar deneyin.',
+        duration: 10000,
+      });
+    }
   };
 
   // Once burada bir setInterval sahte yuzde uretiyordu (200ms'de +1, %90'da
