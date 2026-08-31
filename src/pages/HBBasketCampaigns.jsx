@@ -745,6 +745,7 @@ export default function HBBasketCampaigns() {
                         <th className="p-3 text-center font-semibold min-w-[160px]">Mevcut Satış Fiyatı</th>
                         <th className="p-3 text-center font-semibold min-w-[150px]">Kampanyaya Dahil Edilebilecek Maksimum Fiyat</th>
                         <th className="p-3 text-center font-semibold min-w-[210px]">Kampanyalı Fiyat</th>
+                        <th className="p-3 text-center font-semibold min-w-[150px]">Müşterinin Ödediği Tutar</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -779,14 +780,25 @@ export default function HBBasketCampaigns() {
                                   <Button size="sm" variant="ghost" className="h-5 w-5 p-0 shrink-0" onClick={() => openDetailModal(odenecekFiyat(item.campaign_price), item.discounted_commission, item)}><Info className="h-3 w-3" /></Button>
                                 </div>
                                 <div className="text-[11px] text-muted-foreground">Kom: {commLabel(item.discounted_commission)}</div>
-                                {item.campaign_price > 0 && kampanyaIndirimi?.tur && (
-                                  <div className="text-[11px] text-muted-foreground">Müşteri öder: ₺{odenecekFiyat(item.campaign_price).toFixed(2)}</div>
-                                )}
                                 {item.campaign_price > 0 && (
                                   <div className={`text-xs font-semibold ${campCalc.profit > 0 ? 'text-emerald-600' : 'text-rose-600'}`}>{campCalc.profit > 0 ? '+' : ''}₺{campCalc.profit.toFixed(2)} (%{campCalc.profitRate.toFixed(1)})</div>
                                 )}
                                 {overMax && <Badge variant="outline" className="mt-1 text-[10px] text-rose-600 border-rose-300">Maksimum fiyatı aşıyor!</Badge>}
                               </div>
+                            </td>
+                            <td className="p-3 text-center">
+                              {item.campaign_price > 0 ? (
+                                <>
+                                  <div className="font-semibold text-foreground">₺{odenecekFiyat(item.campaign_price).toFixed(2)}</div>
+                                  {kampanyaIndirimi?.tur ? (
+                                    <div className="text-[11px] text-muted-foreground">{indirimEtiketi(kampanyaIndirimi)}</div>
+                                  ) : (
+                                    <div className="text-[11px] text-muted-foreground">indirim yok</div>
+                                  )}
+                                </>
+                              ) : (
+                                <span className="text-muted-foreground">-</span>
+                              )}
                             </td>
                           </tr>
                         );
