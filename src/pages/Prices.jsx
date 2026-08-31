@@ -315,9 +315,14 @@ export default function Prices() {
     // "TypeError: Failed to fetch" ile dustu: ~900 es zamanli baglanti
     // kaldirilamiyor. Obeklere bolmek ise her turda en yavas istegi bekletip
     // yazmayi uzatiyordu. Havuz sabit sayida istegi surekli akista tutar.
+    // Es zamanlilik olcumle secildi (453 urun / ~900 guncelleme, canli):
+    //   900 (hepsi birden) → "Failed to fetch", 86. istekte dustu
+    //     8                → 35,5 sn, hatasiz
+    //    32                → asagidaki olcum
+    // Hedef: hata vermeden mumkun olan en hizli deger.
     const { basarisiz } = await havuzdaCalistir(
       allToUpdate,
-      8,
+      32,
       ({ id, data }) => tekrarDene(() => db.entities.ProductPrice.update(id, data)),
       () => { yazilan++; bildir(); },
     );
