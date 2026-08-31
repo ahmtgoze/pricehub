@@ -62,6 +62,41 @@ function normalize(row) {
   return { ...row, created_date: row.created_at };
 }
 
+
+/**
+ * Tum satirlari SAYFA SAYFA ceker.
+ *
+ * NICIN VAR: filter/list varsayilan olarak 10.000 satirda kesiyordu ve bunu
+ * SESSIZCE yapiyordu. 10.000 urunu olan bir hesapta fiyat kaydi ~30.000
+ * olur; 20.000'i hic gelmez. Fiyat hesabi gelmeyen kaydi "yok" sayip
+ * YENISINI olusturur — her calistirmada on binlerce cift kayit birikir,
+ * hicbir uyari cikmaz.
+ *
+ * Supabase tek istekte sinirsiz satir vermez; 1000'lik dilimlerle
+ * (range) hepsi cekilir. Cagrilar degismedi, yalnizca artik eksiksiz.
+ */
+const SAYFA = 1000;
+
+async function sayfalayarakCek(entityName, islem, limit, sorguKur) {
+  const tablo = TABLE_MAP[entityName];
+  const hepsi = [];
+
+  for (let bas = 0; ; bas += SAYFA) {
+    // limit verilmisse onu asma
+    const kalan = limit ? limit - hepsi.length : SAYFA;
+    if (kalan <= 0) break;
+    const son = bas + Math.min(SAYFA, kalan) - 1;
+
+    const { data, error } = await sorguKur(supabase.from(tablo)).range(bas, son);
+    if (error) throw new Error(`[db.${entityName}.${islem}] ${error.message}`);
+
+    const dilim = data || [];
+    hepsi.push(...dilim);
+    if (dilim.length < SAYFA) break;      // son sayfa
+  }
+  return hepsi.map(normalize);
+}
+
 function createEntity(entityName) {
   const tableName = TABLE_MAP[entityName];
   if (!tableName) throw new Error(`Bilinmeyen entity: ${entityName}`);
@@ -69,26 +104,25 @@ function createEntity(entityName) {
   return {
     // alanlar: yalnizca belirli sutunlari cekmek icin (ornek: 'id, platform_name').
     // Varsayilan '*' — mevcut tum cagrilarin davranisi degismez.
-    async filter(conditions = {}, orderBy = '-created_at', limit = 10000, alanlar = '*') {
-      let query = supabase.from(tableName).select(alanlar);
-      query = applyConditions(query, conditions);
-      const order = parseOrderBy(orderBy);
-      if (order) query = query.order(order.column, { ascending: order.ascending });
-      query = query.limit(limit || 50000);
-      const { data, error } = await query;
-      if (error) throw new Error(`[db.${entityName}.filter] ${error.message}`);
-      return (data || []).map(normalize);
+    // alanlar: yalnizca belirli sutunlari cekmek icin (ornek: 'id, platform_name').
+    // limit verilirse o kadarla sinirlanir; VERILMEZSE tum satirlar sayfa
+    // sayfa cekilir.
+    async filter(conditions = {}, orderBy = '-created_at', limit = null, alanlar = '*') {
+      return sayfalayarakCek(entityName, 'filter', limit, (q) => {
+        let query = applyConditions(q.select(alanlar), conditions);
+        const order = parseOrderBy(orderBy);
+        if (order) query = query.order(order.column, { ascending: order.ascending });
+        return query;
+      });
     },
 
-    async list(orderBy = '-created_at', limit = 10000) {
-      let query = supabase.from(tableName).select('*');
-      const order = parseOrderBy(orderBy);
-      if (order) query = query.order(order.column, { ascending: order.ascending });
-      query = query.limit(50000);
-      query = query.limit(limit || 50000);
-      const { data, error } = await query;
-      if (error) throw new Error(`[db.${entityName}.list] ${error.message}`);
-      return (data || []).map(normalize);
+    async list(orderBy = '-created_at', limit = null) {
+      return sayfalayarakCek(entityName, 'list', limit, (q) => {
+        let query = q.select('*');
+        const order = parseOrderBy(orderBy);
+        if (order) query = query.order(order.column, { ascending: order.ascending });
+        return query;
+      });
     },
 
     async create(data) {

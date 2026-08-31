@@ -295,17 +295,41 @@ export default function Prices() {
   const HESAP_PAYI = 30;
 
   /** Hesaplanan fiyatlari yazar; cubugu %HESAP_PAYI'den 100'e tasir. */
+  /**
+   * Mevcut fiyatlari (urun + platform) -> kayit seklinde dizinler.
+   *
+   * Dizi taramasiyla arandiginda maliyet urun x platform x fiyat oluyordu:
+   * 10.000 uründe ~900 milyon karsilastirma, dakikalarca surerdi. Dizin bir
+   * kez kurulur, aramalar sabit surede olur.
+   *
+   * Ayni (urun, platform) icin birden fazla kayit varsa ILKI kullanilir;
+   * boylece eski cift kayitlar cogalmaz, uzerine yazilir.
+   */
+  const fiyatDizini = (fiyatlar) => {
+    const dizin = new Map();
+    for (const f of fiyatlar || []) {
+      const anahtar = `${f.product_id}|${f.platform_id}`;
+      if (!dizin.has(anahtar)) dizin.set(anahtar, f);
+    }
+    return dizin;
+  };
+
   const fiyatlariYaz = async (allToCreate, allToUpdate) => {
     const BATCH = 100;
     const toplamAdim = Math.ceil(allToCreate.length / BATCH) + allToUpdate.length;
     if (toplamAdim === 0) { updateTask(100, 100); return; }
 
     let yazilan = 0;
-    const bildir = () => updateTask(
-      yazmaYuzdesi(yazilan, toplamAdim, HESAP_PAYI),
-      100,
-      'Fiyatlar Kaydediliyor',
-    );
+    // Her kayitta bildirmek sayfayi 900 kez yeniden cizdiriyordu (bu sayfada
+    // yuzlerce satirlik bir tablo var). Yuzde DEGISMEDIKCE bildirmiyoruz:
+    // ekranda gorunen bilgi ayni, is ise belirgin sekilde hizlaniyor.
+    let sonYuzde = -1;
+    const bildir = () => {
+      const y = yazmaYuzdesi(yazilan, toplamAdim, HESAP_PAYI);
+      if (y === sonYuzde) return;
+      sonYuzde = y;
+      updateTask(y, 100, 'Fiyatlar Kaydediliyor');
+    };
     bildir();
     for (let i = 0; i < allToCreate.length; i += BATCH) {
       await db.entities.ProductPrice.bulkCreate(allToCreate.slice(i, i + BATCH));
@@ -390,6 +414,7 @@ export default function Prices() {
       });
 
       const total = freshProducts.length;
+      const mevcutFiyatlar = fiyatDizini(freshProductPrices);
       startTask('calc-all-prices', 'Fiyatlar Hesaplanıyor', 'Fiyatlar', 'Prices', 100);
       let successCount = 0;
       const failedProductsList = [];
@@ -410,8 +435,11 @@ export default function Prices() {
           }
           else {
             for (const calcPrice of calculatedPrices) {
-              const existing = freshProductPrices.filter(pp => pp.product_id === product.id && pp.platform_id === calcPrice.platform_id);
-              if (existing.length > 0) allToUpdate.push({ id: existing[0].id, data: calcPrice });
+              // Dizi taramasi yerine dizin: 10.000 uründe bu tarama
+              // urun x platform x fiyat = yuz milyonlarca karsilastirma
+              // demekti ve hesaplama dakikalara cikiyordu.
+              const mevcut = mevcutFiyatlar.get(`${product.id}|${calcPrice.platform_id}`);
+              if (mevcut) allToUpdate.push({ id: mevcut.id, data: calcPrice });
               else allToCreate.push(calcPrice);
             }
             successCount++;
@@ -572,6 +600,7 @@ export default function Prices() {
         db.entities.Commission.filter({ created_by: userEmail }), db.entities.Settings.filter({ created_by: userEmail }),
         db.entities.Platform.filter({ is_system_admin: true }),
       ]);
+      const mevcutFiyatlar = fiyatDizini(freshProductPrices);
       const freshActivePlatforms = freshUserPlatforms.filter(p => p.is_active !== false);
       const getFreshPackageCost = (packageId) => { if (!packageId) return 0; return freshPackageItems.filter(item => item.package_id === packageId && item.is_active !== false).reduce((sum, item) => sum + (item.cost || 0), 0); };
       const allToCreate = [], allToUpdate = [];
@@ -589,8 +618,8 @@ export default function Prices() {
           const calculatedPrices = calculateAllPlatformPrices({ product, platforms: freshActivePlatforms, shippingRates: freshShippingRates, commissions: freshCommissions, packages: freshPackages, packageItems: freshPackageItems, getPackageCost: getFreshPackageCost, settings: freshSettings, systemAdminPlatforms: freshAdminPlatforms });
           if (calculatedPrices.length === 0) { stillFailedProducts.push(failedProduct); continue; }
           for (const calcPrice of calculatedPrices) {
-            const existing = freshProductPrices.filter(pp => pp.product_id === product.id && pp.platform_id === calcPrice.platform_id);
-            if (existing.length > 0) allToUpdate.push({ id: existing[0].id, data: calcPrice });
+            const mevcut = mevcutFiyatlar.get(`${product.id}|${calcPrice.platform_id}`);
+            if (mevcut) allToUpdate.push({ id: mevcut.id, data: calcPrice });
             else allToCreate.push(calcPrice);
           }
           successCount++;
