@@ -14,6 +14,7 @@ import * as XLSX from 'xlsx';
 import PriceDetailModal from '@/components/modals/PriceDetailModal';
 import { baremSec, baremTarifesiSec } from '@/lib/baremKurali';
 import { kampanyaSayfasiniKur } from '@/lib/hbSepetDisaAktarim';
+import { kdvDahilOran, komisyonEtiketi } from '@/lib/hbKomisyon';
 
 const Product = db.entities.Product;
 const Platform = db.entities.Platform;
@@ -37,10 +38,11 @@ const parseNum = (v) => {
   const n = parseFloat(String(v ?? '').replace(/\./g, '').replace(',', '.'));
   return isNaN(n) ? 0 : n;
 };
-// HB komisyonları KDV hariç gelir; kasadan çıkan gerçek oran = ham × 1,20
-// HepsiBurada komisyonlari sisteme zaten KDV DAHIL giriliyor;
-// etikette bir daha KDV eklemek yaniltiyordu.
-const commLabel = (rate) => `%${rate || 0}`;
+// Oranlar HB'nin Excel'inden HAM (KDV haric) geliyor ve okundugu anda
+// kdvDahilOran ile cevriliyor; buradaki deger artik KDV dahildir.
+// Etikette HB'nin panelde gosterdigi ham oran da parantezde yazilir.
+// Ayrinti ve gecmis: src/lib/hbKomisyon.js
+const commLabel = komisyonEtiketi;
 
 export default function HBBasketCampaigns() {
   const [userEmail, setUserEmail] = useState(null);
@@ -212,8 +214,8 @@ export default function HBBasketCampaigns() {
             stock: parseNum(row['Stok']),
             max_price: parseNum(row['Girebileceğiniz max. fiyat']),
             current_price: parseNum(row['Mevcut satış fiyatı']),
-            current_commission: parsePercent(row['Güncel Komisyon Oranı']),
-            discounted_commission: parsePercent(row['İndirimli Komisyon Oranı']),
+            current_commission: kdvDahilOran(parsePercent(row['Güncel Komisyon Oranı'])),
+            discounted_commission: kdvDahilOran(parsePercent(row['İndirimli Komisyon Oranı'])),
             campaign_price: 0,
             selected: false,
           };

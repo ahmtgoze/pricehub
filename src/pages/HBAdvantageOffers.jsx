@@ -13,6 +13,7 @@ import { toast } from 'sonner';
 import * as XLSX from 'xlsx';
 import PriceDetailModal from '@/components/modals/PriceDetailModal';
 import { baremSec, baremTarifesiSec } from '@/lib/baremKurali';
+import { kdvDahilOran, komisyonEtiketi } from '@/lib/hbKomisyon';
 
 const Product = db.entities.Product;
 const Platform = db.entities.Platform;
@@ -41,7 +42,9 @@ const parseNum = (v) => {
 // HB komisyonları KDV hariç gelir; kasadan çıkan gerçek oran = ham × 1,20
 // HepsiBurada komisyonlari sisteme zaten KDV DAHIL giriliyor;
 // etikette bir daha KDV eklemek yaniltiyordu.
-const commLabel = (rate) => `%${rate || 0}`;
+// Oranlar HB Excel'inden HAM (KDV haric) gelir, okundugu anda kdvDahilOran
+// ile cevrilir; asagidaki degerler KDV dahildir. Bkz. src/lib/hbKomisyon.js
+const commLabel = komisyonEtiketi;
 
 export default function HBAdvantageOffers() {
   const [userEmail, setUserEmail] = useState(null);
@@ -256,13 +259,13 @@ export default function HBAdvantageOffers() {
             category: row['Kategori'] ?? '',
             stock: parseNum(row['Mevcut Stok'] ?? row['Stok']),
             current_price: parseNum(row['Güncel Fiyat']),
-            current_commission: parsePercent(row['Güncel Komisyon']),
+            current_commission: kdvDahilOran(parsePercent(row['Güncel Komisyon'])),
             tier1_price: parseNum(row['Teklif 1 Katılabileceğiniz Maximum Fiyat']),
-            tier1_commission: parsePercent(row['Komisyon Teklifi 1']),
+            tier1_commission: kdvDahilOran(parsePercent(row['Komisyon Teklifi 1'])),
             tier2_price: parseNum(row['Teklif 2 Katılabileceğiniz Maximum Fiyat']),
-            tier2_commission: parsePercent(row['Komisyon Teklifi 2']),
+            tier2_commission: kdvDahilOran(parsePercent(row['Komisyon Teklifi 2'])),
             tier3_price: parseNum(row['Teklif 3 Katılabileceğiniz Maximum Fiyat']),
-            tier3_commission: parsePercent(row['Komisyon Teklifi 3']),
+            tier3_commission: kdvDahilOran(parsePercent(row['Komisyon Teklifi 3'])),
             selected_tier: 'none',
             selected_price: 0,
             manual_price: 0,

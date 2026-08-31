@@ -104,6 +104,32 @@ satırında geri yazılır.
 > Örnek: HepsiBurada %17 diyorsa sisteme **20,4** girilir (17 × 1,20).
 > Sistemde bu değer zaten böyle duruyor.
 
+### HB Excel'inden okunan komisyonlar
+
+Yukarıdaki kural **elle girilen** komisyonlar içindir. HepsiBurada'nın kendi
+Excel'inden okunan oranlar da **KDV hariçtir** ve aynı şekilde ×1,20 yapılmalıdır:
+
+| Sayfa | Komisyon nereden gelir | Çevrim |
+|---|---|---|
+| Sepet Kampanyaları | HB Excel'i (`Güncel/İndirimli Komisyon Oranı`) | **×1,20 gerekir** |
+| Avantajlı Teklifler | HB Excel'i (`Güncel Komisyon`, `Komisyon Teklifi 1-3`) | **×1,20 gerekir** |
+| Kendi Kampanyan | `commissions` tablosu (zaten KDV dahil) | çevrim YOK |
+
+Çevrim Excel **okunduğu anda** yapılır; aşağıdaki tüm hesap ve etiketler KDV
+dahil oranla çalışır. Her kullanım yerinde ayrı ayrı çarpmak, bir yeri
+atlamaya açıktır.
+
+Etikette her iki oran da gösterilir: **`%20,4 (HB %17)`**. Panelle
+karşılaştırma yapılabilsin diye ham oran görünür kalmalıdır.
+
+> **Geçmiş hata:** 2026-08-28'de etiketten "(KDV'li %20,4)" gösterimi
+> *"komisyonlar sisteme zaten KDV dahil giriliyor"* gerekçesiyle kaldırıldı.
+> Bu gerekçe tablodan okuyan sayfalar için doğru, **Excel'den okuyanlar için
+> yanlıştı**. Hesap da baştan beri ham oranı kullanıyordu: komisyon eksik,
+> kâr olduğundan yüksek çıkıyordu. 2026-08-31'de düzeltildi.
+
+Kaynak: `src/lib/hbKomisyon.js` (testleri: `tests/hbKomisyon.test.mjs`)
+
 ### Eşleştirme
 
 Komisyon **kategori × platform** kombinasyonuna bağlıdır:
