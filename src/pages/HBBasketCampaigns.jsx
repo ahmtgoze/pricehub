@@ -295,6 +295,7 @@ export default function HBBasketCampaigns() {
       (r) => r.platform_account === selectedPlatform &&
              r.start_date === donem.baslangic && r.end_date === donem.bitis
     );
+    const degisen = eskiler.length;
     await havuzdaCalistir(eskiler, 16, (r) => tekrarDene(() => BasketEntity.delete(r.id)));
 
     const yazilacak = satirlar.map((it) => ({
@@ -325,7 +326,7 @@ export default function HBBasketCampaigns() {
       yazilacak, 16, (kayit) => tekrarDene(() => BasketEntity.create(kayit))
     );
     queryClient.invalidateQueries({ queryKey: ['hbBasketCampaigns'] });
-    return { toplam: yazilacak.length, basarisiz: basarisiz.length };
+    return { toplam: yazilacak.length, basarisiz: basarisiz.length, degisen };
   };
 
   const handleFileUpload = (e) => {
@@ -412,9 +413,16 @@ export default function HBBasketCampaigns() {
         // kayda bagli.
         setKaydediliyor(true);
         try {
-          const { toplam, basarisiz } = await donemeYaz(parsed);
-          if (basarisiz > 0) toast.warning(`${parsed.length} ürün yüklendi · ${basarisiz} kayıt yazılamadı`);
-          else toast.success(`${toplam} ürün yüklendi ve ${donem.baslangic} – ${donem.bitis} dönemine kaydedildi`);
+          const { toplam, basarisiz, degisen } = await donemeYaz(parsed);
+          if (basarisiz > 0) {
+            toast.warning(`${parsed.length} ürün yüklendi · ${basarisiz} kayıt yazılamadı`);
+          } else if (degisen > 0) {
+            // Ayni doneme ikinci dosya yuklenince oncekiler siliniyor;
+            // sessizce olmasin, kullanici yanlis donemi secmis olabilir.
+            toast.success(`${toplam} ürün yüklendi · bu dönemdeki önceki ${degisen} kayıt değiştirildi`);
+          } else {
+            toast.success(`${toplam} ürün yüklendi ve ${donem.baslangic} – ${donem.bitis} dönemine kaydedildi`);
+          }
         } catch (kayitHatasi) {
           toast.warning(`${parsed.length} ürün yüklendi ama kaydedilemedi: ${kayitHatasi?.message || kayitHatasi}`);
         } finally {
@@ -680,7 +688,12 @@ export default function HBBasketCampaigns() {
               </div>
               <div className="space-y-2">
                 <Label>Kampanya Tarih Aralığı *</Label>
-                <Popover open={calendarOpen} onOpenChange={(open) => { if (open) setDateRangeValue({ from: undefined, to: undefined }); setCalendarOpen(open); }}>
+                {/* Takvim acilinca secili aralik SILINMEZ. Onceden acilista
+                    sifirlaniyordu (Plus Tarifesi'nden kopyalanmis davranis):
+                    donem hatirlanmis olsa bile takvime dokunmak yetiyor,
+                    secim ucuyor ve yukleme butonu kapaniyordu. Yeni bir
+                    aralik secmek isteyen zaten uzerine tikliyor. */}
+                <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
                   <PopoverTrigger asChild>
                     <Button variant="outline" className="w-full justify-start text-left font-normal">
                       <CalendarIcon className="mr-2 h-4 w-4" />
@@ -688,7 +701,29 @@ export default function HBBasketCampaigns() {
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar mode="range" selected={dateRangeValue} onSelect={(range) => { setDateRangeValue(range || { from: undefined, to: undefined }); if (range?.from && range?.to && range.from.getTime() !== range.to.getTime()) setCalendarOpen(false); }} defaultMonth={new Date()} numberOfMonths={2} locale={tr} classNames={{ day_today: "bg-primary font-bold text-primary-foreground" }} />
+                    <Calendar
+                      mode="range"
+                      selected={dateRangeValue}
+                      onSelect={(aralik, secilenGun) => {
+                        // Tam bir aralik varken bir gune tiklanirsa BASTAN
+                        // baslatilir. Takvigin kendi davranisi mevcut araligi
+                        // genisletip daraltmak; donem degistirmek isteyen
+                        // kullanici icin kafa karistiriciydi.
+                        if (dateRangeValue?.from && dateRangeValue?.to && secilenGun) {
+                          setDateRangeValue({ from: secilenGun, to: undefined });
+                          return;
+                        }
+                        setDateRangeValue(aralik || { from: undefined, to: undefined });
+                        // Aralik tamamlandiginda takvim kendiliginden kapanir
+                        if (aralik?.from && aralik?.to && aralik.from.getTime() !== aralik.to.getTime()) {
+                          setCalendarOpen(false);
+                        }
+                      }}
+                      defaultMonth={dateRangeValue?.from || new Date()}
+                      numberOfMonths={2}
+                      locale={tr}
+                      classNames={{ day_today: "bg-primary font-bold text-primary-foreground" }}
+                    />
                   </PopoverContent>
                 </Popover>
               </div>
