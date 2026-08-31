@@ -16,6 +16,8 @@ const TABLE_MAP = {
   FlashProduct: 'flash_products',
   AdvantageProductTag: 'advantage_product_tags',
   PlusProductCommissionTariff: 'plus_product_commission_tariffs',
+  // HB Sepet Kampanyalari: platform + tarih araligi bazli secim kayitlari
+  HBBasketCampaign: 'hb_basket_campaigns',
   TrendyolPriceRange: 'trendyol_price_ranges',
   Announcement: 'announcements',
   AnnouncementRead: 'announcement_reads',
