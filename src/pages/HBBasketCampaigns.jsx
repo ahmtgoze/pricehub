@@ -18,6 +18,7 @@ import * as XLSX from 'xlsx';
 import PriceDetailModal from '@/components/modals/PriceDetailModal';
 import { baremSec, baremTarifesiSec } from '@/lib/baremKurali';
 import { satirPlani } from '@/lib/hbSepetDisaAktarim';
+import { stilleriYazmayaHazirla } from '@/lib/excelStil';
 import { kdvDahilOran, komisyonEtiketi } from '@/lib/hbKomisyon';
 import { havuzdaCalistir, tekrarDene } from '@/lib/istekHavuzu';
 import { aciklamalardanIndirim, indirimliFiyat, indirimEtiketi } from '@/lib/hbSepetIndirimi';
@@ -626,6 +627,10 @@ export default function HBBasketCampaigns() {
     if (sayfa['!rows']) {
       sayfa['!rows'] = kalanSatirlar.map((r) => sayfa['!rows'][r]);
     }
+
+    // Okunan stiller DUZ bicimde gelir, yazici IC ICE bekler; cevrilmezse
+    // sablonun renkleri sessizce dusuyordu.
+    stilleriYazmayaHazirla(kitap);
 
     XLSX.writeFile(kitap, 'hepsiburada-sepet-kampanyalari.xlsx');
     toast.success(
