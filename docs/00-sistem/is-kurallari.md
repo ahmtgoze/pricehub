@@ -636,6 +636,46 @@ indirimi HB kendisi uygular.
 
 Kaynak: `src/lib/hbSepetIndirimi.js` (testleri: `tests/hbSepetIndirimi.test.mjs`)
 
+### Dosya sıfırdan üretilir, yüklenen dosya düzenlenmez
+
+Dışa aktarımda **yalnızca değerler** yazılır: iki sayfa (Açıklamalar + ürün
+listesi), doğru başlıklar, doğru sütun sırası, içeriğe göre **otomatik sütun
+genişliği**.
+
+> **Neden yüklenen dosya düzenlenmiyor:** biçim korunsun diye önce HB'nin
+> dosyası açılıp içinden satır siliniyordu. Ama o dosyada gömülü resim,
+> açıklama balonları ve VML çizimleri var; kütüphane bunları yazarken
+> referansları tutarsız bırakıyor ve Excel dosyayı *"Bazı öğelerde bir
+> sorunla karşılaştık"* diye açıyordu. Renk/biçim de zaten kurtarılamıyordu.
+> Renkler kaybolur — HB paneli renklere bakmaz, sorun değil.
+
+### SKU başlığı elle geri yazılır (kütüphane okuyamıyor)
+
+D sütununun başlığı şablonda **zengin metin** olarak saklanıyor (`<r>`
+parçaları, her birinde `xmlns`). Excel kütüphanemiz bu yapıyı çözemiyor ve
+hücreyi **değeri yokmuş gibi** okuyor. Şablondaki bütün hücreler içinde
+**yalnızca bu biri** böyle; hiçbir okuma seçeneği (`cellStyles`, `cellText`)
+kurtarmıyor.
+
+Boş bırakılırsa HepsiBurada dosyayı **"Hatalı işlem — Şema hatası"** ile
+reddeder. Bu yüzden başlık sabit olarak tutulur ve boş okunduğunda geri
+yazılır:
+
+```
+SKU (Kampanyaya dahil etmek istemediğiniz ürün kodlarını excelden
+silmeniz gerekmektedir)
+```
+
+Yalnızca "SKU" yazmak **yetmez** — panel metnin tamamını bekliyor (denendi,
+reddedildi). Başlık düzgün okunabiliyorsa üzerine yazılmaz.
+
+> Bu başlığın kendisi **satır silme kuralını doğrular**: kampanyaya
+> girmeyecek ürünlerin satırları dosyadan silinmelidir.
+
+> **Uyarı:** başka bir HB/Trendyol şablonunda da başlıklar boş okunuyorsa
+> ilk şüpheli budur. Hücre `{ t: 's' }` ama `v` yoksa değer zengin metindir
+> ve düşmüştür.
+
 ### Şablona dokunulmaz
 
 - Sütun **eklenmez**, sütun **sırası değişmez**, başlık satırı **aynen** korunur
