@@ -295,6 +295,7 @@ export default function HBBasketCampaigns() {
       (r) => r.platform_account === selectedPlatform &&
              r.start_date === donem.baslangic && r.end_date === donem.bitis
     );
+    const degisen = eskiler.length;
     await havuzdaCalistir(eskiler, 16, (r) => tekrarDene(() => BasketEntity.delete(r.id)));
 
     const yazilacak = satirlar.map((it) => ({
@@ -325,7 +326,7 @@ export default function HBBasketCampaigns() {
       yazilacak, 16, (kayit) => tekrarDene(() => BasketEntity.create(kayit))
     );
     queryClient.invalidateQueries({ queryKey: ['hbBasketCampaigns'] });
-    return { toplam: yazilacak.length, basarisiz: basarisiz.length };
+    return { toplam: yazilacak.length, basarisiz: basarisiz.length, degisen };
   };
 
   const handleFileUpload = (e) => {
@@ -412,9 +413,16 @@ export default function HBBasketCampaigns() {
         // kayda bagli.
         setKaydediliyor(true);
         try {
-          const { toplam, basarisiz } = await donemeYaz(parsed);
-          if (basarisiz > 0) toast.warning(`${parsed.length} ürün yüklendi · ${basarisiz} kayıt yazılamadı`);
-          else toast.success(`${toplam} ürün yüklendi ve ${donem.baslangic} – ${donem.bitis} dönemine kaydedildi`);
+          const { toplam, basarisiz, degisen } = await donemeYaz(parsed);
+          if (basarisiz > 0) {
+            toast.warning(`${parsed.length} ürün yüklendi · ${basarisiz} kayıt yazılamadı`);
+          } else if (degisen > 0) {
+            // Ayni doneme ikinci dosya yuklenince oncekiler siliniyor;
+            // sessizce olmasin, kullanici yanlis donemi secmis olabilir.
+            toast.success(`${toplam} ürün yüklendi · bu dönemdeki önceki ${degisen} kayıt değiştirildi`);
+          } else {
+            toast.success(`${toplam} ürün yüklendi ve ${donem.baslangic} – ${donem.bitis} dönemine kaydedildi`);
+          }
         } catch (kayitHatasi) {
           toast.warning(`${parsed.length} ürün yüklendi ama kaydedilemedi: ${kayitHatasi?.message || kayitHatasi}`);
         } finally {
@@ -680,7 +688,13 @@ export default function HBBasketCampaigns() {
               </div>
               <div className="space-y-2">
                 <Label>Kampanya Tarih Aralığı *</Label>
-                <Popover open={calendarOpen} onOpenChange={(open) => { if (open) setDateRangeValue({ from: undefined, to: undefined }); setCalendarOpen(open); }}>
+                {/* Takvimi ACMAK secili araligi sifirlar — Plus Tarifesi,
+                    Komisyon Tarifesi ve Avantajli Urun Etiketi sayfalariyla
+                    AYNI davranis. Ayni gorunen alan sayfadan sayfaya farkli
+                    davranmasin diye boyle birakildi (kullanici karari).
+                    Mevcut donemle yeni dosya yuklemek isteyen takvime hic
+                    dokunmuyor; donem localStorage'dan hatirlaniyor. */}
+                <Popover open={calendarOpen} onOpenChange={(acik) => { if (acik) setDateRangeValue({ from: undefined, to: undefined }); setCalendarOpen(acik); }}>
                   <PopoverTrigger asChild>
                     <Button variant="outline" className="w-full justify-start text-left font-normal">
                       <CalendarIcon className="mr-2 h-4 w-4" />
@@ -688,7 +702,21 @@ export default function HBBasketCampaigns() {
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar mode="range" selected={dateRangeValue} onSelect={(range) => { setDateRangeValue(range || { from: undefined, to: undefined }); if (range?.from && range?.to && range.from.getTime() !== range.to.getTime()) setCalendarOpen(false); }} defaultMonth={new Date()} numberOfMonths={2} locale={tr} classNames={{ day_today: "bg-primary font-bold text-primary-foreground" }} />
+                    <Calendar
+                      mode="range"
+                      selected={dateRangeValue}
+                      onSelect={(aralik) => {
+                        setDateRangeValue(aralik || { from: undefined, to: undefined });
+                        // Aralik tamamlandiginda takvim kendiliginden kapanir
+                        if (aralik?.from && aralik?.to && aralik.from.getTime() !== aralik.to.getTime()) {
+                          setCalendarOpen(false);
+                        }
+                      }}
+                      defaultMonth={new Date()}
+                      numberOfMonths={2}
+                      locale={tr}
+                      classNames={{ day_today: "bg-primary font-bold text-primary-foreground" }}
+                    />
                   </PopoverContent>
                 </Popover>
               </div>
