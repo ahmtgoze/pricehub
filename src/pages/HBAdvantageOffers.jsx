@@ -389,6 +389,7 @@ export default function HBAdvantageOffers() {
         printingCost: matchedProduct?.printing_cost || 0,
         extraCost: matchedProduct?.extra_cost || 0,
         shippingCost: calc.breakdown?.shippingCost || 0,
+        posServiceFee: calc.breakdown?.posServiceFee || 0,
       },
     });
   };

@@ -803,7 +803,8 @@ export default function AdvantageProductTag() {
                   packagingCost: calc.breakdown.packagingCost,
                   printingCost: calc.matchedProduct.printing_cost || 0,
                   extraCost: calc.matchedProduct.extra_cost || 0,
-                  shippingCost: calc.breakdown.shippingCost
+                  shippingCost: calc.breakdown.shippingCost,
+                  posServiceFee: calc.breakdown?.posServiceFee || 0
                 }
               });
             }

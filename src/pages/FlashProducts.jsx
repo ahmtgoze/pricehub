@@ -1581,7 +1581,8 @@ export default function FlashProducts() {
                                                       calculationDetails: {
                                                         productCost: gecerliMaliyet(calc.matchedProduct),
                                                         productVatRate: calc.matchedProduct.vat_rate || 20,
-                                                        commissionRate: commissionRate24h
+                                                        commissionRate: commissionRate24h,
+                                                        posServiceFee: calc.breakdown?.posServiceFee || 0
                                                       }
                                                     });
                                                   }
@@ -1660,7 +1661,8 @@ export default function FlashProducts() {
                                                       calculationDetails: {
                                                         productCost: gecerliMaliyet(calc.matchedProduct),
                                                         productVatRate: calc.matchedProduct.vat_rate || 20,
-                                                        commissionRate: commissionRate3h
+                                                        commissionRate: commissionRate3h,
+                                                        posServiceFee: calc.breakdown?.posServiceFee || 0
                                                       }
                                                     });
                                                   }
@@ -1807,7 +1809,8 @@ export default function FlashProducts() {
                                               calculationDetails: {
                                                 productCost: gecerliMaliyet(bestBaremSuggestion.matchedProduct),
                                                 productVatRate: bestBaremSuggestion.matchedProduct.vat_rate || 20,
-                                                commissionRate: bestBaremSuggestion.commissionRate
+                                                commissionRate: bestBaremSuggestion.commissionRate,
+                                                posServiceFee: bestBaremSuggestion.breakdown?.posServiceFee || 0
                                               }
                                             });
                                           }
@@ -1885,7 +1888,8 @@ export default function FlashProducts() {
                                                      calculationDetails: {
                                                        productCost: gecerliMaliyet(calc.matchedProduct),
                                                        productVatRate: calc.matchedProduct.vat_rate || 20,
-                                                       commissionRate: manualCommissionRate
+                                                       commissionRate: manualCommissionRate,
+                                                       posServiceFee: calc.breakdown?.posServiceFee || 0
                                                      }
                                                    });
                                                  }
