@@ -705,7 +705,11 @@ export default function TrendyolPriceRange() {
 
     const parts = [];
     if (selectedCount > 0) parts.push(`✅ ${selectedCount} ürün seçildi`);
-    if (skippedAlreadySelected > 0) parts.push(`${skippedAlreadySelected} zaten seçili/manuel`);
+    // Hangi tarifede secili oldugu yazilir: tarifeler bagimsiz oldugu icin
+    // "zaten secili" yalnizca ACIK tarifeyi anlatir.
+    if (skippedAlreadySelected > 0) {
+      parts.push(`${skippedAlreadySelected} zaten ${secilenPencere ? `"${secilenPencere}" tarifesinde ` : ''}seçili/manuel`);
+    }
     if (skippedNoProduct > 0) parts.push(`⚠️ ${skippedNoProduct} sistem ürünüyle eşleşmedi`);
     if (skippedNoMatch > 0) parts.push(`⚠️ ${skippedNoMatch} komisyon kaydı bulunamadı`);
     if (skippedNoCommission > 0) parts.push(`⚠️ ${skippedNoCommission} indirimli hedef kâr tanımlı değil`);
