@@ -21,6 +21,8 @@ import BaremBadge from '@/components/ui/BaremBadge';
 import { baremSec, baremTavanFiyatlari, baremTarifesiSec } from '@/lib/baremKurali';
 import { gecerliMaliyet } from '@/lib/gecerliMaliyet';
 import { pencereleriBul, pencereKomisyonlari, tarifeSecimDegeri } from '@/lib/trendyolTarifePenceresi';
+import { unzipSync, zipSync } from 'fflate';
+import { hucreleriYaz, baslikHaritasi, paylasilanMetinler, sayfaXmlYolu, sutunDegerleri } from '@/lib/xlsxYerindeYaz';
 import { komisyonHaritasi, pencereUygula, pencereAdlari, pencereDegistirilebilir,
          pencereyeGec, acikSecimiSakla, secimiOku, seciliPencereler, secimOzeti } from '@/lib/trendyolPencereSecimi';
 
@@ -166,7 +168,7 @@ export default function TrendyolPriceRange() {
           const wb = XLSX.read(ham, { type: 'array' });
           const sn = wb.SheetNames[0];
           // "ham": disa aktarimda her tarife icin temiz bir kopya acilir.
-          setOriginalExcelData({ workbook: wb, sheetName: sn, raw: ham, rawType: 'array',
+          setOriginalExcelData({ workbook: wb, sheetName: sn, raw: ham, rawType: 'array', baytlar: ham,
                                  jsonData: XLSX.utils.sheet_to_json(wb.Sheets[sn]) });
         })
         .catch(e => console.error('Excel restore hatası:', e));
@@ -189,8 +191,12 @@ export default function TrendyolPriceRange() {
         const sheetName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[sheetName];
         const jsonData = XLSX.utils.sheet_to_json(worksheet);
+        // readAsBinaryString ikili DIZGI verir; fflate bayt bekler.
+        const ikili = event.target.result;
+        const baytlar = new Uint8Array(ikili.length);
+        for (let i = 0; i < ikili.length; i++) baytlar[i] = ikili.charCodeAt(i) & 0xff;
         setOriginalExcelData({ workbook, sheetName, jsonData,
-                               raw: event.target.result, rawType: 'binary' });
+                               raw: ikili, rawType: 'binary', baytlar });
 
         // Excel'i dosya olarak yükle (URL sakla)
         const excelBuffer = XLSX.write(workbook, { type: 'array', bookType: 'xlsx' });
@@ -754,7 +760,7 @@ export default function TrendyolPriceRange() {
   const handleExport = (istenenTarife = null) => {
     if (uploadedData.length === 0) { toast.error('Yüklenmiş Excel dosyası bulunamadı'); return; }
     if (!originalExcelData) { toast.error('Orijinal Excel dosyası bulunamadı'); return; }
-    if (!originalExcelData.raw) {
+    if (!originalExcelData.baytlar) {
       toast.error('Excel yeniden okunamıyor. Lütfen dosyayı yeniden yükleyin.', { duration: 8000 });
       return;
     }
@@ -779,73 +785,79 @@ export default function TrendyolPriceRange() {
 
 
     const dosyaUret = (pencereAdi) => {
-      // Her dosya HAM veriden yeniden aciliyor. Ayni workbook uzerinde iki kez
-      // calisilsaydi ilk dosyanin yazdiklari ikincisine tasinirdi.
-      const workbook = XLSX.read(originalExcelData.raw, { type: originalExcelData.rawType || 'binary' });
-      const sheetName = originalExcelData.sheetName || workbook.SheetNames[0];
-      const worksheet = workbook.Sheets[sheetName];
-      const range = XLSX.utils.decode_range(worksheet['!ref']);
+      // DOSYA YENIDEN URETILMIYOR. Yuklenen dosyanin XML'i acilip yalnizca
+      // ilgili hucreler degistiriliyor, sonra ayni parcalarla geri
+      // paketleniyor.
+      //
+      // SheetJS ile yeniden yazmak metin hucrelerini t="str" olarak
+      // yaziyordu; OOXML'de bu FORMUL SONUCU demek, duz metin degil.
+      // Trendyol'un okuyucusu baslik satirini bos goruyor ve dosyayi
+      // "Yüklenen excel formatı hatalıdır" diye reddediyordu (sonuc
+      // raporunda BARKOD sutunu bostu). Ayrica sharedStrings,
+      // dataValidation (24 kural) ve <cols> tanimlari da kayboluyordu.
+      const parcalar = unzipSync(originalExcelData.baytlar);
+      const yol = sayfaXmlYolu(parcalar);
+      if (!yol) throw new Error('Excel içinde sayfa bulunamadı');
+
+      const metneCevir = (b) => new TextDecoder().decode(b);
+      let sheet = metneCevir(parcalar[yol]);
+      const paylasilan = parcalar['xl/sharedStrings.xml']
+        ? paylasilanMetinler(metneCevir(parcalar['xl/sharedStrings.xml']))
+        : [];
+      const basliklar = baslikHaritasi(sheet, 1, paylasilan);
+
+      const barkodSut = basliklar['BARKOD'];
+      const tsfSut = basliklar['YENİ TSF (FİYAT GÜNCELLE)'];
+      const secimSut = basliklar['Tarife Seçimi'];
+      const uygulaSut = basliklar['Tarife Sonuna Kadar Uygula'];
+      if (!barkodSut || !tsfSut) {
+        throw new Error('Excel başlıkları tanınmadı (BARKOD / YENİ TSF sütunu yok)');
+      }
+
+      // Satir eslesmesi XML'den: sheet_to_json bos satirlari atlayabilir ve
+      // fiyat YANLIS URUNE yazilabilirdi.
+      const barkodlar = sutunDegerleri(sheet, barkodSut, paylasilan);
+      const degisiklikler = [];
       let yazilan = 0;
 
-      const basligi = (C) => worksheet[XLSX.utils.encode_cell({ r: range.s.r, c: C })]?.v;
-
-      for (let R = range.s.r + 1; R <= range.e.r; R++) {
-        let barcode;
-        for (let C = range.s.c; C <= range.e.c; C++) {
-          if (basligi(C) === 'BARKOD') barcode = worksheet[XLSX.utils.encode_cell({ r: R, c: C })]?.v;
-        }
-        const item = veri.find(i => i.barcode === barcode);
-        // Bu dosyaya YALNIZCA bu tarifede secilenler yazilir.
+      for (const [satirMetni, barkod] of Object.entries(barkodlar)) {
+        const satirNo = Number(satirMetni);
+        if (satirNo < 2) continue;                       // baslik satiri
+        const item = veri.find((x) => String(x.barcode) === String(barkod));
         const secim = item ? secimiOku(item, pencereAdi) : { kademe: 'none', fiyat: 0 };
-        const buDosyaya = secim.kademe !== 'none';
-        if (buDosyaya) yazilan++;
+        const dolu = secim.kademe !== 'none';
+        if (dolu) yazilan++;
 
-        for (let C = range.s.c; C <= range.e.c; C++) {
-          const header = basligi(C);
-          const hucre = XLSX.utils.encode_cell({ r: R, c: C });
-          if (header === 'YENİ TSF (FİYAT GÜNCELLE)') {
-            if (buDosyaya) worksheet[hucre] = { v: secim.fiyat || 0, t: 'n' };
-            else delete worksheet[hucre];   // vazgecilen urun eski fiyatiyla gitmesin
-          } else if (header === 'Tarife Sonuna Kadar Uygula') {
-            if (buDosyaya) worksheet[hucre] = { v: 'Evet', t: 's' };
-            else delete worksheet[hucre];
-          } else if (header === 'Tarife Seçimi') {
-            const secim = buDosyaya ? tarifeSecimDegeri(pencereAdi || item.tarife_penceresi) : null;
-            if (secim) worksheet[hucre] = { v: secim, t: 's' };
-            else delete worksheet[hucre];
-          }
+        // Secili olmayan satirlarin eski degerleri TEMIZLENIR; vazgecilen bir
+        // urun eski fiyatiyla Trendyol'a gitmesin.
+        degisiklikler.push({ adres: `${tsfSut}${satirNo}`, deger: dolu ? secim.fiyat : null, tip: 'n' });
+        if (secimSut) {
+          degisiklikler.push({
+            adres: `${secimSut}${satirNo}`,
+            deger: dolu ? tarifeSecimDegeri(pencereAdi || item?.tarife_penceresi) : null,
+            tip: 's',
+          });
+        }
+        if (uygulaSut) {
+          degisiklikler.push({ adres: `${uygulaSut}${satirNo}`, deger: dolu ? 'Evet' : null, tip: 's' });
         }
       }
 
-      // Trendyol'un YUKLEME bicimi bu dort sutunu istemiyor; disa aktarmada
-      // silinirler. Onceki surum "bilinen sutunlari TUT, gerisini sil" diye
-      // calisiyordu ve izin listesinde tekil "EXTERNAL ID" yaziyordu:
-      // gercek basliklar FIRST/SECOND/FULL EXTERNAL ID oldugu icin ucu
-      // siliniyor ama TARİFE GRUBU listede oldugu icin KALIYORDU. Artik
-      // hangilerinin silinecegi acikca yaziyor; geri kalan hicbir sutuna
-      // dokunulmuyor.
-      const SILINECEK_SUTUNLAR = new Set([
-        'FIRST EXTERNAL ID', 'SECOND EXTERNAL ID', 'FULL EXTERNAL ID', 'TARİFE GRUBU',
-      ]);
-
-      // Sagdan sola silinir; yoksa kalan sutunlar kayar
-      for (let C = range.e.c; C >= range.s.c; C--) {
-        if (!SILINECEK_SUTUNLAR.has(String(basligi(C) ?? ''))) continue;
-        for (let R = range.s.r; R <= range.e.r; R++) {
-          for (let shiftC = C; shiftC < range.e.c; shiftC++) {
-            const from = XLSX.utils.encode_cell({ r: R, c: shiftC + 1 });
-            const to = XLSX.utils.encode_cell({ r: R, c: shiftC });
-            if (worksheet[from]) worksheet[to] = worksheet[from];
-            else delete worksheet[to];
-          }
-          delete worksheet[XLSX.utils.encode_cell({ r: R, c: range.e.c })];
-        }
-        range.e.c--;
-      }
-      worksheet['!ref'] = XLSX.utils.encode_range(range);
+      sheet = hucreleriYaz(sheet, degisiklikler);
+      parcalar[yol] = new TextEncoder().encode(sheet);
 
       const ek = pencereAdi ? `-${slugify(pencereAdi)}` : '';
-      XLSX.writeFile(workbook, `urunkomisyontarifesi-${donem}${ek}.xlsx`);
+      const blob = new Blob([zipSync(parcalar)], {
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      });
+      const url = URL.createObjectURL(blob);
+      const baglanti = document.createElement('a');
+      baglanti.href = url;
+      baglanti.download = `urunkomisyontarifesi-${donem}${ek}.xlsx`;
+      document.body.appendChild(baglanti);
+      baglanti.click();
+      baglanti.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
       return yazilan;
     };
 
