@@ -19,6 +19,7 @@ import PriceDetailModal from '@/components/modals/PriceDetailModal';
 import BaremBadge from '@/components/ui/BaremBadge';
 import { baremSec, baremTavanFiyatlari, baremTarifesiSec } from '@/lib/baremKurali';
 import { gecerliMaliyet } from '@/lib/gecerliMaliyet';
+import { pencereleriBul, pencereKomisyonlari, tarifeSecimDegeri } from '@/lib/trendyolTarifePenceresi';
 
 const TrendyolPriceRangeEntity = db.entities.TrendyolPriceRange;
 const Product = db.entities.Product;
@@ -54,6 +55,11 @@ export default function TrendyolPriceRange() {
   const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0 });
   const [calendarKey, setCalendarKey] = useState(0);
   const [calendarOpen, setCalendarOpen] = useState(false);
+  // Trendyol dosyasi artik BIRDEN FAZLA zaman penceresi iceriyor (3 gunluk,
+  // 4 gunluk). Her birinin komisyonlari farkli; kullanici hangisi icin islem
+  // yaptigini secer. Onceden yalnizca ilki okunuyordu, ikincisi gorunmuyordu.
+  const [pencereler, setPencereler] = useState([]);
+  const [secilenPencere, setSecilenPencere] = useState('');
   const [detailModal, setDetailModal] = useState({ open: false, product: null, priceData: null, calculationDetails: null });
 
   const queryClient = useQueryClient();
@@ -191,7 +197,16 @@ export default function TrendyolPriceRange() {
           console.error('Excel upload hatası:', uploadErr);
         }
 
+        // Dosyadaki pencereler ilk satirdan cikarilir; kullanici secmediyse
+        // ilki kullanilir (eski tek pencereli dosyalarla uyum).
+        const dosyaPencereleri = jsonData.length ? pencereleriBul(jsonData[0]) : [];
+        setPencereler(dosyaPencereleri);
+        const aktif = dosyaPencereleri.find((x) => x.ad === secilenPencere) || dosyaPencereleri[0] || { ad: '', sonek: '' };
+        if (!secilenPencere && aktif.ad) setSecilenPencere(aktif.ad);
+        const pencereAdi = aktif.ad;
+
         const parsed = jsonData.map(row => {
+          const komisyonlar = pencereKomisyonlari(row, aktif.sonek);
           const barcode = row['BARKOD'] || '';
           const marketplaceProduct = marketplaceProducts.find(mp => mp.platform_account === selectedPlatform && mp.barkod === barcode);
           let matchedProduct;
@@ -223,10 +238,13 @@ export default function TrendyolPriceRange() {
             price_range_3_max: parseFloat(row['3.Fiyat Üst Limiti']) || 0,
             price_range_4_min: 0,
             price_range_4_max: parseFloat(row['4.Fiyat Üst Limiti']) || 0,
-            commission_1: parseFloat(row['1.KOMİSYON']) || 0,
-            commission_2: parseFloat(row['2.KOMİSYON']) || 0,
-            commission_3: parseFloat(row['3.KOMİSYON']) || 0,
-            commission_4: parseFloat(row['4.KOMİSYON']) || 0,
+            // Secilen zaman penceresinin komisyonlari. Dosyada ayni baslikla
+            // birden fazla set var; okuyucu ikincisini "_1" diye adlandiriyor.
+            commission_1: komisyonlar[0],
+            commission_2: komisyonlar[1],
+            commission_3: komisyonlar[2],
+            commission_4: komisyonlar[3],
+            tarife_penceresi: pencereAdi,
             current_base_price: parseFloat(row['KOMİSYONA ESAS FİYAT']) || 0,
             current_commission: parseFloat(row['GÜNCEL KOMİSYON']) || 0,
             current_tsf: parseFloat(row['GÜNCEL TSF']) || 0,
@@ -698,6 +716,14 @@ export default function TrendyolPriceRange() {
           const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
           if (header === 'YENİ TSF (FİYAT GÜNCELLE)') worksheet[cellAddress] = { v: item.selected_price || 0, t: 'n' };
           if (header === 'Tarife Sonuna Kadar Uygula') worksheet[cellAddress] = { v: 'Evet', t: 's' };
+          // Yeni bicimde bu sutun, islemin hangi zaman penceresi icin
+          // yapildigini soyluyor. Secilen pencerenin adi yazilir.
+          if (header === 'Tarife Seçimi') {
+            // Sutun acilir liste; listede olmayan deger reddedilir.
+            // "3 Gün" DEGIL, "3 Günlük Fiyat" yazilmali.
+            const secim = tarifeSecimDegeri(item.tarife_penceresi);
+            if (secim) worksheet[cellAddress] = { v: secim, t: 's' };
+          }
         }
       }
     }
@@ -717,7 +743,18 @@ export default function TrendyolPriceRange() {
     for (let C = range.e.c; C >= range.s.c; C--) {
       const headerAddress = XLSX.utils.encode_cell({ r: range.s.r, c: C });
       const header = worksheet[headerAddress]?.v;
-      if (!allowedHeaders.has(header)) {
+      // Trendyol yeni bicimde pencere basina sutun uretiyor:
+      //   "Tarih aralığı (3 Gün)", "Hesaplanan Komisyon (4 Gün)", "Tarife Seçimi"
+      // Bunlar listede olmadigi icin SILINIYORLARDI; dosya semaya uymuyordu.
+      // Ileride "7 Gün" gibi yeni pencereler de gelebilecegi icin ad yerine
+      // ONEK kontrolu yapiliyor.
+      const baslikMetni = String(header ?? '');
+      const yeniBicimSutunu =
+        baslikMetni.startsWith('Tarih aralığı') ||
+        baslikMetni.startsWith('Hesaplanan Komisyon') ||
+        baslikMetni === 'Tarife Seçimi';
+
+      if (!allowedHeaders.has(header) && !yeniBicimSutunu) {
         // Bu sütunu sil ve sağındakileri sola kaydır
         for (let R = range.s.r; R <= range.e.r; R++) {
           for (let shiftC = C; shiftC < range.e.c; shiftC++) {
@@ -937,6 +974,26 @@ export default function TrendyolPriceRange() {
                 </PopoverContent>
                 </Popover>
               </div>
+
+              {/* Trendyol dosyasi birden fazla zaman penceresi iceriyor; her
+                  birinin komisyonlari farkli. Kullanici hangisi icin islem
+                  yaptigini secer, hesap o pencerenin komisyonlariyla yapilir. */}
+              {pencereler.length > 1 && (
+                <div className="space-y-2">
+                  <Label>Tarife Penceresi *</Label>
+                  <Select value={secilenPencere} onValueChange={setSecilenPencere}>
+                    <SelectTrigger><SelectValue placeholder="Pencere seçin" /></SelectTrigger>
+                    <SelectContent>
+                      {pencereler.map((p) => (
+                        <SelectItem key={p.ad} value={p.ad}>{p.ad} — {p.tarihAraligi}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-[11px] text-muted-foreground">
+                    Değiştirdikten sonra Excel'i <strong>yeniden yükleyin</strong>; komisyonlar seçilen pencereden okunur.
+                  </p>
+                </div>
+              )}
             </div>
             <div className="flex flex-wrap gap-3">
               <Button onClick={() => document.getElementById('excelUpload').click()} disabled={!selectedPlatform || !dateRangeValue?.from || !dateRangeValue?.to} className="bg-primary hover:bg-black dark:hover:bg-white/90">
