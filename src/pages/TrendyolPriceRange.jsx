@@ -817,12 +817,31 @@ export default function TrendyolPriceRange() {
         }
       }
 
-      // SUTUN SILINMIYOR. Onceki surum "bilinen sutunlari tut, gerisini sil"
-      // diye calisiyordu ve listede "EXTERNAL ID" yaziyordu; dosyadaki gercek
-      // basliklar ise FIRST / SECOND / FULL EXTERNAL ID. Ucu de siliniyor,
-      // dosya 35 sutun yerine 32 sutunla iniyordu ve Trendyol
-      // "Yüklenen excel formatı hatalıdır" diyip hic islemiyordu.
-      // Dosyayi Trendyol uretiyor; her sutunu semasinin parcasi.
+      // Trendyol'un YUKLEME bicimi bu dort sutunu istemiyor; disa aktarmada
+      // silinirler. Onceki surum "bilinen sutunlari TUT, gerisini sil" diye
+      // calisiyordu ve izin listesinde tekil "EXTERNAL ID" yaziyordu:
+      // gercek basliklar FIRST/SECOND/FULL EXTERNAL ID oldugu icin ucu
+      // siliniyor ama TARİFE GRUBU listede oldugu icin KALIYORDU. Artik
+      // hangilerinin silinecegi acikca yaziyor; geri kalan hicbir sutuna
+      // dokunulmuyor.
+      const SILINECEK_SUTUNLAR = new Set([
+        'FIRST EXTERNAL ID', 'SECOND EXTERNAL ID', 'FULL EXTERNAL ID', 'TARİFE GRUBU',
+      ]);
+
+      // Sagdan sola silinir; yoksa kalan sutunlar kayar
+      for (let C = range.e.c; C >= range.s.c; C--) {
+        if (!SILINECEK_SUTUNLAR.has(String(basligi(C) ?? ''))) continue;
+        for (let R = range.s.r; R <= range.e.r; R++) {
+          for (let shiftC = C; shiftC < range.e.c; shiftC++) {
+            const from = XLSX.utils.encode_cell({ r: R, c: shiftC + 1 });
+            const to = XLSX.utils.encode_cell({ r: R, c: shiftC });
+            if (worksheet[from]) worksheet[to] = worksheet[from];
+            else delete worksheet[to];
+          }
+          delete worksheet[XLSX.utils.encode_cell({ r: R, c: range.e.c })];
+        }
+        range.e.c--;
+      }
       worksheet['!ref'] = XLSX.utils.encode_range(range);
 
       const ek = pencereAdi ? `-${slugify(pencereAdi)}` : '';
