@@ -748,7 +748,9 @@ export default function TrendyolPriceRange() {
     }
   };
 
-  const handleExport = () => {
+  // istenenTarife verilirse YALNIZCA o tarifenin dosyasi iner;
+  // verilmezse secim yapilan her tarife icin ayri dosya iner.
+  const handleExport = (istenenTarife = null) => {
     if (uploadedData.length === 0) { toast.error('Yüklenmiş Excel dosyası bulunamadı'); return; }
     if (!originalExcelData) { toast.error('Orijinal Excel dosyası bulunamadı'); return; }
     if (!originalExcelData.raw) {
@@ -761,8 +763,13 @@ export default function TrendyolPriceRange() {
     // Acik tarifenin secimi henuz kutusuna yazilmamis olabilir; once katlanir.
     const veri = uploadedData.map((u) => acikSecimiSakla(u, secilenPencere));
     const ozet = secimOzeti(veri);
-    const pencereler = Object.keys(ozet).filter((k) => k !== 'toplam');
-    if (pencereler.length === 0) { toast.error('Seçili ürün yok'); return; }
+    const pencereler = Object.keys(ozet)
+      .filter((k) => k !== 'toplam')
+      .filter((k) => !istenenTarife || k === istenenTarife);
+    if (pencereler.length === 0) {
+      toast.error(istenenTarife ? `"${istenenTarife}" tarifesinde seçili ürün yok` : 'Seçili ürün yok');
+      return;
+    }
 
     const slugify = (str) => str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
     const fromStr = dateRangeValue?.from ? format(dateRangeValue.from, 'd MMMM', { locale: tr }) : '';
@@ -855,7 +862,12 @@ export default function TrendyolPriceRange() {
       const ad = p === '(pencere yok)' ? null : p;
       return `${ad || 'tarifesiz'}: ${dosyaUret(ad)} ürün`;
     });
-    toast.success(`${pencereler.length} Excel dosyası indirildi — ${sonuc.join(' · ')}`, { duration: 8000 });
+    toast.success(
+      pencereler.length === 1
+        ? `Excel indirildi — ${sonuc[0]}`
+        : `${pencereler.length} Excel dosyası indirildi — ${sonuc.join(' · ')}`,
+      { duration: 8000 }
+    );
   };
 
   const getMatchedProduct = (item) => {
@@ -1114,9 +1126,22 @@ export default function TrendyolPriceRange() {
                   <Button variant="outline" onClick={() => { setUploadedData(uploadedData.map(item => ({ ...item, selected_range: 'none', selected_price: 0 }))); toast.success('Tüm seçimler kaldırıldı'); }}>
                     Seçimleri Kaldır
                   </Button>
-                  <Button variant="outline" onClick={handleExport}>
-                    <Download className="mr-2 h-4 w-4" />Excel İndir
-                  </Button>
+                  {/* Her tarife icin AYRI buton: hangisini istersen onu indirirsin.
+                      Tek tarifede secim varsa tek buton cikar. */}
+                  {Object.keys(seciliOzet).filter((k) => k !== 'toplam').length > 1 ? (
+                    Object.entries(seciliOzet)
+                      .filter(([k]) => k !== 'toplam')
+                      .map(([ad, adet]) => (
+                        <Button key={ad} variant="outline" onClick={() => handleExport(ad)}>
+                          <Download className="mr-2 h-4 w-4" />{ad} Excel ({adet})
+                        </Button>
+                      ))
+                  ) : (
+                    <Button variant="outline" onClick={() => handleExport()}>
+                      <Download className="mr-2 h-4 w-4" />Excel İndir
+                      {seciliOzet.toplam > 0 && ` (${seciliOzet.toplam})`}
+                    </Button>
+                  )}
                 </>
               )}
             </div>
