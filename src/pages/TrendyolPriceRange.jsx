@@ -20,6 +20,7 @@ import BaremBadge from '@/components/ui/BaremBadge';
 import { baremSec, baremTavanFiyatlari, baremTarifesiSec } from '@/lib/baremKurali';
 import { gecerliMaliyet } from '@/lib/gecerliMaliyet';
 import { pencereleriBul, pencereKomisyonlari, tarifeSecimDegeri } from '@/lib/trendyolTarifePenceresi';
+import { komisyonHaritasi, pencereUygula, pencereAdlari } from '@/lib/trendyolPencereSecimi';
 
 const TrendyolPriceRangeEntity = db.entities.TrendyolPriceRange;
 const Product = db.entities.Product;
@@ -244,6 +245,10 @@ export default function TrendyolPriceRange() {
             commission_2: komisyonlar[1],
             commission_3: komisyonlar[2],
             commission_4: komisyonlar[3],
+            // TUM pencerelerin komisyonlari satirda saklanir. Boylece pencere
+            // degistirildiginde komisyonlar hazirda bulunur ve Excel'i yeniden
+            // yuklemek gerekmez.
+            pencere_komisyonlari: komisyonHaritasi(row, dosyaPencereleri),
             tarife_penceresi: pencereAdi,
             current_base_price: parseFloat(row['KOMİSYONA ESAS FİYAT']) || 0,
             current_commission: parseFloat(row['GÜNCEL KOMİSYON']) || 0,
@@ -459,6 +464,15 @@ export default function TrendyolPriceRange() {
       if (rangeType === 'manual') updated[index].manual_price = price;
     }
     setUploadedData(updated);
+  };
+
+  // Pencereyi degistirir ve komisyonlari TUM urunlere yeniden uygular.
+  // Komisyonlar satirda hazir durdugu icin dosya yeniden okunmaz; karlar
+  // ekranda aninda guncellenir.
+  const tumUrunlerePencereUygula = (pencereAdi) => {
+    setSecilenPencere(pencereAdi);
+    if (uploadedData.length === 0) return;
+    setUploadedData(uploadedData.map((item) => pencereUygula(item, pencereAdi)));
   };
 
   const handleManualPriceChange = (index, value) => {
@@ -881,6 +895,13 @@ export default function TrendyolPriceRange() {
     return priceInfo ? { ...priceInfo, commission_rate: commissionRate } : null;
   };
 
+  // Pencere listesi normalde Excel yuklenirken dosyadan cikarilir. Sayfa
+  // yeniden acilip liste veritabanindan geldiginde bu state bos olur; o
+  // durumda pencereler satirlarda saklanan komisyon haritasindan okunur.
+  const pencereSecenekleri = pencereler.length > 1
+    ? pencereler
+    : pencereAdlari(uploadedData[0] || {}).map((ad) => ({ ad, tarihAraligi: '' }));
+
   const filteredData = uploadedData.filter(item => {
     if (searchTerm && !item.product_name?.toLowerCase().includes(searchTerm.toLowerCase())) return false;
     if (filterBarcode && !item.barcode?.includes(filterBarcode)) return false;
@@ -990,22 +1011,24 @@ export default function TrendyolPriceRange() {
                 </Popover>
               </div>
 
-              {/* Trendyol dosyasi birden fazla zaman penceresi iceriyor; her
-                  birinin komisyonlari farkli. Kullanici hangisi icin islem
-                  yaptigini secer, hesap o pencerenin komisyonlariyla yapilir. */}
-              {pencereler.length > 1 && (
+              {/* Dosyada birden fazla zaman penceresi var (3 gunluk, 4 gunluk) ve
+                  komisyonlari farkli. Pencere degistirilince karlar aninda yeniden
+                  hesaplanir; Excel'i yeniden yuklemek GEREKMEZ. Indirilen dosyaya
+                  o an secili pencere "Tarife Secimi" sutununa yazilir. */}
+              {pencereSecenekleri.length > 1 && (
                 <div className="space-y-2">
-                  <Label>Tarife Penceresi *</Label>
-                  <Select value={secilenPencere} onValueChange={setSecilenPencere}>
+                  <Label>Tarife Penceresi (tümüne uygula)</Label>
+                  <Select value={secilenPencere} onValueChange={tumUrunlerePencereUygula}>
                     <SelectTrigger><SelectValue placeholder="Pencere seçin" /></SelectTrigger>
                     <SelectContent>
-                      {pencereler.map((p) => (
-                        <SelectItem key={p.ad} value={p.ad}>{p.ad} — {p.tarihAraligi}</SelectItem>
+                      {pencereSecenekleri.map((p) => (
+                        <SelectItem key={p.ad} value={p.ad}>{p.ad}{p.tarihAraligi ? ` — ${p.tarihAraligi}` : ''}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                   <p className="text-[11px] text-muted-foreground">
-                    Değiştirdikten sonra Excel'i <strong>yeniden yükleyin</strong>; komisyonlar seçilen pencereden okunur.
+                    Pencereyi değiştirdiğinizde kârlar <strong>anında</strong> yeniden hesaplanır;
+                    Excel'i yeniden yüklemeniz gerekmez.
                   </p>
                 </div>
               )}
