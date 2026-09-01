@@ -79,6 +79,27 @@ function normalize(row) {
  */
 const SAYFA = 1000;
 
+/**
+ * Siralamaya BENZERSIZ bir ayirici ekler.
+ *
+ * NICIN ZORUNLU: sayfalama range(0..999), range(1000..1999) seklinde yapiliyor.
+ * Siralama anahtari benzersiz DEGILSE (varsayilan created_at boyle: toplu
+ * eklemede yuzlerce kayit ayni saniyeyi tasir) Postgres esit satirlarin
+ * sirasini garanti etmez. Iki istek arasinda sira degisince bazi satirlar
+ * ATLANIR, bazilari IKI KEZ gelir.
+ *
+ * Canli etkisi: svs'de 1009 fiyat kaydi (tam iki sayfa) vardi; her yuklemede
+ * rastgele birkac kayit dusuyor, o urunlerde "sistem fiyati" bos gorunuyordu.
+ * Sebebi urunde ya da eslestirmede sanildi, oysa veri hic gelmiyordu.
+ *
+ * id birincil anahtar oldugu icin benzersizdir; ikincil siralama olarak
+ * eklenince toplam sira kesinlesir ve sayfalama guvenli olur.
+ */
+function siralamayiKesinlestir(query, order) {
+  if (order) query = query.order(order.column, { ascending: order.ascending });
+  return query.order('id', { ascending: true });
+}
+
 async function sayfalayarakCek(entityName, islem, limit, sorguKur) {
   const tablo = TABLE_MAP[entityName];
   const hepsi = [];
@@ -111,19 +132,15 @@ function createEntity(entityName) {
     // sayfa cekilir.
     async filter(conditions = {}, orderBy = '-created_at', limit = null, alanlar = '*') {
       return sayfalayarakCek(entityName, 'filter', limit, (q) => {
-        let query = applyConditions(q.select(alanlar), conditions);
-        const order = parseOrderBy(orderBy);
-        if (order) query = query.order(order.column, { ascending: order.ascending });
-        return query;
+        const query = applyConditions(q.select(alanlar), conditions);
+        return siralamayiKesinlestir(query, parseOrderBy(orderBy));
       });
     },
 
     async list(orderBy = '-created_at', limit = null) {
       return sayfalayarakCek(entityName, 'list', limit, (q) => {
-        let query = q.select('*');
-        const order = parseOrderBy(orderBy);
-        if (order) query = query.order(order.column, { ascending: order.ascending });
-        return query;
+        const query = q.select('*');
+        return siralamayiKesinlestir(query, parseOrderBy(orderBy));
       });
     },
 
