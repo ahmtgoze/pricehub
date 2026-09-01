@@ -466,6 +466,15 @@ export default function TrendyolPriceRange() {
     setUploadedData(updated);
   };
 
+  // Tek bir urunun tarife penceresini degistirir. Fiyat limitleri iki
+  // pencerede AYNI oldugu icin secili kademe ve fiyat korunur; degisen
+  // yalnizca komisyon, dolayisiyla kar.
+  const handlePencereChange = (index, pencereAdi) => {
+    const updated = [...uploadedData];
+    updated[index] = pencereUygula(updated[index], pencereAdi);
+    setUploadedData(updated);
+  };
+
   // Pencereyi degistirir ve komisyonlari TUM urunlere yeniden uygular.
   // Komisyonlar satirda hazir durdugu icin dosya yeniden okunmaz; karlar
   // ekranda aninda guncellenir.
@@ -1027,8 +1036,8 @@ export default function TrendyolPriceRange() {
                     </SelectContent>
                   </Select>
                   <p className="text-[11px] text-muted-foreground">
-                    Pencereyi değiştirdiğinizde kârlar <strong>anında</strong> yeniden hesaplanır;
-                    Excel'i yeniden yüklemeniz gerekmez.
+                    Kârlar <strong>anında</strong> yeniden hesaplanır; Excel'i yeniden yüklemeniz
+                    gerekmez. Tek bir ürünü ayırmak için tablodaki <strong>Tarife</strong> sütununu kullanın.
                   </p>
                 </div>
               )}
@@ -1147,6 +1156,7 @@ export default function TrendyolPriceRange() {
                         <th className="p-3 text-center font-semibold">Stok</th>
                         <th className="p-3 text-center font-semibold min-w-[120px]">Kategori</th>
                         <th className="p-3 text-center font-semibold min-w-[140px]">Sistem Fiyatı</th>
+                        <th className="p-3 text-center font-semibold min-w-[110px]">Tarife</th>
                         <th className="p-3 text-center font-semibold min-w-[140px]">Aralık 1</th>
                         <th className="p-3 text-center font-semibold min-w-[140px]">Aralık 2</th>
                         <th className="p-3 text-center font-semibold min-w-[140px]">Aralık 3</th>
@@ -1182,6 +1192,27 @@ export default function TrendyolPriceRange() {
                                   </div>
                                 </div>
                               ) : <div className="text-center text-muted-foreground/70 text-xs">-</div>}
+                            </td>
+
+                            {/* Urun bazinda tarife penceresi. Ustteki secici hepsini
+                                birden degistirir; burasi tek urunu ayirmak icindir.
+                                Limitler pencerelerde ayni, degisen komisyon ve kar. */}
+                            <td className="p-3">
+                              {pencereAdlari(item).length > 1 ? (
+                                <Select
+                                  value={item.tarife_penceresi || ''}
+                                  onValueChange={(v) => handlePencereChange(uploadedData.indexOf(item), v)}
+                                >
+                                  <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                                  <SelectContent>
+                                    {pencereAdlari(item).map((ad) => (
+                                      <SelectItem key={ad} value={ad} className="text-xs">{ad}</SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              ) : (
+                                <div className="text-center text-muted-foreground/70 text-xs">{item.tarife_penceresi || '-'}</div>
+                              )}
                             </td>
 
                             {[1, 2, 3, 4].map(rangeNum => {
