@@ -94,24 +94,16 @@ async function hedefBul() {
   throw new Error('Chrome hata ayıklama portuna bağlanılamadı');
 }
 
-class Baglanti {
-  constructor(ws) { this.ws = ws; this.id = 0; this.bekleyen = new Map(); this.olaylar = []; }
-  static async ac(url) {
-    const ws = new WebSocket(url);
-    await new Promise((c, r) => { ws.onopen = c; ws.onerror = () => r(new Error('WS acilamadi')); });
-    const b = new Baglanti(ws);
-    ws.onmessage = (m) => {
-      const v = JSON.parse(m.data);
-      if (v.id && b.bekleyen.has(v.id)) { b.bekleyen.get(v.id)(v); b.bekleyen.delete(v.id); }
-      else if (v.method) b.olaylar.push(v);
-    };
-    return b;
-  }
-  gonder(method, params = {}) {
-    const id = ++this.id;
-    return new Promise((c) => { this.bekleyen.set(id, c); this.ws.send(JSON.stringify({ id, method, params })); });
-  }
-}
+/**
+ * Baglanti sinifi ORTAK modulden gelir (tests/tarayici.mjs).
+ *
+ * NICIN: burada birebir ayni sinifin KOPYASI duruyordu. Ortak module
+ * "duzgunKapat" eklendiginde kopyaya eklenmedi ve `npm run bot:giris`
+ * tam giris algilandiktan sonra "b.duzgunKapat is not a function" ile
+ * cokuyordu — yani oturum hicbir zaman diske yazilamiyordu. Kopya
+ * kaldirildi ki ayni sinif iki yerde ayrisamasin.
+ */
+import { Baglanti } from './tarayici.mjs';
 
 /* ── Yardımcılar ─────────────────────────────────────────────────────── */
 const hataMetni = (o) => {
