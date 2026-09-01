@@ -13,6 +13,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { toast } from 'sonner';
 import * as XLSX from 'xlsx';
 import PriceDetailModal from '@/components/modals/PriceDetailModal';
@@ -1126,16 +1127,31 @@ export default function TrendyolPriceRange() {
                   <Button variant="outline" onClick={() => { setUploadedData(uploadedData.map(item => ({ ...item, selected_range: 'none', selected_price: 0 }))); toast.success('Tüm seçimler kaldırıldı'); }}>
                     Seçimleri Kaldır
                   </Button>
-                  {/* Her tarife icin AYRI buton: hangisini istersen onu indirirsin.
-                      Tek tarifede secim varsa tek buton cikar. */}
+                  {/* Tek buton; basinca hangi tarifenin inecegi seciliyor.
+                      Tek tarifede secim varsa menu acmadan dogrudan iner. */}
                   {Object.keys(seciliOzet).filter((k) => k !== 'toplam').length > 1 ? (
-                    Object.entries(seciliOzet)
-                      .filter(([k]) => k !== 'toplam')
-                      .map(([ad, adet]) => (
-                        <Button key={ad} variant="outline" onClick={() => handleExport(ad)}>
-                          <Download className="mr-2 h-4 w-4" />{ad} Excel ({adet})
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="outline">
+                          <Download className="mr-2 h-4 w-4" />Excel İndir ({seciliOzet.toplam})
                         </Button>
-                      ))
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="start">
+                        <DropdownMenuLabel>Hangi tarife inecek?</DropdownMenuLabel>
+                        <DropdownMenuSeparator />
+                        {Object.entries(seciliOzet)
+                          .filter(([k]) => k !== 'toplam')
+                          .map(([ad, adet]) => (
+                            <DropdownMenuItem key={ad} onSelect={() => handleExport(ad)}>
+                              {ad} — {adet} ürün
+                            </DropdownMenuItem>
+                          ))}
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem onSelect={() => handleExport()}>
+                          Hepsi (ayrı dosyalar)
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   ) : (
                     <Button variant="outline" onClick={() => handleExport()}>
                       <Download className="mr-2 h-4 w-4" />Excel İndir
