@@ -21,7 +21,7 @@ import { baremSec, baremTavanFiyatlari, baremTarifesiSec } from '@/lib/baremKura
 import { gecerliMaliyet } from '@/lib/gecerliMaliyet';
 import { pencereleriBul, pencereKomisyonlari, tarifeSecimDegeri } from '@/lib/trendyolTarifePenceresi';
 import { komisyonHaritasi, pencereUygula, pencereAdlari, pencereDegistirilebilir,
-         buPenceredeSecili, baskaPenceredeSecili, secimOzeti } from '@/lib/trendyolPencereSecimi';
+         pencereyeGec, acikSecimiSakla, secimiOku, seciliPencereler, secimOzeti } from '@/lib/trendyolPencereSecimi';
 
 const TrendyolPriceRangeEntity = db.entities.TrendyolPriceRange;
 const Product = db.entities.Product;
@@ -493,10 +493,12 @@ export default function TrendyolPriceRange() {
       );
       return;
     }
-    // Baska pencerede SECILI urunler oldugu gibi kalir; komisyonlari kendi
-    // penceresine ait olmali, yoksa kayitta ve Excel'de yanlis oran yazilir.
+    // Acik tarifenin secimi kendi kutusuna kaydedilir, yeni tarifenin secimi
+    // ekrana gelir. Yeni tarifede secim yoksa SIFIRDAN baslanir — diger
+    // tarifede secili olmasi burayi etkilemez.
+    const oncekiPencere = secilenPencere;
     setUploadedData(uploadedData.map((item) =>
-      baskaPenceredeSecili(item, pencereAdi) ? item : pencereUygula(item, pencereAdi)
+      pencereUygula(pencereyeGec(item, oncekiPencere, pencereAdi), pencereAdi)
     ));
   };
 
@@ -752,7 +754,9 @@ export default function TrendyolPriceRange() {
 
     // HER TARIFE AYRI DOSYA. 3 gunlukte secilenler bir dosyaya, 4 gunlukte
     // secilenler digerine iner; Trendyol'a ayri ayri yuklenebilsinler diye.
-    const ozet = secimOzeti(uploadedData);
+    // Acik tarifenin secimi henuz kutusuna yazilmamis olabilir; once katlanir.
+    const veri = uploadedData.map((u) => acikSecimiSakla(u, secilenPencere));
+    const ozet = secimOzeti(veri);
     const pencereler = Object.keys(ozet).filter((k) => k !== 'toplam');
     if (pencereler.length === 0) { toast.error('Seçili ürün yok'); return; }
 
@@ -788,16 +792,17 @@ export default function TrendyolPriceRange() {
         for (let C = range.s.c; C <= range.e.c; C++) {
           if (basligi(C) === 'BARKOD') barcode = worksheet[XLSX.utils.encode_cell({ r: R, c: C })]?.v;
         }
-        const item = uploadedData.find(i => i.barcode === barcode);
+        const item = veri.find(i => i.barcode === barcode);
         // Bu dosyaya YALNIZCA bu tarifede secilenler yazilir.
-        const buDosyaya = !!item && buPenceredeSecili(item, pencereAdi);
+        const secim = item ? secimiOku(item, pencereAdi) : { kademe: 'none', fiyat: 0 };
+        const buDosyaya = secim.kademe !== 'none';
         if (buDosyaya) yazilan++;
 
         for (let C = range.s.c; C <= range.e.c; C++) {
           const header = basligi(C);
           const hucre = XLSX.utils.encode_cell({ r: R, c: C });
           if (header === 'YENİ TSF (FİYAT GÜNCELLE)') {
-            if (buDosyaya) worksheet[hucre] = { v: item.selected_price || 0, t: 'n' };
+            if (buDosyaya) worksheet[hucre] = { v: secim.fiyat || 0, t: 'n' };
             else delete worksheet[hucre];   // vazgecilen urun eski fiyatiyla gitmesin
           } else if (header === 'Tarife Sonuna Kadar Uygula') {
             if (buDosyaya) worksheet[hucre] = { v: 'Evet', t: 's' };
@@ -945,7 +950,7 @@ export default function TrendyolPriceRange() {
     : pencereAdlari(uploadedData[0] || {}).map((ad) => ({ ad, tarihAraligi: '' }));
 
   // Pencere basina kac urun secili: "3 Gün: 11 · 4 Gün: 5"
-  const seciliOzet = secimOzeti(uploadedData);
+  const seciliOzet = secimOzeti(uploadedData, secilenPencere);
   const seciliKirilim = Object.entries(seciliOzet)
     .filter(([k]) => k !== 'toplam')
     .map(([k, v]) => `${k}: ${v}`)
@@ -1237,21 +1242,24 @@ export default function TrendyolPriceRange() {
                               ) : <div className="text-center text-muted-foreground/70 text-xs">-</div>}
                             </td>
 
-                            {/* Urunun HANGI pencereye ait oldugu. Secim hangi tarifede
-                                yapildiysa orasidir; Excel'e de o yazilir. */}
+                            {/* Urun HANGI tarifelerde secili. Tarifeler bagimsiz;
+                                bir urun ikisinde birden de secili olabilir. */}
                             <td className="p-3 text-center">
-                              {item.secim_penceresi ? (
-                                <span className={`inline-block rounded px-2 py-1 text-xs font-medium ${
-                                  item.secim_penceresi === secilenPencere
-                                    ? 'bg-primary/10 text-primary'
-                                    : 'bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300'
-                                }`}>
-                                  {item.secim_penceresi}
-                                  {item.secim_penceresi !== secilenPencere && "'de seçili"}
-                                </span>
-                              ) : (
-                                <span className="text-muted-foreground/70 text-xs">-</span>
-                              )}
+                              {(() => {
+                                const secili = seciliPencereler(acikSecimiSakla(item, secilenPencere));
+                                if (secili.length === 0) return <span className="text-muted-foreground/70 text-xs">-</span>;
+                                return (
+                                  <div className="flex flex-wrap justify-center gap-1">
+                                    {secili.map((ad) => (
+                                      <span key={ad} className={`rounded px-1.5 py-0.5 text-[11px] font-medium ${
+                                        ad === secilenPencere
+                                          ? 'bg-primary/10 text-primary'
+                                          : 'bg-secondary text-muted-foreground'
+                                      }`}>{ad}</span>
+                                    ))}
+                                  </div>
+                                );
+                              })()}
                             </td>
 
                             {[1, 2, 3, 4].map(rangeNum => {
@@ -1271,8 +1279,7 @@ export default function TrendyolPriceRange() {
 
                                const { profit, profitRate, baremUsed } = calculateProfit(priceToUse, commission, item);
                                const isProfitable = profit > 0;
-                               // Baska pencerede secilenler BURADA isaretli gorunmez.
-                               const isSelected = item.selected_range === `range_${rangeNum}` && buPenceredeSecili(item, secilenPencere);
+                               const isSelected = item.selected_range === `range_${rangeNum}`;
 
                               return (
                                 <td key={rangeNum} className="p-3">

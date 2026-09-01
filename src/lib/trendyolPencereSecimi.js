@@ -105,53 +105,87 @@ export function kademeKarsilastir(urun, kademeNo) {
 }
 
 /* ------------------------------------------------------------------ *
- * SECIMIN HANGI PENCEREYE AIT OLDUGU
+ * HER TARIFENIN KENDI SECIMI
  *
- * Kullanici once 3 gunluk tarifede secim yapiyor, sonra 4 gunluge geciyor.
- * 4 gunluk gorunumde 3 gunlukte secilenler SECILI GORUNMEMELI; o pencerenin
- * kendi secimi yapilmali. Sonunda hepsi TEK Excel'e yaziliyor: her urun
- * kendi penceresiyle.
+ * Kullanici 3 gunluk tarifede secim yapiyor, 4 gunluge gecince SIFIRDAN
+ * seciyor. Iki tarife AYRI Excel olarak indigi icin secimler birbirinden
+ * bagimsizdir: ayni urun hem 3 gunlukte hem 4 gunlukte, hatta FARKLI
+ * fiyatlarla secilebilir. (Tek dosyaya yazsaydik urun basina tek satir
+ * oldugu icin bu mumkun olmazdi.)
  *
- * Bir urun ayni anda iki pencereye ait OLAMAZ — dosyada urun basina tek satir
- * ve tek "Tarife Secimi" hucresi var. Secim yeni pencereye TASINIR.
+ * Secimler urunun uzerinde pencere adina gore saklanir:
+ *   secimler: { '3 Gün': { kademe: 'range_2', fiyat: 488.17 },
+ *               '4 Gün': { kademe: 'range_3', fiyat: 441.75 } }
+ *
+ * Ekranda calisan kod tek bir secimle ugrassin diye, acik olan pencerenin
+ * secimi ayrica selected_range / selected_price alanlarinda tutulur.
  * ------------------------------------------------------------------ */
 
-/** Urunun secimi var mi (hangi pencerede olursa olsun)? */
-export function seciliMi(urun) {
-  const s = urun?.selected_range;
-  return !!s && s !== 'none';
+const BOS_SECIM = { kademe: 'none', fiyat: 0 };
+
+/** Urunun verilen tarifedeki secimi. */
+export function secimiOku(urun, pencereAdi) {
+  const s = urun?.secimler?.[pencereAdi];
+  if (!s || !s.kademe || s.kademe === 'none') return { ...BOS_SECIM };
+  return { kademe: s.kademe, fiyat: Number(s.fiyat) || 0 };
 }
 
-/** Urun BU pencerede mi secili? Tabloda isaretli gorunmesi buna bagli. */
-export function buPenceredeSecili(urun, pencereAdi) {
-  return seciliMi(urun) && (urun.secim_penceresi || null) === pencereAdi;
+/** Urun bu tarifede secili mi? */
+export function secimVarMi(urun, pencereAdi) {
+  return secimiOku(urun, pencereAdi).kademe !== 'none';
 }
 
-/** Urun BASKA bir pencerede secili mi? Tabloda "3 Gün'de secili" rozeti icin. */
-export function baskaPenceredeSecili(urun, pencereAdi) {
-  if (!seciliMi(urun)) return false;
-  const p = urun.secim_penceresi || null;
-  return p !== null && p !== pencereAdi;
-}
-
-/** Secimi verilen pencereye baglar. */
-export function secimiPencereyeBagla(urun, pencereAdi) {
-  if (!urun) return urun;
-  return { ...urun, secim_penceresi: pencereAdi || null };
+/** Urunun secili oldugu tarifelerin adlari. */
+export function seciliPencereler(urun) {
+  const h = urun?.secimler;
+  if (!h || typeof h !== 'object') return [];
+  return Object.keys(h).filter((ad) => secimVarMi(urun, ad));
 }
 
 /**
- * Pencere basina kac urun secili?
- * @returns { '3 Gün': 11, '4 Gün': 5, toplam: 16 }
+ * Ekrandaki secimi (selected_range/selected_price) verilen tarifenin
+ * kutusuna yazar. Pencere degistirmeden ONCE cagrilir.
  */
-export function secimOzeti(urunler) {
+export function acikSecimiSakla(urun, pencereAdi) {
+  if (!urun || !pencereAdi) return urun;
+  const kademe = urun.selected_range || 'none';
+  const secimler = { ...(urun.secimler || {}) };
+  if (kademe === 'none') delete secimler[pencereAdi];
+  else secimler[pencereAdi] = { kademe, fiyat: Number(urun.selected_price) || 0 };
+  return { ...urun, secimler };
+}
+
+/**
+ * Verilen tarifenin secimini ekrana getirir. Secimi yoksa SIFIRDAN baslar —
+ * diger tarifede secili olmasi burayi etkilemez.
+ */
+export function secimiEkranaAl(urun, pencereAdi) {
+  if (!urun) return urun;
+  const s = secimiOku(urun, pencereAdi);
+  return { ...urun, selected_range: s.kademe, selected_price: s.fiyat, secim_penceresi: pencereAdi || null };
+}
+
+/** Once acik secimi saklar, sonra yeni tarifenin secimini ekrana alir. */
+export function pencereyeGec(urun, eskiPencere, yeniPencere) {
+  if (!urun) return urun;
+  return secimiEkranaAl(acikSecimiSakla(urun, eskiPencere), yeniPencere);
+}
+
+/**
+ * Tarife basina kac urun secili?
+ * Acik olan tarifenin secimi henuz kutusuna yazilmamis olabilir; bu yuzden
+ * disaridan verilir.
+ * @returns { '3 Gün': 11, '4 Gün': 2, toplam: 13 }
+ */
+export function secimOzeti(urunler, acikPencere) {
   const ozet = { toplam: 0 };
   if (!Array.isArray(urunler)) return ozet;
   for (const u of urunler) {
-    if (!seciliMi(u)) continue;
-    const p = u.secim_penceresi || '(pencere yok)';
-    ozet[p] = (ozet[p] || 0) + 1;
-    ozet.toplam++;
+    const guncel = acikPencere ? acikSecimiSakla(u, acikPencere) : u;
+    for (const ad of seciliPencereler(guncel)) {
+      ozet[ad] = (ozet[ad] || 0) + 1;
+      ozet.toplam++;
+    }
   }
   return ozet;
 }

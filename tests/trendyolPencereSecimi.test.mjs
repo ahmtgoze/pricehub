@@ -1,5 +1,5 @@
 import { komisyonHaritasi, pencereKomisyonlariniAl, pencereUygula, pencereAdlari, kademeKarsilastir, pencereDegistirilebilir,
-         seciliMi, buPenceredeSecili, baskaPenceredeSecili, secimiPencereyeBagla, secimOzeti }
+         secimiOku, secimVarMi, seciliPencereler, acikSecimiSakla, secimiEkranaAl, pencereyeGec, secimOzeti }
   from '../src/lib/trendyolPencereSecimi.js';
 import { pencereleriBul } from '../src/lib/trendyolTarifePenceresi.js';
 
@@ -93,31 +93,68 @@ esit('degistirilebilir mi — hepsi sifir', pencereDegistirilebilir({ pencere_ko
 esit('pencere adlari', pencereAdlari({ pencere_komisyonlari: { '3 Gün': [], '4 Gün': [] } }), ['3 Gün', '4 Gün']);
 esit('haritasiz urun', pencereAdlari({}), []);
 
-console.log('\n=== SECIM HANGI PENCEREYE AIT ===');
+console.log('\n=== HER TARIFENIN KENDI SECIMI ===');
 {
-  const uc  = { selected_range: 'range_2', selected_price: 488.17, secim_penceresi: '3 Gün' };
-  const drt = { selected_range: 'range_3', selected_price: 441.75, secim_penceresi: '4 Gün' };
-  const bos = { selected_range: 'none' };
+  const bos = { barcode: 'A' };
 
-  // 3 gunlukte secilen, 4 gunluk gorunumde SECILI GORUNMEMELI
-  esit('3 gunlukte secili, 3 gunluk gorunumde isaretli', buPenceredeSecili(uc, '3 Gün'), true);
-  esit('3 gunlukte secili, 4 gunluk gorunumde isaretsiz', buPenceredeSecili(uc, '4 Gün'), false);
-  esit('ama baska pencerede secili oldugu belli', baskaPenceredeSecili(uc, '4 Gün'), true);
-  esit('kendi penceresinde "baska" degil', baskaPenceredeSecili(uc, '3 Gün'), false);
-  esit('secilmemis urun', [buPenceredeSecili(bos, '3 Gün'), baskaPenceredeSecili(bos, '4 Gün')], [false, false]);
-  esit('secili mi', [seciliMi(uc), seciliMi(bos), seciliMi({}), seciliMi(null)], [true, false, false, false]);
+  // 3 gunlukte sec
+  let u = { ...bos, selected_range: 'range_2', selected_price: 488.17 };
+  u = acikSecimiSakla(u, '3 Gün');
+  esit('3 gunluk secim saklandi', secimiOku(u, '3 Gün'), { kademe: 'range_2', fiyat: 488.17 });
 
-  // Secim yeni pencereye TASINIR; urun iki pencereye birden ait olamaz
-  const tasinan = secimiPencereyeBagla(uc, '4 Gün');
-  esit('tasindi', [buPenceredeSecili(tasinan, '4 Gün'), buPenceredeSecili(tasinan, '3 Gün')], [true, false]);
-  esit('fiyat korunur', tasinan.selected_price, 488.17);
+  // 4 gunluge gec: SIFIRDAN baslamali
+  u = secimiEkranaAl(u, '4 Gün');
+  esit('4 gunlukte ekran bos', [u.selected_range, u.selected_price], ['none', 0]);
+  esit('ama 3 gunluk secim duruyor', secimVarMi(u, '3 Gün'), true);
+  esit('4 gunlukte secim yok', secimVarMi(u, '4 Gün'), false);
 
-  esit('pencere basina sayim', secimOzeti([uc, uc, drt, bos]), { toplam: 3, '3 Gün': 2, '4 Gün': 1 });
-  esit('penceresiz secim ayri sayilir', secimOzeti([{ selected_range: 'range_1' }]), { toplam: 1, '(pencere yok)': 1 });
+  // 4 gunlukte FARKLI kademe sec — 3 gunluge dokunmamali
+  u = acikSecimiSakla({ ...u, selected_range: 'range_3', selected_price: 441.75 }, '4 Gün');
+  esit('4 gunluk secim', secimiOku(u, '4 Gün'), { kademe: 'range_3', fiyat: 441.75 });
+  esit('3 gunluk bozulmadi', secimiOku(u, '3 Gün'), { kademe: 'range_2', fiyat: 488.17 });
+  esit('ayni urun iki tarifede de secili', seciliPencereler(u).sort(), ['3 Gün', '4 Gün']);
+
+  // 3 gunluge geri don: kendi secimi geri gelmeli
+  u = secimiEkranaAl(u, '3 Gün');
+  esit('3 gunluk geri geldi', [u.selected_range, u.selected_price], ['range_2', 488.17]);
+}
+
+console.log('\n=== PENCEREYE GECIS ===');
+{
+  const u = pencereyeGec({ selected_range: 'range_1', selected_price: 100 }, '3 Gün', '4 Gün');
+  esit('eski saklandi', secimiOku(u, '3 Gün'), { kademe: 'range_1', fiyat: 100 });
+  esit('yeni bos', [u.selected_range, u.selected_price], ['none', 0]);
+  esit('acik pencere yazildi', u.secim_penceresi, '4 Gün');
+
+  // Secim kaldirilirsa kutudan da silinir
+  const v = acikSecimiSakla({ selected_range: 'none', secimler: { '3 Gün': { kademe: 'range_2', fiyat: 5 } } }, '3 Gün');
+  esit('secim kaldirilinca silinir', secimVarMi(v, '3 Gün'), false);
+  esit('gecis — urun yoksa', pencereyeGec(null, '3 Gün', '4 Gün'), null);
+}
+
+console.log('\n=== TARIFE BASINA SAYIM ===');
+{
+  const yap = (p3, p4) => ({ secimler: {
+    ...(p3 ? { '3 Gün': { kademe: 'range_2', fiyat: 1 } } : {}),
+    ...(p4 ? { '4 Gün': { kademe: 'range_2', fiyat: 1 } } : {}) } });
+  esit('ayri ayri sayilir',
+    secimOzeti([yap(1, 0), yap(1, 0), yap(0, 1), yap(1, 1), yap(0, 0)]),
+    { toplam: 5, '3 Gün': 3, '4 Gün': 2 });
+  // Acik pencerenin HENUZ saklanmamis secimi de sayilir
+  esit('acik secim de sayilir',
+    secimOzeti([{ selected_range: 'range_1', selected_price: 9 }], '4 Gün'),
+    { toplam: 1, '4 Gün': 1 });
   esit('bos liste', secimOzeti([]), { toplam: 0 });
   esit('gecersiz girdi', secimOzeti(null), { toplam: 0 });
-  esit('bagla — urun yoksa', secimiPencereyeBagla(null, '3 Gün'), null);
 }
+
+console.log('\n=== SECIM UC DURUMLARI ===');
+esit('secimsiz urun', secimiOku({}, '3 Gün'), { kademe: 'none', fiyat: 0 });
+esit('null urun', secimiOku(null, '3 Gün'), { kademe: 'none', fiyat: 0 });
+esit('kademe none ise secim yok', secimVarMi({ secimler: { '3 Gün': { kademe: 'none' } } }, '3 Gün'), false);
+esit('fiyat okunamazsa 0', secimiOku({ secimler: { '3 Gün': { kademe: 'range_1', fiyat: 'abc' } } }, '3 Gün').fiyat, 0);
+esit('secili pencere yok', seciliPencereler({}), []);
+esit('sakla — pencere adi yoksa', acikSecimiSakla({ a: 1 }, ''), { a: 1 });
 
 console.log(`\nGECEN: ${gecen}   KALAN: ${kalan}`);
 process.exit(kalan ? 1 : 0);
