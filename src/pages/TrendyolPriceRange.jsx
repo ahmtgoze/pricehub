@@ -266,21 +266,36 @@ export default function TrendyolPriceRange() {
           }
         }
 
-        setUploadProgress({ current: 0, total: parsed.length });
-        for (let i = 0; i < parsed.length; i += 30) {
-          const batch = parsed.slice(i, i + 30);
-          // Sadece ilk batch'in ilk kaydına Excel URL'ini ekle
-          if (i === 0 && batch.length > 0 && excelFileUrl) {
-            batch[0].excel_file_url = excelFileUrl;
-          }
-          await TrendyolPriceRangeEntity.bulkCreate(batch);
-          setUploadProgress({ current: Math.min(i + 30, parsed.length), total: parsed.length });
-          if (i + 30 < parsed.length) await new Promise(resolve => setTimeout(resolve, 200));
-        }
-
+        // Liste ONCE ekrana verilir. Kaydetme basarisiz olsa bile kullanici
+        // urunleri ve karlari gorur; onceden kayit hatasinda liste bos
+        // kaliyordu ve sebebi anlasilmiyordu.
         setUploadedData(parsed);
-        queryClient.invalidateQueries(['trendyolPriceRanges']);
-        toast.success(`${parsed.length} ürün yüklendi ve kaydedildi`);
+
+        setUploadProgress({ current: 0, total: parsed.length });
+        try {
+          for (let i = 0; i < parsed.length; i += 30) {
+            const batch = parsed.slice(i, i + 30);
+            // Sadece ilk batch'in ilk kaydına Excel URL'ini ekle
+            if (i === 0 && batch.length > 0 && excelFileUrl) {
+              batch[0].excel_file_url = excelFileUrl;
+            }
+            await TrendyolPriceRangeEntity.bulkCreate(batch);
+            setUploadProgress({ current: Math.min(i + 30, parsed.length), total: parsed.length });
+            if (i + 30 < parsed.length) await new Promise(resolve => setTimeout(resolve, 200));
+          }
+          queryClient.invalidateQueries(['trendyolPriceRanges']);
+          toast.success(`${parsed.length} ürün yüklendi ve kaydedildi`);
+        } catch (kayitHatasi) {
+          // KAYDETME hatasi, OKUMA hatasi degil. Onceki surumde ikisi ayni
+          // mesaji veriyordu ("Excel dosyası okunamadı") ve dosyada sorun
+          // varmis gibi gorunuyordu.
+          setUploadProgress({ current: 0, total: 0 });
+          toast.error(
+            `${parsed.length} ürün okundu ama KAYDEDİLEMEDİ: ${kayitHatasi?.message || kayitHatasi}. ` +
+            'Liste ekranda duruyor; sayfadan çıkarsanız kaybolur.',
+            { duration: 12000 }
+          );
+        }
       } catch (error) {
         toast.error('Excel dosyası okunamadı: ' + error.message);
       }
