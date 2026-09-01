@@ -777,16 +777,6 @@ export default function TrendyolPriceRange() {
     const toStr = dateRangeValue?.to ? format(dateRangeValue.to, 'd MMMM', { locale: tr }) : '';
     const donem = `${slugify(fromStr)}-${slugify(toStr)}`;
 
-    // Sadece bilinen sütunları tut, geri kalanını sil (EXTERNAL ID, TARİFE GRUBU ve bilinmeyen sütunlar)
-    const allowedHeaders = new Set([
-      'ÜRÜN İSMİ', 'BARKOD', 'SATICI STOK KODU', 'BEDEN', 'MODEL KODU', 'KATEGORİ', 'MARKA', 'STOK',
-      '1.Fiyat Alt Limit', '2.Fiyat Üst Limiti', '2.Fiyat Alt Limit', '3.Fiyat Üst Limiti',
-      '3.Fiyat Alt Limit', '4.Fiyat Üst Limiti',
-      '1.KOMİSYON', '2.KOMİSYON', '3.KOMİSYON', '4.KOMİSYON',
-      'KOMİSYONA ESAS FİYAT', 'GÜNCEL KOMİSYON', 'GÜNCEL TSF',
-      'YENİ TSF (FİYAT GÜNCELLE)', 'Hesaplanan Komisyon', 'Tarife Sonuna Kadar Uygula',
-      'EXTERNAL ID', 'TARİFE GRUBU', 'Kar Tutarı', 'Kar/Maliyet (%)'
-    ]);
 
     const dosyaUret = (pencereAdi) => {
       // Her dosya HAM veriden yeniden aciliyor. Ayni workbook uzerinde iki kez
@@ -827,31 +817,12 @@ export default function TrendyolPriceRange() {
         }
       }
 
-      // Sütunları sağdan sola silerek kaydırma sorununu önle
-      for (let C = range.e.c; C >= range.s.c; C--) {
-        const header = basligi(C);
-        // Trendyol yeni bicimde pencere basina sutun uretiyor:
-        //   "Tarih aralığı (3 Gün)", "Hesaplanan Komisyon (4 Gün)", "Tarife Seçimi"
-        // Bunlar listede olmadigi icin SILINIYORLARDI; dosya semaya uymuyordu.
-        const baslikMetni = String(header ?? '');
-        const yeniBicimSutunu =
-          baslikMetni.startsWith('Tarih aralığı') ||
-          baslikMetni.startsWith('Hesaplanan Komisyon') ||
-          baslikMetni === 'Tarife Seçimi';
-
-        if (!allowedHeaders.has(header) && !yeniBicimSutunu) {
-          for (let R = range.s.r; R <= range.e.r; R++) {
-            for (let shiftC = C; shiftC < range.e.c; shiftC++) {
-              const from = XLSX.utils.encode_cell({ r: R, c: shiftC + 1 });
-              const to = XLSX.utils.encode_cell({ r: R, c: shiftC });
-              if (worksheet[from]) worksheet[to] = worksheet[from];
-              else delete worksheet[to];
-            }
-            delete worksheet[XLSX.utils.encode_cell({ r: R, c: range.e.c })];
-          }
-          range.e.c--;
-        }
-      }
+      // SUTUN SILINMIYOR. Onceki surum "bilinen sutunlari tut, gerisini sil"
+      // diye calisiyordu ve listede "EXTERNAL ID" yaziyordu; dosyadaki gercek
+      // basliklar ise FIRST / SECOND / FULL EXTERNAL ID. Ucu de siliniyor,
+      // dosya 35 sutun yerine 32 sutunla iniyordu ve Trendyol
+      // "Yüklenen excel formatı hatalıdır" diyip hic islemiyordu.
+      // Dosyayi Trendyol uretiyor; her sutunu semasinin parcasi.
       worksheet['!ref'] = XLSX.utils.encode_range(range);
 
       const ek = pencereAdi ? `-${slugify(pencereAdi)}` : '';
