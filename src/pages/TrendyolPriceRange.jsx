@@ -20,7 +20,7 @@ import BaremBadge from '@/components/ui/BaremBadge';
 import { baremSec, baremTavanFiyatlari, baremTarifesiSec } from '@/lib/baremKurali';
 import { gecerliMaliyet } from '@/lib/gecerliMaliyet';
 import { pencereleriBul, pencereKomisyonlari, tarifeSecimDegeri } from '@/lib/trendyolTarifePenceresi';
-import { komisyonHaritasi, pencereUygula, pencereAdlari } from '@/lib/trendyolPencereSecimi';
+import { komisyonHaritasi, pencereUygula, pencereAdlari, pencereDegistirilebilir } from '@/lib/trendyolPencereSecimi';
 
 const TrendyolPriceRangeEntity = db.entities.TrendyolPriceRange;
 const Product = db.entities.Product;
@@ -481,6 +481,16 @@ export default function TrendyolPriceRange() {
   const tumUrunlerePencereUygula = (pencereAdi) => {
     setSecilenPencere(pencereAdi);
     if (uploadedData.length === 0) return;
+    // Bu alan eklenmeden once kaydedilmis listelerde pencere komisyonlari yok.
+    // Sessizce hicbir sey yapmak yerine sebebini soyle.
+    if (!uploadedData.some((item) => pencereDegistirilebilir(item, pencereAdi))) {
+      toast.error(
+        `"${pencereAdi}" komisyonları bu listede kayıtlı değil. Tarifeyi değiştirmek için ` +
+        'Excel dosyasını yeniden yükleyin.',
+        { duration: 9000 }
+      );
+      return;
+    }
     setUploadedData(uploadedData.map((item) => pencereUygula(item, pencereAdi)));
   };
 

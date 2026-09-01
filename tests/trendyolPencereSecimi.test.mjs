@@ -1,4 +1,4 @@
-import { komisyonHaritasi, pencereKomisyonlariniAl, pencereUygula, pencereAdlari, kademeKarsilastir }
+import { komisyonHaritasi, pencereKomisyonlariniAl, pencereUygula, pencereAdlari, kademeKarsilastir, pencereDegistirilebilir }
   from '../src/lib/trendyolPencereSecimi.js';
 import { pencereleriBul } from '../src/lib/trendyolTarifePenceresi.js';
 
@@ -81,7 +81,14 @@ esit('olmayan pencere sifirlanir', pencereKomisyonlariniAl({ '3 Gün': [1, 2, 3,
 esit('harita yoksa', pencereKomisyonlariniAl(undefined, '3 Gün'), [0, 0, 0, 0]);
 esit('urun yoksa degismez', pencereUygula(null, '3 Gün'), null);
 esit('pencere adi yoksa degismez', pencereUygula({ a: 1 }, ''), { a: 1 });
-esit('harita yoksa komisyon 0', pencereUygula({ a: 1 }, '3 Gün').commission_1, 0);
+// Komisyon okunamiyorsa urun DEGISTIRILMEZ; sifirlamak yanlis kar hesaplatirdi.
+esit('harita yoksa urun korunur', pencereUygula({ a: 1 }, '3 Gün'), { a: 1 });
+esit('eski kayit (harita null) korunur',
+  pencereUygula({ commission_2: 19.3, pencere_komisyonlari: null }, '4 Gün'),
+  { commission_2: 19.3, pencere_komisyonlari: null });
+esit('degistirilebilir mi — var', pencereDegistirilebilir({ pencere_komisyonlari: { '4 Gün': [20, 16.6, 14.7, 12.2] } }, '4 Gün'), true);
+esit('degistirilebilir mi — yok', pencereDegistirilebilir({ pencere_komisyonlari: null }, '4 Gün'), false);
+esit('degistirilebilir mi — hepsi sifir', pencereDegistirilebilir({ pencere_komisyonlari: { '4 Gün': [0, 0, 0, 0] } }, '4 Gün'), false);
 esit('pencere adlari', pencereAdlari({ pencere_komisyonlari: { '3 Gün': [], '4 Gün': [] } }), ['3 Gün', '4 Gün']);
 esit('haritasiz urun', pencereAdlari({}), []);
 

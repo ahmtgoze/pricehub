@@ -48,14 +48,30 @@ export function pencereKomisyonlariniAl(harita, pencereAdi) {
 }
 
 /**
+ * Urunun istenen pencereye ait komisyonlari var mi?
+ *
+ * Bu alan eklenmeden ONCE kaydedilmis kayitlarda harita bostur. O kayitlarda
+ * pencere degistirmek komisyonlari SIFIRLARDI ve fiyatlar/karlar bozuk
+ * gorunurdu; degisiklik yapmamak dogrusu.
+ */
+export function pencereDegistirilebilir(urun, pencereAdi) {
+  const k = urun?.pencere_komisyonlari?.[pencereAdi];
+  return Array.isArray(k) && k.length === 4 && k.some((x) => x > 0);
+}
+
+/**
  * Secilen pencerenin komisyonlarini urune uygular.
  *
  * FIYAT SECIMI KORUNUR: limitler iki pencerede ayni oldugu icin secili
  * kademe gecerliligini yitirmez; yalnizca komisyon — dolayisiyla kar —
  * degisir. Secimi silmek kullaniciyi bos yere yeniden secmeye zorlardi.
+ *
+ * Komisyonlar okunamiyorsa urun OLDUGU GIBI birakilir; sifirlanmis komisyon
+ * sessizce yanlis kar hesaplatir.
  */
 export function pencereUygula(urun, pencereAdi) {
   if (!urun || !pencereAdi) return urun;
+  if (!pencereDegistirilebilir(urun, pencereAdi)) return urun;
   const k = pencereKomisyonlariniAl(urun.pencere_komisyonlari, pencereAdi);
   return {
     ...urun,
