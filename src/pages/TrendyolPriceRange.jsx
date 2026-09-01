@@ -161,9 +161,12 @@ export default function TrendyolPriceRange() {
       fetch(recordWithExcel.excel_file_url)
         .then(r => r.arrayBuffer())
         .then(ab => {
-          const wb = XLSX.read(new Uint8Array(ab), { type: 'array' });
+          const ham = new Uint8Array(ab);
+          const wb = XLSX.read(ham, { type: 'array' });
           const sn = wb.SheetNames[0];
-          setOriginalExcelData({ workbook: wb, sheetName: sn, jsonData: XLSX.utils.sheet_to_json(wb.Sheets[sn]) });
+          // "ham": disa aktarimda her tarife icin temiz bir kopya acilir.
+          setOriginalExcelData({ workbook: wb, sheetName: sn, raw: ham, rawType: 'array',
+                                 jsonData: XLSX.utils.sheet_to_json(wb.Sheets[sn]) });
         })
         .catch(e => console.error('Excel restore hatası:', e));
     }
@@ -185,7 +188,8 @@ export default function TrendyolPriceRange() {
         const sheetName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[sheetName];
         const jsonData = XLSX.utils.sheet_to_json(worksheet);
-        setOriginalExcelData({ workbook, sheetName, jsonData });
+        setOriginalExcelData({ workbook, sheetName, jsonData,
+                               raw: event.target.result, rawType: 'binary' });
 
         // Excel'i dosya olarak yükle (URL sakla)
         const excelBuffer = XLSX.write(workbook, { type: 'array', bookType: 'xlsx' });
@@ -741,61 +745,21 @@ export default function TrendyolPriceRange() {
   const handleExport = () => {
     if (uploadedData.length === 0) { toast.error('Yüklenmiş Excel dosyası bulunamadı'); return; }
     if (!originalExcelData) { toast.error('Orijinal Excel dosyası bulunamadı'); return; }
-
-    const { workbook, sheetName } = originalExcelData;
-    const worksheet = workbook.Sheets[sheetName];
-    const range = XLSX.utils.decode_range(worksheet['!ref']);
-
-    for (let R = range.s.r + 1; R <= range.e.r; R++) {
-      const row = {};
-      for (let C = range.s.c; C <= range.e.c; C++) {
-        const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
-        const cell = worksheet[cellAddress];
-        if (cell) {
-          const headerAddress = XLSX.utils.encode_cell({ r: range.s.r, c: C });
-          const header = worksheet[headerAddress]?.v;
-          if (header) row[header] = cell.v;
-        }
-      }
-      const barcode = row['BARKOD'];
-      const item = uploadedData.find(i => i.barcode === barcode);
-
-      // SECILI OLMAYAN satirlar TEMIZLENIR. Ayni dosya ikinci kez islenirse
-      // (ornegin daha once indirilmis bir dosya yeniden yuklenirse) eski
-      // fiyat ve tarife hucrede kalirdi; vazgecilen bir urun eski fiyatiyla
-      // Trendyol'a gidebilirdi. Dosya artik yalnizca GUNCEL secimi yansitir.
-      if (!item || item.selected_range === 'none') {
-        for (let C = range.s.c; C <= range.e.c; C++) {
-          const header = worksheet[XLSX.utils.encode_cell({ r: range.s.r, c: C })]?.v;
-          if (header === 'YENİ TSF (FİYAT GÜNCELLE)' ||
-              header === 'Tarife Seçimi' ||
-              header === 'Tarife Sonuna Kadar Uygula') {
-            delete worksheet[XLSX.utils.encode_cell({ r: R, c: C })];
-          }
-        }
-      }
-
-      if (item && item.selected_range !== 'none') {
-        for (let C = range.s.c; C <= range.e.c; C++) {
-          const headerAddress = XLSX.utils.encode_cell({ r: range.s.r, c: C });
-          const header = worksheet[headerAddress]?.v;
-          const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
-          if (header === 'YENİ TSF (FİYAT GÜNCELLE)') worksheet[cellAddress] = { v: item.selected_price || 0, t: 'n' };
-          if (header === 'Tarife Sonuna Kadar Uygula') worksheet[cellAddress] = { v: 'Evet', t: 's' };
-          // Yeni bicimde bu sutun, islemin hangi zaman penceresi icin
-          // yapildigini soyluyor. Secilen pencerenin adi yazilir.
-          if (header === 'Tarife Seçimi') {
-            // Sutun acilir liste; listede olmayan deger reddedilir.
-            // "3 Gün" DEGIL, "3 Günlük Fiyat" yazilmali.
-            // Urun hangi tarifede secildiyse o yazilir. 3 gunlukte secilenler
-            // "3 Günlük Fiyat", 4 gunlukte secilenler "4 Günlük Fiyat" —
-            // ikisi de AYNI dosyada.
-            const secim = tarifeSecimDegeri(item.secim_penceresi || item.tarife_penceresi);
-            if (secim) worksheet[cellAddress] = { v: secim, t: 's' };
-          }
-        }
-      }
+    if (!originalExcelData.raw) {
+      toast.error('Excel yeniden okunamıyor. Lütfen dosyayı yeniden yükleyin.', { duration: 8000 });
+      return;
     }
+
+    // HER TARIFE AYRI DOSYA. 3 gunlukte secilenler bir dosyaya, 4 gunlukte
+    // secilenler digerine iner; Trendyol'a ayri ayri yuklenebilsinler diye.
+    const ozet = secimOzeti(uploadedData);
+    const pencereler = Object.keys(ozet).filter((k) => k !== 'toplam');
+    if (pencereler.length === 0) { toast.error('Seçili ürün yok'); return; }
+
+    const slugify = (str) => str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+    const fromStr = dateRangeValue?.from ? format(dateRangeValue.from, 'd MMMM', { locale: tr }) : '';
+    const toStr = dateRangeValue?.to ? format(dateRangeValue.to, 'd MMMM', { locale: tr }) : '';
+    const donem = `${slugify(fromStr)}-${slugify(toStr)}`;
 
     // Sadece bilinen sütunları tut, geri kalanını sil (EXTERNAL ID, TARİFE GRUBU ve bilinmeyen sütunlar)
     const allowedHeaders = new Set([
@@ -808,43 +772,81 @@ export default function TrendyolPriceRange() {
       'EXTERNAL ID', 'TARİFE GRUBU', 'Kar Tutarı', 'Kar/Maliyet (%)'
     ]);
 
-    // Sütunları sağdan sola silerek kaydırma sorununu önle
-    for (let C = range.e.c; C >= range.s.c; C--) {
-      const headerAddress = XLSX.utils.encode_cell({ r: range.s.r, c: C });
-      const header = worksheet[headerAddress]?.v;
-      // Trendyol yeni bicimde pencere basina sutun uretiyor:
-      //   "Tarih aralığı (3 Gün)", "Hesaplanan Komisyon (4 Gün)", "Tarife Seçimi"
-      // Bunlar listede olmadigi icin SILINIYORLARDI; dosya semaya uymuyordu.
-      // Ileride "7 Gün" gibi yeni pencereler de gelebilecegi icin ad yerine
-      // ONEK kontrolu yapiliyor.
-      const baslikMetni = String(header ?? '');
-      const yeniBicimSutunu =
-        baslikMetni.startsWith('Tarih aralığı') ||
-        baslikMetni.startsWith('Hesaplanan Komisyon') ||
-        baslikMetni === 'Tarife Seçimi';
+    const dosyaUret = (pencereAdi) => {
+      // Her dosya HAM veriden yeniden aciliyor. Ayni workbook uzerinde iki kez
+      // calisilsaydi ilk dosyanin yazdiklari ikincisine tasinirdi.
+      const workbook = XLSX.read(originalExcelData.raw, { type: originalExcelData.rawType || 'binary' });
+      const sheetName = originalExcelData.sheetName || workbook.SheetNames[0];
+      const worksheet = workbook.Sheets[sheetName];
+      const range = XLSX.utils.decode_range(worksheet['!ref']);
+      let yazilan = 0;
 
-      if (!allowedHeaders.has(header) && !yeniBicimSutunu) {
-        // Bu sütunu sil ve sağındakileri sola kaydır
-        for (let R = range.s.r; R <= range.e.r; R++) {
-          for (let shiftC = C; shiftC < range.e.c; shiftC++) {
-            const from = XLSX.utils.encode_cell({ r: R, c: shiftC + 1 });
-            const to = XLSX.utils.encode_cell({ r: R, c: shiftC });
-            if (worksheet[from]) worksheet[to] = worksheet[from];
-            else delete worksheet[to];
-          }
-          delete worksheet[XLSX.utils.encode_cell({ r: R, c: range.e.c })];
+      const basligi = (C) => worksheet[XLSX.utils.encode_cell({ r: range.s.r, c: C })]?.v;
+
+      for (let R = range.s.r + 1; R <= range.e.r; R++) {
+        let barcode;
+        for (let C = range.s.c; C <= range.e.c; C++) {
+          if (basligi(C) === 'BARKOD') barcode = worksheet[XLSX.utils.encode_cell({ r: R, c: C })]?.v;
         }
-        range.e.c--;
-      }
-    }
-    worksheet['!ref'] = XLSX.utils.encode_range(range);
+        const item = uploadedData.find(i => i.barcode === barcode);
+        // Bu dosyaya YALNIZCA bu tarifede secilenler yazilir.
+        const buDosyaya = !!item && buPenceredeSecili(item, pencereAdi);
+        if (buDosyaya) yazilan++;
 
-    const slugify = (str) => str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
-    const fromStr = dateRangeValue?.from ? format(dateRangeValue.from, 'd MMMM', { locale: tr }) : '';
-    const toStr = dateRangeValue?.to ? format(dateRangeValue.to, 'd MMMM', { locale: tr }) : '';
-    const fileName = `urunkomisyontarifesi-${slugify(fromStr)}-${slugify(toStr)}.xlsx`;
-    XLSX.writeFile(workbook, fileName);
-    toast.success('Excel dosyası indirildi');
+        for (let C = range.s.c; C <= range.e.c; C++) {
+          const header = basligi(C);
+          const hucre = XLSX.utils.encode_cell({ r: R, c: C });
+          if (header === 'YENİ TSF (FİYAT GÜNCELLE)') {
+            if (buDosyaya) worksheet[hucre] = { v: item.selected_price || 0, t: 'n' };
+            else delete worksheet[hucre];   // vazgecilen urun eski fiyatiyla gitmesin
+          } else if (header === 'Tarife Sonuna Kadar Uygula') {
+            if (buDosyaya) worksheet[hucre] = { v: 'Evet', t: 's' };
+            else delete worksheet[hucre];
+          } else if (header === 'Tarife Seçimi') {
+            const secim = buDosyaya ? tarifeSecimDegeri(pencereAdi || item.tarife_penceresi) : null;
+            if (secim) worksheet[hucre] = { v: secim, t: 's' };
+            else delete worksheet[hucre];
+          }
+        }
+      }
+
+      // Sütunları sağdan sola silerek kaydırma sorununu önle
+      for (let C = range.e.c; C >= range.s.c; C--) {
+        const header = basligi(C);
+        // Trendyol yeni bicimde pencere basina sutun uretiyor:
+        //   "Tarih aralığı (3 Gün)", "Hesaplanan Komisyon (4 Gün)", "Tarife Seçimi"
+        // Bunlar listede olmadigi icin SILINIYORLARDI; dosya semaya uymuyordu.
+        const baslikMetni = String(header ?? '');
+        const yeniBicimSutunu =
+          baslikMetni.startsWith('Tarih aralığı') ||
+          baslikMetni.startsWith('Hesaplanan Komisyon') ||
+          baslikMetni === 'Tarife Seçimi';
+
+        if (!allowedHeaders.has(header) && !yeniBicimSutunu) {
+          for (let R = range.s.r; R <= range.e.r; R++) {
+            for (let shiftC = C; shiftC < range.e.c; shiftC++) {
+              const from = XLSX.utils.encode_cell({ r: R, c: shiftC + 1 });
+              const to = XLSX.utils.encode_cell({ r: R, c: shiftC });
+              if (worksheet[from]) worksheet[to] = worksheet[from];
+              else delete worksheet[to];
+            }
+            delete worksheet[XLSX.utils.encode_cell({ r: R, c: range.e.c })];
+          }
+          range.e.c--;
+        }
+      }
+      worksheet['!ref'] = XLSX.utils.encode_range(range);
+
+      const ek = pencereAdi ? `-${slugify(pencereAdi)}` : '';
+      XLSX.writeFile(workbook, `urunkomisyontarifesi-${donem}${ek}.xlsx`);
+      return yazilan;
+    };
+
+    const sonuc = pencereler.map((p) => {
+      const ad = p === '(pencere yok)' ? null : p;
+      return `${ad || 'tarifesiz'}: ${dosyaUret(ad)} ürün`;
+    });
+    toast.success(`${pencereler.length} Excel dosyası indirildi — ${sonuc.join(' · ')}`, { duration: 8000 });
   };
 
   const getMatchedProduct = (item) => {
