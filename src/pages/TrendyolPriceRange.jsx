@@ -19,7 +19,7 @@ import PriceDetailModal from '@/components/modals/PriceDetailModal';
 import BaremBadge from '@/components/ui/BaremBadge';
 import { baremSec, baremTavanFiyatlari, baremTarifesiSec } from '@/lib/baremKurali';
 import { gecerliMaliyet } from '@/lib/gecerliMaliyet';
-import { pencereleriBul, pencereKomisyonlari } from '@/lib/trendyolTarifePenceresi';
+import { pencereleriBul, pencereKomisyonlari, tarifeSecimDegeri } from '@/lib/trendyolTarifePenceresi';
 
 const TrendyolPriceRangeEntity = db.entities.TrendyolPriceRange;
 const Product = db.entities.Product;
@@ -718,8 +718,11 @@ export default function TrendyolPriceRange() {
           if (header === 'Tarife Sonuna Kadar Uygula') worksheet[cellAddress] = { v: 'Evet', t: 's' };
           // Yeni bicimde bu sutun, islemin hangi zaman penceresi icin
           // yapildigini soyluyor. Secilen pencerenin adi yazilir.
-          if (header === 'Tarife Seçimi' && item.tarife_penceresi) {
-            worksheet[cellAddress] = { v: item.tarife_penceresi, t: 's' };
+          if (header === 'Tarife Seçimi') {
+            // Sutun acilir liste; listede olmayan deger reddedilir.
+            // "3 Gün" DEGIL, "3 Günlük Fiyat" yazilmali.
+            const secim = tarifeSecimDegeri(item.tarife_penceresi);
+            if (secim) worksheet[cellAddress] = { v: secim, t: 's' };
           }
         }
       }

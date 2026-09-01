@@ -1,4 +1,4 @@
-import { pencereleriBul, pencereKomisyonlari, tarihAraliginiAyir }
+import { pencereleriBul, pencereKomisyonlari, tarihAraliginiAyir, tarifeSecimDegeri, TARIFE_SECIM_DEGERLERI, TARIFE_YOK }
   from '../src/lib/trendyolTarifePenceresi.js';
 
 let gecen = 0, kalan = 0;
@@ -76,6 +76,22 @@ esit('normal', tarihAraliginiAyir('1 Eylül 08.00-4 Eylül 07.59'),
   { baslangic: '1 Eylül 08.00', bitis: '4 Eylül 07.59' });
 esit('bos', tarihAraliginiAyir(''), { baslangic: '', bitis: '' });
 esit('tire yoksa', tarihAraliginiAyir('1 Eylül'), { baslangic: '1 Eylül', bitis: '' });
+
+
+console.log('\n=== TARIFE SECIMI DEGERI (acilir liste) ===');
+// Dosyanin kendi dataValidation tanimindan alinan degerler
+esit('kabul edilen degerler', TARIFE_SECIM_DEGERLERI,
+  ['Trendyol Satış Fiyatı', '7 Günlük Fiyat', '4 Günlük Fiyat', '3 Günlük Fiyat']);
+esit('tarife yok degeri', TARIFE_YOK, 'Trendyol Satış Fiyatı');
+// Baslik "3 Gün" der ama secim degeri "3 Günlük Fiyat"tir — bastaki hata buydu
+esit('3 Gün', tarifeSecimDegeri('3 Gün'), '3 Günlük Fiyat');
+esit('4 Gün', tarifeSecimDegeri('4 Gün'), '4 Günlük Fiyat');
+esit('7 Gün', tarifeSecimDegeri('7 Gün'), '7 Günlük Fiyat');
+// Listede olmayan pencere icin UYDURMA deger yazilmaz
+esit('5 Gün listede yok', tarifeSecimDegeri('5 Gün'), null);
+esit('sayisiz ad', tarifeSecimDegeri('Pencere'), null);
+esit('bos', tarifeSecimDegeri(''), null);
+esit('null', tarifeSecimDegeri(null), null);
 
 console.log(`\nGECEN: ${gecen}   KALAN: ${kalan}`);
 process.exit(kalan ? 1 : 0);

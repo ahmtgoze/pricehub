@@ -77,3 +77,41 @@ export function tarihAraliginiAyir(metin) {
   if (parcalar.length < 2) return { baslangic: m, bitis: '' };
   return { baslangic: parcalar[0], bitis: parcalar.slice(1).join('-') };
 }
+
+/**
+ * "Tarife Seçimi" sutununun kabul ettigi degerler.
+ *
+ * Dosyada bu sutun bir ACILIR LISTE ve dogrulamasi errorStyle="stop" —
+ * listede olmayan bir deger yazilirsa Excel de Trendyol da reddeder.
+ * Degerler dosyanin kendi dataValidation tanimindan alindi:
+ *
+ *   "Trendyol Satış Fiyatı,7 Günlük Fiyat,4 Günlük Fiyat,3 Günlük Fiyat,"
+ *
+ * DIKKAT: pencere basligi "3 Gün" der ama secim degeri "3 Günlük Fiyat"tir.
+ * Basligi oldugu gibi yazmak gecersiz deger uretir.
+ */
+export const TARIFE_SECIM_DEGERLERI = [
+  'Trendyol Satış Fiyatı',
+  '7 Günlük Fiyat',
+  '4 Günlük Fiyat',
+  '3 Günlük Fiyat',
+];
+
+/** Tarife uygulanmayacak urunler icin secim degeri. */
+export const TARIFE_YOK = 'Trendyol Satış Fiyatı';
+
+/**
+ * Pencere adindan "Tarife Seçimi" degerini uretir.
+ *
+ *   "3 Gün"  -> "3 Günlük Fiyat"
+ *   "4 Gün"  -> "4 Günlük Fiyat"
+ *
+ * Listede karsiligi bulunamayan pencere icin null doner; uydurma deger
+ * yazmaktansa sutunu bos birakmak dogrudur.
+ */
+export function tarifeSecimDegeri(pencereAdi) {
+  const gun = String(pencereAdi ?? '').match(/(\d+)/);
+  if (!gun) return null;
+  const aday = `${gun[1]} Günlük Fiyat`;
+  return TARIFE_SECIM_DEGERLERI.includes(aday) ? aday : null;
+}
