@@ -14,6 +14,7 @@ import { baremSec, baremTarifesiSec } from '@/lib/baremKurali';
 import { gecerliMaliyet } from '@/lib/gecerliMaliyet';
 import { kampanyaFiyati, ALT_LIMIT_SECENEKLERI } from '@/lib/hbKampanyaIndirimi';
 import { skuSayfasi, ACIKLAMA_SATIRLARI, ACIKLAMA_SAYFASI, SKU_SAYFASI } from '@/lib/hbSkuSablonu';
+import { kampanyayiDenetle, indirimKoduSorulurMu, gunFarki } from '@/lib/hbKampanyaKurallari';
 import * as XLSX from 'xlsx';
 import { toast } from 'sonner';
 
@@ -47,6 +48,16 @@ export default function HBOwnCampaign() {
   const [kacinciUrun, setKacinciUrun] = useState('2');
   // Kampanyaya dahil edilecek urunler; HB'ye SKU listesi olarak gider
   const [secililer, setSecililer] = useState(new Set());
+  // HB ekranindaki kalan alanlar. Kari ETKILEMEZLER; kampanyanin panelde
+  // kabul edilip edilmeyecegini belirlerler. Burada denetlenmeleri, HB'de
+  // formu doldurup en sonda reddedilmeyi onler.
+  const [kampanyaAdi, setKampanyaAdi] = useState('');
+  const [baslangicTarihi, setBaslangicTarihi] = useState('');
+  const [bitisTarihi, setBitisTarihi] = useState('');
+  const [butce, setButce] = useState('');
+  const [maksSiparis, setMaksSiparis] = useState('');
+  const [indirimKoduIstiyor, setIndirimKoduIstiyor] = useState(false);
+  const [indirimKodu, setIndirimKodu] = useState('');
   const [buyX, setBuyX] = useState('3');
   const [payY, setPayY] = useState('2');
   const [commissionDiscount, setCommissionDiscount] = useState('');
@@ -182,6 +193,19 @@ export default function HBOwnCampaign() {
   };
 
   const applyCampaign = (price) => kampanyaFiyati(price, kampanya);
+
+  const kuralUyarilari = React.useMemo(() => kampanyayiDenetle({
+    tur: campaignType,
+    oran: discountPercent,
+    butce,
+    maksSiparis,
+    baslangic: baslangicTarihi || null,
+    bitis: bitisTarihi || null,
+    indirimKodu,
+    indirimKoduIstiyor,
+  }), [campaignType, discountPercent, butce, maksSiparis, baslangicTarihi, bitisTarihi, indirimKodu, indirimKoduIstiyor]);
+
+  const kampanyaGunu = gunFarki(baslangicTarihi || null, bitisTarihi || null);
 
   // HB fiyatı olan ürünleri satırlara dök
   const rows = productPrices
@@ -368,6 +392,58 @@ export default function HBOwnCampaign() {
                 <Input type="number" value={commissionDiscount} onChange={(e) => setCommissionDiscount(e.target.value)} placeholder="örn. 7" />
               </div>
             </div>
+            {/* HB'nin ekranindaki kalan alanlar. Kari etkilemezler; kampanyanin
+                kabul edilip edilmeyecegini belirlerler. */}
+            <div className="mt-4 pt-4 border-t border-border">
+              <p className="text-sm font-semibold text-foreground mb-3">Kampanya Bilgileri <span className="text-xs font-normal text-muted-foreground">— HepsiBurada ekranına gireceğin değerler</span></p>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label>Kampanya Adı</Label>
+                  <Input value={kampanyaAdi} onChange={(e) => setKampanyaAdi(e.target.value)} placeholder="örn. Eylül Sepet İndirimi" />
+                </div>
+                <div className="space-y-2">
+                  <Label>Başlangıç</Label>
+                  <Input type="date" value={baslangicTarihi} onChange={(e) => setBaslangicTarihi(e.target.value)} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Bitiş {kampanyaGunu ? <span className="text-xs font-normal text-muted-foreground">({kampanyaGunu} gün)</span> : null}</Label>
+                  <Input type="date" value={bitisTarihi} onChange={(e) => setBitisTarihi(e.target.value)} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Kampanya Bütçesi (₺)</Label>
+                  <Input type="number" value={butce} onChange={(e) => setButce(e.target.value)} placeholder="en az 1.000" />
+                </div>
+                <div className="space-y-2">
+                  <Label>Maksimum Sipariş Adedi</Label>
+                  <Input type="number" value={maksSiparis} onChange={(e) => setMaksSiparis(e.target.value)} placeholder="20 - 100.000" />
+                </div>
+                {/* Indirim kodu YALNIZCA sepet tutarina ozel turlerde sorulur */}
+                {indirimKoduSorulurMu(campaignType) && (
+                  <div className="space-y-2">
+                    <Label className="flex items-center gap-2">
+                      <input type="checkbox" checked={indirimKoduIstiyor} onChange={(e) => setIndirimKoduIstiyor(e.target.checked)} className="h-4 w-4 accent-gray-900" />
+                      İndirim kodu oluştur
+                    </Label>
+                    <Input value={indirimKodu} onChange={(e) => setIndirimKodu(e.target.value)} disabled={!indirimKoduIstiyor} placeholder="örn. SVSEYLUL20" />
+                  </div>
+                )}
+              </div>
+
+              {kuralUyarilari.length > 0 && (
+                <div className="mt-3 rounded-xl border border-amber-200 dark:border-amber-900/50 bg-amber-50 dark:bg-amber-950/30 p-3">
+                  <div className="flex items-start gap-2">
+                    <AlertCircle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-sm font-semibold text-amber-900 dark:text-amber-200">HepsiBurada bu kampanyayı kabul etmez</p>
+                      <ul className="text-sm text-amber-800 dark:text-amber-300/90 mt-1 space-y-0.5 list-disc list-inside">
+                        {kuralUyarilari.map((u, i) => <li key={i}>{u.mesaj}</li>)}
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
             <div className="flex flex-wrap gap-3 mt-4">
               <Button onClick={karlilariSec} className="bg-primary hover:bg-black dark:hover:bg-white/90 text-primary-foreground gap-2">
                 <Sparkles className="h-4 w-4" />Kâr Edenleri Seç
