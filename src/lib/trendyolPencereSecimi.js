@@ -103,3 +103,55 @@ export function kademeKarsilastir(urun, kademeNo) {
     .filter((x) => x.komisyon > 0)
     .sort((a, b) => a.komisyon - b.komisyon);
 }
+
+/* ------------------------------------------------------------------ *
+ * SECIMIN HANGI PENCEREYE AIT OLDUGU
+ *
+ * Kullanici once 3 gunluk tarifede secim yapiyor, sonra 4 gunluge geciyor.
+ * 4 gunluk gorunumde 3 gunlukte secilenler SECILI GORUNMEMELI; o pencerenin
+ * kendi secimi yapilmali. Sonunda hepsi TEK Excel'e yaziliyor: her urun
+ * kendi penceresiyle.
+ *
+ * Bir urun ayni anda iki pencereye ait OLAMAZ — dosyada urun basina tek satir
+ * ve tek "Tarife Secimi" hucresi var. Secim yeni pencereye TASINIR.
+ * ------------------------------------------------------------------ */
+
+/** Urunun secimi var mi (hangi pencerede olursa olsun)? */
+export function seciliMi(urun) {
+  const s = urun?.selected_range;
+  return !!s && s !== 'none';
+}
+
+/** Urun BU pencerede mi secili? Tabloda isaretli gorunmesi buna bagli. */
+export function buPenceredeSecili(urun, pencereAdi) {
+  return seciliMi(urun) && (urun.secim_penceresi || null) === pencereAdi;
+}
+
+/** Urun BASKA bir pencerede secili mi? Tabloda "3 Gün'de secili" rozeti icin. */
+export function baskaPenceredeSecili(urun, pencereAdi) {
+  if (!seciliMi(urun)) return false;
+  const p = urun.secim_penceresi || null;
+  return p !== null && p !== pencereAdi;
+}
+
+/** Secimi verilen pencereye baglar. */
+export function secimiPencereyeBagla(urun, pencereAdi) {
+  if (!urun) return urun;
+  return { ...urun, secim_penceresi: pencereAdi || null };
+}
+
+/**
+ * Pencere basina kac urun secili?
+ * @returns { '3 Gün': 11, '4 Gün': 5, toplam: 16 }
+ */
+export function secimOzeti(urunler) {
+  const ozet = { toplam: 0 };
+  if (!Array.isArray(urunler)) return ozet;
+  for (const u of urunler) {
+    if (!seciliMi(u)) continue;
+    const p = u.secim_penceresi || '(pencere yok)';
+    ozet[p] = (ozet[p] || 0) + 1;
+    ozet.toplam++;
+  }
+  return ozet;
+}

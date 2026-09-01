@@ -1,4 +1,5 @@
-import { komisyonHaritasi, pencereKomisyonlariniAl, pencereUygula, pencereAdlari, kademeKarsilastir, pencereDegistirilebilir }
+import { komisyonHaritasi, pencereKomisyonlariniAl, pencereUygula, pencereAdlari, kademeKarsilastir, pencereDegistirilebilir,
+         seciliMi, buPenceredeSecili, baskaPenceredeSecili, secimiPencereyeBagla, secimOzeti }
   from '../src/lib/trendyolPencereSecimi.js';
 import { pencereleriBul } from '../src/lib/trendyolTarifePenceresi.js';
 
@@ -91,6 +92,32 @@ esit('degistirilebilir mi — yok', pencereDegistirilebilir({ pencere_komisyonla
 esit('degistirilebilir mi — hepsi sifir', pencereDegistirilebilir({ pencere_komisyonlari: { '4 Gün': [0, 0, 0, 0] } }, '4 Gün'), false);
 esit('pencere adlari', pencereAdlari({ pencere_komisyonlari: { '3 Gün': [], '4 Gün': [] } }), ['3 Gün', '4 Gün']);
 esit('haritasiz urun', pencereAdlari({}), []);
+
+console.log('\n=== SECIM HANGI PENCEREYE AIT ===');
+{
+  const uc  = { selected_range: 'range_2', selected_price: 488.17, secim_penceresi: '3 Gün' };
+  const drt = { selected_range: 'range_3', selected_price: 441.75, secim_penceresi: '4 Gün' };
+  const bos = { selected_range: 'none' };
+
+  // 3 gunlukte secilen, 4 gunluk gorunumde SECILI GORUNMEMELI
+  esit('3 gunlukte secili, 3 gunluk gorunumde isaretli', buPenceredeSecili(uc, '3 Gün'), true);
+  esit('3 gunlukte secili, 4 gunluk gorunumde isaretsiz', buPenceredeSecili(uc, '4 Gün'), false);
+  esit('ama baska pencerede secili oldugu belli', baskaPenceredeSecili(uc, '4 Gün'), true);
+  esit('kendi penceresinde "baska" degil', baskaPenceredeSecili(uc, '3 Gün'), false);
+  esit('secilmemis urun', [buPenceredeSecili(bos, '3 Gün'), baskaPenceredeSecili(bos, '4 Gün')], [false, false]);
+  esit('secili mi', [seciliMi(uc), seciliMi(bos), seciliMi({}), seciliMi(null)], [true, false, false, false]);
+
+  // Secim yeni pencereye TASINIR; urun iki pencereye birden ait olamaz
+  const tasinan = secimiPencereyeBagla(uc, '4 Gün');
+  esit('tasindi', [buPenceredeSecili(tasinan, '4 Gün'), buPenceredeSecili(tasinan, '3 Gün')], [true, false]);
+  esit('fiyat korunur', tasinan.selected_price, 488.17);
+
+  esit('pencere basina sayim', secimOzeti([uc, uc, drt, bos]), { toplam: 3, '3 Gün': 2, '4 Gün': 1 });
+  esit('penceresiz secim ayri sayilir', secimOzeti([{ selected_range: 'range_1' }]), { toplam: 1, '(pencere yok)': 1 });
+  esit('bos liste', secimOzeti([]), { toplam: 0 });
+  esit('gecersiz girdi', secimOzeti(null), { toplam: 0 });
+  esit('bagla — urun yoksa', secimiPencereyeBagla(null, '3 Gün'), null);
+}
 
 console.log(`\nGECEN: ${gecen}   KALAN: ${kalan}`);
 process.exit(kalan ? 1 : 0);
