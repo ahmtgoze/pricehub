@@ -1,7 +1,8 @@
 import { komisyonHaritasi, pencereKomisyonlariniAl, pencereUygula, pencereAdlari, kademeKarsilastir, pencereDegistirilebilir,
-         secimiOku, secimVarMi, seciliPencereler, acikSecimiSakla, secimiEkranaAl, pencereyeGec, secimOzeti }
+         secimiOku, secimVarMi, seciliPencereler, acikSecimiSakla, secimiEkranaAl, pencereyeGec, secimOzeti,
+         pencereGunu, birlesikPencere, birlesikPencereEkle }
   from '../src/lib/trendyolPencereSecimi.js';
-import { pencereleriBul } from '../src/lib/trendyolTarifePenceresi.js';
+import { pencereleriBul, tarifeSecimDegeri } from '../src/lib/trendyolTarifePenceresi.js';
 
 let gecen = 0, kalan = 0;
 const esit = (ad, olan, beklenen) => {
@@ -155,6 +156,26 @@ esit('kademe none ise secim yok', secimVarMi({ secimler: { '3 Gün': { kademe: '
 esit('fiyat okunamazsa 0', secimiOku({ secimler: { '3 Gün': { kademe: 'range_1', fiyat: 'abc' } } }, '3 Gün').fiyat, 0);
 esit('secili pencere yok', seciliPencereler({}), []);
 esit('sakla — pencere adi yoksa', acikSecimiSakla({ a: 1 }, ''), { a: 1 });
+
+console.log('\n=== BIRLESIK PENCERE (7 Günlük Fiyat) ===');
+{
+  esit('gun sayisi', [pencereGunu('3 Gün'), pencereGunu('4 Gün'), pencereGunu('Pencere')], [3, 4, null]);
+  esit('3+4 = 7', birlesikPencere(PENCERELER), { ad: '7 Gün', gun: 7 });
+  esit('tek pencerede yok', birlesikPencere([{ ad: '3 Gün' }]), null);
+  // Toplam listede yoksa uretilmez (Trendyol yalnizca 3/4/7 kabul ediyor)
+  esit('3+3 = 6 kabul edilmez', birlesikPencere([{ ad: '3 Gün' }, { ad: '3 Gün' }]), null);
+  esit('adsiz pencere', birlesikPencere([{ ad: 'A' }, { ad: 'B' }]), null);
+
+  const h = birlesikPencereEkle(komisyonHaritasi(SATIR, PENCERELER), PENCERELER);
+  esit('7 Gün eklendi', Object.keys(h), ['3 Gün', '4 Gün', '7 Gün']);
+  // Kademe bazinda EN YUKSEK: 3 gunluk hicbir kademede 4 gunlugun altinda degil
+  esit('en kotu durum', h['7 Gün'], [20, 19.3, 17.6, 15.5]);
+  esit('kaynak pencereler bozulmadi', [h['3 Gün'], h['4 Gün']], [[20, 19.3, 17.6, 15.5], [20, 16.6, 14.7, 12.2]]);
+  // Secim degeri listede olmali
+  esit('secim degeri', tarifeSecimDegeri('7 Gün'), '7 Günlük Fiyat');
+  esit('harita yoksa dokunmaz', birlesikPencereEkle(null, PENCERELER), null);
+  esit('tek pencerede eklemez', birlesikPencereEkle({ '3 Gün': [1,2,3,4] }, [{ ad: '3 Gün' }]), { '3 Gün': [1,2,3,4] });
+}
 
 console.log(`\nGECEN: ${gecen}   KALAN: ${kalan}`);
 process.exit(kalan ? 1 : 0);

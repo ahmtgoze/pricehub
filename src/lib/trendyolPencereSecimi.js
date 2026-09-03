@@ -189,3 +189,58 @@ export function secimOzeti(urunler, acikPencere) {
   }
   return ozet;
 }
+
+/* ------------------------------------------------------------------ *
+ * BIRLESIK PENCERE ("7 Günlük Fiyat")
+ *
+ * Dosyanin "Hesaplanan Komisyon" formulleri sunu soyluyor:
+ *   AC (3 Gün) -> "3 Günlük" VEYA "7 Günlük" secilirse hesaplar
+ *   AD (4 Gün) -> "4 Günlük" VEYA "7 Günlük" secilirse hesaplar
+ *
+ * Yani "7 Günlük Fiyat" = HER IKI PENCERE BIRDEN. Tek fiyat konur; 1-4
+ * Eylul'de 3 gunlugun, 4-8 Eylul'de 4 gunlugun komisyonu isler. 3+4=7.
+ *
+ * Komisyonu KADEME BAZINDA EN YUKSEK olan alinir. Hafta boyunca iki oran da
+ * isleyecegi icin dusuk olani gostermek kari oldugundan yuksek gosterir.
+ * Gercek dosyada 3 gunluk hicbir kademede 4 gunlugun altina dusmuyor
+ * (66 kademede yuksek, 22 kademede esit), yani pratikte 3 gunlugun orani.
+ * ------------------------------------------------------------------ */
+
+/** Pencere adindaki gun sayisi: "3 Gün" -> 3, bulunamazsa null. */
+export function pencereGunu(ad) {
+  const m = String(ad ?? '').match(/(\d+)/);
+  return m ? Number(m[1]) : null;
+}
+
+/**
+ * Pencerelerin tamamini kapsayan birlesik pencereyi uretir.
+ * Yalnizca gun sayilari toplami Trendyol'un kabul ettigi bir secenege
+ * denk geliyorsa (3+4=7) uretilir; yoksa null.
+ *
+ * @param pencereler pencereleriBul ciktisi
+ * @returns { ad, gun } veya null
+ */
+export function birlesikPencere(pencereler) {
+  if (!Array.isArray(pencereler) || pencereler.length < 2) return null;
+  const gunler = pencereler.map((p) => pencereGunu(p?.ad));
+  if (gunler.some((g) => g === null)) return null;
+  const toplam = gunler.reduce((a, b) => a + b, 0);
+  // Trendyol'un acilir listesinde yalnizca 3 / 4 / 7 Günlük Fiyat var
+  if (![7].includes(toplam)) return null;
+  return { ad: `${toplam} Gün`, gun: toplam };
+}
+
+/**
+ * Komisyon haritasina birlesik pencereyi ekler.
+ * Kademe bazinda EN YUKSEK oran alinir (en kotu durum).
+ */
+export function birlesikPencereEkle(harita, pencereler) {
+  const b = birlesikPencere(pencereler);
+  if (!b || !harita) return harita;
+  const adlar = pencereler.map((p) => p.ad).filter((ad) => Array.isArray(harita[ad]));
+  if (adlar.length < 2) return harita;
+  const enYuksek = [0, 1, 2, 3].map((i) =>
+    Math.max(...adlar.map((ad) => Number(harita[ad][i]) || 0))
+  );
+  return { ...harita, [b.ad]: enYuksek };
+}

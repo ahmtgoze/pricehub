@@ -25,7 +25,8 @@ import { unzipSync, zipSync } from 'fflate';
 import { hucreleriYaz, baslikHaritasi, paylasilanMetinler, sayfaXmlYolu, sutunDegerleri } from '@/lib/xlsxYerindeYaz';
 import { kademeFiyati, tarifeUstSiniri, sinirAsanlar } from '@/lib/trendyolTarifeKurali';
 import { yazilmaliMi, gonderimleriIsle, gonderilenFiyat } from '@/lib/trendyolGonderim';
-import { komisyonHaritasi, pencereUygula, pencereAdlari, pencereDegistirilebilir,
+import { birlesikPencere, birlesikPencereEkle, pencereKomisyonlariniAl,
+         komisyonHaritasi, pencereUygula, pencereAdlari, pencereDegistirilebilir,
          pencereyeGec, acikSecimiSakla, secimiOku, seciliPencereler, secimOzeti } from '@/lib/trendyolPencereSecimi';
 
 const TrendyolPriceRangeEntity = db.entities.TrendyolPriceRange;
@@ -216,16 +217,32 @@ export default function TrendyolPriceRange() {
           console.error('Excel upload hatası:', uploadErr);
         }
 
-        // Dosyadaki pencereler ilk satirdan cikarilir; kullanici secmediyse
-        // ilki kullanilir (eski tek pencereli dosyalarla uyum).
+        // Dosyadaki pencereler ilk satirdan cikarilir.
         const dosyaPencereleri = jsonData.length ? pencereleriBul(jsonData[0]) : [];
-        setPencereler(dosyaPencereleri);
-        const aktif = dosyaPencereleri.find((x) => x.ad === secilenPencere) || dosyaPencereleri[0] || { ad: '', sonek: '' };
+
+        // "7 Günlük Fiyat" = HER IKI PENCERE BIRDEN. Dosyanin "Hesaplanan
+        // Komisyon" formulleri boyle: 3 gunluk sutunu "3 Günlük" VEYA
+        // "7 Günlük" secilirse, 4 gunluk sutunu "4 Günlük" VEYA "7 Günlük"
+        // secilirse hesaplar. 3+4=7; tek fiyat konur, her pencerede kendi
+        // orani isler. Komisyonu kademe bazinda EN YUKSEK olan alinir.
+        const birlesik = birlesikPencere(dosyaPencereleri);
+        const secenekler = birlesik
+          ? [...dosyaPencereleri, { ad: birlesik.ad, tarihAraligi: 'tüm dönem', sonek: null }]
+          : dosyaPencereleri;
+        setPencereler(secenekler);
+
+        // Varsayilan: birlesik pencere. Tek fiyatla tum hafta kapsanir.
+        const aktif = secenekler.find((x) => x.ad === secilenPencere)
+          || (birlesik ? secenekler[secenekler.length - 1] : secenekler[0])
+          || { ad: '', sonek: '' };
         if (!secilenPencere && aktif.ad) setSecilenPencere(aktif.ad);
         const pencereAdi = aktif.ad;
 
         const parsed = jsonData.map(row => {
-          const komisyonlar = pencereKomisyonlari(row, aktif.sonek);
+          // Tum pencereler + birlesik pencere; aktif olanin komisyonlari
+          // haritadan okunur (birlesik pencerenin sonegi yok).
+          const harita = birlesikPencereEkle(komisyonHaritasi(row, dosyaPencereleri), dosyaPencereleri);
+          const komisyonlar = pencereKomisyonlariniAl(harita, pencereAdi);
           const barcode = row['BARKOD'] || '';
           const marketplaceProduct = marketplaceProducts.find(mp => mp.platform_account === selectedPlatform && mp.barkod === barcode);
           let matchedProduct;
@@ -266,7 +283,7 @@ export default function TrendyolPriceRange() {
             // TUM pencerelerin komisyonlari satirda saklanir. Boylece pencere
             // degistirildiginde komisyonlar hazirda bulunur ve Excel'i yeniden
             // yuklemek gerekmez.
-            pencere_komisyonlari: komisyonHaritasi(row, dosyaPencereleri),
+            pencere_komisyonlari: harita,
             tarife_penceresi: pencereAdi,
             current_base_price: parseFloat(row['KOMİSYONA ESAS FİYAT']) || 0,
             current_commission: parseFloat(row['GÜNCEL KOMİSYON']) || 0,
