@@ -157,9 +157,15 @@ export default function PlusProductCommissionTariff() {
       fetch(recordWithExcel.excel_file_url)
         .then(r => r.arrayBuffer())
         .then(ab => {
-          const wb = XLSX.read(new Uint8Array(ab), { type: 'array' });
+          // "baytlar": disa aktarim dosyanin uzerine yazdigi icin ham hali
+          // gerekiyor. Yalnizca yukleme yolunda saklaniyordu; liste kayittan
+          // geri yuklendiginde eksik kaliyor ve indirme "Excel yeniden
+          // okunamiyor" hatasi veriyordu.
+          const ham = new Uint8Array(ab);
+          const wb = XLSX.read(ham, { type: 'array' });
           const sn = wb.SheetNames[0];
-          setOriginalExcelData({ workbook: wb, sheetName: sn, jsonData: XLSX.utils.sheet_to_json(wb.Sheets[sn]) });
+          setOriginalExcelData({ workbook: wb, sheetName: sn, baytlar: ham,
+                                 jsonData: XLSX.utils.sheet_to_json(wb.Sheets[sn]) });
         })
         .catch(e => console.error('Excel restore hatası:', e));
     }
