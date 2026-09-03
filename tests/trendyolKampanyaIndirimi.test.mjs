@@ -146,7 +146,8 @@ console.log('\n=== ESKI KAYIT UYUMU ===');
 console.log('\n=== SABIT LISTELER ===');
 {
   esit('5 indirim turu', INDIRIM_TURLERI.map((t) => t.value), ['net_percent', 'cart_percent', 'cart_tl', 'buy_x_pay_y', 'qty_percent']);
-  esit('mikro ihracat henuz yok', KAMPANYA_GRUPLARI.some((g) => g.value === 'mikro_ihracat'), false);
+  esit('uc grup: genel, plus, mikro ihracat', KAMPANYA_GRUPLARI.map((g) => g.value), ['all_countries', 'trendyol_plus', 'mikro_ihracat']);
+  esit('okul donemi ayri grup degil', KAMPANYA_GRUPLARI.some((g) => g.value === 'ozel_donem'), false);
 }
 
 console.log(`\nGECEN: ${gecen}   KALAN: ${kalan}`);

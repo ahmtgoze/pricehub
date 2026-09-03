@@ -700,10 +700,9 @@ Kaynak: Trendyol Partner → Promosyonlar → Katılabileceğim Kampanyalar
 ### Kampanya grupları (yeşil başlık satırları)
 | Grup | Bizde | Not |
 |---|---|---|
-| Tüm Ülkeler | `all_countries` | |
+| Genel Kampanyalar (Tüm Ülkeler, Okul İhtiyaçları vb. dönemsel başlıklar dahil) | `all_countries` | dönemsel başlıklar ayrı grup DEĞİL (kullanıcı kararı) |
 | Trendyol Plus — Ek İndirim | `trendyol_plus` | komisyon Plus Tarifesi'nden |
-| Özel Dönem (Okul İhtiyaçları vb.) | `ozel_donem` | |
-| Mikro İhracat | **yok** | kullanıcı kararı: en son yapılacak; ülke bazlı, komisyon/kargo modeli farklı |
+| Mikro İhracat | `mikro_ihracat` | seçilebilir; ülke bazlı komisyon/kargo modeli **henüz yok**, en son yapılacak — şimdilik genel gibi hesaplanır |
 
 ### İndirim türleri ("İndirim Detayı" satırı)
 | Trendyol metni | `discount_kind` | Satıcıya etkisi (birim, karşılama hariç) |

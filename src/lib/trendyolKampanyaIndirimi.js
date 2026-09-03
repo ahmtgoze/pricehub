@@ -28,8 +28,8 @@
  *   urunlerle esigi doldurursa bizim urunden daha az iner); kar en kotu
  *   duruma gore gosterilir.
  *
- * Mikro Ihracat kampanyalari bu modele dahil DEGIL (kullanici karari: en
- * son yapilacak; ulke bazli, komisyon ve kargo modeli farkli).
+ * Mikro Ihracat grubu secilebilir ama ozel modeli (ulke bazli komisyon ve
+ * kargo) henuz yok; kullanici karari: en son yapilacak.
  *
  * Import icermez — duz node ile test edilebilir.
  */
@@ -57,11 +57,16 @@ export const KATILIM_KOSULLARI = [
   { value: 'min_price', label: 'Minimum Fiyat veya Daha Düşük' },
 ];
 
-/** Kampanya gruplari (Trendyol'un yesil baslik satirlari). Mikro Ihracat sonra. */
+/**
+ * Kampanya gruplari — kullanici karari: UC cesit var.
+ * "Okul Ihtiyaclari" gibi donemsel basliklar ayri grup DEGIL, genel kampanya.
+ * Mikro Ihracat'in ulke/komisyon/kargo modeli henuz yapilmadi; grup olarak
+ * secilebilir, hesap simdilik genel kampanya gibi.
+ */
 export const KAMPANYA_GRUPLARI = [
-  { value: 'all_countries', label: 'Tüm Ülkeler' },
+  { value: 'all_countries', label: 'Genel Kampanyalar' },
   { value: 'trendyol_plus', label: 'Trendyol Plus (Ek İndirim)' },
-  { value: 'ozel_donem', label: 'Özel Dönem (Okul İhtiyaçları vb.)' },
+  { value: 'mikro_ihracat', label: 'Mikro İhracat' },
 ];
 
 const yuzdeliMi = (tur) => tur === 'net_percent' || tur === 'cart_percent' || tur === 'qty_percent';
