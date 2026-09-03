@@ -696,6 +696,8 @@ export default function PlusProductCommissionTariff() {
         const secili = secim.kademe !== 'none' && secim.fiyat > 0;
         if (secili) yazilan++;
 
+        // Kabul edilen ciktida (Melontik) secilmeyen satirlarda bu iki hucre
+        // HIC YOK, "İptal" ise BOS METIN olarak duruyor. Sutun basina farkli.
         degisiklikler.push({ adres: `${secimSut}${satirNo}`, deger: secili ? secim.fiyat : null, tip: 'n' });
 
         // "Tarife Seçimi" metni DOSYADAN gelir; tarih araligi parantez icinde
@@ -705,7 +707,25 @@ export default function PlusProductCommissionTariff() {
           degisiklikler.push({ adres: `${tarifeSut}${satirNo}`, deger: metin, tip: 's' });
         }
         if (iptalSut) {
-          degisiklikler.push({ adres: `${iptalSut}${satirNo}`, deger: secili ? 'Hayır' : null, tip: 's' });
+          degisiklikler.push({ adres: `${iptalSut}${satirNo}`, deger: secili ? 'Hayır' : '', tip: 's' });
+        }
+
+        // "Hesaplanan Komisyon (N Gün)" — kabul edilen ciktida (Melontik)
+        // secilen pencerenin sutununa o pencerenin Plus komisyon teklifi
+        // yaziliyor, digeri "-" kaliyor. Onceki surum bu sutuna HIC
+        // dokunmuyordu: dosya "4 gunluk tarifeyi su fiyattan seciyorum"
+        // diyor ama hesaplanan komisyon bos kaliyordu ve Trendyol satiri
+        // reddediyordu.
+        //   ornek: TBE3 · 153,41 · "4 Günlük Fiyat (...)" -> 10,5
+        for (const pen of Object.keys(item?.plus_pencereleri || {})) {
+          const sut = basliklar[`Hesaplanan Komisyon (${pen})`];
+          if (!sut) continue;
+          const oran = item.plus_pencereleri[pen]?.komisyon;
+          degisiklikler.push({
+            adres: `${sut}${satirNo}`,
+            deger: secili && pen === tarife && oran > 0 ? oran : '-',
+            tip: secili && pen === tarife && oran > 0 ? 'n' : 's',
+          });
         }
       }
 

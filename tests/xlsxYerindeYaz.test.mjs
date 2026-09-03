@@ -53,6 +53,21 @@ console.log('\n=== HUCRE SILME ===');
   esit('olmayan hucreyi silmek zararsiz', hucreYaz(XML, 'AE2', null), XML);
 }
 
+console.log('\n=== BOS METIN: HUCRE KALIR, DEGER BOSALIR ===');
+{
+  // null siler, '' bosaltir. Kabul edilen Plus ciktisinda secilmeyen
+  // satirlarda "İptal" hucresi bos metin olarak DURUYOR.
+  const silinmis = hucreYaz(XML, 'AB2', null);
+  esit('null hucreyi siler', silinmis.includes('r="AB2"'), false);
+
+  const bosaltilmis = hucreYaz(XML, 'AB2', '', 's');
+  esit('bos metin hucreyi birakir', bosaltilmis.includes('r="AB2"'), true);
+  esit('degeri bos', bosaltilmis.includes('<c r="AB2" s="9" t="inlineStr"><is><t></t></is></c>'), true);
+  esit('stil korundu', bosaltilmis.includes('s="9"'), true);
+  // Sayi tipiyle bile bos metin sayi olarak yazilmamali (NaN olurdu)
+  esit('bos metin sayi olmaz', hucreYaz(XML, 'AB2', '', 'n').includes('<v>NaN</v>'), false);
+}
+
 console.log('\n=== BOS SATIR ===');
 {
   const y = hucreYaz(XML, 'AB3', 5, 'n');

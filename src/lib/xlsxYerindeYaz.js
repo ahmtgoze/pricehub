@@ -87,8 +87,14 @@ function stiliOku(hucreMetni) {
  *
  * @param xml    sheet XML'i
  * @param adres  "AB4"
- * @param deger  sayi veya metin; null/undefined ise hucre SILINIR
+ * @param deger  sayi veya metin.
+ *   null / undefined -> hucre SILINIR
+ *   '' (bos metin)   -> hucre KALIR, degeri bosaltilir
  * @param tip    'n' (sayi) | 's' (metin, inlineStr olarak yazilir)
+ *
+ * Ayrim onemli: kabul edilen Plus ciktisinda (Melontik) secilmeyen
+ * satirlarda "İptal" hucresi BOS METIN olarak duruyor, silinmiyor. Hucreyi
+ * tamamen kaldirmak dosyanin yapisini degistiriyor.
  */
 export function hucreYaz(xml, adres, deger, tip = 's') {
   const coz = adresiCoz(adres);
@@ -96,7 +102,7 @@ export function hucreYaz(xml, adres, deger, tip = 's') {
   const satir = satiriBul(xml, coz.satir);
   if (!satir) return xml;                    // satir yoksa dokunma
   const mevcut = satir.kapali ? null : hucreyiBul(satir.ic, adres);
-  const siliniyor = deger === null || deger === undefined || deger === '';
+  const siliniyor = deger === null || deger === undefined;
 
   if (siliniyor) {
     if (!mevcut) return xml;
@@ -105,7 +111,7 @@ export function hucreYaz(xml, adres, deger, tip = 's') {
   }
 
   const stil = stiliOku(mevcut?.metin);
-  const yeniHucre = tip === 'n'
+  const yeniHucre = (tip === 'n' && deger !== '')
     ? `<c r="${adres}"${stil}><v>${Number(deger)}</v></c>`
     // Trendyol'un dosyasindaki bicimin AYNISI: t="str" DEGIL, inlineStr
     : `<c r="${adres}"${stil} t="inlineStr"><is><t>${xmlKacir(deger)}</t></is></c>`;
