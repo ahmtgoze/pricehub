@@ -17,6 +17,8 @@ import * as XLSX from 'xlsx';
 import { unzipSync, zipSync } from 'fflate';
 import { hucreleriYaz, baslikHaritasi, paylasilanMetinler, sayfaXmlYolu, sutunDegerleri } from '@/lib/xlsxYerindeYaz';
 import { plusPencereleriBul, plusPencereHaritasi, plusPencereUygula, plusPencereAdlari } from '@/lib/plusTarifePenceresi';
+import { pencereyeGec, acikSecimiSakla, secimiOku, secimOzeti } from '@/lib/trendyolPencereSecimi';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { sayiyaCevirVeya } from '@/lib/turkceSayi';
 import PriceDetailModal from '@/components/modals/PriceDetailModal';
 import BaremBadge from '@/components/ui/BaremBadge';
@@ -559,14 +561,20 @@ export default function PlusProductCommissionTariff() {
       );
       return;
     }
-    setUploadedData(uploadedData.map((item) => plusPencereUygula(item, pencereAdi)));
+    // Acik pencerenin secimi kendi kutusuna kaydedilir, yeni pencerenin
+    // secimi ekrana gelir; yoksa SIFIRDAN baslanir. Plus sayfasi secim
+    // alani olarak "selected_type" kullaniyor.
+    const oncekiPencere = secilenPencere;
+    setUploadedData(uploadedData.map((item) =>
+      plusPencereUygula(pencereyeGec(item, oncekiPencere, pencereAdi, 'selected_type'), pencereAdi)
+    ));
   };
 
   const handleSave = async () => {
     const selectedItems = uploadedData.filter(item => item.selected_type !== 'none');
     if (selectedItems.length === 0) { toast.error('Lütfen en az bir ürün seçin'); return; }
     const cols = ['platform_account','start_date','end_date','product_name','barcode','seller_stock_code','size','model_code','category','brand','stock','current_base_price','current_commission','plus_price_limit','plus_commission_offer','plus_base_price','selected_type','selected_price','calculated_commission','manual_price','manual_profit','manual_profit_rate','manual_commission','cancel_status','matched_product_id',
-      'plus_pencereleri','tarife_penceresi','tarife_secim_metni'];
+      'plus_pencereleri','tarife_penceresi','tarife_secim_metni','secimler'];
     const clean = (item) => { const o = {}; cols.forEach(c => { if (item[c] !== undefined) o[c] = item[c]; }); return o; };
     try {
       const all = uploadedData.filter(i => i.id);
@@ -601,14 +609,31 @@ export default function PlusProductCommissionTariff() {
     }
   };
 
-  const handleExport = () => {
+  // istenenTarife verilirse YALNIZCA o tarifenin dosyasi iner; verilmezse
+  // secim yapilan her tarife icin ayri dosya iner.
+  const handleExport = (istenenTarife = null) => {
     if (uploadedData.length === 0) { toast.error('Yüklenmiş Excel dosyası bulunamadı'); return; }
     if (!originalExcelData?.baytlar) {
       toast.error('Excel yeniden okunamıyor. Lütfen dosyayı yeniden yükleyin.', { duration: 8000 });
       return;
     }
 
-    try {
+    // Acik tarifenin secimi henuz kutusuna yazilmamis olabilir; once katlanir.
+    const veri = uploadedData.map((u) => acikSecimiSakla(u, secilenPencere, 'selected_type'));
+    const ozet = secimOzeti(veri);
+    const tarifeler = Object.keys(ozet)
+      .filter((k) => k !== 'toplam')
+      .filter((k) => !istenenTarife || k === istenenTarife);
+    if (tarifeler.length === 0) {
+      toast.error(istenenTarife ? `"${istenenTarife}" tarifesinde seçili ürün yok` : 'Seçili ürün yok');
+      return;
+    }
+
+    const slugify = (str) => str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+    const fromStr = dateRangeValue?.from ? format(dateRangeValue.from, 'd MMMM', { locale: tr }) : '';
+    const toStr = dateRangeValue?.to ? format(dateRangeValue.to, 'd MMMM', { locale: tr }) : '';
+
+    const dosyaUret = (tarife) => {
       // DOSYA YENIDEN URETILMIYOR; yuklenen dosyanin uzerine yaziliyor.
       const parcalar = unzipSync(originalExcelData.baytlar);
       const yol = sayfaXmlYolu(parcalar);
@@ -640,31 +665,21 @@ export default function PlusProductCommissionTariff() {
         const barkod = barkodlar[satirNo];
         const urunId = urunIdleri[satirNo];
         const item =
-          (barkod && uploadedData.find((i) => String(i.barcode || '') === String(barkod))) ||
-          (urunId && uploadedData.find((i) => String(i.product_id || '') === String(urunId)));
+          (barkod && veri.find((i) => String(i.barcode || '') === String(barkod))) ||
+          (urunId && veri.find((i) => String(i.product_id || '') === String(urunId)));
 
-        const secili = !!item && item.selected_type !== 'none' && Number(item.selected_price) > 0;
+        const secim = item ? secimiOku(item, tarife) : { kademe: 'none', fiyat: 0 };
+        const secili = secim.kademe !== 'none' && secim.fiyat > 0;
         if (secili) yazilan++;
 
-        degisiklikler.push({
-          adres: `${secimSut}${satirNo}`,
-          deger: secili ? Number(item.selected_price) : null,
-          tip: 'n',
-        });
+        degisiklikler.push({ adres: `${secimSut}${satirNo}`, deger: secili ? secim.fiyat : null, tip: 'n' });
 
-        // "Tarife Seçimi" metni DOSYADAN gelir; kendimiz kurmuyoruz. Tarih
-        // araligi parantez icinde olmali — kabul edilen ciktida
-        // "4 Günlük Fiyat (4 Eylül 08.00-8 Eylül 07.59)" yaziyor, yalnizca
-        // "4 Günlük Fiyat" degil. Onceki surum bu sutunu HIC yazmiyordu.
+        // "Tarife Seçimi" metni DOSYADAN gelir; tarih araligi parantez icinde
+        // olmali ("4 Günlük Fiyat (4 Eylül 08.00-8 Eylül 07.59)").
         if (tarifeSut) {
-          const metin = secili
-            ? (item.tarife_secim_metni ||
-               item.plus_pencereleri?.[item.tarife_penceresi || secilenPencere]?.secimMetni ||
-               null)
-            : null;
+          const metin = secili ? (item.plus_pencereleri?.[tarife]?.secimMetni || null) : null;
           degisiklikler.push({ adres: `${tarifeSut}${satirNo}`, deger: metin, tip: 's' });
         }
-
         if (iptalSut) {
           degisiklikler.push({ adres: `${iptalSut}${satirNo}`, deger: secili ? 'Hayır' : null, tip: 's' });
         }
@@ -673,23 +688,28 @@ export default function PlusProductCommissionTariff() {
       sheet = hucreleriYaz(sheet, degisiklikler);
       parcalar[yol] = new TextEncoder().encode(sheet);
 
-      const slugify = (str) => str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
-      const fromStr = dateRangeValue?.from ? format(dateRangeValue.from, 'd MMMM', { locale: tr }) : '';
-      const toStr = dateRangeValue?.to ? format(dateRangeValue.to, 'd MMMM', { locale: tr }) : '';
-      const ek = secilenPencere ? `-${slugify(secilenPencere)}` : '';
       const blob = new Blob([zipSync(parcalar)], {
         type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       });
       const url = URL.createObjectURL(blob);
       const baglanti = document.createElement('a');
       baglanti.href = url;
-      baglanti.download = `plus-komisyon-${slugify(fromStr)}-${slugify(toStr)}${ek}.xlsx`;
+      baglanti.download = `plus-komisyon-${slugify(fromStr)}-${slugify(toStr)}-${slugify(tarife)}.xlsx`;
       document.body.appendChild(baglanti);
       baglanti.click();
       baglanti.remove();
       setTimeout(() => URL.revokeObjectURL(url), 1000);
+      return yazilan;
+    };
 
-      toast.success(`Excel indirildi — ${yazilan} ürün${secilenPencere ? ` (${secilenPencere})` : ''}`);
+    try {
+      const sonuc = tarifeler.map((t) => `${t}: ${dosyaUret(t)} ürün`);
+      toast.success(
+        tarifeler.length === 1
+          ? `Excel indirildi — ${sonuc[0]}`
+          : `${tarifeler.length} Excel dosyası indirildi — ${sonuc.join(' · ')}`,
+        { duration: 8000 }
+      );
     } catch (hata) {
       toast.error('Excel oluşturulamadı: ' + (hata?.message || hata), { duration: 10000 });
     }
@@ -750,7 +770,13 @@ export default function PlusProductCommissionTariff() {
 
   const allCategories = [...new Set(uploadedData.map(item => getMatchedProduct(item)?.category_name || item.category).filter(Boolean))].sort();
   const uniqueBrands = [...new Set(uploadedData.map(item => item.brand).filter(Boolean))];
-  const selectedCount = uploadedData.filter(i => i.selected_type !== 'none').length;
+  // Pencere basina kac urun secili: "3 Gün: 10 · 4 Gün: 13"
+  const seciliOzet = secimOzeti(uploadedData, secilenPencere, 'selected_type');
+  const seciliKirilim = Object.entries(seciliOzet)
+    .filter(([k]) => k !== 'toplam')
+    .map(([k, v]) => `${k}: ${v}`)
+    .join(' · ');
+  const selectedCount = seciliOzet.toplam;
 
   return (
     <div className="min-h-screen bg-secondary">
@@ -821,9 +847,12 @@ export default function PlusProductCommissionTariff() {
                     </SelectContent>
                   </Select>
                   <p className="text-[11px] text-muted-foreground">
-                    Değiştirdiğinizde komisyonlar ve kârlar <strong>anında</strong> yeniden
-                    hesaplanır; Excel'i yeniden yüklemeniz gerekmez.
+                    Her tarifede ayrı seçim yaparsınız; seçtikleriniz diğerine geçince
+                    işaretli kalmaz. Kârlar <strong>anında</strong> yeniden hesaplanır.
                   </p>
+                  {seciliKirilim && (
+                    <p className="text-[11px] font-medium text-foreground">Seçili — {seciliKirilim}</p>
+                  )}
                 </div>
               )}
             </div>
@@ -839,7 +868,37 @@ export default function PlusProductCommissionTariff() {
                   <Button variant="outline" onClick={handleDeleteExcel} className="text-red-600 dark:text-red-400 hover:text-red-700 dark:text-red-300 hover:bg-red-50 dark:bg-red-950/30"><Trash2 className="mr-2 h-4 w-4" />Excel'i Sil</Button>
                   <Button variant="outline" onClick={handleSave}><Check className="mr-2 h-4 w-4" />Seçimleri Kaydet ({selectedCount})</Button>
                   <Button variant="outline" onClick={() => { setUploadedData(uploadedData.map(item => ({ ...item, selected_type: 'none', selected_price: 0 }))); toast.success('Tüm seçimler kaldırıldı'); }}>Seçimleri Kaldır</Button>
-                  <Button variant="outline" onClick={handleExport}><Download className="mr-2 h-4 w-4" />Excel İndir</Button>
+                  {/* Tek buton; basinca hangi tarifenin inecegi seciliyor.
+                      Tek tarifede secim varsa menu acmadan dogrudan iner. */}
+                  {Object.keys(seciliOzet).filter((k) => k !== 'toplam').length > 1 ? (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="outline">
+                          <Download className="mr-2 h-4 w-4" />Excel İndir ({seciliOzet.toplam})
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="start">
+                        <DropdownMenuLabel>Hangi tarife inecek?</DropdownMenuLabel>
+                        <DropdownMenuSeparator />
+                        {Object.entries(seciliOzet)
+                          .filter(([k]) => k !== 'toplam')
+                          .map(([ad, adet]) => (
+                            <DropdownMenuItem key={ad} onSelect={() => handleExport(ad)}>
+                              {ad} — {adet} ürün
+                            </DropdownMenuItem>
+                          ))}
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem onSelect={() => handleExport()}>
+                          Hepsi (ayrı dosyalar)
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  ) : (
+                    <Button variant="outline" onClick={() => handleExport()}>
+                      <Download className="mr-2 h-4 w-4" />Excel İndir
+                      {seciliOzet.toplam > 0 && ` (${seciliOzet.toplam})`}
+                    </Button>
+                  )}
                 </>
               )}
             </div>

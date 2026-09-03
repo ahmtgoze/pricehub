@@ -157,6 +157,25 @@ esit('fiyat okunamazsa 0', secimiOku({ secimler: { '3 Gün': { kademe: 'range_1'
 esit('secili pencere yok', seciliPencereler({}), []);
 esit('sakla — pencere adi yoksa', acikSecimiSakla({ a: 1 }, ''), { a: 1 });
 
+console.log('\n=== ALAN ADI SAYFAYA GORE DEGISIR ===');
+{
+  // Plus tarifesi "selected_type" kullaniyor
+  let u = { selected_type: 'plus', selected_price: 184.48 };
+  u = acikSecimiSakla(u, '3 Gün', 'selected_type');
+  esit('selected_type saklandi', secimiOku(u, '3 Gün'), { kademe: 'plus', fiyat: 184.48 });
+
+  u = secimiEkranaAl(u, '4 Gün', 'selected_type');
+  esit('4 gunlukte bos', [u.selected_type, u.selected_price], ['none', 0]);
+  esit('selected_range kirletilmedi', u.selected_range, undefined);
+  esit('3 gunluk duruyor', secimVarMi(u, '3 Gün'), true);
+
+  const geri = pencereyeGec(u, '4 Gün', '3 Gün', 'selected_type');
+  esit('geri donunce gelir', [geri.selected_type, geri.selected_price], ['plus', 184.48]);
+  esit('ozet alan adiyla',
+    secimOzeti([{ selected_type: 'plus', selected_price: 1 }], '4 Gün', 'selected_type'),
+    { toplam: 1, '4 Gün': 1 });
+}
+
 console.log('\n=== BIRLESIK PENCERE (7 Günlük Fiyat) ===');
 {
   esit('gun sayisi', [pencereGunu('3 Gün'), pencereGunu('4 Gün'), pencereGunu('Pencere')], [3, 4, null]);

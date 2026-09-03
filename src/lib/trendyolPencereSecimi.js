@@ -119,6 +119,10 @@ export function kademeKarsilastir(urun, kademeNo) {
  *
  * Ekranda calisan kod tek bir secimle ugrassin diye, acik olan pencerenin
  * secimi ayrica selected_range / selected_price alanlarinda tutulur.
+ *
+ * ALAN ADI SAYFAYA GORE DEGISIR: Komisyon Tarifesi "selected_range",
+ * Plus tarifesi "selected_type" kullaniyor. Bu yuzden fonksiyonlar alan
+ * adini parametre aliyor.
  * ------------------------------------------------------------------ */
 
 const BOS_SECIM = { kademe: 'none', fiyat: 0 };
@@ -146,9 +150,9 @@ export function seciliPencereler(urun) {
  * Ekrandaki secimi (selected_range/selected_price) verilen tarifenin
  * kutusuna yazar. Pencere degistirmeden ONCE cagrilir.
  */
-export function acikSecimiSakla(urun, pencereAdi) {
+export function acikSecimiSakla(urun, pencereAdi, alan = 'selected_range') {
   if (!urun || !pencereAdi) return urun;
-  const kademe = urun.selected_range || 'none';
+  const kademe = urun[alan] || 'none';
   const secimler = { ...(urun.secimler || {}) };
   if (kademe === 'none') delete secimler[pencereAdi];
   else secimler[pencereAdi] = { kademe, fiyat: Number(urun.selected_price) || 0 };
@@ -159,16 +163,16 @@ export function acikSecimiSakla(urun, pencereAdi) {
  * Verilen tarifenin secimini ekrana getirir. Secimi yoksa SIFIRDAN baslar —
  * diger tarifede secili olmasi burayi etkilemez.
  */
-export function secimiEkranaAl(urun, pencereAdi) {
+export function secimiEkranaAl(urun, pencereAdi, alan = 'selected_range') {
   if (!urun) return urun;
   const s = secimiOku(urun, pencereAdi);
-  return { ...urun, selected_range: s.kademe, selected_price: s.fiyat, secim_penceresi: pencereAdi || null };
+  return { ...urun, [alan]: s.kademe, selected_price: s.fiyat, secim_penceresi: pencereAdi || null };
 }
 
 /** Once acik secimi saklar, sonra yeni tarifenin secimini ekrana alir. */
-export function pencereyeGec(urun, eskiPencere, yeniPencere) {
+export function pencereyeGec(urun, eskiPencere, yeniPencere, alan = 'selected_range') {
   if (!urun) return urun;
-  return secimiEkranaAl(acikSecimiSakla(urun, eskiPencere), yeniPencere);
+  return secimiEkranaAl(acikSecimiSakla(urun, eskiPencere, alan), yeniPencere, alan);
 }
 
 /**
@@ -177,11 +181,11 @@ export function pencereyeGec(urun, eskiPencere, yeniPencere) {
  * disaridan verilir.
  * @returns { '3 Gün': 11, '4 Gün': 2, toplam: 13 }
  */
-export function secimOzeti(urunler, acikPencere) {
+export function secimOzeti(urunler, acikPencere, alan = 'selected_range') {
   const ozet = { toplam: 0 };
   if (!Array.isArray(urunler)) return ozet;
   for (const u of urunler) {
-    const guncel = acikPencere ? acikSecimiSakla(u, acikPencere) : u;
+    const guncel = acikPencere ? acikSecimiSakla(u, acikPencere, alan) : u;
     for (const ad of seciliPencereler(guncel)) {
       ozet[ad] = (ozet[ad] || 0) + 1;
       ozet.toplam++;
