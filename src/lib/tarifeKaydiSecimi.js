@@ -13,8 +13,11 @@
  *      daha ucuz). Iki kayit da kayitliyken hangisinin geldigi rastgeleydi;
  *      yanlis komisyonla kar hesaplanabiliyordu.
  *
- * Siralama: once tarihi ortusen kayitlar, sonra SECIM YAPILMIS olanlar
- * (satici o tarifeyi gercekten uygulamis demektir), sonra en yeni kayit.
+ * Siralama: once tarihi ortusen kayitlar, sonra en yeni kayit.
+ *
+ * DIKKAT: Komisyon Tarifesi sayfasinda o urunun SECILI olup olmamasina
+ * BAKILMAZ. Tarifenin aralaklari urunun kendi ozelligi; sayfada 20 urunden
+ * 10'unu secip yuklemek, avantajli urun etiketindeki komisyonu degistirmez.
  *
  * Import icermez — duz node ile test edilebilir.
  */
@@ -30,12 +33,6 @@ export function tarihlerOrtusuyorMu(aBas, aBit, bBas, bBit) {
   const a1 = gun(aBas), a2 = gun(aBit), b1 = gun(bBas), b2 = gun(bBit);
   if (a1 === null || a2 === null || b1 === null || b2 === null) return true;
   return a1 <= b2 && b1 <= a2;
-}
-
-/** Kayitta secim yapilmis mi? */
-function secimVar(kayit) {
-  const s = kayit?.selected_range;
-  return !!s && s !== 'none';
 }
 
 /**
@@ -54,12 +51,7 @@ export function tarifeKaydiSec(kayitlar, olcut) {
   );
   if (adaylar.length === 0) return null;
 
-  const puan = (k) => {
-    let p = 0;
-    if (tarihlerOrtusuyorMu(baslangic, bitis, k.start_date, k.end_date)) p += 4;
-    if (secimVar(k)) p += 2;
-    return p;
-  };
+  const puan = (k) => (tarihlerOrtusuyorMu(baslangic, bitis, k.start_date, k.end_date) ? 1 : 0);
   const zaman = (k) => gun(k?.updated_date || k?.created_at) ?? 0;
 
   return [...adaylar].sort((a, b) => (puan(b) - puan(a)) || (zaman(b) - zaman(a)))[0] || null;
@@ -87,3 +79,33 @@ export function kademeKomisyonu(kayit, fiyat) {
 
   return komisyon !== null && komisyon > 0 ? komisyon : null;
 }
+
+/**
+ * Fiyat icin gecerli EN YUKSEK tarife komisyonu.
+ *
+ * Ayni donemde birden fazla pencere olabilir (3 gunluk ve 4 gunluk) ve
+ * komisyonlari farklidir. Yildiz etiketi tum doneme TEK fiyat koydugu icin
+ * hangi pencerenin gecerli olacagi onceden belli degil: 1-4 Eylul'de 3
+ * gunlugun, 4-8 Eylul'de 4 gunlugun komisyonu isler.
+ *
+ * Bu yuzden EN YUKSEK komisyon alinir — en kotu durum. Dusuk olani gostermek
+ * kari oldugundan yuksek gosterir ve satici ona gore fiyatlarsa zarar eder.
+ *
+ * @returns komisyon orani, veya uygun kayit yoksa null
+ */
+export function enYuksekTarifeKomisyonu(kayitlar, olcut, fiyat) {
+  if (!Array.isArray(kayitlar) || !olcut?.barkod) return null;
+  const { barkod, platform, baslangic, bitis } = olcut;
+
+  const oranlar = kayitlar
+    .filter((k) =>
+      String(k?.barcode ?? '') === String(barkod) &&
+      (!platform || k?.platform_account === platform) &&
+      tarihlerOrtusuyorMu(baslangic, bitis, k?.start_date, k?.end_date)
+    )
+    .map((k) => kademeKomisyonu(k, fiyat))
+    .filter((o) => o !== null);
+
+  return oranlar.length ? Math.max(...oranlar) : null;
+}
+

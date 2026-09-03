@@ -1,4 +1,4 @@
-import { tarifeKaydiSec, kademeKomisyonu, tarihlerOrtusuyorMu } from '../src/lib/tarifeKaydiSecimi.js';
+import { tarifeKaydiSec, kademeKomisyonu, tarihlerOrtusuyorMu, enYuksekTarifeKomisyonu } from '../src/lib/tarifeKaydiSecimi.js';
 
 let gecen = 0, kalan = 0;
 const esit = (ad, olan, beklenen) => {
@@ -23,14 +23,14 @@ console.log('\n=== TARIH SUZGECI ===');
   esit('tarihi ortusen secilir', s.commission_2, 19.3);
 }
 
-console.log('\n=== PENCERE: SECIM YAPILMIS OLAN ONCELIKLI ===');
+console.log('\n=== SECIM DURUMU KAYIT SECIMINI ETKILEMEZ ===');
 {
-  // Ayni urun icin 3 gunluk ve 4 gunluk iki kayit; komisyonlar FARKLI
-  const ucGun = kayit({ tarife_penceresi: '3 Gün', commission_2: 19.3, selected_range: 'none' });
-  const dortGun = kayit({ tarife_penceresi: '4 Gün', commission_2: 16.6, selected_range: 'range_2' });
-  const s = tarifeKaydiSec([ucGun, dortGun], { barkod: 'KPBŞ1', platform: 'Trendyol', baslangic: '2026-09-01', bitis: '2026-09-07' });
-  esit('satici hangisini uyguladiysa o', s.commission_2, 16.6);
-  esit('pencere adi', s.tarife_penceresi, '4 Gün');
+  // Komisyon Tarifesi sayfasinda secili olup olmamasi onemli DEGIL:
+  // tarifenin aralaklari urunun kendi ozelligi
+  const secili = kayit({ commission_2: 16.6, selected_range: 'range_2', updated_date: '2026-09-01T10:00:00Z' });
+  const secilmemis = kayit({ commission_2: 19.3, selected_range: 'none', updated_date: '2026-09-03T10:00:00Z' });
+  const s = tarifeKaydiSec([secili, secilmemis], { barkod: 'KPBŞ1', platform: 'Trendyol', baslangic: '2026-09-01', bitis: '2026-09-07' });
+  esit('secim degil, tarih ve guncellik belirler', s.commission_2, 19.3);
 }
 
 console.log('\n=== ESITLIKTE EN YENI ===');
@@ -64,6 +64,31 @@ console.log('\n=== KADEME KOMISYONU ===');
   esit('fiyat 0', kademeKomisyonu(k, 0), null);
   esit('kayit yok', kademeKomisyonu(null, 500), null);
   esit('komisyon 0 ise null', kademeKomisyonu(kayit({ commission_1: 0 }), 500), null);
+}
+
+console.log('\n=== EN YUKSEK KOMISYON (gercek KPBŞ1 kayitlari) ===');
+{
+  const olcut = { barkod: 'KPBŞ1', platform: 'Trendyol', baslangic: '2026-09-01', bitis: '2026-09-07' };
+  const ucGun   = kayit({ start_date: '2026-09-01', end_date: '2026-09-08', commission_2: 19.3 });
+  const dortGun = kayit({ start_date: '2026-09-01', end_date: '2026-09-07', commission_2: 16.6 });
+  // Temmuz kaydinda komisyonlar 0 — hesaba katilmamali
+  const temmuz  = kayit({ start_date: '2026-07-21', end_date: '2026-07-28',
+                          commission_1: 0, commission_2: 0, commission_3: 0, commission_4: 0 });
+  // Haziran kaydi donem disi
+  const haziran = kayit({ start_date: '2026-06-09', end_date: '2026-06-16', commission_2: 13.14 });
+
+  esit('en kotu durum alinir',
+    enYuksekTarifeKomisyonu([dortGun, ucGun, temmuz, haziran], olcut, 488.17), 19.3);
+  esit('donem disi kayit sayilmaz',
+    enYuksekTarifeKomisyonu([haziran], olcut, 488.17), null);
+  esit('sifir komisyon sayilmaz',
+    enYuksekTarifeKomisyonu([temmuz], { ...olcut, baslangic: '2026-07-21', bitis: '2026-07-28' }, 488.17), null);
+  esit('tek pencere', enYuksekTarifeKomisyonu([dortGun], olcut, 488.17), 16.6);
+  esit('fiyat hicbir kademeye girmezse null',
+    enYuksekTarifeKomisyonu([ucGun, dortGun], olcut, 0), null);
+  esit('kayit yok', enYuksekTarifeKomisyonu([], olcut, 488.17), null);
+  esit('gecersiz girdi', enYuksekTarifeKomisyonu(null, olcut, 100), null);
+  esit('barkodsuz', enYuksekTarifeKomisyonu([ucGun], {}, 100), null);
 }
 
 console.log(`\nGECEN: ${gecen}   KALAN: ${kalan}`);

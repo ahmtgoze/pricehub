@@ -20,7 +20,7 @@ import { sayiyaCevirVeya } from '@/lib/turkceSayi';
 import { unzipSync, zipSync } from 'fflate';
 import { hucreleriYaz, baslikHaritasi, paylasilanMetinler, sayfaXmlYolu, sutunDegerleri } from '@/lib/xlsxYerindeYaz';
 import { kademeFiyati } from '@/lib/trendyolTarifeKurali';
-import { tarifeKaydiSec, kademeKomisyonu } from '@/lib/tarifeKaydiSecimi';
+import { enYuksekTarifeKomisyonu } from '@/lib/tarifeKaydiSecimi';
 import BaremBadge from '@/components/ui/BaremBadge';
 import { baremSec, baremTavanFiyatlari, baremTarifesiSec } from '@/lib/baremKurali';
 import { gecerliMaliyet } from '@/lib/gecerliMaliyet';
@@ -406,25 +406,31 @@ export default function AdvantageProductTag() {
     }
   };
 
-  // KOMİSYON TARİFESİ "Var" olan urunler avantajli urun etiketine ALINMAZ.
-  // Ayni urun iki programa birden giremiyor; Trendyol boyle satirlari
-  // reddediyor.
+  // KOMİSYON TARİFESİ "Var" olan urunun komisyonu, kendi tarife
+  // kademelerinden gelir: yildiz fiyati tarifenin hangi aralagina duserse
+  // o aralikin komisyonu uygulanir. Urun etiket programindan CIKARILMAZ ve
+  // bu, Komisyon Tarifesi sayfasinda ne secildiginden bagimsizdir.
   const komisyonTarifesindeMi = (item) =>
     item?.has_commission_tariff === 'Var' || item?.has_commission_tariff === 'true';
 
   const getDynamicCommissionForPrice = (item, price) => {
-    // Tarife "Var" ise komisyon, urunun tarife kademesinden gelir.
-    // Kayit secimi TARIH ve PENCERE gozeterek yapilir: Trendyol artik bir
-    // dosyada 3 gunluk ve 4 gunluk iki pencere veriyor ve komisyonlari
-    // farkli; onceki surum ilk buldugu kaydi aliyordu.
+    // Tarife "Var" ise komisyon, urunun kendi tarife kademesinden gelir:
+    // yildiz fiyati tarifenin hangi araligina duserse o aralikin komisyonu.
+    //
+    // Onceki surum ilk buldugu kaydi aliyordu; KPBŞ1'in dort kaydi var ve
+    // biri Temmuz'dan kalma, komisyonlari 0 — kar oldugundan yuksek
+    // gorunebiliyordu. Artik yalnizca DONEMI ORTUSEN kayitlar sayiliyor.
+    //
+    // Ayni donemde 3 gunluk ve 4 gunluk iki pencere olabiliyor ve
+    // komisyonlari farkli (19,3 / 16,6). Etiket tum doneme tek fiyat
+    // koydugu icin EN YUKSEK komisyon — en kotu durum — kullaniliyor.
     if (komisyonTarifesindeMi(item) && price > 0 && item.barcode) {
-      const kayit = tarifeKaydiSec(trendyolPriceRanges, {
+      const oran = enYuksekTarifeKomisyonu(trendyolPriceRanges, {
         barkod: item.barcode,
         platform: selectedPlatform,
         baslangic: item.start_date,
         bitis: item.end_date,
-      });
-      const oran = kademeKomisyonu(kayit, price);
+      }, price);
       if (oran) return oran;
     }
 
@@ -453,7 +459,6 @@ export default function AdvantageProductTag() {
     let selectedCount = 0;
     let skippedAlreadySelected = 0;
     let skippedNoProduct = 0;
-    let skippedTarifeli = 0;
     let skippedNoMatch = 0;
     let skippedNoCommission = 0;
     let skippedTargetNotMet = 0;
@@ -467,8 +472,6 @@ export default function AdvantageProductTag() {
       }
 
       const matchedProduct = getMatchedProduct(item);
-      // Komisyon tarifesindeki urun bu programa alinmaz
-      if (komisyonTarifesindeMi(item)) { skippedTarifeli++; return { ...item, selected_range: 'none', selected_price: 0 }; }
       if (!matchedProduct) { skippedNoProduct++; return { ...item, selected_range: 'none', selected_price: 0 }; }
 
       const commission = findCommission(matchedProduct);
@@ -532,7 +535,6 @@ export default function AdvantageProductTag() {
     const parts = [];
     if (selectedCount > 0) parts.push(`✅ ${selectedCount} ürün seçildi`);
     if (skippedAlreadySelected > 0) parts.push(`${skippedAlreadySelected} zaten seçili/manuel`);
-    if (skippedTarifeli > 0) parts.push(`${skippedTarifeli} ürün komisyon tarifesinde (etiket verilmez)`);
     if (skippedNoProduct > 0) parts.push(`⚠️ ${skippedNoProduct} sistem ürünüyle eşleşmedi`);
     if (skippedNoMatch > 0) parts.push(`⚠️ ${skippedNoMatch} komisyon kaydı bulunamadı`);
     if (skippedNoCommission > 0) parts.push(`⚠️ ${skippedNoCommission} indirimli hedef kâr tanımlı değil`);
@@ -554,7 +556,6 @@ export default function AdvantageProductTag() {
       tutar <= (Number.isNaN(maxAmount) ? Infinity : maxAmount);
 
     const updated = uploadedData.map(item => {
-      if (komisyonTarifesindeMi(item)) return { ...item, selected_range: 'none', selected_price: 0 };
       if (item.selected_range !== 'none' && item.selected_range !== bulkColumn) return item;
 
       let price = 0, commissionRate = 0;
@@ -684,9 +685,7 @@ export default function AdvantageProductTag() {
         const satirNo = Number(satirMetni);
         if (satirNo < 2) continue;
         const item = uploadedData.find((x) => String(x.barcode) === String(barkod));
-        // Komisyon tarifesindeki urun hicbir kosulda yazilmaz
-        const secili = !!item && !komisyonTarifesindeMi(item) &&
-                       item.selected_range !== 'none' && (item.selected_price || 0) > 0;
+        const secili = !!item && item.selected_range !== 'none' && (item.selected_price || 0) > 0;
         if (secili) yazilan++;
 
         // Secili olmayan satirlar TEMIZLENIR; onceden indirilmis bir dosya
@@ -810,15 +809,6 @@ export default function AdvantageProductTag() {
 
   const renderRangeCell = (item, index, rangeType, minPrice, hamUstFiyat, excelCommission, label) => {
     if (!minPrice || minPrice <= 0) return <div className="text-center text-muted-foreground/70 text-xs">-</div>;
-
-    // Komisyon tarifesindeki urun bu programa alinmaz
-    if (komisyonTarifesindeMi(item)) {
-      return (
-        <div className="text-center text-amber-700 dark:text-amber-400 text-xs">
-          komisyon tarifesinde
-        </div>
-      );
-    }
 
     // Kademe bir ARALIK; ust fiyat kullanilir ama "MÜŞTERİNİN GÖRDÜĞÜ FİYAT"i
     // gecemez. Geciyorsa oraya cekilir; kademe ve komisyon ayni kalir.
