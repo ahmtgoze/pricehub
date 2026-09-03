@@ -24,6 +24,7 @@ import { pencereleriBul, pencereKomisyonlari, tarifeSecimDegeri } from '@/lib/tr
 import { unzipSync, zipSync } from 'fflate';
 import { hucreleriYaz, baslikHaritasi, paylasilanMetinler, sayfaXmlYolu, sutunDegerleri } from '@/lib/xlsxYerindeYaz';
 import { kademeFiyati, tarifeUstSiniri, sinirAsanlar } from '@/lib/trendyolTarifeKurali';
+import { yazilmaliMi, gonderimleriIsle, gonderilenFiyat } from '@/lib/trendyolGonderim';
 import { komisyonHaritasi, pencereUygula, pencereAdlari, pencereDegistirilebilir,
          pencereyeGec, acikSecimiSakla, secimiOku, seciliPencereler, secimOzeti } from '@/lib/trendyolPencereSecimi';
 
@@ -66,6 +67,10 @@ export default function TrendyolPriceRange() {
   // yaptigini secer. Onceden yalnizca ilki okunuyordu, ikincisi gorunmuyordu.
   const [pencereler, setPencereler] = useState([]);
   const [secilenPencere, setSecilenPencere] = useState('');
+  // Hangi urune hangi tarifede hangi fiyati gonderdigimiz. Trendyol ayni
+  // fiyati ikinci kez kabul etmiyor; tekrar gonderilen satirlar rapora
+  // hata olarak dusuyor.
+  const [gonderimDefteri, setGonderimDefteri] = useState({});
   const [detailModal, setDetailModal] = useState({ open: false, product: null, priceData: null, calculationDetails: null });
 
   const queryClient = useQueryClient();
@@ -840,15 +845,22 @@ export default function TrendyolPriceRange() {
       // fiyat YANLIS URUNE yazilabilirdi.
       const barkodlar = sutunDegerleri(sheet, barkodSut, paylasilan);
       const degisiklikler = [];
+      const yazilanlar = [];
       let yazilan = 0;
+      let atlanan = 0;
 
       for (const [satirMetni, barkod] of Object.entries(barkodlar)) {
         const satirNo = Number(satirMetni);
         if (satirNo < 2) continue;                       // baslik satiri
         const item = veri.find((x) => String(x.barcode) === String(barkod));
         const secim = item ? secimiOku(item, pencereAdi) : { kademe: 'none', fiyat: 0 };
-        const dolu = secim.kademe !== 'none';
-        if (dolu) yazilan++;
+        // Ayni fiyati ikinci kez gondermek Trendyol'da hata sayiliyor
+        const karar = secim.kademe === 'none'
+          ? { yazilir: false, sebep: 'fiyat-yok' }
+          : yazilmaliMi(secim.fiyat, item?.current_tsf, gonderilenFiyat(gonderimDefteri, pencereAdi, barkod));
+        const dolu = karar.yazilir;
+        if (dolu) { yazilan++; yazilanlar.push({ barkod, fiyat: secim.fiyat }); }
+        else if (secim.kademe !== 'none') atlanan++;
 
         // Secili olmayan satirlarin eski degerleri TEMIZLENIR; vazgecilen bir
         // urun eski fiyatiyla Trendyol'a gitmesin.
@@ -880,18 +892,25 @@ export default function TrendyolPriceRange() {
       baglanti.click();
       baglanti.remove();
       setTimeout(() => URL.revokeObjectURL(url), 1000);
-      return yazilan;
+      return { yazilan, atlanan, yazilanlar };
     };
 
+    let defter = gonderimDefteri;
+    let toplamAtlanan = 0;
     const sonuc = pencereler.map((p) => {
       const ad = p === '(pencere yok)' ? null : p;
-      return `${ad || 'tarifesiz'}: ${dosyaUret(ad)} ürün`;
+      const { yazilan, atlanan, yazilanlar } = dosyaUret(ad);
+      defter = gonderimleriIsle(defter, ad, yazilanlar);
+      toplamAtlanan += atlanan;
+      return `${ad || 'tarifesiz'}: ${yazilan} ürün${atlanan ? ` (${atlanan} atlandı)` : ''}`;
     });
+    setGonderimDefteri(defter);
     toast.success(
-      pencereler.length === 1
+      (pencereler.length === 1
         ? `Excel indirildi — ${sonuc[0]}`
-        : `${pencereler.length} Excel dosyası indirildi — ${sonuc.join(' · ')}`,
-      { duration: 8000 }
+        : `${pencereler.length} Excel dosyası indirildi — ${sonuc.join(' · ')}`) +
+      (toplamAtlanan ? '. Atlananlar aynı fiyatla zaten gönderilmişti; Trendyol bunları hata sayıyor.' : ''),
+      { duration: 10000 }
     );
   };
 
