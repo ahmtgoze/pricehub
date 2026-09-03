@@ -18,6 +18,7 @@ import { unzipSync, zipSync } from 'fflate';
 import { hucreleriYaz, baslikHaritasi, paylasilanMetinler, sayfaXmlYolu, sutunDegerleri } from '@/lib/xlsxYerindeYaz';
 import { plusPencereleriBul, plusPencereHaritasi, plusPencereUygula, plusPencereAdlari } from '@/lib/plusTarifePenceresi';
 import { pencereyeGec, acikSecimiSakla, secimiOku, secimOzeti } from '@/lib/trendyolPencereSecimi';
+import { kayitlariTeklestir } from '@/lib/kayitTeklestirme';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { sayiyaCevirVeya } from '@/lib/turkceSayi';
 import PriceDetailModal from '@/components/modals/PriceDetailModal';
@@ -141,9 +142,14 @@ export default function PlusProductCommissionTariff() {
 
     const startDate = format(dateRangeValue.from, 'yyyy-MM-dd');
     const endDate = format(dateRangeValue.to, 'yyyy-MM-dd');
-    const filtered = savedPlusTariffs.filter(
+    const eslesenler = savedPlusTariffs.filter(
       r => r.platform_account === selectedPlatform && r.start_date === startDate && r.end_date === endDate
     );
+    // Ayni donem icin birden fazla kayit seti olabilir (ornegin 3 gunluk ve
+    // 4 gunluk pencere ayri ayri yuklenmisse). Ikisi birden yuklenince ayni
+    // barkod iki kez cikiyor, biri secili biri degil ve secimler
+    // SIFIRLANMIS gibi gorunuyordu. Urun basina secimi olan kayit tutulur.
+    const filtered = kayitlariTeklestir(eslesenler);
     setUploadedData(filtered);
 
     const recordWithExcel = filtered.find(r => r.excel_file_url);
@@ -272,14 +278,26 @@ export default function PlusProductCommissionTariff() {
         }
 
         setUploadProgress({ current: 0, total: parsed.length });
+        // bulkCreate olusan kayitlari id'leriyle dondurur. Bu id'ler state'e
+        // islenmezse "Secimleri Kaydet" guncelleme yerine YENI kayit
+        // olusturuyor; ayni urun iki kez kaydediliyor ve donem yeniden
+        // acildiginda secimler sifirlanmis gibi gorunuyordu.
+        const olusanlar = [];
         for (let i = 0; i < parsed.length; i += 30) {
           const batch = parsed.slice(i, i + 30);
           if (i === 0 && batch.length > 0 && excelFileUrl) {
             batch[0].excel_file_url = excelFileUrl;
           }
-          await PlusEntity.bulkCreate(batch);
+          const olusan = await PlusEntity.bulkCreate(batch);
+          if (Array.isArray(olusan)) olusanlar.push(...olusan);
           setUploadProgress({ current: Math.min(i + 30, parsed.length), total: parsed.length });
           if (i + 30 < parsed.length) await new Promise(resolve => setTimeout(resolve, 200));
+        }
+        if (olusanlar.length > 0) {
+          const idler = new Map(olusanlar.filter(r => r?.barcode).map(r => [String(r.barcode), r.id]));
+          setUploadedData(oncekiler => oncekiler.map(u =>
+            idler.has(String(u.barcode)) ? { ...u, id: idler.get(String(u.barcode)) } : u
+          ));
         }
 
         setUploadedData(parsed);
