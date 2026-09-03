@@ -16,6 +16,10 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import * as XLSX from 'xlsx';
+import { sayiyaCevirVeya } from '@/lib/turkceSayi';
+import { unzipSync, zipSync } from 'fflate';
+import { hucreleriYaz, baslikHaritasi, paylasilanMetinler, sayfaXmlYolu, sutunDegerleri } from '@/lib/xlsxYerindeYaz';
+import { kademeFiyati } from '@/lib/trendyolTarifeKurali';
 import BaremBadge from '@/components/ui/BaremBadge';
 import { baremSec, baremTavanFiyatlari, baremTarifesiSec } from '@/lib/baremKurali';
 import { gecerliMaliyet } from '@/lib/gecerliMaliyet';
@@ -173,9 +177,11 @@ export default function AdvantageProductTag() {
       fetch(recordWithExcel.excel_file_url)
         .then(r => r.arrayBuffer())
         .then(ab => {
-          const wb = XLSX.read(new Uint8Array(ab), { type: 'array' });
+          const ham = new Uint8Array(ab);
+          const wb = XLSX.read(ham, { type: 'array' });
           const sn = wb.SheetNames[0];
-          setOriginalExcelData({ workbook: wb, sheetName: sn, jsonData: XLSX.utils.sheet_to_json(wb.Sheets[sn]) });
+          setOriginalExcelData({ workbook: wb, sheetName: sn, raw: ham, baytlar: ham,
+                                 jsonData: XLSX.utils.sheet_to_json(wb.Sheets[sn]) });
         })
         .catch(e => console.error('Excel restore hatası:', e));
     }
@@ -198,7 +204,11 @@ export default function AdvantageProductTag() {
         const sheetName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[sheetName];
         const jsonData = XLSX.utils.sheet_to_json(worksheet);
-        setOriginalExcelData({ workbook, sheetName, jsonData });
+        // readAsBinaryString ikili DIZGI verir; fflate bayt bekler.
+        const ikili = event.target.result;
+        const baytlar = new Uint8Array(ikili.length);
+        for (let i = 0; i < ikili.length; i++) baytlar[i] = ikili.charCodeAt(i) & 0xff;
+        setOriginalExcelData({ workbook, sheetName, jsonData, baytlar });
 
         const excelBuffer = XLSX.write(workbook, { type: 'array', bookType: 'xlsx' });
         const excelBlob = new Blob([new Uint8Array(excelBuffer)], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
@@ -241,22 +251,25 @@ export default function AdvantageProductTag() {
             size: row['BEDEN'] || '',
             model_code: row['MODEL KODU'] || '',
             category: matchedProduct?.category_name || row['KATEGORİ'] || '',
-            stock: parseFloat(row['STOK']) || 0,
+            stock: sayiyaCevirVeya(row['STOK']),
             brand: row['MARKA'] || '',
             commission_rate: commissionRate,
+            // Dosyada fiyatlar VIRGULLU METIN geliyor ("480,17"). parseFloat
+            // bunu 480 yapiyordu; alt sinirlar bir ALT kademenin bandina
+            // dusuyor ve gosterilen komisyon gerceginden farkli oluyordu.
             has_commission_tariff: row['Ürün Komisyon Tarife Seçeneği'] || row['KOMİSYON TARİFESİ'] || 'Yok',
-            advantage_min: parseFloat(row['Avantajlı Ürün Alt Limit'] ?? row['1 YILDIZ ALT FİYAT']) || 0,
-            advantage_max: parseFloat(row['Avantajlı Ürün Üst Limit'] ?? row['1 YILDIZ ÜST FİYAT']) || 0,
-            advantage_commission: parseFloat(row['Avantajlı Ürün Komisyon'] ?? row['1 YILDIZ KOMİSYON']) || 0,
-            super_advantage_min: parseFloat(row['Çok Avantajlı Ürün Alt Limit'] ?? row['2 YILDIZ ALT FİYAT']) || 0,
-            super_advantage_max: parseFloat(row['Çok Avantajlı Ürün Üst Limit'] ?? row['2 YILDIZ ÜST FİYAT']) || 0,
-            super_advantage_commission: parseFloat(row['Çok Avantajlı Ürün Komisyon'] ?? row['2 YILDIZ KOMİSYON']) || 0,
-            mega_advantage_min: parseFloat(row['Süper Avantajlı Ürün Alt Limit'] ?? row['3 YILDIZ ALT FİYAT'] ?? row['3 YILDIZ ÜST FİYAT']) || 0,
-            mega_advantage_max: parseFloat(row['Süper Avantajlı Ürün Üst Limit'] ?? row['3 YILDIZ ÜST FİYAT']) || 0,
-            mega_advantage_commission: parseFloat(row['Süper Avantajlı Ürün Komisyon'] ?? row['3 YILDIZ KOMİSYON']) || 0,
-            current_base_price: parseFloat(row['KOMİSYONA ESAS FİYAT'] ?? row['MÜŞTERİNİN GÖRDÜĞÜ FİYAT']) || 0,
-            current_commission: parseFloat(row['GÜNCEL KOMİSYON']) || 0,
-            current_tsf: parseFloat(row['GÜNCEL TSF'] ?? row['TRENDYOL SATIŞ FİYATI']) || 0,
+            advantage_min: sayiyaCevirVeya(row['Avantajlı Ürün Alt Limit'] ?? row['1 YILDIZ ALT FİYAT']),
+            advantage_max: sayiyaCevirVeya(row['Avantajlı Ürün Üst Limit'] ?? row['1 YILDIZ ÜST FİYAT']),
+            advantage_commission: sayiyaCevirVeya(row['Avantajlı Ürün Komisyon'] ?? row['1 YILDIZ KOMİSYON']),
+            super_advantage_min: sayiyaCevirVeya(row['Çok Avantajlı Ürün Alt Limit'] ?? row['2 YILDIZ ALT FİYAT']),
+            super_advantage_max: sayiyaCevirVeya(row['Çok Avantajlı Ürün Üst Limit'] ?? row['2 YILDIZ ÜST FİYAT']),
+            super_advantage_commission: sayiyaCevirVeya(row['Çok Avantajlı Ürün Komisyon'] ?? row['2 YILDIZ KOMİSYON']),
+            mega_advantage_min: sayiyaCevirVeya(row['Süper Avantajlı Ürün Alt Limit'] ?? row['3 YILDIZ ALT FİYAT'] ?? row['3 YILDIZ ÜST FİYAT']),
+            mega_advantage_max: sayiyaCevirVeya(row['Süper Avantajlı Ürün Üst Limit'] ?? row['3 YILDIZ ÜST FİYAT']),
+            mega_advantage_commission: sayiyaCevirVeya(row['Süper Avantajlı Ürün Komisyon'] ?? row['3 YILDIZ KOMİSYON']),
+            current_base_price: sayiyaCevirVeya(row['KOMİSYONA ESAS FİYAT'] ?? row['MÜŞTERİNİN GÖRDÜĞÜ FİYAT']),
+            current_commission: sayiyaCevirVeya(row['GÜNCEL KOMİSYON']),
+            current_tsf: sayiyaCevirVeya(row['GÜNCEL TSF'] ?? row['TRENDYOL SATIŞ FİYATI']),
             selected_range: 'none',
             manual_price: 0,
             matched_product_id: matchedProduct?.id || null
@@ -482,9 +495,12 @@ export default function AdvantageProductTag() {
       // Süper Avantaj → Çok Avantaj → Avantaj (en indirimliden başla),
       // hedefi karşılayan İLK aralıkta dur. Komisyon kartla aynı (getDynamicCommissionForPrice).
       const ranges = [
-        { rangeType: 'mega_advantage', price: item.mega_advantage_max, min: item.mega_advantage_min, commission: getDynamicCommissionForPrice(item, item.mega_advantage_max) },
-        { rangeType: 'super_advantage', price: item.super_advantage_max, min: item.super_advantage_min, commission: getDynamicCommissionForPrice(item, item.super_advantage_max) },
-        { rangeType: 'advantage', price: item.advantage_max, min: item.advantage_min, commission: getDynamicCommissionForPrice(item, item.advantage_max) },
+        // Fiyatlar musterinin gordugu fiyata cekilmis haliyle degerlendirilir;
+        // yoksa Trendyol satiri reddediyor ve kar da gerceklesmeyen bir fiyata
+        // gore hesaplanmis oluyor.
+        { rangeType: 'mega_advantage', price: yildizFiyati(item, item.mega_advantage_max, item.mega_advantage_min), min: item.mega_advantage_min, commission: getDynamicCommissionForPrice(item, item.mega_advantage_max) },
+        { rangeType: 'super_advantage', price: yildizFiyati(item, item.super_advantage_max, item.super_advantage_min), min: item.super_advantage_min, commission: getDynamicCommissionForPrice(item, item.super_advantage_max) },
+        { rangeType: 'advantage', price: yildizFiyati(item, item.advantage_max, item.advantage_min), min: item.advantage_min, commission: getDynamicCommissionForPrice(item, item.advantage_max) },
       ];
 
       for (const range of ranges) {
@@ -623,45 +639,86 @@ export default function AdvantageProductTag() {
     }
   };
 
+  // Bir yildiz kademesine yazilabilecek fiyat. Kademe bir ARALIK oldugu icin
+  // ust fiyat kullanilir, ama fiyat "MÜŞTERİNİN GÖRDÜĞÜ FİYAT"i gecemez:
+  // Trendyol fiyat YUKSELTMEYE izin vermiyor, geceni sessizce reddediyor.
+  // Cekilen fiyat kademenin alt sinirinin altina duserse kademe kullanilamaz.
+  const yildizFiyati = (item, ust, alt) =>
+    kademeFiyati(ust, alt, item?.current_base_price, false);
+
   const handleExport = () => {
     if (uploadedData.length === 0) { toast.error('Yüklenmiş veri bulunamadı'); return; }
-    if (!originalExcelData) { toast.error('Orijinal Excel dosyası bulunamadı'); return; }
-
-    const { workbook, sheetName } = originalExcelData;
-    const worksheet = workbook.Sheets[sheetName];
-    const range = XLSX.utils.decode_range(worksheet['!ref']);
-
-    for (let R = range.s.r + 1; R <= range.e.r; R++) {
-      const row = {};
-      for (let C = range.s.c; C <= range.e.c; C++) {
-        const cell = worksheet[XLSX.utils.encode_cell({ r: R, c: C })];
-        const header = worksheet[XLSX.utils.encode_cell({ r: range.s.r, c: C })]?.v;
-        if (cell && header) row[header] = cell.v;
-      }
-      const barcode = row['BARKOD'];
-      const item = uploadedData.find(i => i.barcode === barcode);
-      const isSelected = item && item.selected_range !== 'none';
-
-      // Her satırda önce TSF ve "Uygula" hücrelerini TEMİZLE, sadece seçili olanlara yaz.
-      // (Önceden indirilip tekrar yüklenen dosyalardaki hayalet "Evet" değerleri böylece silinir.)
-      for (let C = range.s.c; C <= range.e.c; C++) {
-        const header = worksheet[XLSX.utils.encode_cell({ r: range.s.r, c: C })]?.v;
-        const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
-        if (header === 'YENİ TSF (FİYAT GÜNCELLE)') {
-          worksheet[cellAddress] = isSelected ? { v: item.selected_price || 0, t: 'n' } : { v: '', t: 's' };
-        }
-        if (header === 'Tarife Sonuna Kadar Uygula') {
-          worksheet[cellAddress] = isSelected ? { v: 'Evet', t: 's' } : { v: '', t: 's' };
-        }
-      }
+    if (!originalExcelData?.baytlar) {
+      toast.error('Excel yeniden okunamıyor. Lütfen dosyayı yeniden yükleyin.', { duration: 8000 });
+      return;
     }
 
-    const slugify = (str) => str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
-    const fromStr = dateRangeValue?.from ? format(dateRangeValue.from, 'd MMMM', { locale: tr }) : '';
-    const toStr = dateRangeValue?.to ? format(dateRangeValue.to, 'd MMMM', { locale: tr }) : '';
-    const fileName = `avantajliurunetiketi-${slugify(fromStr)}-${slugify(toStr)}.xlsx`;
-    XLSX.writeFile(workbook, fileName);
-    toast.success('Excel dosyası indirildi');
+    try {
+      // DOSYA YENIDEN URETILMIYOR. SheetJS ile yeniden yazmak metin hucrelerini
+      // t="str" (formul sonucu) olarak yaziyor; Trendyol dosyayi
+      // "Yüklenen excel formatı hatalıdır" diye reddediyor. Ayrica
+      // dataValidation (170 kural) ve stiller de kayboluyordu.
+      const parcalar = unzipSync(originalExcelData.baytlar);
+      const yol = sayfaXmlYolu(parcalar);
+      if (!yol) throw new Error('Excel içinde sayfa bulunamadı');
+
+      const metneCevir = (b) => new TextDecoder().decode(b);
+      let sheet = metneCevir(parcalar[yol]);
+      const paylasilan = parcalar['xl/sharedStrings.xml']
+        ? paylasilanMetinler(metneCevir(parcalar['xl/sharedStrings.xml']))
+        : [];
+      const basliklar = baslikHaritasi(sheet, 1, paylasilan);
+
+      const barkodSut = basliklar['BARKOD'];
+      const tsfSut = basliklar['YENİ TSF (FİYAT GÜNCELLE)'];
+      const uygulaSut = basliklar['Tarife Sonuna Kadar Uygula'];
+      if (!barkodSut || !tsfSut) {
+        throw new Error('Excel başlıkları tanınmadı (BARKOD / YENİ TSF sütunu yok)');
+      }
+
+      // Satir eslesmesi XML'den; sheet_to_json bos satirlari atlayabilir ve
+      // fiyat YANLIS URUNE yazilabilirdi.
+      const barkodlar = sutunDegerleri(sheet, barkodSut, paylasilan);
+      const degisiklikler = [];
+      let yazilan = 0;
+
+      for (const [satirMetni, barkod] of Object.entries(barkodlar)) {
+        const satirNo = Number(satirMetni);
+        if (satirNo < 2) continue;
+        const item = uploadedData.find((x) => String(x.barcode) === String(barkod));
+        const secili = !!item && item.selected_range !== 'none' && (item.selected_price || 0) > 0;
+        if (secili) yazilan++;
+
+        // Secili olmayan satirlar TEMIZLENIR; onceden indirilmis bir dosya
+        // yeniden yuklenirse hayalet fiyat ve "Evet" degerleri kalmasin.
+        degisiklikler.push({ adres: `${tsfSut}${satirNo}`, deger: secili ? item.selected_price : null, tip: 'n' });
+        if (uygulaSut) {
+          degisiklikler.push({ adres: `${uygulaSut}${satirNo}`, deger: secili ? 'Evet' : null, tip: 's' });
+        }
+      }
+
+      sheet = hucreleriYaz(sheet, degisiklikler);
+      parcalar[yol] = new TextEncoder().encode(sheet);
+
+      const slugify = (str) => str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+      const fromStr = dateRangeValue?.from ? format(dateRangeValue.from, 'd MMMM', { locale: tr }) : '';
+      const toStr = dateRangeValue?.to ? format(dateRangeValue.to, 'd MMMM', { locale: tr }) : '';
+      const blob = new Blob([zipSync(parcalar)], {
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      });
+      const url = URL.createObjectURL(blob);
+      const baglanti = document.createElement('a');
+      baglanti.href = url;
+      baglanti.download = `avantajliurunetiketi-${slugify(fromStr)}-${slugify(toStr)}.xlsx`;
+      document.body.appendChild(baglanti);
+      baglanti.click();
+      baglanti.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+
+      toast.success(`Excel indirildi — ${yazilan} ürün`);
+    } catch (hata) {
+      toast.error('Excel oluşturulamadı: ' + (hata?.message || hata), { duration: 10000 });
+    }
   };
 
   const filteredData = uploadedData.filter(item => {
@@ -751,8 +808,21 @@ export default function AdvantageProductTag() {
     );
   };
 
-  const renderRangeCell = (item, index, rangeType, minPrice, maxPrice, excelCommission, label) => {
+  const renderRangeCell = (item, index, rangeType, minPrice, hamUstFiyat, excelCommission, label) => {
     if (!minPrice || minPrice <= 0) return <div className="text-center text-muted-foreground/70 text-xs">-</div>;
+
+    // Kademe bir ARALIK; ust fiyat kullanilir ama "MÜŞTERİNİN GÖRDÜĞÜ FİYAT"i
+    // gecemez. Geciyorsa oraya cekilir; kademe ve komisyon ayni kalir.
+    // Cekilince alt sinirin altina duserse kademe kullanilamaz.
+    const maxPrice = yildizFiyati(item, hamUstFiyat, minPrice);
+    if (maxPrice === null) {
+      return (
+        <div className="text-center text-muted-foreground/70 text-xs">
+          müşteri fiyatının üstünde
+        </div>
+      );
+    }
+    const cekildi = hamUstFiyat > 0 && maxPrice < hamUstFiyat;
 
     const dynamicCommission = getDynamicCommissionForPrice(item, maxPrice);
     const { profit, profitRate, baremUsed } = calculateProfit(maxPrice, dynamicCommission, item);
@@ -766,6 +836,11 @@ export default function AdvantageProductTag() {
           <div className="text-xs text-muted-foreground text-center">
             <div className="font-bold text-sm">₺{maxPrice?.toFixed(2)}</div>
             <div>ve altı</div>
+            {cekildi && (
+              <div className="text-[10px] text-amber-700 dark:text-amber-400">
+                müşteri fiyatı tavanı ₺{item.current_base_price?.toFixed(2)}
+              </div>
+            )}
           </div>
         )}
         <div className="flex items-center justify-between gap-1">
