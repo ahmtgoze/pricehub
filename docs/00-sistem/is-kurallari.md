@@ -691,6 +691,114 @@ yüzden dosyaya tarih sütunu **eklenmemelidir**.
 
 Kaynak: `src/lib/hbSepetDisaAktarim.js` (testleri: `tests/hbSepetDisaAktarim.test.mjs`)
 
+## 7d. Trendyol Kampanyalar — kampanya türleri ve komisyon
+
+Kaynak: Trendyol Partner → Promosyonlar → Katılabileceğim Kampanyalar
+(3 Eylül 2026 ekran kaydı). Fiyat modeli `src/lib/trendyolKampanyaIndirimi.js`
+(69 test), sayfa `src/pages/Campaigns.jsx`.
+
+### Kampanya grupları (yeşil başlık satırları)
+| Grup | Bizde | Not |
+|---|---|---|
+| Genel Kampanyalar (Tüm Ülkeler, Okul İhtiyaçları vb. dönemsel başlıklar dahil) | `all_countries` | dönemsel başlıklar ayrı grup DEĞİL (kullanıcı kararı) |
+| Trendyol Plus — Ek İndirim | `trendyol_plus` | komisyon Plus Tarifesi'nden |
+| Mikro İhracat | `mikro_ihracat` | seçilebilir; ülke bazlı komisyon/kargo modeli **henüz yok**, en son yapılacak — şimdilik genel gibi hesaplanır |
+
+### İndirim türleri ("İndirim Detayı" satırı)
+| Trendyol metni | `discount_kind` | Satıcıya etkisi (birim, karşılama hariç) |
+|---|---|---|
+| Net %15 İndirim | `net_percent` | fiyat × %15 |
+| Sepette %40 İndirim | `cart_percent` | fiyat × %40 |
+| 500 TL'ye 100 TL İndirim | `cart_tl` | fiyat ≥ 500 ise 100 TL; değilse fiyat × 100/500 (sepet tam eşikte, oransal dağılım) |
+| 3 Al 2 Öde | `buy_x_pay_y` | fiyat × (3−2)/3 |
+| 2 Adet ve Üzeri %15 İndirim | `qty_percent` | fiyat × %15 (tüm adetler) |
+
+> `cart_tl`: Trendyol sepet indirimini siparişteki kampanya ürünlerine
+> **tutarları oranında dağıtır** (kullanıcı, 3 Eyl 2026). En kötü durum sepetin
+> tam eşikte olmasıdır: indirim oranı = tutar/eşik. Örn. 2000 TL'ye 150 TL →
+> %7,5; 826,99 TL'lik ürün için 62,02 TL. Sepet eşiği aştıkça gerçek indirim
+> bundan küçüktür; kâr en kötü duruma göre gösterilir.
+
+### Ortak alanlar
+- **Trendyol Karşılamalı (%)** — indirimin bu payı Trendyol'dan çıkar.
+  Satıcı fiyatı = fiyat − indirim × (1 − karşılama/100).
+- **Fiyat Kuralı** (`price_rule_min/max`) — "100 TL ve üzeri ürünler",
+  "10 TL ve 700 TL arası ürünler", "800 TL ve altı ürünler". Aralık dışındaki
+  ürün kampanyaya giremez; **Akıllı Otomatik Seç** bunları atlar ve sayar.
+- **Katılım Koşulu** (`participation_condition`: `buybox` | `min_price`) —
+  bilgi amaçlı; Trendyol'un Excel'indeki "girilebilecek max fiyat" bunu zaten
+  uygular, ayrıca hesaba katılmaz.
+- **Kampanya Adı** — isteğe bağlı; kartta grup adının yerine görünür.
+
+### Eski kayıt uyumu
+`discount_kind` eklenmeden önceki kampanyalar `discount_type` (percent | tl),
+`discount_amount`, `cart_amount`, `cart_condition` ile okunur
+(`kaydiKampanyayaCevir`): percent → `net_percent`; tl → `cart_tl`
+(sepet "üzeri" ise eşik); percent + sepet "altı/üzeri" → fiyat kuralı.
+Eski kampanyaların kâr hesabı **değişmez** (testle doğrulandı). Yeni kayıtta
+`cart_amount/cart_condition` boş bırakılır; `discount_type` uyum için
+doldurulur.
+
+### Komisyon kaynağı: o gün geçerli tarife penceresi (4 Eyl 2026)
+Trendyol'un tarife Excel'inde ayrı bir "7 günlük komisyon" **yoktur**; mavi
+kutu fiyat kademeleri, yeşil 3 Gün ve kırmızı 4 Gün komisyon bloklarıdır.
+"7 Günlük Fiyat" seçilince fiyat hafta boyu sabit kalır ama komisyon **ilk 3
+gün 3 günlük, sonraki 4 gün 4 günlük** orandır (dosyanın formülü de böyle).
+
+**Kullanıcı kararı (4 Eyl 2026):** ortalama ya da "en yüksek" yok. Avantajlı
+Ürün Etiketi, Flaş Ürünler ve Kampanyalar komisyonu **o an geçerli
+pencerenin** oranıyla hesaplar; kullanıcı her pencere değişiminde (3 gün
+sonra, sonra 4 gün sonra) çıktıyı yeniden indirip yükler: "sonuç %100 doğru
+olur". Aylık kampanyada her hafta yeni tarife dosyasıyla aynı düzen sürer.
+
+Mekanizma (`src/lib/tarifeKaydiSecimi.js`): tarife yüklenirken pencerelerin
+tarihleri `pencere_tarihleri` olarak kayda yazılır (`pencereTarihiCoz`:
+"1 Eylül 08.00-4 Eylül 07.59" → ISO, yıl kaydın başlangıcından, +03:00).
+`tarifeKomisyonu(kayıtlar, {barkod, platform, başlangıç, bitiş, an}, fiyat)`
+dönemle örtüşen en güncel kaydı alır, `aktifPencere(kayıt, an)` ile o anın
+penceresini bulur (pencerelerden önceyse ilk, sonraysa son) ve
+`kademeKomisyonu(kayıt, fiyat, pencere)` ile kademenin o penceredeki oranını
+verir. Kademe **kampanyalı satış fiyatına** göre. Eski kayıtta pencere tarihi
+yoksa `commission_1..4` sütunları. Sayfa başlığının altında
+`AktifPencereSatiri` bugünkü pencereyi ve tarihlerini gösterir.
+
+**Hatırlatma bildirimi (4 Eyl 2026):** `bildirimler` tablosu (RLS
+`created_by = auth.email()`, INSERT yalnızca fonksiyonla). Saatlik pg_cron
+`tarife-pencere-bildirimi` → `tarife_pencere_bildirimi_uret()`: her pencere
+için iki bildirim — **önceki gün 17:00** ("yarın … geçiliyor") ve **pencere
+başladığında** ("… başladı, Excel'i şimdi yeniden indirip yükleyin").
+Yalnızca `pencere_tarihleri` dolu tarife kaydı olan kullanıcılara gider
+(kullanıcı: "herkese gitmesin, sadece girdiyi yapanlara"). Aynı olay
+`anahtar` ile bir kez üretilir; 1 günden eski olaylar üretilmez. Zil
+menüsünde "Hatırlatmalar" bölümü olarak duyuruların üstünde görünür,
+okunmamışlar zil rozetine eklenir (`BildirimPanel`).
+
+**Kampanyalar (Plus dışı) — kaynak kuralı:** kampanya Excel'indeki
+`Ürün Komisyon Tarifesi` sütunu belirler. **Var** → 7 günlük tarife
+komisyonu (bulunamazsa kategori komisyonu). **Yok** → doğrudan kategori
+komisyonu (`commissions`). Tarife sayfasındaki seçim (`selected_range`)
+hesaba katılmaz. Plus kampanyaları Plus Tarifesi'nden okur; Plus'ta 7 günlük
+yok (kullanıcı inceleyecek).
+
+### Tarife çıktısı: TEK dosya (3 Eyl 2026)
+Ürün Komisyon Tarifesi ve Plus Ürün Komisyon Tarifesi'nde 3 günlük ve 4
+günlük seçimler **ayrı ayrı yapılır ama tek Excel'e yazılır**; tarife başına
+ayrı dosya ve "Excel İndir" açılır menüsü kaldırıldı. Trendyol'un dosyasında
+ürün başına tek satır/tek fiyat/tek "Tarife Seçimi" var; dosyanın formülü
+"7 Günlük Fiyat"ı iki pencere için birden hesaplar. Birleştirme
+(`tekSatirSecimi`, `src/lib/trendyolPencereSecimi.js`):
+
+| Seçim | Yazılan |
+|---|---|
+| yalnız 3 Gün | fiyat + `3 Günlük Fiyat` (Plus: 3 Gün Tarih Aralığı metni) |
+| yalnız 4 Gün | fiyat + `4 Günlük Fiyat` (Plus: 4 Gün Tarih Aralığı metni) |
+| ikisi de, aynı fiyat | fiyat + `7 Günlük Fiyat` (Plus: dosyanın `7 Gün Tarih Aralığı` hücresi) |
+| ikisi de, farklı fiyat | **çatışma**: satır boş kalır, kullanıcıya barkodlarla söylenir |
+
+Plus'ta 7 Gün seçildiğinde her iki `Hesaplanan Komisyon (N Gün)` sütunu da
+o pencerenin teklifiyle dolar. Gönderim defteri (aynı fiyatı ikinci kez
+göndermeme) pencere bazlıdır; 7 Gün için 3 ve 4'e de bakılır.
+
 ## 8. Excel içe/dışa aktarma
 
 - Sütunlar **başlık adına göre** eşleştirilir; sıra önemli değildir

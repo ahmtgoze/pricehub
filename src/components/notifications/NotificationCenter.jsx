@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils';
 import AnnouncementPanel from './AnnouncementPanel';
 import MessagesPanel from './MessagesPanel';
 import AdminAnnouncementCompose from './AdminAnnouncementCompose';
+import BildirimPanel from './BildirimPanel';
 
 export default function NotificationCenter() {
   const [user, setUser] = useState(null);
@@ -74,10 +75,19 @@ export default function NotificationCenter() {
     refetchInterval: 10000,
   });
 
+  // Kullaniciya ozel sistem bildirimleri (tarife penceresi hatirlatmasi vb.)
+  const { data: bildirimler = [] } = useQuery({
+    queryKey: ['bildirimler', user?.email],
+    queryFn: () => db.entities.Bildirim.filter({ created_by: user?.email }, '-created_at', 50),
+    enabled: !!user?.email,
+    refetchInterval: 60000,
+  });
+  const okunmayanBildirim = bildirimler.filter((b) => !b.okundu).length;
+
   const unreadAnnouncementsCount = announcements.filter(a => {
     const rec = readRecords.find(r => r.announcement_id === a.id);
     return !rec?.read_at && !rec?.is_archived;
-  }).length;
+  }).length + okunmayanBildirim;
 
   const unreadMessagesCount = messages.filter(m =>
     m.receiver_email === user?.email && !m.is_read && !m.is_archived
@@ -172,6 +182,7 @@ export default function NotificationCenter() {
               user={user}
               unreadAnnouncementsCount={unreadAnnouncementsCount}
               unreadMessagesCount={unreadMessagesCount}
+              bildirimler={bildirimler}
               replyRef={replyRef}
               setReplyRef={setReplyRef}
               onReplyToAnnouncement={handleReplyToAnnouncement}
@@ -184,7 +195,7 @@ export default function NotificationCenter() {
   );
 }
 
-function PanelContent({ open, setOpen, isAdmin, user, unreadAnnouncementsCount, unreadMessagesCount, replyRef, setReplyRef, onReplyToAnnouncement }) {
+function PanelContent({ open, setOpen, isAdmin, user, unreadAnnouncementsCount, unreadMessagesCount, bildirimler, replyRef, setReplyRef, onReplyToAnnouncement }) {
   return (
     <>
       {/* Panel header */}
@@ -195,7 +206,7 @@ function PanelContent({ open, setOpen, isAdmin, user, unreadAnnouncementsCount, 
             className={cn("flex items-center gap-1.5 text-sm font-semibold px-3 py-1.5 rounded-lg transition-all", open === 'announcements' ? "bg-card shadow-sm text-foreground" : "text-muted-foreground/70 hover:text-muted-foreground")}
           >
             <Bell className="h-4 w-4" />
-            Duyurular
+            Bildirimler
             {unreadAnnouncementsCount > 0 && (
               <span className="bg-primary text-primary-foreground text-[10px] px-1.5 py-0.5 rounded-full">{unreadAnnouncementsCount}</span>
             )}
@@ -220,6 +231,9 @@ function PanelContent({ open, setOpen, isAdmin, user, unreadAnnouncementsCount, 
       {open === 'announcements' && isAdmin && (
         <AdminAnnouncementCompose />
       )}
+
+      {/* Kisiye ozel hatirlatmalar, duyurularin ustunde */}
+      {open === 'announcements' && <BildirimPanel user={user} bildirimler={bildirimler} />}
 
       {/* Panel content */}
       <div className="flex-1 overflow-hidden" style={{ minHeight: 0 }}>

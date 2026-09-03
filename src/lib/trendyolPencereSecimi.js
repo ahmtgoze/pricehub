@@ -108,10 +108,10 @@ export function kademeKarsilastir(urun, kademeNo) {
  * HER TARIFENIN KENDI SECIMI
  *
  * Kullanici 3 gunluk tarifede secim yapiyor, 4 gunluge gecince SIFIRDAN
- * seciyor. Iki tarife AYRI Excel olarak indigi icin secimler birbirinden
- * bagimsizdir: ayni urun hem 3 gunlukte hem 4 gunlukte, hatta FARKLI
- * fiyatlarla secilebilir. (Tek dosyaya yazsaydik urun basina tek satir
- * oldugu icin bu mumkun olmazdi.)
+ * seciyor. Secimler pencere basina ayri tutulur; ayni urun hem 3 gunlukte
+ * hem 4 gunlukte secilebilir. Cikti TEK DOSYADIR (kullanici karari, 3 Eylul
+ * 2026): urun basina tek satir oldugu icin iki pencerenin secimi
+ * tekSatirSecimi ile tek satira indirgenir (bkz. asagida).
  *
  * Secimler urunun uzerinde pencere adina gore saklanir:
  *   secimler: { '3 Gün': { kademe: 'range_2', fiyat: 488.17 },
@@ -263,4 +263,72 @@ export function birlesikPencereEkle(harita, pencereler) {
     Math.max(...adlar.map((ad) => Number(harita[ad][i]) || 0))
   );
   return { ...harita, [b.ad]: enYuksek };
+}
+
+/* ------------------------------------------------------------------ *
+ * TEK DOSYA (kullanici karari, 3 Eylul 2026)
+ *
+ * "3 ve 4'u ayri ayri seciyoruz ama ayni Excel'e isliyoruz artik."
+ * Trendyol'un dosyasinda urun basina TEK satir, tek fiyat ve tek
+ * "Tarife Seçimi" var. Dosyanin kendi formulu "7 Günlük Fiyat" secilince
+ * hem 3 gunluk hem 4 gunluk komisyonu hesapliyor; yani 7 Günlük = iki
+ * pencere birden. Buna gore:
+ *
+ *   yalniz 3 Gün secili                 -> "3 Günlük Fiyat", o fiyat
+ *   yalniz 4 Gün secili                 -> "4 Günlük Fiyat", o fiyat
+ *   ikisi de secili, fiyatlar AYNI      -> "7 Günlük Fiyat", o fiyat
+ *   ikisi de secili, fiyatlar FARKLI    -> CATISMA: satir bos birakilir,
+ *                                          kullaniciya soylenir
+ * ------------------------------------------------------------------ */
+
+const ayniFiyat = (a, b) => Math.abs(Number(a) - Number(b)) < 0.005;
+
+/**
+ * Urunun pencere secimlerini tek satira indirger.
+ *
+ * @param urun        secimler haritasi olan urun
+ * @param pencereler  dosyadaki pencere adlari, orn. ['3 Gün', '4 Gün']
+ * @returns { pencere, fiyat, catisma }
+ *   pencere  '3 Gün' | '4 Gün' | '7 Gün' | null (secim yok ya da catisma)
+ *   fiyat    yazilacak fiyat (secim yoksa 0)
+ *   catisma  null, ya da { '3 Gün': 488.17, '4 Gün': 441.75 } gibi fiyatlar
+ */
+export function tekSatirSecimi(urun, pencereler) {
+  const adlar = Array.isArray(pencereler) ? pencereler.filter(Boolean) : [];
+  const seciliOlanlar = adlar
+    .map((ad) => ({ ad, ...secimiOku(urun, ad) }))
+    .filter((s) => s.kademe !== 'none' && s.fiyat > 0);
+
+  if (seciliOlanlar.length === 0) return { pencere: null, fiyat: 0, catisma: null };
+  if (seciliOlanlar.length === 1) {
+    return { pencere: seciliOlanlar[0].ad, fiyat: seciliOlanlar[0].fiyat, catisma: null };
+  }
+
+  const ilk = seciliOlanlar[0].fiyat;
+  if (seciliOlanlar.every((s) => ayniFiyat(s.fiyat, ilk))) {
+    const birlesik = birlesikPencere(seciliOlanlar.map((s) => ({ ad: s.ad })));
+    // 3+4 disinda bir bilesim (Trendyol'un listesinde yok): ilk pencere
+    return { pencere: birlesik ? birlesik.ad : seciliOlanlar[0].ad, fiyat: ilk, catisma: null };
+  }
+
+  const catisma = {};
+  for (const s of seciliOlanlar) catisma[s.ad] = s.fiyat;
+  return { pencere: null, fiyat: 0, catisma };
+}
+
+/**
+ * Tek dosyaya yazilacak satirlarin ozeti: pencere basina adet ve catisan
+ * urunler. Butonun yanindaki sayi ve indirmeden onceki uyari icin.
+ * @returns { '3 Gün': 5, '4 Gün': 2, '7 Gün': 3, toplam: 10, catisanlar: [barkod...] }
+ */
+export function tekDosyaOzeti(urunler, pencereler) {
+  const ozet = { toplam: 0, catisanlar: [] };
+  for (const u of urunler || []) {
+    const s = tekSatirSecimi(u, pencereler);
+    if (s.catisma) { ozet.catisanlar.push(u?.barcode ?? ''); continue; }
+    if (!s.pencere) continue;
+    ozet[s.pencere] = (ozet[s.pencere] || 0) + 1;
+    ozet.toplam++;
+  }
+  return ozet;
 }

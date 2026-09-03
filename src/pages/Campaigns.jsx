@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import AktifPencereSatiri from '@/components/AktifPencereSatiri';
 import { db } from '@/api/db';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Plus, Edit2, Trash2, Calendar as CalendarIcon, Download, Sparkles, Check, Info } from 'lucide-react';
@@ -19,6 +20,13 @@ import PriceDetailModal from '@/components/modals/PriceDetailModal';
 import BaremBadge from '@/components/ui/BaremBadge';
 import { baremSec, baremTavanFiyatlari, baremTarifesiSec } from '@/lib/baremKurali';
 import { gecerliMaliyet } from '@/lib/gecerliMaliyet';
+import { sayiyaCevirVeya } from '@/lib/turkceSayi';
+import { tarifeKomisyonu, aktifPencereOzeti } from '@/lib/tarifeKaydiSecimi';
+import {
+  INDIRIM_TURLERI, KATILIM_KOSULLARI, KAMPANYA_GRUPLARI,
+  kampanyaFiyati, kampanyaFiyatiTersi, fiyatKuralinaUyuyorMu,
+  kampanyaMetni, fiyatKuraliMetni, kaydiKampanyayaCevir,
+} from '@/lib/trendyolKampanyaIndirimi';
 
 const Campaign = db.entities.Campaign;
 let CampaignProduct;
@@ -39,21 +47,54 @@ const Commission = db.entities.Commission;
 const ShippingRate = db.entities.ShippingRate;
 const MarketplaceProduct = db.entities.MarketplaceProduct;
 
-const CAMPAIGN_TYPES = [
-  { value: 'all_countries', label: 'Tüm Ülkeler' },
-  { value: 'trendyol_plus', label: 'Trendyol Plus (Ek İndirim)' },
-];
+// Kampanya gruplari ve indirim turleri Trendyol'un Katilabilecegim
+// Kampanyalar ekranindan alindi; tanimlar ve fiyat matematigi
+// src/lib/trendyolKampanyaIndirimi.js icinde (test edilebilir).
+const CAMPAIGN_TYPES = KAMPANYA_GRUPLARI;
+const YUZDELI = (tur) => tur === 'net_percent' || tur === 'cart_percent' || tur === 'qty_percent';
+
+/**
+ * Trendyol'un kampanya Excel'inde fiyat girilen sutunun basligi kampanyaya
+ * gore degisiyor (3 Eylul 2026 dosyalari):
+ *   trendyol-plus-...-ek-5-indirim     -> "Kampanyalı Satış Fiyatı"
+ *   2000-tl-uzeri-150-tl-indirim-...   -> "İndirim Uygulanmadan Önceki Fiyat"
+ *   okula-donus-...-1000-tl-uzeri-...  -> "İndirim Uygulanmadan Önceki Fiyat"
+ * Ikisi de ayni sey: bizim girdigimiz fiyat; Trendyol indirimi ustune uygular.
+ */
+// DIKKAT: "İndirim".toLowerCase() Turkce noktali İ'yi "i̇" (i + birlesik nokta)
+// yapar ve "indirim" ile ESLESMEZ; bu yuzden anahtar bas harfsiz yazildi.
+const FIYAT_SUTUNU_ANAHTARLARI = ['kampanyalı satış', 'kampanyalı fiyat', 'ndirim uygulanmadan'];
 
 const emptyForm = {
   campaign_type: '',
+  campaign_name: '',
   start_date: null,
   end_date: null,
-  cart_amount: '',
-  cart_condition: 'over',
-  discount_type: 'percent',
+  discount_kind: 'net_percent',
   discount_amount: '',
+  threshold_amount: '',
+  buy_x: '',
+  pay_y: '',
+  min_qty: '',
+  price_rule_min: '',
+  price_rule_max: '',
+  participation_condition: 'none',
   trendyol_coverage_rate: '',
 };
+
+/** Form alanlarini fiyat modelinin bekledigi kampanya nesnesine cevirir. */
+const formuKampanyayaCevir = (f) => ({
+  tur: f.discount_kind,
+  oran: YUZDELI(f.discount_kind) ? (Number(f.discount_amount) || 0) : 0,
+  tutar: f.discount_kind === 'cart_tl' ? (Number(f.discount_amount) || 0) : 0,
+  esik: Number(f.threshold_amount) || 0,
+  alX: Number(f.buy_x) || 0,
+  odeY: Number(f.pay_y) || 0,
+  minAdet: Number(f.min_qty) || 0,
+  karsilama: Number(f.trendyol_coverage_rate) || 0,
+  kuralMin: Number(f.price_rule_min) || 0,
+  kuralMax: Number(f.price_rule_max) || 0,
+});
 
 export default function Campaigns() {
   const queryClient = useQueryClient();
@@ -151,49 +192,72 @@ export default function Campaigns() {
     }
   }, [trendyolPlatforms.length]);
 
-  const isAllCountries = formData.campaign_type === 'all_countries';
-
   // ===================== KAMPANYA FORMU =====================
   const resetForm = () => { setFormData({ ...emptyForm }); setEditingId(null); };
   const openNew = () => { resetForm(); setShowForm(true); };
   const openEdit = (c) => {
     setEditingId(c.id);
+    // Eski kayitlar (discount_type/cart_*) da ayni ceviriciden gecer
+    const k = kaydiKampanyayaCevir(c);
+    const veya = (v) => (v > 0 ? v : '');
     setFormData({
       campaign_type: c.campaign_type || '',
+      campaign_name: c.campaign_name || '',
       start_date: c.start_date ? new Date(c.start_date) : null,
       end_date: c.end_date ? new Date(c.end_date) : null,
-      cart_amount: c.cart_amount ?? '',
-      cart_condition: c.cart_condition || 'over',
-      discount_type: c.discount_type || 'percent',
-      discount_amount: c.discount_amount ?? '',
+      discount_kind: k.tur,
+      discount_amount: veya(k.tur === 'cart_tl' ? k.tutar : k.oran),
+      threshold_amount: veya(k.esik),
+      buy_x: veya(k.alX),
+      pay_y: veya(k.odeY),
+      min_qty: veya(k.minAdet),
+      price_rule_min: veya(k.kuralMin),
+      price_rule_max: veya(k.kuralMax),
+      participation_condition: k.katilim || 'none',
       trendyol_coverage_rate: c.trendyol_coverage_rate ?? '',
     });
     setShowForm(true);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
-  const handleTypeChange = (type) => {
-    setFormData({
-      ...formData,
-      campaign_type: type,
-      cart_amount: type === 'all_countries' ? formData.cart_amount : '',
-      cart_condition: type === 'all_countries' ? formData.cart_condition : 'over',
-    });
-  };
+  const handleTypeChange = (type) => setFormData({ ...formData, campaign_type: type });
+  const alan = (ad) => (e) => setFormData({ ...formData, [ad]: e.target.value === '' ? '' : parseFloat(e.target.value) });
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.campaign_type) { toast.error('Lütfen kampanya türünü seçin'); return; }
     if (!formData.start_date || !formData.end_date) { toast.error('Lütfen tarih aralığını seçin'); return; }
-    if (formData.discount_amount === '' || formData.discount_amount === null) { toast.error('Lütfen indirim tutarını/oranını girin'); return; }
+    const tur = formData.discount_kind;
+    const n = (v) => (v === '' || v === null || v === undefined ? null : Number(v));
+    if (tur === 'buy_x_pay_y') {
+      if (!(n(formData.buy_x) > 0) || !(n(formData.pay_y) > 0)) { toast.error('"X Al Y Öde" için al ve öde adetlerini girin'); return; }
+      if (n(formData.pay_y) >= n(formData.buy_x)) { toast.error('Öde adedi al adedinden küçük olmalı (örn. 3 Al 2 Öde)'); return; }
+    } else if (!(n(formData.discount_amount) > 0)) {
+      toast.error(tur === 'cart_tl' ? 'Lütfen indirim tutarını (TL) girin' : 'Lütfen indirim oranını (%) girin'); return;
+    }
+    if (tur === 'qty_percent' && !(n(formData.min_qty) >= 2)) { toast.error('Minimum adet en az 2 olmalı (örn. 2 Adet ve Üzeri)'); return; }
+    if (n(formData.price_rule_min) > 0 && n(formData.price_rule_max) > 0 && n(formData.price_rule_min) > n(formData.price_rule_max)) {
+      toast.error('Fiyat kuralında alt sınır üst sınırdan büyük olamaz'); return;
+    }
 
     const payload = {
       campaign_type: formData.campaign_type,
+      campaign_name: (formData.campaign_name || '').trim() || null,
       start_date: format(formData.start_date, 'yyyy-MM-dd'),
       end_date: format(formData.end_date, 'yyyy-MM-dd'),
-      discount_type: formData.discount_type,
-      discount_amount: Number(formData.discount_amount),
-      cart_amount: (isAllCountries && formData.cart_amount !== '' && formData.cart_amount !== null) ? Number(formData.cart_amount) : null,
-      cart_condition: (isAllCountries && formData.cart_amount !== '' && formData.cart_amount !== null) ? formData.cart_condition : null,
-      trendyol_coverage_rate: (formData.trendyol_coverage_rate !== '' && formData.trendyol_coverage_rate !== null) ? Number(formData.trendyol_coverage_rate) : null,
+      discount_kind: tur,
+      // Eski alanlar diger ekranlarla uyum icin dolduruluyor; sepet
+      // alanlari yeni kayitta kullanilmaz (esik/fiyat kurali ayri sutunda)
+      discount_type: tur === 'cart_tl' ? 'tl' : 'percent',
+      discount_amount: tur === 'buy_x_pay_y' ? 0 : Number(formData.discount_amount),
+      threshold_amount: tur === 'cart_tl' ? n(formData.threshold_amount) : null,
+      buy_x: tur === 'buy_x_pay_y' ? n(formData.buy_x) : null,
+      pay_y: tur === 'buy_x_pay_y' ? n(formData.pay_y) : null,
+      min_qty: tur === 'qty_percent' ? n(formData.min_qty) : null,
+      price_rule_min: n(formData.price_rule_min),
+      price_rule_max: n(formData.price_rule_max),
+      participation_condition: formData.participation_condition === 'none' ? null : formData.participation_condition,
+      cart_amount: null,
+      cart_condition: null,
+      trendyol_coverage_rate: n(formData.trendyol_coverage_rate),
       is_active: true,
     };
     try {
@@ -214,10 +278,10 @@ export default function Campaigns() {
 
   const getTypeLabel = (type) => (CAMPAIGN_TYPES.find(t => t.value === type)?.label) || (type || '-');
   const campaignTitle = (c) => {
-    const disc = c.discount_type === 'percent' ? `%${c.discount_amount} indirim` : `${c.discount_amount} TL indirim`;
-    const cart = (c.cart_amount !== null && c.cart_amount !== undefined && c.cart_amount !== '') ? ` · ${c.cart_amount} TL ${c.cart_condition === 'under' ? 'altı' : 'üzeri'}` : '';
-    const cov = (Number(c.trendyol_coverage_rate) > 0) ? ` · %${c.trendyol_coverage_rate} Trendyol karşılamalı` : '';
-    return `${getTypeLabel(c.campaign_type)}${cart} · ${disc}${cov}`;
+    const k = kaydiKampanyayaCevir(c);
+    const parcalar = [c.campaign_name || getTypeLabel(c.campaign_type), kampanyaMetni(k), fiyatKuraliMetni(k)];
+    if (k.karsilama > 0) parcalar.push(`%${k.karsilama} Trendyol karşılamalı`);
+    return parcalar.filter(Boolean).join(' · ');
   };
   const safeDate = (d) => { if (!d) return ''; try { return format(new Date(d), 'd MMM yyyy', { locale: tr }); } catch { return d; } };
 
@@ -313,16 +377,10 @@ export default function Campaigns() {
     );
   };
 
-  const effectiveSellerPrice = (campaignPrice) => {
-    const L = parseFloat(campaignPrice) || 0;
-    if (L <= 0 || !managingCampaign) return 0;
-    const d = parseFloat(managingCampaign.discount_amount) || 0;
-    const cov = (parseFloat(managingCampaign.trendyol_coverage_rate) || 0) / 100;
-    if (managingCampaign.discount_type === 'percent') {
-      return L * (1 - (d / 100) * (1 - cov));
-    }
-    return L - d * (1 - cov);
-  };
+  // Saticinin eline gecen birim fiyat: indirim turune gore hesaplanir,
+  // Trendyol'un karsiladigi pay saticidan dusulmez.
+  const effectiveSellerPrice = (campaignPrice) =>
+    (aktifKampanya ? kampanyaFiyati(campaignPrice, aktifKampanya) : 0);
 
   const getCommissionRecord = (item) => {
     const matchedProduct = getMatchedProduct(item);
@@ -354,7 +412,7 @@ export default function Campaigns() {
   };
 
   // Ürünün komisyon oranı — kampanya türüne göre ilgili tarife sayfasından çekilir
-  const getProductCommissionRate = (item) => {
+  const getProductCommissionRate = (item, fiyat = 0) => {
     const isPlus = managingCampaign?.campaign_type === 'trendyol_plus';
     if (isPlus) {
       const pr = matchTariffRecord(plusTariffs, item);
@@ -363,18 +421,23 @@ export default function Campaigns() {
         if (c > 0) return c;
       }
     } else {
-      const tr = matchTariffRecord(priceRanges, item);
-      if (tr) {
-        let c = 0;
-        if (tr.has_commission_tariff === 'Var' || tr.has_commission_tariff === 'true') {
-          if (tr.selected_range === 'range_1') c = tr.commission_1;
-          else if (tr.selected_range === 'range_2') c = tr.commission_2;
-          else if (tr.selected_range === 'range_3') c = tr.commission_3;
-          else if (tr.selected_range === 'range_4') c = tr.commission_4;
-          else if (tr.selected_range === 'manual') c = tr.manual_commission;
-        }
-        if (!c) c = parseFloat(tr.current_commission) || 0;
-        if (c > 0) return c;
+      // Kullanici karari (3 Eylul 2026): kampanya Excel'indeki "Ürün Komisyon
+      // Tarifesi" sutunu belirler.
+      //   Var -> Komisyon Tarifesi'nde BUGUN gecerli pencerenin komisyonu
+      //          (ilk 3 gun 3 gunluk, sonraki 4 gun 4 gunluk; fiyatin girdigi
+      //          kademe); bulunamazsa kategori komisyonu
+      //   Yok -> dogrudan kategori komisyonu
+      // Tarife sayfasindaki SECIM (selected_range) hesaba katilmaz; tarife
+      // urunun kendi ozelligi.
+      const tarifeVar = String(item.commission_tariff || '').trim().toLocaleLowerCase('tr') === 'var';
+      if (tarifeVar && item.barcode && fiyat > 0) {
+        const { oran } = tarifeKomisyonu(priceRanges, {
+          barkod: item.barcode,
+          platform: selectedPlatform,
+          baslangic: managingCampaign?.start_date,
+          bitis: managingCampaign?.end_date,
+        }, fiyat);
+        if (oran) return oran;
       }
     }
     // yedek: kategori komisyonu (Komisyonlar tablosu)
@@ -391,16 +454,10 @@ export default function Campaigns() {
    * fiyatini bulur. Barem esikleri etkin fiyata gore degerlendirildigi icin
    * oneri fiyatini dogru hesaplamak adina gerekli.
    */
-  const etkinFiyatIcinKampanyaFiyati = (hedefEtkin) => {
-    if (!managingCampaign) return 0;
-    const d = parseFloat(managingCampaign.discount_amount) || 0;
-    const cov = (parseFloat(managingCampaign.trendyol_coverage_rate) || 0) / 100;
-    if (managingCampaign.discount_type === 'percent') {
-      const k = 1 - (d / 100) * (1 - cov);
-      return k > 0 ? hedefEtkin / k : 0;
-    }
-    return hedefEtkin + d * (1 - cov);
-  };
+  // Acik kampanyanin fiyat modeli (tur, oran, esik, karsilama, fiyat kurali)
+  const aktifKampanya = managingCampaign ? kaydiKampanyayaCevir(managingCampaign) : null;
+  const etkinFiyatIcinKampanyaFiyati = (hedefEtkin) =>
+    (aktifKampanya ? kampanyaFiyatiTersi(hedefEtkin, aktifKampanya) : 0);
 
   const calculateProfit = (campaignPrice, item) => {
     try {
@@ -411,7 +468,7 @@ export default function Campaigns() {
       const platform = uniquePlatforms.find(p => p.name === selectedPlatform);
       if (!platform) return { profit: 0, profitRate: 0, breakdown: null };
 
-      const commissionRate = getProductCommissionRate(item);
+      const commissionRate = getProductCommissionRate(item, parseFloat(campaignPrice) || 0);
 
       const platformShippingRates = shippingRates.filter(r =>
         r.is_active !== false && (r.platform_id === platform.id || r.platform_type === platform.platform_type)
@@ -532,9 +589,12 @@ export default function Campaigns() {
           const barcode = getVal(row, 'Barkod', ['barkod', 'barcode']) || '';
           const productName = getVal(row, 'Ürün Adı', ['ürün adı', 'ürün ismi', 'product name']) || '';
           const stockCode = getVal(row, 'Stok Kodu', ['stok kodu', 'sku']) || '';
-          const maxPrice = parseFloat(getVal(row, 'Maksimum Girebileceğin Fiyat', ['maksimum', 'maks'])) || 0;
-          const curPrice = parseFloat(getVal(row, 'Mevcut Satış Fiyatı', ['mevcut satış', 'mevcut fiyat'])) || 0;
-          const existingL = parseFloat(getVal(row, 'Kampanyalı Satış Fiyatı', ['kampanyalı satış', 'kampanyalı fiyat'])) || 0;
+          const maxPrice = sayiyaCevirVeya(getVal(row, 'Maksimum Girebileceğin Fiyat', ['maksimum', 'maks']), 0);
+          const curPrice = sayiyaCevirVeya(getVal(row, 'Mevcut Satış Fiyatı', ['mevcut satış', 'mevcut fiyat']), 0);
+          // Yazilacak fiyat sutunu kampanyaya gore farkli adlaniyor:
+          //   Plus (Ek İndirim)      -> "Kampanyalı Satış Fiyatı"
+          //   Genel (X TL'ye Y TL)   -> "İndirim Uygulanmadan Önceki Fiyat"
+          const existingL = sayiyaCevirVeya(getVal(row, 'Kampanyalı Satış Fiyatı', FIYAT_SUTUNU_ANAHTARLARI), 0);
 
           const mpRec = marketplaceProducts.find(mp => mp.platform_account === selectedPlatform && mp.barkod === barcode);
           let matched;
@@ -604,7 +664,7 @@ export default function Campaigns() {
   };
 
   const handleSmartAutoSelect = () => {
-    let selectedCount = 0, skipNoProduct = 0, skipNoCommission = 0, skipBelow = 0;
+    let selectedCount = 0, skipNoProduct = 0, skipNoCommission = 0, skipBelow = 0, skipKural = 0;
     const updated = uploadedData.map(item => {
       if (item.selected_type === 'campaign') return item;
       const matched = getMatchedProduct(item);
@@ -613,6 +673,8 @@ export default function Campaigns() {
       if (!commRec) { skipNoCommission++; return item; }
       const price = item.max_price || item.campaign_price;
       if (!price || price <= 0) return item;
+      // Trendyol'un "Fiyat Kuralı" disindaki urun kampanyaya giremez
+      if (aktifKampanya && !fiyatKuralinaUyuyorMu(price, aktifKampanya)) { skipKural++; return item; }
       if (isBelowFloor(item, price)) { skipBelow++; return item; }
       selectedCount++;
       return { ...item, selected_type: 'campaign', campaign_price: price };
@@ -623,6 +685,7 @@ export default function Campaigns() {
     if (skipNoProduct > 0) parts.push(`⚠️ ${skipNoProduct} sistem ürünüyle eşleşmedi`);
     if (skipNoCommission > 0) parts.push(`⚠️ ${skipNoCommission} komisyon/kâr tabanı yok`);
     if (skipBelow > 0) parts.push(`🔴 ${skipBelow} kâr tabanının altında`);
+    if (skipKural > 0) parts.push(`⚠️ ${skipKural} fiyat kuralı dışında`);
     if (selectedCount === 0) toast.warning(parts.join(' • ') || 'Uygun ürün bulunamadı');
     else toast.success(parts.join(' • '));
   };
@@ -740,11 +803,11 @@ export default function Campaigns() {
     for (let C = range.s.c; C <= range.e.c; C++) {
       const h = worksheet[XLSX.utils.encode_cell({ r: range.s.r, c: C })]?.v;
       const hl = (h || '').toString().toLowerCase().trim();
-      if (hl.includes('kampanyalı satış') || hl.includes('kampanyalı fiyat')) colL = C;
+      if (FIYAT_SUTUNU_ANAHTARLARI.some(a => hl.includes(a))) colL = C;
       if (hl === 'barkod') colBarkod = C;
       if (hl.includes('listingid') || hl === 'listing id') colListing = C;
     }
-    if (colL === -1) { toast.error('Excelde "Kampanyalı Satış Fiyatı" sütunu bulunamadı'); return; }
+    if (colL === -1) { toast.error('Excelde fiyat sütunu bulunamadı ("Kampanyalı Satış Fiyatı" veya "İndirim Uygulanmadan Önceki Fiyat")'); return; }
 
     let written = 0;
     for (let R = range.s.r + 1; R <= range.e.r; R++) {
@@ -812,6 +875,7 @@ export default function Campaigns() {
           <Button variant="outline" onClick={closeManager} className="mb-4">← Kampanyalara Dön</Button>
           <div className="mb-6">
             <h1 className="ph-title">Ürün Ekle — {getTypeLabel(managingCampaign.campaign_type)}</h1>
+            <AktifPencereSatiri ozet={aktifPencereOzeti(priceRanges, selectedPlatform)} />
             <p className="text-muted-foreground mt-1">{campaignTitle(managingCampaign)} · {safeDate(managingCampaign.start_date)} - {safeDate(managingCampaign.end_date)}</p>
           </div>
 
@@ -997,40 +1061,97 @@ export default function Campaigns() {
                   </div>
                 )}
 
-                {isAllCountries && (
-                  <>
-                    <div className="grid grid-cols-3 gap-4">
-                      <div className="col-span-1 space-y-2">
-                        <Label>Sepet Tutarı (TL)</Label>
-                        <Input type="number" placeholder="Opsiyonel" value={formData.cart_amount}
-                          onChange={(e) => setFormData({ ...formData, cart_amount: e.target.value === '' ? '' : parseFloat(e.target.value) })} />
+                {formData.campaign_type && (
+                  <div className="space-y-2">
+                    <Label>Kampanya Adı</Label>
+                    <Input placeholder="Opsiyonel — Trendyol'daki adı, örn. Hobi Ürünlerinde 300 TL üzeri 40 TL indirim" value={formData.campaign_name}
+                      onChange={(e) => setFormData({ ...formData, campaign_name: e.target.value })} />
+                  </div>
+                )}
+
+                {formData.campaign_type && (
+                  <div className="space-y-2">
+                    <Label>İndirim Türü *</Label>
+                    <Select value={formData.discount_kind} onValueChange={(v) => setFormData({ ...formData, discount_kind: v })}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {INDIRIM_TURLERI.map(t => <SelectItem key={t.value} value={t.value}>{t.label} <span className="text-muted-foreground">— {t.ornek}</span></SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
+                {formData.campaign_type && YUZDELI(formData.discount_kind) && (
+                  <div className="grid grid-cols-2 gap-4">
+                    {formData.discount_kind === 'qty_percent' && (
+                      <div className="space-y-2">
+                        <Label>Minimum Adet *</Label>
+                        <Input type="number" min="2" placeholder="2" value={formData.min_qty} onChange={alan('min_qty')} />
                       </div>
-                      <div className="col-span-2 space-y-2">
-                        <Label>Koşul</Label>
-                        <Select value={formData.cart_condition} onValueChange={(v) => setFormData({ ...formData, cart_condition: v })}>
-                          <SelectTrigger><SelectValue /></SelectTrigger>
-                          <SelectContent><SelectItem value="over">Üzeri</SelectItem><SelectItem value="under">Altı</SelectItem></SelectContent>
-                        </Select>
+                    )}
+                    <div className="space-y-2">
+                      <Label>İndirim Oranı (%) *</Label>
+                      <Input type="number" placeholder="15" value={formData.discount_amount} onChange={alan('discount_amount')} />
+                    </div>
+                  </div>
+                )}
+
+                {formData.campaign_type && formData.discount_kind === 'cart_tl' && (
+                  <>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>Sepet Eşiği (TL)</Label>
+                        <Input type="number" placeholder="500" value={formData.threshold_amount} onChange={alan('threshold_amount')} />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>İndirim Tutarı (TL) *</Label>
+                        <Input type="number" placeholder="100" value={formData.discount_amount} onChange={alan('discount_amount')} />
                       </div>
                     </div>
-                    <p className="text-xs text-muted-foreground -mt-2">Sepet şartı yoksa (örn. düz %20 indirim) boş bırakın.</p>
+                    <p className="text-xs text-muted-foreground -mt-2">Ürün eşiğin altındaysa müşteri eşiğe ulaşmak için birden fazla alır; indirim adetlere bölünerek hesaplanır.</p>
+                  </>
+                )}
+
+                {formData.campaign_type && formData.discount_kind === 'buy_x_pay_y' && (
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Al (adet) *</Label>
+                      <Input type="number" min="2" placeholder="3" value={formData.buy_x} onChange={alan('buy_x')} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Öde (adet) *</Label>
+                      <Input type="number" min="1" placeholder="2" value={formData.pay_y} onChange={alan('pay_y')} />
+                    </div>
+                  </div>
+                )}
+
+                {formData.campaign_type && (
+                  <>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>Fiyat Kuralı — Alt Sınır (TL)</Label>
+                        <Input type="number" placeholder="Opsiyonel — örn. 100" value={formData.price_rule_min} onChange={alan('price_rule_min')} />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Fiyat Kuralı — Üst Sınır (TL)</Label>
+                        <Input type="number" placeholder="Opsiyonel — örn. 700" value={formData.price_rule_max} onChange={alan('price_rule_max')} />
+                      </div>
+                    </div>
+                    <p className="text-xs text-muted-foreground -mt-2">Trendyol'un "Fiyat Kuralı" satırı: "100 TL ve üzeri ürünler", "10 TL ve 700 TL arası ürünler". Aralık dışındaki ürünler otomatik seçimde atlanır.</p>
                   </>
                 )}
 
                 {formData.campaign_type && (
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>İndirim Tipi *</Label>
-                      <Select value={formData.discount_type} onValueChange={(v) => setFormData({ ...formData, discount_type: v })}>
-                        <SelectTrigger><SelectValue /></SelectTrigger>
-                        <SelectContent><SelectItem value="percent">% İndirimi</SelectItem><SelectItem value="tl">TL İndirimi</SelectItem></SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label>İndirim {formData.discount_type === 'percent' ? 'Oranı (%)' : 'Tutarı (TL)'} *</Label>
-                      <Input type="number" placeholder={formData.discount_type === 'percent' ? '20' : '50'} value={formData.discount_amount}
-                        onChange={(e) => setFormData({ ...formData, discount_amount: e.target.value === '' ? '' : parseFloat(e.target.value) })} />
-                    </div>
+                  <div className="space-y-2">
+                    <Label>Katılım Koşulu</Label>
+                    <Select value={formData.participation_condition} onValueChange={(v) => setFormData({ ...formData, participation_condition: v })}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">Belirtilmemiş</SelectItem>
+                        {KATILIM_KOSULLARI.map(t => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground">Bilgi amaçlı; Trendyol'un Excel'indeki "girilebilecek max fiyat" bu koşulu zaten uygular.</p>
                   </div>
                 )}
 
@@ -1043,6 +1164,15 @@ export default function Campaigns() {
                       <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground font-medium">%</span>
                     </div>
                     <p className="text-xs text-muted-foreground">Boş bırakılırsa karşılama yok sayılır. Örn: %40 → indirimin %40'ını Trendyol karşılar, kalanı satıcı.</p>
+                  </div>
+                )}
+
+                {formData.campaign_type && kampanyaMetni(formuKampanyayaCevir(formData)) && (
+                  <div className="rounded-lg border border-border bg-secondary px-3 py-2 text-sm">
+                    <span className="text-muted-foreground">İndirim Detayı: </span>
+                    <span className="font-medium">{kampanyaMetni(formuKampanyayaCevir(formData))}</span>
+                    {fiyatKuraliMetni(formuKampanyayaCevir(formData)) && <span className="text-muted-foreground"> · Fiyat Kuralı: {fiyatKuraliMetni(formuKampanyayaCevir(formData))}</span>}
+                    {Number(formData.trendyol_coverage_rate) > 0 && <span className="text-muted-foreground"> · %{formData.trendyol_coverage_rate} Trendyol Karşılamalı</span>}
                   </div>
                 )}
 
@@ -1064,10 +1194,9 @@ export default function Campaigns() {
                     <h3 className="text-lg font-semibold text-foreground">{campaignTitle(campaign)}</h3>
                     <div className="flex gap-2 mt-2 flex-wrap">
                       <Badge className="bg-secondary text-muted-foreground">{getTypeLabel(campaign.campaign_type)}</Badge>
-                      {campaign.discount_type === 'percent'
-                        ? <Badge variant="outline">%{campaign.discount_amount} indirim</Badge>
-                        : <Badge variant="outline">{campaign.discount_amount} TL indirim</Badge>}
-                      {campaign.cart_amount ? <Badge variant="outline">{campaign.cart_amount} TL {campaign.cart_condition === 'under' ? 'altı' : 'üzeri'}</Badge> : null}
+                      <Badge variant="outline">{kampanyaMetni(kaydiKampanyayaCevir(campaign))}</Badge>
+                      {fiyatKuraliMetni(kaydiKampanyayaCevir(campaign)) ? <Badge variant="outline">{fiyatKuraliMetni(kaydiKampanyayaCevir(campaign))}</Badge> : null}
+                      {campaign.participation_condition ? <Badge variant="outline">{KATILIM_KOSULLARI.find(x => x.value === campaign.participation_condition)?.label || campaign.participation_condition}</Badge> : null}
                       {Number(campaign.trendyol_coverage_rate) > 0 ? <Badge className="bg-amber-100 text-amber-700">%{campaign.trendyol_coverage_rate} karşılama</Badge> : null}
                       {campaign.is_active ? <Badge className="bg-green-100 text-green-700">Aktif</Badge> : <Badge className="bg-border text-muted-foreground">İnaktif</Badge>}
                     </div>

@@ -13,7 +13,6 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { toast } from 'sonner';
 import * as XLSX from 'xlsx';
 import { kayitlariTeklestir } from '@/lib/kayitTeklestirme';
@@ -22,14 +21,15 @@ import PriceDetailModal from '@/components/modals/PriceDetailModal';
 import BaremBadge from '@/components/ui/BaremBadge';
 import { baremSec, baremTavanFiyatlari, baremTarifesiSec } from '@/lib/baremKurali';
 import { gecerliMaliyet } from '@/lib/gecerliMaliyet';
-import { pencereleriBul, pencereKomisyonlari, tarifeSecimDegeri } from '@/lib/trendyolTarifePenceresi';
+import { pencereleriBul, tarifeSecimDegeri } from '@/lib/trendyolTarifePenceresi';
+import { pencereTarihleri } from '@/lib/tarifeKaydiSecimi';
 import { unzipSync, zipSync } from 'fflate';
 import { hucreleriYaz, baslikHaritasi, paylasilanMetinler, sayfaXmlYolu, sutunDegerleri } from '@/lib/xlsxYerindeYaz';
 import { kademeFiyati, tarifeUstSiniri, sinirAsanlar } from '@/lib/trendyolTarifeKurali';
 import { yazilmaliMi, gonderimleriIsle, gonderilenFiyat } from '@/lib/trendyolGonderim';
 import { pencereKomisyonlariniAl,
-         komisyonHaritasi, pencereUygula, pencereAdlari, pencereDegistirilebilir,
-         pencereyeGec, acikSecimiSakla, secimiOku, seciliPencereler, secimOzeti } from '@/lib/trendyolPencereSecimi';
+         komisyonHaritasi, pencereUygula, pencereAdlari, pencereDegistirilebilir, tekSatirSecimi, tekDosyaOzeti,
+         pencereyeGec, acikSecimiSakla, seciliPencereler, secimOzeti } from '@/lib/trendyolPencereSecimi';
 
 const TrendyolPriceRangeEntity = db.entities.TrendyolPriceRange;
 const Product = db.entities.Product;
@@ -239,6 +239,7 @@ export default function TrendyolPriceRange() {
           || { ad: '', sonek: '' };
         if (!secilenPencere && aktif.ad) setSecilenPencere(aktif.ad);
         const pencereAdi = aktif.ad;
+        const pencereTarihleriHaritasi = pencereTarihleri(dosyaPencereleri, startDate);
 
         const parsed = jsonData.map(row => {
           // Haritada YALNIZCA dosyanin gercek pencereleri var; birlesik
@@ -286,6 +287,10 @@ export default function TrendyolPriceRange() {
             // degistirildiginde komisyonlar hazirda bulunur ve Excel'i yeniden
             // yuklemek gerekmez.
             pencere_komisyonlari: harita,
+            // Pencerelerin TARIHLERI de saklanir: Avantajli / Flas / Kampanya
+            // o gun hangi pencerenin gecerli oldugunu buradan bulur ve o
+            // pencerenin komisyonuyla hesaplar (kullanici karari, 4 Eylul).
+            pencere_tarihleri: pencereTarihleriHaritasi,
             tarife_penceresi: pencereAdi,
             current_base_price: sayiyaCevirVeya(row['KOMİSYONA ESAS FİYAT']),
             current_commission: sayiyaCevirVeya(row['GÜNCEL KOMİSYON']),
@@ -801,9 +806,8 @@ export default function TrendyolPriceRange() {
     }
   };
 
-  // istenenTarife verilirse YALNIZCA o tarifenin dosyasi iner;
-  // verilmezse secim yapilan her tarife icin ayri dosya iner.
-  const handleExport = (istenenTarife = null) => {
+  // TEK DOSYA: butun pencerelerin secimleri ayni Excel'e iner.
+  const handleExport = () => {
     if (uploadedData.length === 0) { toast.error('Yüklenmiş Excel dosyası bulunamadı'); return; }
     if (!originalExcelData) { toast.error('Orijinal Excel dosyası bulunamadı'); return; }
     if (!originalExcelData.baytlar) {
@@ -811,13 +815,32 @@ export default function TrendyolPriceRange() {
       return;
     }
 
-    // HER TARIFE AYRI DOSYA. 3 gunlukte secilenler bir dosyaya, 4 gunlukte
-    // secilenler digerine iner; Trendyol'a ayri ayri yuklenebilsinler diye.
+    // TEK DOSYA (kullanici karari, 3 Eylul 2026): 3 gunluk ve 4 gunluk
+    // secimler ayri ayri yapilir ama AYNI Excel'e islenir. Urun basina tek
+    // satir oldugu icin secimler tekSatirSecimi ile tek satira indirgenir:
+    // yalniz 3 -> "3 Günlük Fiyat", yalniz 4 -> "4 Günlük Fiyat", ikisi ayni
+    // fiyatla -> "7 Günlük Fiyat" (dosyanin formulu iki pencereyi de
+    // hesaplar). Fiyatlar farkliysa satir bos kalir ve kullaniciya soylenir.
     // Acik tarifenin secimi henuz kutusuna yazilmamis olabilir; once katlanir.
     const veri = uploadedData.map((u) => acikSecimiSakla(u, secilenPencere));
+    // Dosyanin gercek pencereleri (3 Gün, 4 Gün). Haritadaki birlesik
+    // "7 Gün" anahtari secilebilir bir pencere DEGIL; disarida tutulur.
+    const dosyaPencereleri = [...new Set(veri.flatMap((u) => pencereAdlari(u)))]
+      .filter((ad) => !/^\s*7\s*g/i.test(String(ad)));
+    const ozet = tekDosyaOzeti(veri, dosyaPencereleri);
+    if (ozet.catisanlar.length > 0) {
+      toast.error(
+        `${ozet.catisanlar.length} üründe 3 günlük ve 4 günlük fiyat farklı; tek dosyada bir ürünün tek fiyatı olur. ` +
+        `Bu satırlar boş bırakıldı: ${ozet.catisanlar.slice(0, 5).join(', ')}${ozet.catisanlar.length > 5 ? '…' : ''}. ` +
+        'İkisini aynı fiyata getirin ya da birini kaldırın.',
+        { duration: 12000 }
+      );
+    }
+    if (ozet.toplam === 0) { toast.error('Seçili ürün yok'); return; }
+
     // Eski kayitlardan gelen secimler esas fiyati asiyor olabilir; Trendyol
     // bu satirlari reddediyor. Indirmeden once soyle.
-    const asanlar = sinirAsanlar(veri, (u) => secimiOku(u, u.secim_penceresi || secilenPencere).fiyat);
+    const asanlar = sinirAsanlar(veri, (u) => tekSatirSecimi(u, dosyaPencereleri).fiyat);
     if (asanlar.length > 0) {
       toast.error(
         `${asanlar.length} üründe seçili fiyat komisyona esas fiyatı aşıyor; Trendyol bunları reddeder. ` +
@@ -827,120 +850,109 @@ export default function TrendyolPriceRange() {
       );
     }
 
-    const ozet = secimOzeti(veri);
-    const pencereler = Object.keys(ozet)
-      .filter((k) => k !== 'toplam')
-      .filter((k) => !istenenTarife || k === istenenTarife);
-    if (pencereler.length === 0) {
-      toast.error(istenenTarife ? `"${istenenTarife}" tarifesinde seçili ürün yok` : 'Seçili ürün yok');
-      return;
-    }
-
     const slugify = (str) => str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
     const fromStr = dateRangeValue?.from ? format(dateRangeValue.from, 'd MMMM', { locale: tr }) : '';
     const toStr = dateRangeValue?.to ? format(dateRangeValue.to, 'd MMMM', { locale: tr }) : '';
     const donem = `${slugify(fromStr)}-${slugify(toStr)}`;
 
+    // DOSYA YENIDEN URETILMIYOR. Yuklenen dosyanin XML'i acilip yalnizca
+    // ilgili hucreler degistiriliyor, sonra ayni parcalarla geri
+    // paketleniyor.
+    //
+    // SheetJS ile yeniden yazmak metin hucrelerini t="str" olarak
+    // yaziyordu; OOXML'de bu FORMUL SONUCU demek, duz metin degil.
+    // Trendyol'un okuyucusu baslik satirini bos goruyor ve dosyayi
+    // "Yüklenen excel formatı hatalıdır" diye reddediyordu (sonuc
+    // raporunda BARKOD sutunu bostu). Ayrica sharedStrings,
+    // dataValidation (24 kural) ve <cols> tanimlari da kayboluyordu.
+    const parcalar = unzipSync(originalExcelData.baytlar);
+    const yol = sayfaXmlYolu(parcalar);
+    if (!yol) { toast.error('Excel içinde sayfa bulunamadı'); return; }
 
-    const dosyaUret = (pencereAdi) => {
-      // DOSYA YENIDEN URETILMIYOR. Yuklenen dosyanin XML'i acilip yalnizca
-      // ilgili hucreler degistiriliyor, sonra ayni parcalarla geri
-      // paketleniyor.
-      //
-      // SheetJS ile yeniden yazmak metin hucrelerini t="str" olarak
-      // yaziyordu; OOXML'de bu FORMUL SONUCU demek, duz metin degil.
-      // Trendyol'un okuyucusu baslik satirini bos goruyor ve dosyayi
-      // "Yüklenen excel formatı hatalıdır" diye reddediyordu (sonuc
-      // raporunda BARKOD sutunu bostu). Ayrica sharedStrings,
-      // dataValidation (24 kural) ve <cols> tanimlari da kayboluyordu.
-      const parcalar = unzipSync(originalExcelData.baytlar);
-      const yol = sayfaXmlYolu(parcalar);
-      if (!yol) throw new Error('Excel içinde sayfa bulunamadı');
+    const metneCevir = (b) => new TextDecoder().decode(b);
+    let sheet = metneCevir(parcalar[yol]);
+    const paylasilan = parcalar['xl/sharedStrings.xml']
+      ? paylasilanMetinler(metneCevir(parcalar['xl/sharedStrings.xml']))
+      : [];
+    const basliklar = baslikHaritasi(sheet, 1, paylasilan);
 
-      const metneCevir = (b) => new TextDecoder().decode(b);
-      let sheet = metneCevir(parcalar[yol]);
-      const paylasilan = parcalar['xl/sharedStrings.xml']
-        ? paylasilanMetinler(metneCevir(parcalar['xl/sharedStrings.xml']))
-        : [];
-      const basliklar = baslikHaritasi(sheet, 1, paylasilan);
+    const barkodSut = basliklar['BARKOD'];
+    const tsfSut = basliklar['YENİ TSF (FİYAT GÜNCELLE)'];
+    const secimSut = basliklar['Tarife Seçimi'];
+    const uygulaSut = basliklar['Tarife Sonuna Kadar Uygula'];
+    if (!barkodSut || !tsfSut) {
+      toast.error('Excel başlıkları tanınmadı (BARKOD / YENİ TSF sütunu yok)');
+      return;
+    }
 
-      const barkodSut = basliklar['BARKOD'];
-      const tsfSut = basliklar['YENİ TSF (FİYAT GÜNCELLE)'];
-      const secimSut = basliklar['Tarife Seçimi'];
-      const uygulaSut = basliklar['Tarife Sonuna Kadar Uygula'];
-      if (!barkodSut || !tsfSut) {
-        throw new Error('Excel başlıkları tanınmadı (BARKOD / YENİ TSF sütunu yok)');
+    // Satir eslesmesi XML'den: sheet_to_json bos satirlari atlayabilir ve
+    // fiyat YANLIS URUNE yazilabilirdi.
+    const barkodlar = sutunDegerleri(sheet, barkodSut, paylasilan);
+    const degisiklikler = [];
+    const yazilanlar = {};          // pencere -> [{ barkod, fiyat }]
+    const sayac = {};               // pencere -> yazilan adet
+    let atlanan = 0;
+
+    for (const [satirMetni, barkod] of Object.entries(barkodlar)) {
+      const satirNo = Number(satirMetni);
+      if (satirNo < 2) continue;                       // baslik satiri
+      const item = veri.find((x) => String(x.barcode) === String(barkod));
+      const secim = item ? tekSatirSecimi(item, dosyaPencereleri) : { pencere: null, fiyat: 0 };
+      // Ayni fiyati ikinci kez gondermek Trendyol'da hata sayiliyor.
+      // Defter pencere bazli tutulur; 7 Gün icin 3 ve 4'e de bakilir.
+      const dahaOnce = secim.pencere
+        ? [secim.pencere, ...(secim.pencere === '7 Gün' ? dosyaPencereleri : [])]
+            .map((ad) => gonderilenFiyat(gonderimDefteri, ad, barkod))
+            .find((f) => f != null)
+        : undefined;
+      const karar = !secim.pencere
+        ? { yazilir: false, sebep: 'fiyat-yok' }
+        : yazilmaliMi(secim.fiyat, item?.current_tsf, dahaOnce);
+      const dolu = karar.yazilir;
+      if (dolu) {
+        sayac[secim.pencere] = (sayac[secim.pencere] || 0) + 1;
+        (yazilanlar[secim.pencere] ||= []).push({ barkod, fiyat: secim.fiyat });
+      } else if (secim.pencere) atlanan++;
+
+      // Secili olmayan satirlarin eski degerleri TEMIZLENIR; vazgecilen bir
+      // urun eski fiyatiyla Trendyol'a gitmesin.
+      degisiklikler.push({ adres: `${tsfSut}${satirNo}`, deger: dolu ? secim.fiyat : null, tip: 'n' });
+      if (secimSut) {
+        degisiklikler.push({
+          adres: `${secimSut}${satirNo}`,
+          deger: dolu ? tarifeSecimDegeri(secim.pencere) : null,
+          tip: 's',
+        });
       }
-
-      // Satir eslesmesi XML'den: sheet_to_json bos satirlari atlayabilir ve
-      // fiyat YANLIS URUNE yazilabilirdi.
-      const barkodlar = sutunDegerleri(sheet, barkodSut, paylasilan);
-      const degisiklikler = [];
-      const yazilanlar = [];
-      let yazilan = 0;
-      let atlanan = 0;
-
-      for (const [satirMetni, barkod] of Object.entries(barkodlar)) {
-        const satirNo = Number(satirMetni);
-        if (satirNo < 2) continue;                       // baslik satiri
-        const item = veri.find((x) => String(x.barcode) === String(barkod));
-        const secim = item ? secimiOku(item, pencereAdi) : { kademe: 'none', fiyat: 0 };
-        // Ayni fiyati ikinci kez gondermek Trendyol'da hata sayiliyor
-        const karar = secim.kademe === 'none'
-          ? { yazilir: false, sebep: 'fiyat-yok' }
-          : yazilmaliMi(secim.fiyat, item?.current_tsf, gonderilenFiyat(gonderimDefteri, pencereAdi, barkod));
-        const dolu = karar.yazilir;
-        if (dolu) { yazilan++; yazilanlar.push({ barkod, fiyat: secim.fiyat }); }
-        else if (secim.kademe !== 'none') atlanan++;
-
-        // Secili olmayan satirlarin eski degerleri TEMIZLENIR; vazgecilen bir
-        // urun eski fiyatiyla Trendyol'a gitmesin.
-        degisiklikler.push({ adres: `${tsfSut}${satirNo}`, deger: dolu ? secim.fiyat : null, tip: 'n' });
-        if (secimSut) {
-          degisiklikler.push({
-            adres: `${secimSut}${satirNo}`,
-            deger: dolu ? tarifeSecimDegeri(pencereAdi || item?.tarife_penceresi) : null,
-            tip: 's',
-          });
-        }
-        if (uygulaSut) {
-          degisiklikler.push({ adres: `${uygulaSut}${satirNo}`, deger: dolu ? 'Evet' : null, tip: 's' });
-        }
+      if (uygulaSut) {
+        degisiklikler.push({ adres: `${uygulaSut}${satirNo}`, deger: dolu ? 'Evet' : null, tip: 's' });
       }
+    }
 
-      sheet = hucreleriYaz(sheet, degisiklikler);
-      parcalar[yol] = new TextEncoder().encode(sheet);
+    sheet = hucreleriYaz(sheet, degisiklikler);
+    parcalar[yol] = new TextEncoder().encode(sheet);
 
-      const ek = pencereAdi ? `-${slugify(pencereAdi)}` : '';
-      const blob = new Blob([zipSync(parcalar)], {
-        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-      });
-      const url = URL.createObjectURL(blob);
-      const baglanti = document.createElement('a');
-      baglanti.href = url;
-      baglanti.download = `urunkomisyontarifesi-${donem}${ek}.xlsx`;
-      document.body.appendChild(baglanti);
-      baglanti.click();
-      baglanti.remove();
-      setTimeout(() => URL.revokeObjectURL(url), 1000);
-      return { yazilan, atlanan, yazilanlar };
-    };
+    const blob = new Blob([zipSync(parcalar)], {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    });
+    const url = URL.createObjectURL(blob);
+    const baglanti = document.createElement('a');
+    baglanti.href = url;
+    baglanti.download = `urunkomisyontarifesi-${donem}.xlsx`;
+    document.body.appendChild(baglanti);
+    baglanti.click();
+    baglanti.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
 
     let defter = gonderimDefteri;
-    let toplamAtlanan = 0;
-    const sonuc = pencereler.map((p) => {
-      const ad = p === '(pencere yok)' ? null : p;
-      const { yazilan, atlanan, yazilanlar } = dosyaUret(ad);
-      defter = gonderimleriIsle(defter, ad, yazilanlar);
-      toplamAtlanan += atlanan;
-      return `${ad || 'tarifesiz'}: ${yazilan} ürün${atlanan ? ` (${atlanan} atlandı)` : ''}`;
-    });
+    for (const [ad, satirlar] of Object.entries(yazilanlar)) defter = gonderimleriIsle(defter, ad, satirlar);
     setGonderimDefteri(defter);
+
+    const parcaMetni = Object.entries(sayac).map(([ad, n]) => `${ad}: ${n}`).join(' · ');
+    const toplamYazilan = Object.values(sayac).reduce((a, b) => a + b, 0);
     toast.success(
-      (pencereler.length === 1
-        ? `Excel indirildi — ${sonuc[0]}`
-        : `${pencereler.length} Excel dosyası indirildi — ${sonuc.join(' · ')}`) +
-      (toplamAtlanan ? '. Atlananlar aynı fiyatla zaten gönderilmişti; Trendyol bunları hata sayıyor.' : ''),
+      `Excel indirildi — ${toplamYazilan} ürün${parcaMetni ? ` (${parcaMetni})` : ''}` +
+      (atlanan ? `. ${atlanan} ürün atlandı: aynı fiyatla zaten gönderilmişti; Trendyol bunları hata sayıyor.` : ''),
       { duration: 10000 }
     );
   };
@@ -1201,37 +1213,12 @@ export default function TrendyolPriceRange() {
                   <Button variant="outline" onClick={() => { setUploadedData(uploadedData.map(item => ({ ...item, selected_range: 'none', selected_price: 0 }))); toast.success('Tüm seçimler kaldırıldı'); }}>
                     Seçimleri Kaldır
                   </Button>
-                  {/* Tek buton; basinca hangi tarifenin inecegi seciliyor.
-                      Tek tarifede secim varsa menu acmadan dogrudan iner. */}
-                  {Object.keys(seciliOzet).filter((k) => k !== 'toplam').length > 1 ? (
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="outline">
-                          <Download className="mr-2 h-4 w-4" />Excel İndir ({seciliOzet.toplam})
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="start">
-                        <DropdownMenuLabel>Hangi tarife inecek?</DropdownMenuLabel>
-                        <DropdownMenuSeparator />
-                        {Object.entries(seciliOzet)
-                          .filter(([k]) => k !== 'toplam')
-                          .map(([ad, adet]) => (
-                            <DropdownMenuItem key={ad} onSelect={() => handleExport(ad)}>
-                              {ad} — {adet} ürün
-                            </DropdownMenuItem>
-                          ))}
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem onSelect={() => handleExport()}>
-                          Hepsi (ayrı dosyalar)
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  ) : (
-                    <Button variant="outline" onClick={() => handleExport()}>
-                      <Download className="mr-2 h-4 w-4" />Excel İndir
-                      {seciliOzet.toplam > 0 && ` (${seciliOzet.toplam})`}
-                    </Button>
-                  )}
+                  {/* TEK DOSYA: 3 ve 4 gunluk secimler ayni Excel'e iner
+                      (kullanici karari, 3 Eylul 2026). Dropdown kaldirildi. */}
+                  <Button variant="outline" onClick={() => handleExport()}>
+                    <Download className="mr-2 h-4 w-4" />Excel İndir
+                    {seciliOzet.toplam > 0 && ` (${seciliOzet.toplam})`}
+                  </Button>
                 </>
               )}
             </div>

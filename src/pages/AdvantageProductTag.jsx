@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import AktifPencereSatiri from '@/components/AktifPencereSatiri';
 import { db } from '@/api/db';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Upload, Download, Filter, Check, AlertCircle, Info, Calendar as CalendarIcon, Trash2, Sparkles } from 'lucide-react';
@@ -21,7 +22,7 @@ import { sayiyaCevirVeya } from '@/lib/turkceSayi';
 import { unzipSync, zipSync } from 'fflate';
 import { hucreleriYaz, baslikHaritasi, paylasilanMetinler, sayfaXmlYolu, sutunDegerleri } from '@/lib/xlsxYerindeYaz';
 import { kademeFiyati } from '@/lib/trendyolTarifeKurali';
-import { enYuksekTarifeKomisyonu } from '@/lib/tarifeKaydiSecimi';
+import { tarifeKomisyonu, aktifPencereOzeti } from '@/lib/tarifeKaydiSecimi';
 import BaremBadge from '@/components/ui/BaremBadge';
 import { baremSec, baremTavanFiyatlari, baremTarifesiSec } from '@/lib/baremKurali';
 import { gecerliMaliyet } from '@/lib/gecerliMaliyet';
@@ -440,11 +441,11 @@ export default function AdvantageProductTag() {
     // biri Temmuz'dan kalma, komisyonlari 0 — kar oldugundan yuksek
     // gorunebiliyordu. Artik yalnizca DONEMI ORTUSEN kayitlar sayiliyor.
     //
-    // Ayni donemde 3 gunluk ve 4 gunluk iki pencere olabiliyor ve
-    // komisyonlari farkli (19,3 / 16,6). Etiket tum doneme tek fiyat
-    // koydugu icin EN YUKSEK komisyon — en kotu durum — kullaniliyor.
+    // Komisyon, tarife kaydinin BUGUN gecerli penceresinden okunur: ilk 3
+    // gun 3 gunluk, sonraki 4 gun 4 gunluk oran (kullanici karari, 4 Eylul:
+    // "her 3 ve her 4 gunde bir guncellesin, sonuc %100 dogru olur").
     if (komisyonTarifesindeMi(item) && price > 0 && item.barcode) {
-      const oran = enYuksekTarifeKomisyonu(trendyolPriceRanges, {
+      const { oran } = tarifeKomisyonu(trendyolPriceRanges, {
         barkod: item.barcode,
         platform: selectedPlatform,
         baslangic: item.start_date,
@@ -929,6 +930,7 @@ export default function AdvantageProductTag() {
       <div className="ph-page mx-auto">
         <div className="mb-8">
           <h1 className="ph-title">Avantajlı Ürün Etiketi</h1>
+          <AktifPencereSatiri ozet={aktifPencereOzeti(trendyolPriceRanges, selectedPlatform)} />
           <p className="text-muted-foreground mt-1">Trendyol avantaj etiketlerini yükleyip kârlılık analizi yapın</p>
         </div>
 
