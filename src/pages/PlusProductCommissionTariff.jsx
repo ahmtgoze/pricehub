@@ -499,7 +499,7 @@ export default function PlusProductCommissionTariff() {
     const updated = uploadedData.map(item => {
       if (!visibleBarcodes.has(item.barcode)) return item;
       if (item.selected_type === 'manual') return item;
-      const price = item.plus_price_limit;
+      const price = plusFiyati(item);
       if (!price || price <= 0) return item.selected_type === 'plus' ? { ...item, selected_type: 'none', selected_price: 0 } : item;
       const { profit, profitRate } = calculateProfit(price, item.plus_commission_offer || 0, item);
       if (araliktaMi(profitRate, profit)) return { ...item, selected_type: 'plus', selected_price: price };
@@ -524,7 +524,7 @@ export default function PlusProductCommissionTariff() {
       const matchedProduct = getMatchedProduct(item);
       if (!matchedProduct) { skippedNoProduct++; return item; }
 
-      const price = item.plus_price_limit;
+      const price = plusFiyati(item);
       if (!price || price <= 0) { skippedNoOffer++; return item; }
 
       const commission = commissions.find(c =>
@@ -594,6 +594,17 @@ export default function PlusProductCommissionTariff() {
     setUploadedData(uploadedData.map((item) =>
       plusPencereUygula(pencereyeGec(item, oncekiPencere, pencereAdi, 'selected_type'), pencereAdi)
     ));
+  };
+
+  // Plus fiyati "Plus Komisyona Esas Fiyatı"ni GECEMEZ. Gecerse Trendyol
+  // satiri reddediyor — Urun Komisyon Tarifesi'ndeki kuralin aynisi.
+  // Gercek ornek: bntk2 · ust limit 141,61 · esas 133,65 -> 141,61 yazilinca
+  // satir reddediliyordu; dogrusu 133,65.
+  const plusFiyati = (item) => {
+    const ust = Number(item?.plus_price_limit) || 0;
+    const esas = Number(item?.plus_base_price) || 0;
+    if (ust <= 0) return 0;
+    return esas > 0 ? Math.min(ust, esas) : ust;
   };
 
   const handleSave = async () => {
@@ -1019,7 +1030,7 @@ export default function PlusProductCommissionTariff() {
                         const index = uploadedData.indexOf(item);
                         const systemPrice = getSystemPrice(item);
                         const matchedProduct = getMatchedProduct(item);
-                        const plusPrice = item.plus_price_limit;
+                        const plusPrice = plusFiyati(item);
                         const plusComm = item.plus_commission_offer || 0;
                         const plusCalc = plusPrice > 0 ? calculateProfit(plusPrice, plusComm, item) : { profit: 0, profitRate: 0 };
                         const isPlusSelected = item.selected_type === 'plus';
