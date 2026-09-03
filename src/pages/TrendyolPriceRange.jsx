@@ -16,6 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { toast } from 'sonner';
 import * as XLSX from 'xlsx';
+import { kayitlariTeklestir } from '@/lib/kayitTeklestirme';
 import { sayiyaCevirVeya } from '@/lib/turkceSayi';
 import PriceDetailModal from '@/components/modals/PriceDetailModal';
 import BaremBadge from '@/components/ui/BaremBadge';
@@ -160,11 +161,16 @@ export default function TrendyolPriceRange() {
 
     const startDate = format(dateRangeValue.from, 'yyyy-MM-dd');
     const endDate = format(dateRangeValue.to, 'yyyy-MM-dd');
-    const filtered = savedPriceRanges.filter(
+    const eslesenler = savedPriceRanges.filter(
       r => r.platform_account === selectedPlatform &&
            r.start_date === startDate &&
            r.end_date === endDate
     );
+    // Ayni donem icin birden fazla kayit seti olabilir (ornegin 3 gunluk ve
+    // 4 gunluk pencere ayri ayri yuklenmisse). Ikisi birden yuklenince ayni
+    // barkod iki kez cikiyor, biri secili biri degil ve secimler
+    // SIFIRLANMIS gibi gorunuyordu. Urun basina secimi olan kayit tutulur.
+    const filtered = kayitlariTeklestir(eslesenler);
     setUploadedData(filtered);
     // Excel'i restore et (sayfa değişimi sonrası state sıfırlanmış olabilir)
     const recordWithExcel = filtered.find(r => r.excel_file_url);
@@ -307,15 +313,27 @@ export default function TrendyolPriceRange() {
 
         setUploadProgress({ current: 0, total: parsed.length });
         try {
+          // bulkCreate olusan kayitlari id'leriyle dondurur. Bu id'ler state'e
+          // islenmezse "Secimleri Kaydet" guncelleme yerine YENI kayit
+          // olusturuyor; ayni urun iki kez kaydediliyor ve donem yeniden
+          // acildiginda secimler sifirlanmis gibi gorunuyordu.
+          const olusanlar = [];
           for (let i = 0; i < parsed.length; i += 30) {
             const batch = parsed.slice(i, i + 30);
             // Sadece ilk batch'in ilk kaydına Excel URL'ini ekle
             if (i === 0 && batch.length > 0 && excelFileUrl) {
               batch[0].excel_file_url = excelFileUrl;
             }
-            await TrendyolPriceRangeEntity.bulkCreate(batch);
+            const olusan = await TrendyolPriceRangeEntity.bulkCreate(batch);
+            if (Array.isArray(olusan)) olusanlar.push(...olusan);
             setUploadProgress({ current: Math.min(i + 30, parsed.length), total: parsed.length });
             if (i + 30 < parsed.length) await new Promise(resolve => setTimeout(resolve, 200));
+          }
+          if (olusanlar.length > 0) {
+            const idler = new Map(olusanlar.filter(r => r?.barcode).map(r => [String(r.barcode), r.id]));
+            setUploadedData(oncekiler => oncekiler.map(u =>
+              idler.has(String(u.barcode)) ? { ...u, id: idler.get(String(u.barcode)) } : u
+            ));
           }
           queryClient.invalidateQueries(['trendyolPriceRanges']);
           toast.success(`${parsed.length} ürün yüklendi ve kaydedildi`);

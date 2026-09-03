@@ -16,6 +16,7 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import * as XLSX from 'xlsx';
+import { kayitlariTeklestir } from '@/lib/kayitTeklestirme';
 import { enYuksekTarifeKomisyonu } from '@/lib/tarifeKaydiSecimi';
 import { sayiyaCevirVeya } from '@/lib/turkceSayi';
 import BaremBadge from '@/components/ui/BaremBadge';
@@ -153,12 +154,15 @@ export default function FlashProducts() {
       const startDate = format(dateRangeValue.from, 'yyyy-MM-dd');
       const endDate = format(dateRangeValue.to, 'yyyy-MM-dd');
       
-      const filtered = savedFlashProducts.filter(
+      const eslesenler = savedFlashProducts.filter(
         r => r.platform_account === selectedPlatform &&
              r.start_date === startDate &&
              r.end_date === endDate
       );
-      
+
+      // Ayni donemde birden fazla kayit varsa urun basina secimi olan
+      // tutulur; yoksa kayitli secimler sifirlanmis gibi gorunuyor.
+      const filtered = kayitlariTeklestir(eslesenler);
       setUploadedData(filtered);
       
       // Load selections
@@ -343,17 +347,29 @@ export default function FlashProducts() {
 
         // Yeni verileri batch'ler halinde kaydet (10'ar)
         setUploadProgress({ current: 0, total: parsed.length });
+        // bulkCreate olusan kayitlari id'leriyle dondurur. Bu id'ler state'e
+        // islenmezse "Secimleri Kaydet" guncelleme yerine YENI kayit
+        // olusturuyor; ayni urun iki kez kaydediliyor ve donem yeniden
+        // acildiginda secimler sifirlanmis gibi gorunuyordu.
+        const olusanlar = [];
         for (let i = 0; i < parsed.length; i += 10) {
           const batch = parsed.slice(i, i + 10);
           // Sadece ilk batch'in ilk kaydına Excel URL'ini ekle
           if (i === 0 && batch.length > 0 && excelFileUrl) {
             batch[0].excel_file_url = excelFileUrl;
           }
-          await db.entities.FlashProduct.bulkCreate(batch);
+          const olusan = await db.entities.FlashProduct.bulkCreate(batch);
+          if (Array.isArray(olusan)) olusanlar.push(...olusan);
           setUploadProgress({ current: Math.min(i + 10, parsed.length), total: parsed.length });
           if (i + 10 < parsed.length) {
             await new Promise(resolve => setTimeout(resolve, 1000));
           }
+        }
+        if (olusanlar.length > 0) {
+          const idler = new Map(olusanlar.filter(r => r?.barcode).map(r => [String(r.barcode), r.id]));
+          setUploadedData(oncekiler => oncekiler.map(u =>
+            idler.has(String(u.barcode)) ? { ...u, id: idler.get(String(u.barcode)) } : u
+          ));
         }
 
         setUploadedData(parsed);

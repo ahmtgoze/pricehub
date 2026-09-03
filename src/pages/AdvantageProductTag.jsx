@@ -16,6 +16,7 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import * as XLSX from 'xlsx';
+import { kayitlariTeklestir } from '@/lib/kayitTeklestirme';
 import { sayiyaCevirVeya } from '@/lib/turkceSayi';
 import { unzipSync, zipSync } from 'fflate';
 import { hucreleriYaz, baslikHaritasi, paylasilanMetinler, sayfaXmlYolu, sutunDegerleri } from '@/lib/xlsxYerindeYaz';
@@ -169,9 +170,12 @@ export default function AdvantageProductTag() {
 
     const startDate = format(dateRangeValue.from, 'yyyy-MM-dd');
     const endDate = format(dateRangeValue.to, 'yyyy-MM-dd');
-    const filtered = savedItems.filter(
+    const eslesenler = savedItems.filter(
       r => r.platform_account === selectedPlatform && r.start_date === startDate && r.end_date === endDate
     );
+    // Ayni donemde birden fazla kayit varsa urun basina secimi olan tutulur;
+    // yoksa kayitli secimler sifirlanmis gibi gorunuyor.
+    const filtered = kayitlariTeklestir(eslesenler);
     setUploadedData(filtered);
     const recordWithExcel = filtered.find(r => r.excel_file_url);
     if (recordWithExcel) {
@@ -289,14 +293,26 @@ export default function AdvantageProductTag() {
         }
 
         setUploadProgress({ current: 0, total: parsed.length });
+        // bulkCreate olusan kayitlari id'leriyle dondurur. Bu id'ler state'e
+        // islenmezse "Secimleri Kaydet" guncelleme yerine YENI kayit
+        // olusturuyor; ayni urun iki kez kaydediliyor ve donem yeniden
+        // acildiginda secimler sifirlanmis gibi gorunuyordu.
+        const olusanlar = [];
         for (let i = 0; i < parsed.length; i += 30) {
           const batch = parsed.slice(i, i + 30);
           if (i === 0 && batch.length > 0 && excelFileUrl) {
             batch[0].excel_file_url = excelFileUrl;
           }
-          await db.entities.AdvantageProductTag.bulkCreate(batch);
+          const olusan = await db.entities.AdvantageProductTag.bulkCreate(batch);
+          if (Array.isArray(olusan)) olusanlar.push(...olusan);
           setUploadProgress({ current: Math.min(i + 30, parsed.length), total: parsed.length });
           if (i + 30 < parsed.length) await new Promise(resolve => setTimeout(resolve, 200));
+        }
+        if (olusanlar.length > 0) {
+          const idler = new Map(olusanlar.filter(r => r?.barcode).map(r => [String(r.barcode), r.id]));
+          setUploadedData(oncekiler => oncekiler.map(u =>
+            idler.has(String(u.barcode)) ? { ...u, id: idler.get(String(u.barcode)) } : u
+          ));
         }
 
         setUploadedData(parsed);
