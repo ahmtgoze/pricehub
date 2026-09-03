@@ -10,13 +10,23 @@ const tarih = (iso) => {
 
 /**
  * "Bugün geçerli tarife penceresi: 4 Gün (4 Eyl 08:00 – 8 Eyl 07:59)"
+ * veya tarife bitmisse "Tarife dönemi bitti (8 Eyl 07:59) — yeni tarife
+ * Excel'ini yükleyin; o zamana kadar kategori komisyonu kullanılır."
  *
  * Avantajli / Flas / Kampanya sayfalarinda komisyon o gun gecerli pencerenin
- * oranidir; kullanici pencere degisince ciktiyi yeniden indirir. Hangi
- * pencerede oldugunu gormesi icin. Tarife kaydi yoksa hicbir sey cizmez.
+ * oranidir; kullanici pencere degisince ciktiyi yeniden indirir. Tarife
+ * kaydi hic yoksa hicbir sey cizmez.
  */
 export default function AktifPencereSatiri({ ozet }) {
-  if (!ozet?.pencere) return null;
+  if (!ozet) return null;
+  if (ozet.bitti) {
+    return (
+      <p className="text-xs text-amber-700 dark:text-amber-400 mt-1">
+        Tarife dönemi bitti{ozet.bitis ? ` (${tarih(ozet.bitis)})` : ''} — Trendyol'dan yeni tarife Excel'ini indirip Komisyon Tarifesi'ne yükleyin; o zamana kadar kategori komisyonu kullanılır.
+      </p>
+    );
+  }
+  if (!ozet.pencere) return null;
   const aralik = [tarih(ozet.baslangic), tarih(ozet.bitis)].filter(Boolean).join(' – ');
   return (
     <p className="text-xs text-muted-foreground mt-1">
