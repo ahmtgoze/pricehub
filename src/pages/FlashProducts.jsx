@@ -17,6 +17,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { toast } from 'sonner';
 import * as XLSX from 'xlsx';
 import { enYuksekTarifeKomisyonu } from '@/lib/tarifeKaydiSecimi';
+import { sayiyaCevirVeya } from '@/lib/turkceSayi';
 import BaremBadge from '@/components/ui/BaremBadge';
 import { baremSec, baremTavanFiyatlari, baremTarifesiSec } from '@/lib/baremKurali';
 import { gecerliMaliyet } from '@/lib/gecerliMaliyet';
@@ -300,11 +301,14 @@ export default function FlashProducts() {
             start_date: startDate,
             end_date: endDate,
             product_name: productName,
-            stock: parseFloat(findColumnValue(row, ['stok'])) || 0,
-            price_24h: parseFloat(findColumnValue(row, ['24 saat fiyat', '24h fiyat'])) || 0,
+            // Trendyol dosyalarinda fiyatlar VIRGULLU METIN gelebiliyor
+            // ("480,17"); parseFloat bunu 480 yapiyordu. Yildizli urun
+            // dosyasinda tam bu yasandi.
+            stock: sayiyaCevirVeya(findColumnValue(row, ['stok'])),
+            price_24h: sayiyaCevirVeya(findColumnValue(row, ['24 saat fiyat', '24h fiyat'])),
             start_24h: start24h,
             end_24h: end24h,
-            price_3h: parseFloat(findColumnValue(row, ['3 saat fiyat', '3h fiyat'])) || 0,
+            price_3h: sayiyaCevirVeya(findColumnValue(row, ['3 saat fiyat', '3h fiyat'])),
             start_3h: start3h,
             end_3h: end3h,
             master_product_id: masterProductId,
@@ -1044,7 +1048,7 @@ export default function FlashProducts() {
 
   const handleManualPriceChange = (index, value) => {
     const updated = [...uploadedData];
-    const manualPrice = parseFloat(value) || 0;
+    const manualPrice = sayiyaCevirVeya(value);
     updated[index].manual_price = manualPrice;
     
     if (manualPrice > 0) {
