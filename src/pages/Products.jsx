@@ -40,6 +40,7 @@ import ProductModal from '@/components/modals/ProductModal';
 import BulkOperationsModal from '@/components/modals/BulkOperationsModal';
 import ImportExport from '@/components/ImportExport';
 import * as XLSX from 'xlsx';
+import { sayiyaCevirVeya } from '@/lib/turkceSayi';
 import { calculateAllPlatformPrices } from '@/components/PriceCalculationEngine';
 import { toast } from 'sonner';
 import { useBackgroundTask } from '@/lib/BackgroundTaskContext';
@@ -526,8 +527,8 @@ export default function Products() {
         is_active: row['Aktif'] !== undefined
           ? (row['Aktif'] === 'true' || row['Aktif'] === true)
           : true,
-        printing_cost: parseFloat(row['Baskı Maliyeti'] ?? row.printing_cost ?? 0) || 0,
-        extra_cost: parseFloat(row['Ek Maliyet'] ?? row.extra_cost ?? 0) || 0,
+        printing_cost: sayiyaCevirVeya(row['Baskı Maliyeti'] ?? row.printing_cost),
+        extra_cost: sayiyaCevirVeya(row['Ek Maliyet'] ?? row.extra_cost),
         special_shipping: false,
         double_shipping: parseBoolCol(row['Çift Kargo'] ?? row['Cift Kargo'] ?? row.double_shipping)
       };

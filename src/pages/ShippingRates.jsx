@@ -15,6 +15,7 @@ import ImportExport from '@/components/ImportExport';
 import { toast } from 'sonner';
 import { useBackgroundTask } from '@/lib/BackgroundTaskContext';
 import { useIlerlemePenceresi } from '@/lib/useIlerlemePenceresi';
+import { sayiyaCevirVeya } from '@/lib/turkceSayi';
 
 const ShippingRate = db.entities.ShippingRate;
 const Platform = db.entities.Platform;
@@ -176,9 +177,9 @@ export default function ShippingRates() {
       if (!shippingCompany) { errors.push(`Satır ${rowNo}: Kargo firması boş`); continue; }
 
       const sameDayDelivery = isWebsite ? false : (String(row['Bugün Kapında'] ?? 'false').toLowerCase() === 'true');
-      const desiValue = rateType === 'desi' ? parseFloat(row['Desi'] ?? row.desi ?? 0) : null;
+      const desiValue = rateType === 'desi' ? sayiyaCevirVeya(row['Desi'] ?? row.desi) : null;
       if (rateType === 'desi' && !Number.isFinite(desiValue)) { errors.push(`Satır ${rowNo}: Geçersiz desi`); continue; }
-      const price = parseFloat(row['Ücret'] ?? row.price ?? 0);
+      const price = sayiyaCevirVeya(row['Ücret'] ?? row.price);
 
       if (!Number.isFinite(price) || price <= 0) { errors.push(`Satır ${rowNo}: Geçersiz fiyat`); continue; }
 
@@ -212,7 +213,7 @@ export default function ShippingRates() {
           same_day_delivery: sameDayDelivery,
           desi: desiValue,
           price,
-          vat_rate: parseFloat(row['KDV Oranı'] || row.vat_rate || 20),
+          vat_rate: sayiyaCevirVeya(row['KDV Oranı'] || row.vat_rate || 20, 20),
           is_active: true,
           is_admin_created: userRole === 'admin',
           is_manual: userRole !== 'admin',

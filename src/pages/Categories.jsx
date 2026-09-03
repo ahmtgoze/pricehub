@@ -5,6 +5,7 @@ import { Plus, Pencil, Trash2, Download, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import * as XLSX from 'xlsx';
+import { sayiyaCevirVeya } from '@/lib/turkceSayi';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -161,7 +162,7 @@ export default function Categories() {
 
       for (const row of rows) {
         const name = (row['Kategori Adı'] || row['name'] || '').toString().trim();
-        const vatRate = parseFloat(row['Varsayılan KDV (%)'] || row['default_vat_rate'] || 20);
+        const vatRate = sayiyaCevirVeya(row['Varsayılan KDV (%)'] || row['default_vat_rate'] || 20, 20);
         const trendyol = metin(row['Trendyol Kategorisi'] || row['trendyol_category']);
         const hepsiburada = metin(row['HepsiBurada Kategorisi'] || row['hepsiburada_category']);
         if (!name) { skipped++; continue; }

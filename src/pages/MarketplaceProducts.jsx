@@ -13,6 +13,7 @@ import { tekrarEdenSkular, sayimOzeti } from '@/lib/tekrarEdenSku';
 import { Checkbox } from '@/components/ui/checkbox';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import * as XLSX from 'xlsx';
+import { sayiyaCevirVeya } from '@/lib/turkceSayi';
 import { toast } from 'sonner';
 import { useBackgroundTask } from '@/lib/BackgroundTaskContext';
 import { useIlerlemePenceresi } from '@/lib/useIlerlemePenceresi';
@@ -387,7 +388,7 @@ export default function MarketplaceProducts() {
 
           if (existing) {
             // Hepsiburada: mevcut ürünün fiyat ve stoğunu güncelle
-            await db.functions.invoke('updateMarketplaceProduct', { id: existing.id, data: { stock_quantity: stockQuantity, marketplace_sale_price: parseFloat(row['Fiyat'] || 0) } });
+            await db.functions.invoke('updateMarketplaceProduct', { id: existing.id, data: { stock_quantity: stockQuantity, marketplace_sale_price: sayiyaCevirVeya(row['Fiyat']) } });
             hepsiSkipped++;
           } else {
             await db.entities.MarketplaceProduct.create({
@@ -398,7 +399,7 @@ export default function MarketplaceProducts() {
               brand: row['Marka'] || '',
               category: hepsiCategory,
               platform_product_name: row['Ürün Adı'] || '',
-              marketplace_sale_price: parseFloat(row['Fiyat'] || 0),
+              marketplace_sale_price: sayiyaCevirVeya(row['Fiyat']),
               stock_quantity: stockQuantity,
               shipping_type: row['Teslimat Profili'] || '',
               status: 'not_matched',
@@ -414,7 +415,7 @@ export default function MarketplaceProducts() {
 
           const barkodStr = String(barkod).trim();
           const stockQuantity = extractStock(row);
-          const newPrice = parseFloat(row['Trendyol\'da Satılacak Fiyat (KDV Dahil)'] || row['Piyasa Satış Fiyatı (KDV Dahil)'] || row['Pazaryerinde Satılacak Fiyat (KDV Dahil)'] || 0);
+          const newPrice = sayiyaCevirVeya(row['Trendyol\'da Satılacak Fiyat (KDV Dahil)'] || row['Piyasa Satış Fiyatı (KDV Dahil)'] || row['Pazaryerinde Satılacak Fiyat (KDV Dahil)']);
           const categoryVal = row['En Alt Kategori'] || row['Ana Kategori'] || row['Kategori'] || row['Kategori İsmi'] || '';
 
           const excelRowNorm = {

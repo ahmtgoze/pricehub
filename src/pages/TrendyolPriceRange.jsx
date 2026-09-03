@@ -16,6 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { toast } from 'sonner';
 import * as XLSX from 'xlsx';
+import { sayiyaCevirVeya } from '@/lib/turkceSayi';
 import PriceDetailModal from '@/components/modals/PriceDetailModal';
 import BaremBadge from '@/components/ui/BaremBadge';
 import { baremSec, baremTavanFiyatlari, baremTarifesiSec } from '@/lib/baremKurali';
@@ -258,15 +259,15 @@ export default function TrendyolPriceRange() {
             model_code: row['MODEL KODU'] || '',
             category: matchedProduct?.category_name || row['KATEGORİ'] || '',
             brand: row['MARKA'] || '',
-            stock: parseFloat(row['STOK']) || 0,
-            price_range_1_min: parseFloat(row['1.Fiyat Alt Limit']) || 0,
-            price_range_1_max: parseFloat(row['2.Fiyat Üst Limiti']) || 0,
-            price_range_2_min: parseFloat(row['2.Fiyat Alt Limit']) || 0,
-            price_range_2_max: parseFloat(row['2.Fiyat Üst Limiti']) || 0,
-            price_range_3_min: parseFloat(row['3.Fiyat Alt Limit']) || 0,
-            price_range_3_max: parseFloat(row['3.Fiyat Üst Limiti']) || 0,
+            stock: sayiyaCevirVeya(row['STOK']),
+            price_range_1_min: sayiyaCevirVeya(row['1.Fiyat Alt Limit']),
+            price_range_1_max: sayiyaCevirVeya(row['2.Fiyat Üst Limiti']),
+            price_range_2_min: sayiyaCevirVeya(row['2.Fiyat Alt Limit']),
+            price_range_2_max: sayiyaCevirVeya(row['2.Fiyat Üst Limiti']),
+            price_range_3_min: sayiyaCevirVeya(row['3.Fiyat Alt Limit']),
+            price_range_3_max: sayiyaCevirVeya(row['3.Fiyat Üst Limiti']),
             price_range_4_min: 0,
-            price_range_4_max: parseFloat(row['4.Fiyat Üst Limiti']) || 0,
+            price_range_4_max: sayiyaCevirVeya(row['4.Fiyat Üst Limiti']),
             // Secilen zaman penceresinin komisyonlari. Dosyada ayni baslikla
             // birden fazla set var; okuyucu ikincisini "_1" diye adlandiriyor.
             commission_1: komisyonlar[0],
@@ -278,9 +279,9 @@ export default function TrendyolPriceRange() {
             // yuklemek gerekmez.
             pencere_komisyonlari: harita,
             tarife_penceresi: pencereAdi,
-            current_base_price: parseFloat(row['KOMİSYONA ESAS FİYAT']) || 0,
-            current_commission: parseFloat(row['GÜNCEL KOMİSYON']) || 0,
-            current_tsf: parseFloat(row['GÜNCEL TSF']) || 0,
+            current_base_price: sayiyaCevirVeya(row['KOMİSYONA ESAS FİYAT']),
+            current_commission: sayiyaCevirVeya(row['GÜNCEL KOMİSYON']),
+            current_tsf: sayiyaCevirVeya(row['GÜNCEL TSF']),
             has_commission_tariff: row['Ürün Komisyon Tarife Seçeneği'] || row['KOMİSYON TARİFESİ'] || 'Yok',
             selected_range: 'none',
             manual_price: 0,
