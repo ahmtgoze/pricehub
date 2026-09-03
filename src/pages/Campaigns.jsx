@@ -19,6 +19,7 @@ import PriceDetailModal from '@/components/modals/PriceDetailModal';
 import BaremBadge from '@/components/ui/BaremBadge';
 import { baremSec, baremTavanFiyatlari, baremTarifesiSec } from '@/lib/baremKurali';
 import { gecerliMaliyet } from '@/lib/gecerliMaliyet';
+import { sayiyaCevirVeya } from '@/lib/turkceSayi';
 import { enYuksekTarifeKomisyonu } from '@/lib/tarifeKaydiSecimi';
 import {
   INDIRIM_TURLERI, KATILIM_KOSULLARI, KAMPANYA_GRUPLARI,
@@ -50,6 +51,16 @@ const MarketplaceProduct = db.entities.MarketplaceProduct;
 // src/lib/trendyolKampanyaIndirimi.js icinde (test edilebilir).
 const CAMPAIGN_TYPES = KAMPANYA_GRUPLARI;
 const YUZDELI = (tur) => tur === 'net_percent' || tur === 'cart_percent' || tur === 'qty_percent';
+
+/**
+ * Trendyol'un kampanya Excel'inde fiyat girilen sutunun basligi kampanyaya
+ * gore degisiyor (3 Eylul 2026 dosyalari):
+ *   trendyol-plus-...-ek-5-indirim     -> "Kampanyalı Satış Fiyatı"
+ *   2000-tl-uzeri-150-tl-indirim-...   -> "İndirim Uygulanmadan Önceki Fiyat"
+ *   okula-donus-...-1000-tl-uzeri-...  -> "İndirim Uygulanmadan Önceki Fiyat"
+ * Ikisi de ayni sey: bizim girdigimiz fiyat; Trendyol indirimi ustune uygular.
+ */
+const FIYAT_SUTUNU_ANAHTARLARI = ['kampanyalı satış', 'kampanyalı fiyat', 'indirim uygulanmadan'];
 
 const emptyForm = {
   campaign_type: '',
@@ -582,9 +593,12 @@ export default function Campaigns() {
           const barcode = getVal(row, 'Barkod', ['barkod', 'barcode']) || '';
           const productName = getVal(row, 'Ürün Adı', ['ürün adı', 'ürün ismi', 'product name']) || '';
           const stockCode = getVal(row, 'Stok Kodu', ['stok kodu', 'sku']) || '';
-          const maxPrice = parseFloat(getVal(row, 'Maksimum Girebileceğin Fiyat', ['maksimum', 'maks'])) || 0;
-          const curPrice = parseFloat(getVal(row, 'Mevcut Satış Fiyatı', ['mevcut satış', 'mevcut fiyat'])) || 0;
-          const existingL = parseFloat(getVal(row, 'Kampanyalı Satış Fiyatı', ['kampanyalı satış', 'kampanyalı fiyat'])) || 0;
+          const maxPrice = sayiyaCevirVeya(getVal(row, 'Maksimum Girebileceğin Fiyat', ['maksimum', 'maks']), 0);
+          const curPrice = sayiyaCevirVeya(getVal(row, 'Mevcut Satış Fiyatı', ['mevcut satış', 'mevcut fiyat']), 0);
+          // Yazilacak fiyat sutunu kampanyaya gore farkli adlaniyor:
+          //   Plus (Ek İndirim)      -> "Kampanyalı Satış Fiyatı"
+          //   Genel (X TL'ye Y TL)   -> "İndirim Uygulanmadan Önceki Fiyat"
+          const existingL = sayiyaCevirVeya(getVal(row, 'Kampanyalı Satış Fiyatı', FIYAT_SUTUNU_ANAHTARLARI), 0);
 
           const mpRec = marketplaceProducts.find(mp => mp.platform_account === selectedPlatform && mp.barkod === barcode);
           let matched;
@@ -793,11 +807,11 @@ export default function Campaigns() {
     for (let C = range.s.c; C <= range.e.c; C++) {
       const h = worksheet[XLSX.utils.encode_cell({ r: range.s.r, c: C })]?.v;
       const hl = (h || '').toString().toLowerCase().trim();
-      if (hl.includes('kampanyalı satış') || hl.includes('kampanyalı fiyat')) colL = C;
+      if (FIYAT_SUTUNU_ANAHTARLARI.some(a => hl.includes(a))) colL = C;
       if (hl === 'barkod') colBarkod = C;
       if (hl.includes('listingid') || hl === 'listing id') colListing = C;
     }
-    if (colL === -1) { toast.error('Excelde "Kampanyalı Satış Fiyatı" sütunu bulunamadı'); return; }
+    if (colL === -1) { toast.error('Excelde fiyat sütunu bulunamadı ("Kampanyalı Satış Fiyatı" veya "İndirim Uygulanmadan Önceki Fiyat")'); return; }
 
     let written = 0;
     for (let R = range.s.r + 1; R <= range.e.r; R++) {
