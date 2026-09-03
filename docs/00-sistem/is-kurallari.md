@@ -739,20 +739,28 @@ Eski kampanyaların kâr hesabı **değişmez** (testle doğrulandı). Yeni kay�
 `cart_amount/cart_condition` boş bırakılır; `discount_type` uyum için
 doldurulur.
 
-### Komisyon kaynağı: 7 günlük tarife
-Kampanya, Avantajlı Ürün Etiketi ve Flaş Ürünler komisyonu Komisyon Tarifesi
-kaydının **7 günlük** verisinden okur: `pencere_komisyonlari["7 Gün"]`
-(`yediGunKademeKomisyonlari` → `kademeKomisyonu` → `yediGunTarifeKomisyonu`,
-`src/lib/tarifeKaydiSecimi.js`). Kademe, **kampanyalı satış fiyatına** göre
-bulunur. Harita yoksa veya "7 Gün" anahtarı yoksa `commission_1..4`
-sütunları (eski kayıt) kullanılır.
+### Komisyon kaynağı: o gün geçerli tarife penceresi (4 Eyl 2026)
+Trendyol'un tarife Excel'inde ayrı bir "7 günlük komisyon" **yoktur**; mavi
+kutu fiyat kademeleri, yeşil 3 Gün ve kırmızı 4 Gün komisyon bloklarıdır.
+"7 Günlük Fiyat" seçilince fiyat hafta boyu sabit kalır ama komisyon **ilk 3
+gün 3 günlük, sonraki 4 gün 4 günlük** orandır (dosyanın formülü de böyle).
 
-> Kullanıcı kararı (3 Eyl 2026): "7 günlük (3/4 gün en yükseği) diye bir şey
-> yok; 7 günlük olarak tut sadece." Kademe bazında en yüksek **hesaplanmaz**,
-> kayıtlar arasında da en yüksek aranmaz; dönemle örtüşen en güncel kayıt alınır.
-> Trendyol'un tarife Excel'inde ayrı bir 7 günlük komisyon sütunu **yoktur**
-> (yalnızca 3 Gün ve 4 Gün blokları); "7 Gün" değerinin nereden geleceği
-> kullanıcıyla netleştirilecek.
+**Kullanıcı kararı (4 Eyl 2026):** ortalama ya da "en yüksek" yok. Avantajlı
+Ürün Etiketi, Flaş Ürünler ve Kampanyalar komisyonu **o an geçerli
+pencerenin** oranıyla hesaplar; kullanıcı her pencere değişiminde (3 gün
+sonra, sonra 4 gün sonra) çıktıyı yeniden indirip yükler: "sonuç %100 doğru
+olur". Aylık kampanyada her hafta yeni tarife dosyasıyla aynı düzen sürer.
+
+Mekanizma (`src/lib/tarifeKaydiSecimi.js`): tarife yüklenirken pencerelerin
+tarihleri `pencere_tarihleri` olarak kayda yazılır (`pencereTarihiCoz`:
+"1 Eylül 08.00-4 Eylül 07.59" → ISO, yıl kaydın başlangıcından, +03:00).
+`tarifeKomisyonu(kayıtlar, {barkod, platform, başlangıç, bitiş, an}, fiyat)`
+dönemle örtüşen en güncel kaydı alır, `aktifPencere(kayıt, an)` ile o anın
+penceresini bulur (pencerelerden önceyse ilk, sonraysa son) ve
+`kademeKomisyonu(kayıt, fiyat, pencere)` ile kademenin o penceredeki oranını
+verir. Kademe **kampanyalı satış fiyatına** göre. Eski kayıtta pencere tarihi
+yoksa `commission_1..4` sütunları. Sayfa başlığının altında
+`AktifPencereSatiri` bugünkü pencereyi ve tarihlerini gösterir.
 
 **Kampanyalar (Plus dışı) — kaynak kuralı:** kampanya Excel'indeki
 `Ürün Komisyon Tarifesi` sütunu belirler. **Var** → 7 günlük tarife

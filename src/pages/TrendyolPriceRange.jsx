@@ -22,6 +22,7 @@ import BaremBadge from '@/components/ui/BaremBadge';
 import { baremSec, baremTavanFiyatlari, baremTarifesiSec } from '@/lib/baremKurali';
 import { gecerliMaliyet } from '@/lib/gecerliMaliyet';
 import { pencereleriBul, tarifeSecimDegeri } from '@/lib/trendyolTarifePenceresi';
+import { pencereTarihleri } from '@/lib/tarifeKaydiSecimi';
 import { unzipSync, zipSync } from 'fflate';
 import { hucreleriYaz, baslikHaritasi, paylasilanMetinler, sayfaXmlYolu, sutunDegerleri } from '@/lib/xlsxYerindeYaz';
 import { kademeFiyati, tarifeUstSiniri, sinirAsanlar } from '@/lib/trendyolTarifeKurali';
@@ -238,6 +239,7 @@ export default function TrendyolPriceRange() {
           || { ad: '', sonek: '' };
         if (!secilenPencere && aktif.ad) setSecilenPencere(aktif.ad);
         const pencereAdi = aktif.ad;
+        const pencereTarihleriHaritasi = pencereTarihleri(dosyaPencereleri, startDate);
 
         const parsed = jsonData.map(row => {
           // Haritada YALNIZCA dosyanin gercek pencereleri var; birlesik
@@ -285,6 +287,10 @@ export default function TrendyolPriceRange() {
             // degistirildiginde komisyonlar hazirda bulunur ve Excel'i yeniden
             // yuklemek gerekmez.
             pencere_komisyonlari: harita,
+            // Pencerelerin TARIHLERI de saklanir: Avantajli / Flas / Kampanya
+            // o gun hangi pencerenin gecerli oldugunu buradan bulur ve o
+            // pencerenin komisyonuyla hesaplar (kullanici karari, 4 Eylul).
+            pencere_tarihleri: pencereTarihleriHaritasi,
             tarife_penceresi: pencereAdi,
             current_base_price: sayiyaCevirVeya(row['KOMİSYONA ESAS FİYAT']),
             current_commission: sayiyaCevirVeya(row['GÜNCEL KOMİSYON']),

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import AktifPencereSatiri from '@/components/AktifPencereSatiri';
 import { db } from '@/api/db';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Plus, Edit2, Trash2, Calendar as CalendarIcon, Download, Sparkles, Check, Info } from 'lucide-react';
@@ -20,7 +21,7 @@ import BaremBadge from '@/components/ui/BaremBadge';
 import { baremSec, baremTavanFiyatlari, baremTarifesiSec } from '@/lib/baremKurali';
 import { gecerliMaliyet } from '@/lib/gecerliMaliyet';
 import { sayiyaCevirVeya } from '@/lib/turkceSayi';
-import { yediGunTarifeKomisyonu } from '@/lib/tarifeKaydiSecimi';
+import { tarifeKomisyonu, aktifPencereOzeti } from '@/lib/tarifeKaydiSecimi';
 import {
   INDIRIM_TURLERI, KATILIM_KOSULLARI, KAMPANYA_GRUPLARI,
   kampanyaFiyati, kampanyaFiyatiTersi, fiyatKuralinaUyuyorMu,
@@ -422,20 +423,21 @@ export default function Campaigns() {
     } else {
       // Kullanici karari (3 Eylul 2026): kampanya Excel'indeki "Ürün Komisyon
       // Tarifesi" sutunu belirler.
-      //   Var -> Komisyon Tarifesi sayfasindaki 7 GUNLUK tarife komisyonu
-      //          (fiyatin girdigi kademe); bulunamazsa kategori komisyonu
+      //   Var -> Komisyon Tarifesi'nde BUGUN gecerli pencerenin komisyonu
+      //          (ilk 3 gun 3 gunluk, sonraki 4 gun 4 gunluk; fiyatin girdigi
+      //          kademe); bulunamazsa kategori komisyonu
       //   Yok -> dogrudan kategori komisyonu
       // Tarife sayfasindaki SECIM (selected_range) hesaba katilmaz; tarife
       // urunun kendi ozelligi.
       const tarifeVar = String(item.commission_tariff || '').trim().toLocaleLowerCase('tr') === 'var';
       if (tarifeVar && item.barcode && fiyat > 0) {
-        const yediGun = yediGunTarifeKomisyonu(priceRanges, {
+        const { oran } = tarifeKomisyonu(priceRanges, {
           barkod: item.barcode,
           platform: selectedPlatform,
           baslangic: managingCampaign?.start_date,
           bitis: managingCampaign?.end_date,
         }, fiyat);
-        if (yediGun) return yediGun;
+        if (oran) return oran;
       }
     }
     // yedek: kategori komisyonu (Komisyonlar tablosu)
@@ -873,6 +875,7 @@ export default function Campaigns() {
           <Button variant="outline" onClick={closeManager} className="mb-4">← Kampanyalara Dön</Button>
           <div className="mb-6">
             <h1 className="ph-title">Ürün Ekle — {getTypeLabel(managingCampaign.campaign_type)}</h1>
+            <AktifPencereSatiri ozet={aktifPencereOzeti(priceRanges, selectedPlatform)} />
             <p className="text-muted-foreground mt-1">{campaignTitle(managingCampaign)} · {safeDate(managingCampaign.start_date)} - {safeDate(managingCampaign.end_date)}</p>
           </div>
 

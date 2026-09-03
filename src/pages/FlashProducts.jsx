@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import AktifPencereSatiri from '@/components/AktifPencereSatiri';
 import { db } from '@/api/db';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Upload, Download, Filter, Check, AlertCircle, Info, Calendar as CalendarIcon, Trash2, Sparkles } from 'lucide-react';
@@ -17,7 +18,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { toast } from 'sonner';
 import * as XLSX from 'xlsx';
 import { kayitlariTeklestir } from '@/lib/kayitTeklestirme';
-import { yediGunTarifeKomisyonu } from '@/lib/tarifeKaydiSecimi';
+import { tarifeKomisyonu, aktifPencereOzeti } from '@/lib/tarifeKaydiSecimi';
 import { sayiyaCevirVeya } from '@/lib/turkceSayi';
 import { unzipSync, zipSync } from 'fflate';
 import { hucreleriYaz, baslikHaritasi, paylasilanMetinler, sayfaXmlYolu, sutunDegerleri } from '@/lib/xlsxYerindeYaz';
@@ -517,8 +518,10 @@ export default function FlashProducts() {
     // Onceki surum ilk buldugu kaydi aliyordu ve TARIH suzgeci yoktu:
     // KPBŞ1'in dort kaydi var, biri Temmuz'dan kalma ve komisyonlari 0.
     // O kayit secilirse kar oldugundan cok yuksek gorunuyordu.
+    // BUGUN gecerli pencerenin orani: ilk 3 gun 3 gunluk, sonraki 4 gun
+    // 4 gunluk (kullanici karari, 4 Eylul 2026).
     if (item.has_commission_tariff === 'Var' && price > 0 && item.barcode) {
-      const oran = yediGunTarifeKomisyonu(trendyolPriceRanges, {
+      const { oran } = tarifeKomisyonu(trendyolPriceRanges, {
         barkod: item.barcode,
         platform: selectedPlatform,
         baslangic: item.start_date,
@@ -1153,6 +1156,7 @@ export default function FlashProducts() {
       <div className="ph-page mx-auto">
         <div className="mb-8">
           <h1 className="ph-title">Flaş Ürünler</h1>
+          <AktifPencereSatiri ozet={aktifPencereOzeti(trendyolPriceRanges, selectedPlatform)} />
           <p className="text-muted-foreground mt-1">Flaş ürün fiyatlarını yükleyip kârlılık analizi yapın</p>
         </div>
 
