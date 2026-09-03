@@ -722,12 +722,17 @@ Kaynak: Trendyol Partner → Promosyonlar → Katılabileceğim Kampanyalar
 ### Ortak alanlar
 - **Trendyol Karşılamalı (%)** — indirimin bu payı Trendyol'dan çıkar.
   Satıcı fiyatı = fiyat − indirim × (1 − karşılama/100).
-- **Komisyon matrahı = müşterinin ödediği indirimli fiyat** (Trendyol
-  teyidi, 4 Eyl 2026: "komisyon kampanyalı satış fiyatı üzerinden; 100 TL →
-  90 TL, %20 → 18 TL"). Karşılamalı kampanyada satıcıya kalan tutar
-  müşterininkinden yüksektir; motor komisyonu verilen fiyattan hesapladığı
-  için oran `müşteriFiyatı / satıcıFiyatı` ile ölçeklenir (`musteriFiyati`,
-  Campaigns `calculateProfit`). Karşılama yoksa fark yok.
+- **Komisyon matrahı = KOMİSYONA ESAS FİYAT = liste fiyatı − yalnızca
+  satıcının karşıladığı indirim** (Satıcı Bilgi Merkezi, Plus Komisyon
+  Tarifeleri, 4 Eyl 2026; örnek: 100 TL, 20 TL indirimin yarısı Trendyol →
+  esas fiyat 90, komisyon %19). Trendyol'un karşıladığı pay matrahtan
+  düşülmez. Tarife kademesi de esas fiyata göre bulunur. Bu, satıcıya
+  kalan tutardır (`kampanyaFiyati` → `effPrice`); Campaigns
+  `calculateProfit` motora bunu verir. Karşılama yoksa müşterinin ödediği
+  fiyatla aynıdır ("Komisyon Tutarı Hesaplama" dokümanındaki 100 → 90 →
+  18 TL örneği de bu duruma girer).
+  > Önceki gün yapay zekâ asistanının "müşterinin ödediği fiyat" cevabına
+  > göre oran ölçeklenmişti; resmi doküman daha spesifik, geri alındı.
 - **Fiyat Kuralı** (`price_rule_min/max`) — "100 TL ve üzeri ürünler",
   "10 TL ve 700 TL arası ürünler", "800 TL ve altı ürünler". Aralık dışındaki
   ürün kampanyaya giremez; **Akıllı Otomatik Seç** bunları atlar ve sayar.
@@ -808,6 +813,30 @@ ayrı dosya ve "Excel İndir" açılır menüsü kaldırıldı. Trendyol'un dosy
 Plus'ta 7 Gün seçildiğinde her iki `Hesaplanan Komisyon (N Gün)` sütunu da
 o pencerenin teklifiyle dolar. Gönderim defteri (aynı fiyatı ikinci kez
 göndermeme) pencere bazlıdır; 7 Gün için 3 ve 4'e de bakılır.
+
+### Trendyol teyitleri — Satıcı Bilgi Merkezi (4 Eyl 2026 gecesi okundu)
+Kaynaklar: `akademi.trendyol.com/satici-bilgi-merkezi/detay/…` — urun-komisyon-tarifeleri,
+plus-komisyon-tarifeleri, avantajli-urun-etiketleri, flas-urunler,
+trendyol-plus-kampanyalari, indirimlerin-uygulanma-sirasi, indirim,
+komisyon-tutari-hesaplama, trendyol-komisyonlari, iadelerde-komisyon,
+e-ticaret-stopaji, ticari-seviye. (Giriş gerektirir; kullanıcı izniyle
+Chrome'dan okundu.)
+
+| Kural | Kaynak | Sistem |
+|---|---|---|
+| 7 Günlük Fiyat: komisyon satış gününün penceresine göre (3 gün / 4 gün) | Ortak (yapay zekâ) + dosya formülü | uyumlu |
+| Tarife "katılım" değil: fiyat kademeye denk gelirse komisyon otomatik; Avantajlı/Flaş/Kampanya/İndirim fiyatları "geçerli fiyat"a etki eder | urun-komisyon-tarifeleri, avantajli | uyumlu |
+| Komisyona esas fiyat = liste − satıcının karşıladığı indirim; kademe ve komisyon buna göre | plus-komisyon-tarifeleri | uyumlu (düzeltildi) |
+| Plus tarifesi yalnızca Plus müşterilerin siparişlerinde; Plus'a özel fiyata Plus promosyonu uygulanmaz | plus-komisyon-tarifeleri, indirimlerin-uygulanma-sirasi | bilgi |
+| Plus tarifeleri her **Salı 08:00** yayınlanır (kullanıcı: Ürün tarifesi de) | plus-komisyon-tarifeleri | Salı 08:00 bildirimi |
+| Plus fiyatı TSF'den ve tarife fiyatından yüksek girilemez | plus-komisyon-tarifeleri | uyumlu (min tavan) |
+| Sepet indirimi ürünlere fiyat oranında dağıtılır (700/300 → 140/60); kısmi iadede o ürünün payı iade | indirim | uyumlu (`sepetPayi`) |
+| Aynı uygulanma sırasındaki indirimlerden en yükseği geçerli; net indirim kampanyayla birlikte | indirimlerin-uygulanma-sirasi | bilgi |
+| Komisyon oranları KDV **dahil** | trendyol-komisyonlari | uyumlu |
+| Karşılama oranı olmayan Plus kampanyasında indirimin tamamı satıcıdan | trendyol-plus-kampanyalari | uyumlu (karşılama 0) |
+| E-ticaret stopajı %1, KDV hariç matrah | e-ticaret-stopaji | uyumlu |
+| Fiyat kademeye girmezse kategori komisyonu | Ortak | uyumlu |
+| Tarife bitince ne olur / yeni hafta seçimi taşınır mı / Komisyona Esas Fiyat tanımı / buybox-minimum fiyat / "Maksimum Girebileceğin Fiyat" | **dokümanda yok** | varsayım: bitince kategori; her hafta sıfırdan |
 
 ## 8. Excel içe/dışa aktarma
 

@@ -468,15 +468,16 @@ export default function Campaigns() {
       const platform = uniquePlatforms.find(p => p.name === selectedPlatform);
       if (!platform) return { profit: 0, profitRate: 0, breakdown: null };
 
-      const commissionRate = getProductCommissionRate(item, parseFloat(campaignPrice) || 0);
-      // Trendyol teyidi (4 Eylul 2026): komisyon MUSTERININ ODEDIGI indirimli
-      // fiyattan kesilir. Trendyol karsilamali kampanyada saticiya kalan
-      // (effPrice) musterinin odediginden yuksektir; motor komisyonu verdigi
-      // fiyattan hesapladigi icin oran, matrah farkina gore olceklenir:
-      //   komisyon = oran x musteriFiyati = (oran x musteri/effPrice) x effPrice
+      // KOMISYONA ESAS FIYAT (Satici Bilgi Merkezi, Plus Komisyon Tarifeleri,
+      // 4 Eylul 2026): "komisyon orani komisyona esas fiyat uzerinden
+      // hesaplanir; bu fiyat YALNIZCA SATICININ KARSILADIGI indirimlerin
+      // dusulmesiyle belirlenir" (ornek: 100 TL, 20 TL indirimin yarisi
+      // Trendyol'dan -> esas fiyat 90). Yani matrah = effPrice (satici net
+      // fiyati), musterinin odedigi fiyat DEGIL. Tarife kademesi de bu
+      // fiyata gore bulunur. Karsilama yoksa ikisi aynidir.
+      const komisyonaEsasFiyat = effPrice;
+      const commissionRate = getProductCommissionRate(item, komisyonaEsasFiyat);
       const musteriFiyat = musteriFiyati(campaignPrice, aktifKampanya);
-      const matrahOrani = effPrice > 0 && musteriFiyat > 0 ? Math.min(1, musteriFiyat / effPrice) : 1;
-      const motorKomisyonOrani = (parseFloat(commissionRate) || 0) * matrahOrani;
 
       const platformShippingRates = shippingRates.filter(r =>
         r.is_active !== false && (r.platform_id === platform.id || r.platform_type === platform.platform_type)
@@ -536,7 +537,7 @@ export default function Campaigns() {
         productVatRate: parseFloat(matchedProduct.vat_rate) || 20,
         shippingCost: parseFloat(shippingCost) || 0,
         shippingVatRate: parseFloat(shippingVatRate) || 20,
-        commissionRate: motorKomisyonOrani,
+        commissionRate: parseFloat(commissionRate) || 0,
         commissionVatRate: 20,
         platform,
         baremUsed,
