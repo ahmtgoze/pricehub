@@ -327,7 +327,8 @@ export default function ProductModal({
         : results.map(p => (
           <button key={p.id} type="button" onClick={() => onSelect(p)}
             className="w-full text-left px-3 py-2.5 text-sm hover:bg-secondary border-b border-border last:border-0 flex items-center justify-between gap-2">
-            <span className="text-foreground truncate">{p.name}</span>
+            {/* Uzun urun adlari kesilmesin; alt satira kayip tamami gorunsun */}
+            <span className="text-foreground break-words">{p.name}</span>
             <span className="text-xs text-foreground shrink-0 font-medium">Ekle</span>
           </button>
         ))
@@ -337,7 +338,7 @@ export default function ProductModal({
 
   const Tag = ({ label, onRemove }) => (
     <div className="inline-flex items-center gap-1.5 bg-secondary border border-border rounded-md px-2 py-1 text-xs text-muted-foreground max-w-full">
-      <span className="truncate max-w-[200px]">{label}</span>
+      <span className="break-words">{label}</span>
       <button type="button" onClick={onRemove} className="text-muted-foreground/70 hover:text-muted-foreground shrink-0 text-base leading-none">×</button>
     </div>
   );
@@ -431,8 +432,9 @@ export default function ProductModal({
                 </div>
                 <div className="p-4 space-y-4">
                   {refProduct ? (
-                    <div className="flex items-center gap-2 p-2.5 bg-secondary border border-border rounded-lg text-sm">
-                      <span className="font-medium text-foreground flex-1 truncate">{refProduct.name}</span>
+                    <div className="flex items-start gap-2 p-2.5 bg-secondary border border-border rounded-lg text-sm">
+                      {/* Adin tamami gorunsun; kesmek yerine alt satira kaydiriliyor */}
+                      <span className="font-medium text-foreground flex-1 break-words">{refProduct.name}</span>
                       <span className="text-muted-foreground shrink-0">₺{parseFloat(refProduct.cost).toFixed(2)}</span>
                     </div>
                   ) : (
@@ -513,8 +515,8 @@ export default function ProductModal({
                 </div>
                 <div className="p-4 space-y-4">
                   {refProductSize ? (
-                    <div className="flex items-center gap-2 p-2.5 bg-secondary border border-border rounded-lg text-sm">
-                      <span className="font-medium text-foreground flex-1 truncate">{refProductSize.name}</span>
+                    <div className="flex items-start gap-2 p-2.5 bg-secondary border border-border rounded-lg text-sm">
+                      <span className="font-medium text-foreground flex-1 break-words">{refProductSize.name}</span>
                       <span className="text-muted-foreground shrink-0">₺{parseFloat(refProductSize.cost).toFixed(2)}</span>
                     </div>
                   ) : (
