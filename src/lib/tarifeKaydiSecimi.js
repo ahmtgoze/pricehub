@@ -95,28 +95,47 @@ export function pencereTarihleri(pencereler, kayitBaslangici) {
   return harita;
 }
 
+/** Kaydin pencerelerini baslangica gore sirali liste olarak verir. */
+function pencereListesi(kayit) {
+  const h = kayit?.pencere_tarihleri;
+  if (!h || typeof h !== 'object') return [];
+  return Object.entries(h)
+    .map(([ad, p]) => ({ ad, bas: gun(p?.baslangic), bit: gun(p?.bitis) }))
+    .filter((p) => p.bas !== null && p.bit !== null)
+    .sort((a, b) => a.bas - b.bas);
+}
+
+/**
+ * Tarife donemi bitti mi? (son pencerenin bitisi gecmis)
+ * Kullanici (4 Eylul): "once 3, sonra 4, sonra bitiyor; yeni Excel
+ * tekrardan sifirdan." Bitince tarife komisyonu UYGULANMAZ; yeni dosya
+ * yuklenene kadar kategori komisyonuna donulur.
+ * Pencere tarihi olmayan (eski) kayit icin false.
+ */
+export function tarifeBittiMi(kayit, an = new Date()) {
+  const liste = pencereListesi(kayit);
+  const t = gun(an);
+  if (liste.length === 0 || t === null) return false;
+  return t > liste[liste.length - 1].bit;
+}
+
 /**
  * Verilen anda hangi pencere gecerli?
- * Hicbiri kapsamiyorsa: an tum pencerelerden onceyse ILK, sonraysa SON
- * pencere (kullanici pencere degisiminden az once/sonra da calisabilir).
+ *   pencerenin icinde            -> o pencere
+ *   tum pencerelerden ONCE       -> ilk pencere (hazirlik)
+ *   son pencere BITMIS           -> null (tarife bitti, bkz. tarifeBittiMi)
  * Kayitta pencere tarihi yoksa null.
  *
  * @returns pencere adi veya null
  */
 export function aktifPencere(kayit, an = new Date()) {
-  const h = kayit?.pencere_tarihleri;
-  if (!h || typeof h !== 'object') return null;
+  const liste = pencereListesi(kayit);
   const t = gun(an);
-  if (t === null) return null;
-  const liste = Object.entries(h)
-    .map(([ad, p]) => ({ ad, bas: gun(p?.baslangic), bit: gun(p?.bitis) }))
-    .filter((p) => p.bas !== null && p.bit !== null)
-    .sort((a, b) => a.bas - b.bas);
-  if (liste.length === 0) return null;
+  if (liste.length === 0 || t === null) return null;
   const icinde = liste.find((p) => t >= p.bas && t <= p.bit);
   if (icinde) return icinde.ad;
   if (t < liste[0].bas) return liste[0].ad;
-  return liste[liste.length - 1].ad;
+  return null;
 }
 
 /* ------------------------------------------------------------------ *
@@ -204,6 +223,9 @@ export function tarifeKomisyonu(kayitlar, olcut, fiyat) {
   const zaman = (k) => gun(k?.updated_date || k?.created_at) ?? 0;
   const sirali = [...ortusenler].sort((a, b) => zaman(b) - zaman(a));
   for (const k of sirali) {
+    // Donemi bitmis tarife uygulanmaz (yeni dosya gelene kadar kategori
+    // komisyonu). Pencere tarihi olmayan eski kayitlar sutunlariyla calisir.
+    if (tarifeBittiMi(k, an)) continue;
     const pencere = aktifPencere(k, an);
     const oran = kademeKomisyonu(k, fiyat, pencere);
     if (oran !== null) return { oran, pencere, kayit: k };
@@ -213,20 +235,24 @@ export function tarifeKomisyonu(kayitlar, olcut, fiyat) {
 
 /**
  * Ekranda gostermek icin: platformdaki en guncel tarife kaydina gore su an
- * hangi pencere gecerli ve tarihleri ne?
- * @returns { pencere, baslangic, bitis } veya null
+ * hangi pencere gecerli ve tarihleri ne? Tarife bitmisse { bitti: true }.
+ * @returns { pencere, baslangic, bitis, bitti } veya null (tarife yok)
  */
 export function aktifPencereOzeti(kayitlar, platform, an = new Date()) {
   if (!Array.isArray(kayitlar)) return null;
   const zaman = (k) => gun(k?.updated_date || k?.created_at) ?? 0;
   const adaylar = kayitlar
-    .filter((k) => (!platform || k?.platform_account === platform) && k?.pencere_tarihleri && typeof k.pencere_tarihleri === 'object')
+    .filter((k) => (!platform || k?.platform_account === platform) && pencereListesi(k).length > 0)
     .sort((a, b) => zaman(b) - zaman(a));
+  if (adaylar.length === 0) return null;
   for (const k of adaylar) {
     const ad = aktifPencere(k, an);
     if (!ad) continue;
     const p = k.pencere_tarihleri[ad] || {};
-    return { pencere: ad, baslangic: p.baslangic || null, bitis: p.bitis || null };
+    return { pencere: ad, baslangic: p.baslangic || null, bitis: p.bitis || null, bitti: false };
   }
-  return null;
+  // Hicbir kayitta acik pencere yok: en guncel kaydin son penceresi bitmis
+  const liste = pencereListesi(adaylar[0]);
+  const son = liste[liste.length - 1];
+  return { pencere: null, baslangic: null, bitis: adaylar[0].pencere_tarihleri[son.ad]?.bitis || null, bitti: true };
 }

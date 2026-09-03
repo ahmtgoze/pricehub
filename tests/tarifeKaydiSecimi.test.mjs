@@ -1,6 +1,6 @@
 import {
   tarifeKaydiSec, kademeKomisyonu, kademeKomisyonlari, tarihlerOrtusuyorMu,
-  pencereTarihiCoz, pencereTarihleri, aktifPencere, tarifeKomisyonu, aktifPencereOzeti,
+  pencereTarihiCoz, pencereTarihleri, aktifPencere, tarifeBittiMi, tarifeKomisyonu, aktifPencereOzeti,
 } from '../src/lib/tarifeKaydiSecimi.js';
 
 let gecen = 0, kalan = 0;
@@ -52,7 +52,12 @@ console.log('\n=== AKTIF PENCERE ===');
   esit('4 Eylul 08:00 -> 4 Gün', aktifPencere(k, '2026-09-04T08:00:00+03:00'), '4 Gün');
   esit('6 Eylul -> 4 Gün', aktifPencere(k, '2026-09-06T10:00:00+03:00'), '4 Gün');
   esit('pencereden once -> ilk', aktifPencere(k, '2026-08-30T10:00:00+03:00'), '3 Gün');
-  esit('pencereden sonra -> son', aktifPencere(k, '2026-09-09T10:00:00+03:00'), '4 Gün');
+  esit('pencereden sonra -> null (tarife bitti)', aktifPencere(k, '2026-09-09T10:00:00+03:00'), null);
+  esit('8 Eylul 07:59 -> hala 4 Gün', aktifPencere(k, '2026-09-08T07:59:00+03:00'), '4 Gün');
+  esit('8 Eylul 08:00 -> bitti', aktifPencere(k, '2026-09-08T08:00:00+03:00'), null);
+  esit('tarifeBittiMi: 6 Eylul hayir', tarifeBittiMi(k, '2026-09-06'), false);
+  esit('tarifeBittiMi: 9 Eylul evet', tarifeBittiMi(k, '2026-09-09'), true);
+  esit('tarifeBittiMi: eski kayit hayir', tarifeBittiMi(kayit({ pencere_tarihleri: null }), '2026-09-09'), false);
   esit('tarih yok -> null', aktifPencere(kayit({ pencere_tarihleri: null }), '2026-09-02'), null);
   esit('bos harita -> null', aktifPencere(kayit({ pencere_tarihleri: {} }), '2026-09-02'), null);
   esit('gecersiz an', aktifPencere(k, 'dun'), null);
@@ -95,6 +100,9 @@ console.log('\n=== TARIFE KOMISYONU: O GUN GECERLI PENCERE ===');
   const yeniKayit = kayit({ updated_date: '2026-09-02T08:00:00Z' });
   esit('en guncel kayit', tarifeKomisyonu([eskiKayit, yeniKayit, temmuz, haziran], { ...OLCUT, an: '2026-09-06' }, 488.17).oran, 16.6);
   esit('fiyat kademeye girmezse', tarifeKomisyonu([k], OLCUT, 0).oran, null);
+  // Tarife bitti: kategori komisyonuna donulsun diye null
+  esit('tarife bitince tarife uygulanmaz', tarifeKomisyonu([k], { ...OLCUT, bitis: '2026-09-30', an: '2026-09-09T10:00:00+03:00' }, 488.17).oran, null);
+  esit('pencereden once ilk pencere', tarifeKomisyonu([k], { ...OLCUT, baslangic: '2026-08-30', an: '2026-08-31T10:00:00+03:00' }, 488.17), { oran: 19.3, pencere: '3 Gün', kayit: k });
   esit('kayit yok', tarifeKomisyonu([], OLCUT, 488.17).oran, null);
   esit('gecersiz girdi', tarifeKomisyonu(null, OLCUT, 100).oran, null);
   esit('barkodsuz', tarifeKomisyonu([k], {}, 100).oran, null);
@@ -115,7 +123,8 @@ console.log('\n=== TARIH SUZGECI / KAYIT SECIMI ===');
 console.log('\n=== EKRAN OZETI ===');
 {
   const k = kayit();
-  esit('6 Eylul', aktifPencereOzeti([k], 'Trendyol', '2026-09-06T12:00:00+03:00'), { pencere: '4 Gün', ...TARIHLER['4 Gün'] });
+  esit('6 Eylul', aktifPencereOzeti([k], 'Trendyol', '2026-09-06T12:00:00+03:00'), { pencere: '4 Gün', ...TARIHLER['4 Gün'], bitti: false });
+  esit('9 Eylul: bitti', aktifPencereOzeti([k], 'Trendyol', '2026-09-09T12:00:00+03:00'), { pencere: null, baslangic: null, bitis: TARIHLER['4 Gün'].bitis, bitti: true });
   esit('platform uyusmaz', aktifPencereOzeti([k], 'Hepsiburada', '2026-09-06'), null);
   esit('tarihsiz kayit', aktifPencereOzeti([kayit({ pencere_tarihleri: null })], 'Trendyol', '2026-09-06'), null);
   esit('bos', aktifPencereOzeti([], 'Trendyol'), null);

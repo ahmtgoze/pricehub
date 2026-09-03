@@ -756,7 +756,9 @@ tarihleri `pencere_tarihleri` olarak kayda yazılır (`pencereTarihiCoz`:
 "1 Eylül 08.00-4 Eylül 07.59" → ISO, yıl kaydın başlangıcından, +03:00).
 `tarifeKomisyonu(kayıtlar, {barkod, platform, başlangıç, bitiş, an}, fiyat)`
 dönemle örtüşen en güncel kaydı alır, `aktifPencere(kayıt, an)` ile o anın
-penceresini bulur (pencerelerden önceyse ilk, sonraysa son) ve
+penceresini bulur (pencerelerden önceyse ilk; **son pencere bitmişse tarife
+uygulanmaz**, `tarifeBittiMi` → kategori komisyonu — kullanıcı: "önce 3,
+sonra 4, sonra bitiyor, yeni Excel sıfırdan") ve
 `kademeKomisyonu(kayıt, fiyat, pencere)` ile kademenin o penceredeki oranını
 verir. Kademe **kampanyalı satış fiyatına** göre. Eski kayıtta pencere tarihi
 yoksa `commission_1..4` sütunları. Sayfa başlığının altında
@@ -766,7 +768,9 @@ yoksa `commission_1..4` sütunları. Sayfa başlığının altında
 `created_by = auth.email()`, INSERT yalnızca fonksiyonla). Saatlik pg_cron
 `tarife-pencere-bildirimi` → `tarife_pencere_bildirimi_uret()`: her pencere
 için iki bildirim — **önceki gün 17:00** ("yarın … geçiliyor") ve **pencere
-başladığında** ("… başladı, Excel'i şimdi yeniden indirip yükleyin").
+başladığında** ("… başladı, Excel'i şimdi yeniden indirip yükleyin"); ayrıca
+**son pencere bitince** üçüncüsü ("tarife dönemi bitti, yeni tarife Excel'ini
+yükleyin").
 Yalnızca `pencere_tarihleri` dolu tarife kaydı olan kullanıcılara gider
 (kullanıcı: "herkese gitmesin, sadece girdiyi yapanlara"). Aynı olay
 `anahtar` ile bir kez üretilir; 1 günden eski olaylar üretilmez. Zil
