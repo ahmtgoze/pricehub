@@ -201,10 +201,12 @@ export default function PlusProductCommissionTariff() {
         for (let i = 0; i < ikili.length; i++) baytlar[i] = ikili.charCodeAt(i) & 0xff;
         setOriginalExcelData({ workbook, sheetName, jsonData, baytlar });
 
-        // Excel'i dosya olarak yükle (URL sakla) — yenilemede kaybolmasın
-        const excelBuffer = XLSX.write(workbook, { type: 'array', bookType: 'xlsx', bookSST: true });
-        const excelBlob = new Blob([new Uint8Array(excelBuffer)], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-        const excelFileObj = new File([excelBlob], file.name || 'plus.xlsx', { type: excelBlob.type });
+        // Depoya ORIJINAL dosya gonderilir. Onceden SheetJS ile yeniden
+        // yazilmis kopya gidiyordu; formuller, dogrulama kurallari ve metin
+        // hucreleri kayboluyordu. Sayfa yeniden acilinca disa aktarim bu
+        // BOZUK kopyanin uzerine yaziyor ve Trendyol dosyayi reddediyordu
+        // (Plus dosyasinda 66 formul ve 3 dogrulama kurali kayipti).
+        const excelFileObj = file;
         let excelFileUrl = null;
         try {
           const uploadResult = await db.integrations.Core.UploadFile({ file: excelFileObj });
