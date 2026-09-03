@@ -671,81 +671,74 @@ export default function PlusProductCommissionTariff() {
     const toStr = dateRangeValue?.to ? format(dateRangeValue.to, 'd MMMM', { locale: tr }) : '';
 
     const dosyaUret = (tarife) => {
-      // DOSYA YENIDEN URETILMIYOR; yuklenen dosyanin uzerine yaziliyor.
-      const parcalar = unzipSync(originalExcelData.baytlar);
-      const yol = sayfaXmlYolu(parcalar);
-      if (!yol) throw new Error('Excel içinde sayfa bulunamadı');
+      // KABUL EDILEN SABLONUN BICIMI (Melontik ciktisi):
+      //   sharedStrings ile metin (t="s"), theme1.xml var, dataValidation ve
+      //   formul YOK — yani SheetJS'in bookSST ile yazdigi bicim.
+      // Yerinde yazma dogrulama kurallarini ve formulleri koruyordu; dosya
+      // yapisal olarak sablondan farkli kaliyor ve Trendyol reddediyordu.
+      // Bu yuzden burada dosya sablonla ayni sekilde YENIDEN YAZILIYOR.
+      const wb = XLSX.read(originalExcelData.baytlar, { type: 'array' });
+      // Sablonda olmayan tek parca: xl/metadata.xml. SheetJS kaynaktan
+      // tasiyor; sablonla birebir olsun diye dusuruluyor.
+      if (wb.Custprops) delete wb.Custprops;
+      delete wb.Metadata;
+      const sheetName = wb.SheetNames[0];
+      const ws = wb.Sheets[sheetName];
+      const range = XLSX.utils.decode_range(ws['!ref']);
 
-      const metneCevir = (b) => new TextDecoder().decode(b);
-      let sheet = metneCevir(parcalar[yol]);
-      const paylasilan = parcalar['xl/sharedStrings.xml']
-        ? paylasilanMetinler(metneCevir(parcalar['xl/sharedStrings.xml']))
-        : [];
-      const basliklar = baslikHaritasi(sheet, 1, paylasilan);
+      const sut = {};
+      for (let C = range.s.c; C <= range.e.c; C++) {
+        const h = ws[XLSX.utils.encode_cell({ r: range.s.r, c: C })]?.v;
+        if (h) sut[String(h).trim()] = C;
+      }
+      if (sut['Plus Fiyat Seçimi'] === undefined) {
+        throw new Error('Excelde "Plus Fiyat Seçimi" sütunu bulunamadı');
+      }
 
-      const secimSut = basliklar['Plus Fiyat Seçimi'];
-      const tarifeSut = basliklar['Tarife Seçimi'];
-      const iptalSut = basliklar['İptal'] || basliklar['Iptal'];
-      const barkodSut = basliklar['Barkod'];
-      const urunIdSut = basliklar['Ürün Id'];
-      if (!secimSut) throw new Error('Excelde "Plus Fiyat Seçimi" sütunu bulunamadı');
+      const yaz = (R, baslik, deger, tip) => {
+        const C = sut[baslik];
+        if (C === undefined) return;
+        const adres = XLSX.utils.encode_cell({ r: R, c: C });
+        if (deger === null || deger === undefined) delete ws[adres];
+        else ws[adres] = tip === 'n' ? { v: Number(deger), t: 'n' } : { v: String(deger), t: 's' };
+      };
+      const oku = (R, baslik) => {
+        const C = sut[baslik];
+        return C === undefined ? undefined : ws[XLSX.utils.encode_cell({ r: R, c: C })]?.v;
+      };
 
-      const barkodlar = barkodSut ? sutunDegerleri(sheet, barkodSut, paylasilan) : {};
-      const urunIdleri = urunIdSut ? sutunDegerleri(sheet, urunIdSut, paylasilan) : {};
-      const satirlar = new Set([...Object.keys(barkodlar), ...Object.keys(urunIdleri)].map(Number));
-
-      const degisiklikler = [];
       let yazilan = 0;
-
-      for (const satirNo of [...satirlar].sort((a, b) => a - b)) {
-        if (satirNo < 2) continue;
-        const barkod = barkodlar[satirNo];
-        const urunId = urunIdleri[satirNo];
+      for (let R = range.s.r + 1; R <= range.e.r; R++) {
+        const barkod = oku(R, 'Barkod');
+        const urunId = oku(R, 'Ürün Id');
         const item =
-          (barkod && veri.find((i) => String(i.barcode || '') === String(barkod))) ||
-          (urunId && veri.find((i) => String(i.product_id || '') === String(urunId)));
+          (barkod != null && veri.find((i) => String(i.barcode || '') === String(barkod))) ||
+          (urunId != null && veri.find((i) => String(i.product_id || '') === String(urunId)));
 
         const secim = item ? secimiOku(item, tarife) : { kademe: 'none', fiyat: 0 };
         const secili = secim.kademe !== 'none' && secim.fiyat > 0;
         if (secili) yazilan++;
 
-        // Kabul edilen ciktida (Melontik) secilmeyen satirlarda bu iki hucre
-        // HIC YOK, "İptal" ise BOS METIN olarak duruyor. Sutun basina farkli.
-        degisiklikler.push({ adres: `${secimSut}${satirNo}`, deger: secili ? secim.fiyat : null, tip: 'n' });
+        // Sablonda secilmeyen satirlarda bu iki hucre YOK, "İptal" BOS METIN
+        yaz(R, 'Plus Fiyat Seçimi', secili ? secim.fiyat : null, 'n');
+        yaz(R, 'Tarife Seçimi',
+            secili ? (item.plus_pencereleri?.[tarife]?.secimMetni || null) : null, 's');
+        yaz(R, 'İptal', secili ? 'Hayır' : '', 's');
 
-        // "Tarife Seçimi" metni DOSYADAN gelir; tarih araligi parantez icinde
-        // olmali ("4 Günlük Fiyat (4 Eylül 08.00-8 Eylül 07.59)").
-        if (tarifeSut) {
-          const metin = secili ? (item.plus_pencereleri?.[tarife]?.secimMetni || null) : null;
-          degisiklikler.push({ adres: `${tarifeSut}${satirNo}`, deger: metin, tip: 's' });
-        }
-        if (iptalSut) {
-          degisiklikler.push({ adres: `${iptalSut}${satirNo}`, deger: secili ? 'Hayır' : '', tip: 's' });
-        }
-
-        // "Hesaplanan Komisyon (N Gün)" — kabul edilen ciktida (Melontik)
-        // secilen pencerenin sutununa o pencerenin Plus komisyon teklifi
-        // yaziliyor, digeri "-" kaliyor. Onceki surum bu sutuna HIC
-        // dokunmuyordu: dosya "4 gunluk tarifeyi su fiyattan seciyorum"
-        // diyor ama hesaplanan komisyon bos kaliyordu ve Trendyol satiri
-        // reddediyordu.
-        //   ornek: TBE3 · 153,41 · "4 Günlük Fiyat (...)" -> 10,5
+        // Secilen pencerenin sutununa o pencerenin Plus komisyon teklifi,
+        // digerine "-" yazilir (sablondaki gibi)
         for (const pen of Object.keys(item?.plus_pencereleri || {})) {
-          const sut = basliklar[`Hesaplanan Komisyon (${pen})`];
-          if (!sut) continue;
           const oran = item.plus_pencereleri[pen]?.komisyon;
-          degisiklikler.push({
-            adres: `${sut}${satirNo}`,
-            deger: secili && pen === tarife && oran > 0 ? oran : '-',
-            tip: secili && pen === tarife && oran > 0 ? 'n' : 's',
-          });
+          const dolu = secili && pen === tarife && oran > 0;
+          yaz(R, `Hesaplanan Komisyon (${pen})`, dolu ? oran : '-', dolu ? 'n' : 's');
         }
       }
 
-      sheet = hucreleriYaz(sheet, degisiklikler);
-      parcalar[yol] = new TextEncoder().encode(sheet);
-
-      const blob = new Blob([zipSync(parcalar)], {
+      // bookSST: metinler sharedStrings'e yazilir (t="s"). Bu bayrak olmadan
+      // SheetJS t="str" (formul sonucu) uretiyor ve Trendyol dosyayi
+      // "Yüklenen excel formatı hatalıdır" diye reddediyor.
+      const buf = XLSX.write(wb, { type: 'array', bookType: 'xlsx', bookSST: true });
+      const blob = new Blob([new Uint8Array(buf)], {
         type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       });
       const url = URL.createObjectURL(blob);
