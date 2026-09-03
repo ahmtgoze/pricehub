@@ -691,6 +691,67 @@ yüzden dosyaya tarih sütunu **eklenmemelidir**.
 
 Kaynak: `src/lib/hbSepetDisaAktarim.js` (testleri: `tests/hbSepetDisaAktarim.test.mjs`)
 
+## 7d. Trendyol Kampanyalar — kampanya türleri ve komisyon
+
+Kaynak: Trendyol Partner → Promosyonlar → Katılabileceğim Kampanyalar
+(3 Eylül 2026 ekran kaydı). Fiyat modeli `src/lib/trendyolKampanyaIndirimi.js`
+(69 test), sayfa `src/pages/Campaigns.jsx`.
+
+### Kampanya grupları (yeşil başlık satırları)
+| Grup | Bizde | Not |
+|---|---|---|
+| Tüm Ülkeler | `all_countries` | |
+| Trendyol Plus — Ek İndirim | `trendyol_plus` | komisyon Plus Tarifesi'nden |
+| Özel Dönem (Okul İhtiyaçları vb.) | `ozel_donem` | |
+| Mikro İhracat | **yok** | kullanıcı kararı: en son yapılacak; ülke bazlı, komisyon/kargo modeli farklı |
+
+### İndirim türleri ("İndirim Detayı" satırı)
+| Trendyol metni | `discount_kind` | Satıcıya etkisi (birim, karşılama hariç) |
+|---|---|---|
+| Net %15 İndirim | `net_percent` | fiyat × %15 |
+| Sepette %40 İndirim | `cart_percent` | fiyat × %40 |
+| 500 TL'ye 100 TL İndirim | `cart_tl` | fiyat ≥ 500 ise 100 TL; değilse n = tavan(500/fiyat) adet gerekir, indirim 100/n |
+| 3 Al 2 Öde | `buy_x_pay_y` | fiyat × (3−2)/3 |
+| 2 Adet ve Üzeri %15 İndirim | `qty_percent` | fiyat × %15 (tüm adetler) |
+
+> `cart_tl`'de eşiğin altındaki ürün için indirim **adetlere bölünür**; bu en
+> kötü durumdur (müşteri eşiği başka ürünlerle doldurursa bizimkinden daha az
+> iner). Kâr en kötü duruma göre gösterilir.
+
+### Ortak alanlar
+- **Trendyol Karşılamalı (%)** — indirimin bu payı Trendyol'dan çıkar.
+  Satıcı fiyatı = fiyat − indirim × (1 − karşılama/100).
+- **Fiyat Kuralı** (`price_rule_min/max`) — "100 TL ve üzeri ürünler",
+  "10 TL ve 700 TL arası ürünler", "800 TL ve altı ürünler". Aralık dışındaki
+  ürün kampanyaya giremez; **Akıllı Otomatik Seç** bunları atlar ve sayar.
+- **Katılım Koşulu** (`participation_condition`: `buybox` | `min_price`) —
+  bilgi amaçlı; Trendyol'un Excel'indeki "girilebilecek max fiyat" bunu zaten
+  uygular, ayrıca hesaba katılmaz.
+- **Kampanya Adı** — isteğe bağlı; kartta grup adının yerine görünür.
+
+### Eski kayıt uyumu
+`discount_kind` eklenmeden önceki kampanyalar `discount_type` (percent | tl),
+`discount_amount`, `cart_amount`, `cart_condition` ile okunur
+(`kaydiKampanyayaCevir`): percent → `net_percent`; tl → `cart_tl`
+(sepet "üzeri" ise eşik); percent + sepet "altı/üzeri" → fiyat kuralı.
+Eski kampanyaların kâr hesabı **değişmez** (testle doğrulandı). Yeni kayıtta
+`cart_amount/cart_condition` boş bırakılır; `discount_type` uyum için
+doldurulur.
+
+### Komisyon kaynağı: 7 günlük tarife
+Kampanya, Avantajlı Ürün Etiketi ve Flaş Ürünler tüm döneme **tek fiyat**
+koyar; hafta boyunca hem 3 günlük hem 4 günlük pencerenin komisyonu işler.
+Bu yüzden komisyon, Komisyon Tarifesi kaydının `pencere_komisyonlari`
+haritasından **kademe bazında en yüksek** oran alınarak bulunur
+(`yediGunKademeKomisyonlari` → `kademeKomisyonu` → `enYuksekTarifeKomisyonu`,
+`src/lib/tarifeKaydiSecimi.js`). `commission_1..4` sütunları yalnızca
+kaydederken ekranda açık olan pencereyi taşır; harita yoksa (eski kayıt)
+sütunlar kullanılır. Kademe, **kampanyalı satış fiyatına** göre bulunur.
+
+Sıra (Kampanyalar, Plus dışı): 7 günlük tarife → tarife kaydındaki seçili
+kademe → kategori komisyonu (`commissions`). Plus kampanyaları Plus
+Tarifesi'nden okur; Plus'ta 7 günlük yok (kullanıcı inceleyecek).
+
 ## 8. Excel içe/dışa aktarma
 
 - Sütunlar **başlık adına göre** eşleştirilir; sıra önemli değildir

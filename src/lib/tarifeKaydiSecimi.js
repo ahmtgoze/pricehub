@@ -58,13 +58,40 @@ export function tarifeKaydiSec(kayitlar, olcut) {
 }
 
 /**
+ * 7 GUNLUK (BIRLESIK) KADEME KOMISYONLARI
+ *
+ * Komisyon Tarifesi sayfasi bir kayitta HER pencerenin komisyonunu saklar
+ * (`pencere_komisyonlari` = { "3 Gün": [k1..k4], "4 Gün": [k1..k4] });
+ * `commission_1..4` sutunlari ise yalnizca kaydedilirken EKRANDA ACIK olan
+ * pencereyi tasir. Avantajli Urun Etiketi, Flas Urunler ve Kampanyalar tum
+ * doneme TEK fiyat koyar; hafta boyunca iki pencerenin komisyonu da isler.
+ * Bu yuzden kademe bazinda EN YUKSEK oran alinir — "7 Günlük" mantigi.
+ *
+ * Harita yoksa (eski kayitlar) sutunlar oldugu gibi kullanilir.
+ *
+ * @returns [k1, k2, k3, k4]
+ */
+export function yediGunKademeKomisyonlari(kayit) {
+  const s = (v) => (Number.isFinite(Number(v)) ? Number(v) : 0);
+  const sutun = [s(kayit?.commission_1), s(kayit?.commission_2), s(kayit?.commission_3), s(kayit?.commission_4)];
+  const harita = kayit?.pencere_komisyonlari;
+  if (!harita || typeof harita !== 'object') return sutun;
+  const pencereler = Object.values(harita)
+    .filter((k) => Array.isArray(k) && k.length === 4 && k.some((x) => s(x) > 0));
+  if (pencereler.length === 0) return sutun;
+  return [0, 1, 2, 3].map((i) => Math.max(sutun[i], ...pencereler.map((k) => s(k[i]))));
+}
+
+/**
  * Fiyatin tarife kademelerinden hangisine girdigini bulup komisyonunu verir.
+ * Komisyon 7 gunluk (pencereler arasi en yuksek) degerdir.
  * @returns komisyon orani, veya bulunamazsa null
  */
 export function kademeKomisyonu(kayit, fiyat) {
   const f = Number(fiyat);
   if (!kayit || !Number.isFinite(f) || f <= 0) return null;
   const s = (v) => (Number.isFinite(Number(v)) ? Number(v) : null);
+  const [c1, c2, c3, c4] = yediGunKademeKomisyonlari(kayit);
 
   const k1min = s(kayit.price_range_1_min);
   const k2min = s(kayit.price_range_2_min), k2max = s(kayit.price_range_2_max);
@@ -72,10 +99,10 @@ export function kademeKomisyonu(kayit, fiyat) {
   const k4max = s(kayit.price_range_4_max);
 
   let komisyon = null;
-  if (k1min !== null && f >= k1min) komisyon = s(kayit.commission_1);
-  else if (k2min !== null && k2max !== null && f >= k2min && f <= k2max) komisyon = s(kayit.commission_2);
-  else if (k3min !== null && k3max !== null && f >= k3min && f <= k3max) komisyon = s(kayit.commission_3);
-  else if (k4max !== null && f <= k4max) komisyon = s(kayit.commission_4);
+  if (k1min !== null && f >= k1min) komisyon = c1;
+  else if (k2min !== null && k2max !== null && f >= k2min && f <= k2max) komisyon = c2;
+  else if (k3min !== null && k3max !== null && f >= k3min && f <= k3max) komisyon = c3;
+  else if (k4max !== null && f <= k4max) komisyon = c4;
 
   return komisyon !== null && komisyon > 0 ? komisyon : null;
 }
