@@ -25,7 +25,7 @@ import { unzipSync, zipSync } from 'fflate';
 import { hucreleriYaz, baslikHaritasi, paylasilanMetinler, sayfaXmlYolu, sutunDegerleri } from '@/lib/xlsxYerindeYaz';
 import { kademeFiyati, tarifeUstSiniri, sinirAsanlar } from '@/lib/trendyolTarifeKurali';
 import { yazilmaliMi, gonderimleriIsle, gonderilenFiyat } from '@/lib/trendyolGonderim';
-import { birlesikPencere, birlesikPencereEkle, pencereKomisyonlariniAl,
+import { pencereKomisyonlariniAl,
          komisyonHaritasi, pencereUygula, pencereAdlari, pencereDegistirilebilir,
          pencereyeGec, acikSecimiSakla, secimiOku, seciliPencereler, secimOzeti } from '@/lib/trendyolPencereSecimi';
 
@@ -220,28 +220,21 @@ export default function TrendyolPriceRange() {
         // Dosyadaki pencereler ilk satirdan cikarilir.
         const dosyaPencereleri = jsonData.length ? pencereleriBul(jsonData[0]) : [];
 
-        // "7 Günlük Fiyat" = HER IKI PENCERE BIRDEN. Dosyanin "Hesaplanan
-        // Komisyon" formulleri boyle: 3 gunluk sutunu "3 Günlük" VEYA
-        // "7 Günlük" secilirse, 4 gunluk sutunu "4 Günlük" VEYA "7 Günlük"
-        // secilirse hesaplar. 3+4=7; tek fiyat konur, her pencerede kendi
-        // orani isler. Komisyonu kademe bazinda EN YUKSEK olan alinir.
-        const birlesik = birlesikPencere(dosyaPencereleri);
-        const secenekler = birlesik
-          ? [...dosyaPencereleri, { ad: birlesik.ad, tarihAraligi: 'tüm dönem', sonek: null }]
-          : dosyaPencereleri;
-        setPencereler(secenekler);
-
-        // Varsayilan: birlesik pencere. Tek fiyatla tum hafta kapsanir.
-        const aktif = secenekler.find((x) => x.ad === secilenPencere)
-          || (birlesik ? secenekler[secenekler.length - 1] : secenekler[0])
+        // BU SAYFADA yalnizca dosyanin kendi pencereleri secilir (3 Gün,
+        // 4 Gün). Birlesik "7 Günlük Fiyat" burada KULLANILMAZ; o yalnizca
+        // Avantajli Urun Etiketi ve Flash Urunler sayfalarinda gecerli
+        // (kullanici karari).
+        setPencereler(dosyaPencereleri);
+        const aktif = dosyaPencereleri.find((x) => x.ad === secilenPencere)
+          || dosyaPencereleri[0]
           || { ad: '', sonek: '' };
         if (!secilenPencere && aktif.ad) setSecilenPencere(aktif.ad);
         const pencereAdi = aktif.ad;
 
         const parsed = jsonData.map(row => {
-          // Tum pencereler + birlesik pencere; aktif olanin komisyonlari
-          // haritadan okunur (birlesik pencerenin sonegi yok).
-          const harita = birlesikPencereEkle(komisyonHaritasi(row, dosyaPencereleri), dosyaPencereleri);
+          // Haritada YALNIZCA dosyanin gercek pencereleri var; birlesik
+          // pencere bu sayfada secilemedigi icin eklenmiyor.
+          const harita = komisyonHaritasi(row, dosyaPencereleri);
           const komisyonlar = pencereKomisyonlariniAl(harita, pencereAdi);
           const barcode = row['BARKOD'] || '';
           const marketplaceProduct = marketplaceProducts.find(mp => mp.platform_account === selectedPlatform && mp.barkod === barcode);

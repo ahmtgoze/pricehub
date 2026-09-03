@@ -16,6 +16,7 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import * as XLSX from 'xlsx';
+import { enYuksekTarifeKomisyonu } from '@/lib/tarifeKaydiSecimi';
 import BaremBadge from '@/components/ui/BaremBadge';
 import { baremSec, baremTavanFiyatlari, baremTarifesiSec } from '@/lib/baremKurali';
 import { gecerliMaliyet } from '@/lib/gecerliMaliyet';
@@ -453,31 +454,23 @@ export default function FlashProducts() {
   };
 
   const getCommissionRate = (item, price = null) => {
-    // Eğer "Var" ise: fiyatın hangi Ürün Komisyon Tarifesi aralığına girdiğini kontrol et, o aralığın komisyonunu al
-    if (item.has_commission_tariff === 'Var' && price && price > 0) {
-      const priceRange = trendyolPriceRanges.find(pr => 
-        pr.barcode === item.barcode && 
-        pr.platform_account === selectedPlatform
-      );
-
-      if (priceRange) {
-        let rangeCommission = 0;
-
-        // Fiyatın hangi aralığa girdiğini kontrol et
-        if (price >= (priceRange.price_range_1_min || 0) && price < (priceRange.price_range_2_min || Infinity)) {
-          rangeCommission = priceRange.commission_1 || 0;
-        } else if (price >= (priceRange.price_range_2_min || 0) && price <= (priceRange.price_range_2_max || Infinity)) {
-          rangeCommission = priceRange.commission_2 || 0;
-        } else if (price >= (priceRange.price_range_3_min || 0) && price <= (priceRange.price_range_3_max || Infinity)) {
-          rangeCommission = priceRange.commission_3 || 0;
-        } else if (price >= (priceRange.price_range_4_min || 0) && price <= (priceRange.price_range_4_max || Infinity)) {
-          rangeCommission = priceRange.commission_4 || 0;
-        }
-
-        if (rangeCommission > 0) {
-          return rangeCommission;
-        }
-      }
+    // Tarife "Var" ise komisyon, urunun tarife kademesinden gelir: fiyat
+    // hangi araliga duserse o aralikin orani. Bu sayfada pencere SECILMEZ;
+    // 7 GUNLUK tarife bazi kullanilir, yani hafta boyunca gecerli olan en
+    // yuksek oran (1-4 Eylul'de 3 gunlugun, 4-8 Eylul'de 4 gunlugun orani
+    // isler; dusugunu gostermek kari oldugundan yuksek gosterir).
+    //
+    // Onceki surum ilk buldugu kaydi aliyordu ve TARIH suzgeci yoktu:
+    // KPBŞ1'in dort kaydi var, biri Temmuz'dan kalma ve komisyonlari 0.
+    // O kayit secilirse kar oldugundan cok yuksek gorunuyordu.
+    if (item.has_commission_tariff === 'Var' && price > 0 && item.barcode) {
+      const oran = enYuksekTarifeKomisyonu(trendyolPriceRanges, {
+        barkod: item.barcode,
+        platform: selectedPlatform,
+        baslangic: item.start_date,
+        bitis: item.end_date,
+      }, price);
+      if (oran) return oran;
     }
     
     // "Yok" ise veya komisyon tarifesinde seçim yapılmamışsa sistem fiyatındaki komisyon oranını kullan
