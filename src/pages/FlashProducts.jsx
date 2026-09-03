@@ -973,7 +973,13 @@ export default function FlashProducts() {
     const fromStr = dateRangeValue?.from ? format(dateRangeValue.from, 'd MMMM', { locale: tr }) : '';
     const toStr = dateRangeValue?.to ? format(dateRangeValue.to, 'd MMMM', { locale: tr }) : '';
     const fileName = `flashurunler-${slugify(fromStr)}-${slugify(toStr)}.xlsx`;
-    XLSX.writeFile(workbook, fileName);
+    // bookSST ZORUNLU: bu bayrak olmadan SheetJS metin hucrelerini
+    // t="str" olarak yaziyor. OOXML'de t="str" FORMUL SONUCU demek, duz
+    // metin degil; Trendyol dosyayi "Yüklenen excel formatı hatalıdır"
+    // diye reddediyor (Urun Komisyon Tarifesi'nde tam bu yasandi).
+    // bookSST ile hucreler sharedStrings'e (t="s") yaziliyor — kabul
+    // edilen dosyanin bicimi budur.
+    XLSX.writeFile(workbook, fileName, { bookSST: true });
     toast.success('Excel dosyası indirildi');
   };
 
