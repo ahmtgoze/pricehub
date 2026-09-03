@@ -125,18 +125,27 @@ export function kademeKarsilastir(urun, kademeNo) {
  * adini parametre aliyor.
  * ------------------------------------------------------------------ */
 
-const BOS_SECIM = { kademe: 'none', fiyat: 0 };
+const BOS_SECIM = { kademe: 'none', fiyat: 0, manuel: 0 };
 
-/** Urunun verilen tarifedeki secimi. */
+/**
+ * Urunun verilen tarifedeki secimi.
+ *
+ * MANUEL FIYAT da pencereye aittir. Onceden manual_price pencereden bagimsiz
+ * tutuluyordu; 3 gunlukte girilen manuel fiyat 4 gunluk gorunumde "zaten
+ * secili/manuel" sayilip Akilli Sec'in o urunu atlamasina yol aciyordu.
+ */
 export function secimiOku(urun, pencereAdi) {
   const s = urun?.secimler?.[pencereAdi];
-  if (!s || !s.kademe || s.kademe === 'none') return { ...BOS_SECIM };
-  return { kademe: s.kademe, fiyat: Number(s.fiyat) || 0 };
+  if (!s) return { ...BOS_SECIM };
+  const manuel = Number(s.manuel) || 0;
+  if (!s.kademe || s.kademe === 'none') return { ...BOS_SECIM, manuel };
+  return { kademe: s.kademe, fiyat: Number(s.fiyat) || 0, manuel };
 }
 
-/** Urun bu tarifede secili mi? */
+/** Urun bu tarifede secili mi? (manuel fiyat da secim sayilir) */
 export function secimVarMi(urun, pencereAdi) {
-  return secimiOku(urun, pencereAdi).kademe !== 'none';
+  const s = secimiOku(urun, pencereAdi);
+  return s.kademe !== 'none' || s.manuel > 0;
 }
 
 /** Urunun secili oldugu tarifelerin adlari. */
@@ -153,9 +162,10 @@ export function seciliPencereler(urun) {
 export function acikSecimiSakla(urun, pencereAdi, alan = 'selected_range') {
   if (!urun || !pencereAdi) return urun;
   const kademe = urun[alan] || 'none';
+  const manuel = Number(urun.manual_price) || 0;
   const secimler = { ...(urun.secimler || {}) };
-  if (kademe === 'none') delete secimler[pencereAdi];
-  else secimler[pencereAdi] = { kademe, fiyat: Number(urun.selected_price) || 0 };
+  if (kademe === 'none' && manuel <= 0) delete secimler[pencereAdi];
+  else secimler[pencereAdi] = { kademe, fiyat: Number(urun.selected_price) || 0, manuel };
   return { ...urun, secimler };
 }
 
@@ -166,7 +176,13 @@ export function acikSecimiSakla(urun, pencereAdi, alan = 'selected_range') {
 export function secimiEkranaAl(urun, pencereAdi, alan = 'selected_range') {
   if (!urun) return urun;
   const s = secimiOku(urun, pencereAdi);
-  return { ...urun, [alan]: s.kademe, selected_price: s.fiyat, secim_penceresi: pencereAdi || null };
+  return {
+    ...urun,
+    [alan]: s.kademe,
+    selected_price: s.fiyat,
+    manual_price: s.manuel,
+    secim_penceresi: pencereAdi || null,
+  };
 }
 
 /** Once acik secimi saklar, sonra yeni tarifenin secimini ekrana alir. */

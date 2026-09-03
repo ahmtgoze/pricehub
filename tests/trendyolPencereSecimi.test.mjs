@@ -101,7 +101,7 @@ console.log('\n=== HER TARIFENIN KENDI SECIMI ===');
   // 3 gunlukte sec
   let u = { ...bos, selected_range: 'range_2', selected_price: 488.17 };
   u = acikSecimiSakla(u, '3 Gün');
-  esit('3 gunluk secim saklandi', secimiOku(u, '3 Gün'), { kademe: 'range_2', fiyat: 488.17 });
+  esit('3 gunluk secim saklandi', secimiOku(u, '3 Gün'), { kademe: 'range_2', fiyat: 488.17, manuel: 0 });
 
   // 4 gunluge gec: SIFIRDAN baslamali
   u = secimiEkranaAl(u, '4 Gün');
@@ -111,8 +111,8 @@ console.log('\n=== HER TARIFENIN KENDI SECIMI ===');
 
   // 4 gunlukte FARKLI kademe sec — 3 gunluge dokunmamali
   u = acikSecimiSakla({ ...u, selected_range: 'range_3', selected_price: 441.75 }, '4 Gün');
-  esit('4 gunluk secim', secimiOku(u, '4 Gün'), { kademe: 'range_3', fiyat: 441.75 });
-  esit('3 gunluk bozulmadi', secimiOku(u, '3 Gün'), { kademe: 'range_2', fiyat: 488.17 });
+  esit('4 gunluk secim', secimiOku(u, '4 Gün'), { kademe: 'range_3', fiyat: 441.75, manuel: 0 });
+  esit('3 gunluk bozulmadi', secimiOku(u, '3 Gün'), { kademe: 'range_2', fiyat: 488.17, manuel: 0 });
   esit('ayni urun iki tarifede de secili', seciliPencereler(u).sort(), ['3 Gün', '4 Gün']);
 
   // 3 gunluge geri don: kendi secimi geri gelmeli
@@ -123,7 +123,7 @@ console.log('\n=== HER TARIFENIN KENDI SECIMI ===');
 console.log('\n=== PENCEREYE GECIS ===');
 {
   const u = pencereyeGec({ selected_range: 'range_1', selected_price: 100 }, '3 Gün', '4 Gün');
-  esit('eski saklandi', secimiOku(u, '3 Gün'), { kademe: 'range_1', fiyat: 100 });
+  esit('eski saklandi', secimiOku(u, '3 Gün'), { kademe: 'range_1', fiyat: 100, manuel: 0 });
   esit('yeni bos', [u.selected_range, u.selected_price], ['none', 0]);
   esit('acik pencere yazildi', u.secim_penceresi, '4 Gün');
 
@@ -150,19 +150,41 @@ console.log('\n=== TARIFE BASINA SAYIM ===');
 }
 
 console.log('\n=== SECIM UC DURUMLARI ===');
-esit('secimsiz urun', secimiOku({}, '3 Gün'), { kademe: 'none', fiyat: 0 });
-esit('null urun', secimiOku(null, '3 Gün'), { kademe: 'none', fiyat: 0 });
+esit('secimsiz urun', secimiOku({}, '3 Gün'), { kademe: 'none', fiyat: 0, manuel: 0 });
+esit('null urun', secimiOku(null, '3 Gün'), { kademe: 'none', fiyat: 0, manuel: 0 });
 esit('kademe none ise secim yok', secimVarMi({ secimler: { '3 Gün': { kademe: 'none' } } }, '3 Gün'), false);
 esit('fiyat okunamazsa 0', secimiOku({ secimler: { '3 Gün': { kademe: 'range_1', fiyat: 'abc' } } }, '3 Gün').fiyat, 0);
 esit('secili pencere yok', seciliPencereler({}), []);
 esit('sakla — pencere adi yoksa', acikSecimiSakla({ a: 1 }, ''), { a: 1 });
+
+console.log('\n=== MANUEL FIYAT DA PENCEREYE AIT ===');
+{
+  // 3 gunlukte manuel fiyat girilir
+  let u = acikSecimiSakla({ selected_range: 'none', manual_price: 120 }, '3 Gün');
+  esit('manuel saklandi', secimiOku(u, '3 Gün').manuel, 120);
+  esit('manuel de secim sayilir', secimVarMi(u, '3 Gün'), true);
+
+  // 4 gunluge gecince manuel fiyat da SIFIRLANIR; yoksa Akilli Sec o urunu
+  // "zaten secili/manuel" diye atliyordu
+  u = secimiEkranaAl(u, '4 Gün');
+  esit('4 gunlukte manuel bos', u.manual_price, 0);
+  esit('4 gunlukte secim yok', secimVarMi(u, '4 Gün'), false);
+
+  // Geri donunce manuel fiyat aynen gelir
+  esit('geri donunce manuel gelir', secimiEkranaAl(u, '3 Gün').manual_price, 120);
+  esit('3 gunluk hala secili', secimVarMi(u, '3 Gün'), true);
+
+  // Ne kademe ne manuel varsa kutu bosaltilir
+  const bos = acikSecimiSakla({ selected_range: 'none', manual_price: 0, secimler: { '3 Gün': { kademe: 'range_1', fiyat: 5 } } }, '3 Gün');
+  esit('bos secim kutudan silinir', secimVarMi(bos, '3 Gün'), false);
+}
 
 console.log('\n=== ALAN ADI SAYFAYA GORE DEGISIR ===');
 {
   // Plus tarifesi "selected_type" kullaniyor
   let u = { selected_type: 'plus', selected_price: 184.48 };
   u = acikSecimiSakla(u, '3 Gün', 'selected_type');
-  esit('selected_type saklandi', secimiOku(u, '3 Gün'), { kademe: 'plus', fiyat: 184.48 });
+  esit('selected_type saklandi', secimiOku(u, '3 Gün'), { kademe: 'plus', fiyat: 184.48, manuel: 0 });
 
   u = secimiEkranaAl(u, '4 Gün', 'selected_type');
   esit('4 gunlukte bos', [u.selected_type, u.selected_price], ['none', 0]);
