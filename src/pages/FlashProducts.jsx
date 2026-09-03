@@ -162,9 +162,14 @@ export default function FlashProducts() {
              r.end_date === endDate
       );
 
-      // Ayni donemde birden fazla kayit varsa urun basina secimi olan
-      // tutulur; yoksa kayitli secimler sifirlanmis gibi gorunuyor.
-      const filtered = kayitlariTeklestir(eslesenler);
+      // Tekleştirme dosyanin KENDI anahtariyla ("Ürün Id") yapilir.
+      // Barkoda gore yapmak HATALIYDI: ayni urun farkli flas gunleri icin
+      // dosyada birden fazla satirda geciyor (40 satir = 20 urun x 2 gun) ve
+      // barkodla tekleştirmek iki teklifi tek satira indiriyordu — 8 secim
+      // 4'e dusuyordu. Ürün Id yoksa hic tekleştirilmez.
+      const filtered = eslesenler.some((r) => r.urun_id)
+        ? kayitlariTeklestir(eslesenler, 'urun_id')
+        : eslesenler;
       setUploadedData(filtered);
       
       // Load selections
@@ -295,10 +300,24 @@ export default function FlashProducts() {
             }
           }
 
-          const start24h = findColumnValue(row, ['24 saat başlangıç', '24h başlangıç']) ? format(new Date(findColumnValue(row, ['24 saat başlangıç', '24h başlangıç'])), 'yyyy-MM-dd') : '';
-          const end24h = findColumnValue(row, ['24 saat bitiş', '24h bitiş']) ? format(new Date(findColumnValue(row, ['24 saat bitiş', '24h bitiş'])), 'yyyy-MM-dd') : '';
-          const start3h = findColumnValue(row, ['3 saat başlangıç', '3h başlangıç']) ? format(new Date(findColumnValue(row, ['3 saat başlangıç', '3h başlangıç'])), 'yyyy-MM-dd') : '';
-          const end3h = findColumnValue(row, ['3 saat bitiş', '3h bitiş']) ? format(new Date(findColumnValue(row, ['3 saat bitiş', '3h bitiş'])), 'yyyy-MM-dd') : '';
+          // Gercek basliklar "24 Saat Flaş Başlangıç Tarihi" seklinde; arada
+          // "Flaş" oldugu icin eski anahtarlar ('24 saat başlangıç') includes
+          // ile HIC eslesmiyordu ve tarihler bos kaliyordu. Ayni urun farkli
+          // flas gunleri icin dosyada birden fazla satirda geciyor; tarih
+          // okunmadigi surece bu satirlar birbirinden ayirt edilemiyordu.
+          const tarihOku = (anahtarlar) => {
+            const ham = findColumnValue(row, anahtarlar);
+            if (!ham) return '';
+            // "04/09/2026 00:00" — gun/ay/yil
+            const m = String(ham).trim().match(/^(\d{1,2})[\/.](\d{1,2})[\/.](\d{4})/);
+            if (m) return `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}`;
+            const d = new Date(ham);
+            return Number.isFinite(d.getTime()) ? format(d, 'yyyy-MM-dd') : '';
+          };
+          const start24h = tarihOku(['24 saat flaş başlangıç', '24 saat başlangıç', '24h başlangıç']);
+          const end24h = tarihOku(['24 saat flaş bitiş', '24 saat bitiş', '24h bitiş']);
+          const start3h = tarihOku(['3 saat flaş başlangıç', '3 saat başlangıç', '3h başlangıç']);
+          const end3h = tarihOku(['3 saat flaş bitiş', '3 saat bitiş', '3h bitiş']);
 
           // Tarih aralığı kontrolü
           const isInRange24h = !start24h || !end24h || (start24h >= startDate && end24h <= endDate);
@@ -327,6 +346,10 @@ export default function FlashProducts() {
             master_product_id: masterProductId,
             commission_rate: commissionRate,
             has_commission_tariff: hasCommissionTariff,
+            // Dosyanin KENDI benzersiz anahtari. Ayni urun farkli flas
+            // gunleri icin birden fazla satirda geciyor; barkod tek basina
+            // satiri belirlemiyor.
+            urun_id: findColumnValue(row, ['ürün id', 'urun id', 'product id']) || '',
             category: category,
             barcode: barcode,
             selected_type: 'none',
