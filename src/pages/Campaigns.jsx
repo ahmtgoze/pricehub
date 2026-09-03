@@ -60,7 +60,9 @@ const YUZDELI = (tur) => tur === 'net_percent' || tur === 'cart_percent' || tur 
  *   okula-donus-...-1000-tl-uzeri-...  -> "İndirim Uygulanmadan Önceki Fiyat"
  * Ikisi de ayni sey: bizim girdigimiz fiyat; Trendyol indirimi ustune uygular.
  */
-const FIYAT_SUTUNU_ANAHTARLARI = ['kampanyalı satış', 'kampanyalı fiyat', 'indirim uygulanmadan'];
+// DIKKAT: "İndirim".toLowerCase() Turkce noktali İ'yi "i̇" (i + birlesik nokta)
+// yapar ve "indirim" ile ESLESMEZ; bu yuzden anahtar bas harfsiz yazildi.
+const FIYAT_SUTUNU_ANAHTARLARI = ['kampanyalı satış', 'kampanyalı fiyat', 'ndirim uygulanmadan'];
 
 const emptyForm = {
   campaign_type: '',
