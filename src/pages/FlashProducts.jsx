@@ -19,6 +19,8 @@ import * as XLSX from 'xlsx';
 import { kayitlariTeklestir } from '@/lib/kayitTeklestirme';
 import { enYuksekTarifeKomisyonu } from '@/lib/tarifeKaydiSecimi';
 import { sayiyaCevirVeya } from '@/lib/turkceSayi';
+import { unzipSync, zipSync } from 'fflate';
+import { hucreleriYaz, baslikHaritasi, paylasilanMetinler, sayfaXmlYolu, sutunDegerleri } from '@/lib/xlsxYerindeYaz';
 import BaremBadge from '@/components/ui/BaremBadge';
 import { baremSec, baremTavanFiyatlari, baremTarifesiSec } from '@/lib/baremKurali';
 import { gecerliMaliyet } from '@/lib/gecerliMaliyet';
@@ -181,9 +183,11 @@ export default function FlashProducts() {
         fetch(recordWithExcel.excel_file_url)
           .then(r => r.arrayBuffer())
           .then(ab => {
-            const wb = XLSX.read(new Uint8Array(ab), { type: 'array' });
+            const ham = new Uint8Array(ab);
+            const wb = XLSX.read(ham, { type: 'array' });
             const sn = wb.SheetNames[0];
-            setOriginalExcelData({ workbook: wb, sheetName: sn, jsonData: XLSX.utils.sheet_to_json(wb.Sheets[sn]) });
+            setOriginalExcelData({ workbook: wb, sheetName: sn, baytlar: ham,
+                                   jsonData: XLSX.utils.sheet_to_json(wb.Sheets[sn]) });
           })
           .catch(e => console.error('Excel restore hatası:', e));
       } else {
@@ -221,8 +225,13 @@ export default function FlashProducts() {
         const worksheet = workbook.Sheets[sheetName];
         const jsonData = XLSX.utils.sheet_to_json(worksheet);
         
-        // Orijinal Excel'i sakla
-        setOriginalExcelData({ workbook, sheetName, jsonData });
+        // Orijinal Excel'i sakla. "baytlar": disa aktarimda dosyanin
+        // uzerine yazmak icin ham hali gerekiyor; readAsBinaryString ikili
+        // DIZGI verir, fflate bayt bekler.
+        const ikili = event.target.result;
+        const baytlar = new Uint8Array(ikili.length);
+        for (let i = 0; i < ikili.length; i++) baytlar[i] = ikili.charCodeAt(i) & 0xff;
+        setOriginalExcelData({ workbook, sheetName, jsonData, baytlar });
 
         // Excel'i dosya olarak yükle (URL sakla) — sayfa yenilenince geri yüklensin
         const excelBuffer = XLSX.write(workbook, { type: 'array', bookType: 'xlsx' });
@@ -832,171 +841,103 @@ export default function FlashProducts() {
   };
 
   const handleExport = () => {
-    if (uploadedData.length === 0) {
-      toast.error('İndirilebilecek veri bulunamadı');
+    if (uploadedData.length === 0) { toast.error('İndirilebilecek veri bulunamadı'); return; }
+    if (!originalExcelData?.baytlar) {
+      toast.error('Excel yeniden okunamıyor. Lütfen dosyayı yeniden yükleyin.', { duration: 8000 });
       return;
     }
 
-    if (!originalExcelData) {
-      toast.error('Orijinal Excel dosyası bulunamadı');
-      return;
-    }
+    try {
+      // DOSYA YENIDEN URETILMIYOR. Onceki surum sayfayi aoa_to_sheet ile
+      // sifirdan kuruyor, izin listesinde olmayan sutunlari siliyor ve
+      // SheetJS ile yeniden yaziyordu. Tarife dosyasini bozan iki hata da
+      // buydu: silinen kimlik sutunlari ve t="str" hucreler. Artik yuklenen
+      // dosyanin zip'i acilip yalnizca gerekli hucreler degistiriliyor;
+      // stiller, dogrulama kurallari ve tarih bicimleri oldugu gibi kaliyor.
+      const parcalar = unzipSync(originalExcelData.baytlar);
+      const yol = sayfaXmlYolu(parcalar);
+      if (!yol) throw new Error('Excel içinde sayfa bulunamadı');
 
-    // İzin verilen sütunlar
-    const allowedColumns = [
-      'Model Kodu', 'Barkod', 'Ürün Adı', 'Kategori', 'Marka', 'Stok',
-      'Mevcut Fiyat', 'Müşterinin Gördüğü Fiyat', 'Mevcut Komisyon',
-      'Güncellenecek Fiyat', '24 Saat Fiyat', '3 Saat Fiyat',
-      'Senin Belirlediğin Flaş Fiyatı', '24 Saat Flaş Başlangıç Tarihi',
-      '24 Saat Flaş Bitiş Tarihi', '3 Saat Flaş Başlangıç Tarihi',
-      '3 Saat Flaş Bitiş Tarihi', 'Ürün Komisyon Tarife Seçeneği',
-      'Kampanyalı Ürün', 'Ürün Id'
-    ];
+      const metneCevir = (b) => new TextDecoder().decode(b);
+      let sheet = metneCevir(parcalar[yol]);
+      const paylasilan = parcalar['xl/sharedStrings.xml']
+        ? paylasilanMetinler(metneCevir(parcalar['xl/sharedStrings.xml']))
+        : [];
+      const basliklar = baslikHaritasi(sheet, 1, paylasilan);
 
-    // FRESH workbook kopyası oluştur (değişikliklerin birbirini etkilememesi için)
-    const { workbook: originalWorkbook, sheetName } = originalExcelData;
-    const workbook = XLSX.utils.book_new();
-    const originalSheet = originalWorkbook.Sheets[sheetName];
-    const worksheet = XLSX.utils.aoa_to_sheet(XLSX.utils.sheet_to_json(originalSheet, { header: 1 }));
-    workbook.SheetNames.push(sheetName);
-    workbook.Sheets[sheetName] = worksheet;
-    
-    const range = XLSX.utils.decode_range(worksheet['!ref']);
-
-    // Sütun mapping'i oluştur - hangi sütunlar tutulacak
-    const columnsToKeep = [];
-    for (let C = range.s.c; C <= range.e.c; C++) {
-      const headerAddress = XLSX.utils.encode_cell({ r: range.s.r, c: C });
-      const header = worksheet[headerAddress]?.v?.toString() || '';
-      if (allowedColumns.includes(header)) {
-        columnsToKeep.push(C);
+      const guncellenecekSut = basliklar['Güncellenecek Fiyat'];
+      const flasFiyatSut = basliklar['Senin Belirlediğin Flaş Fiyatı'];
+      const barkodSut = basliklar['Barkod'];
+      const adSut = basliklar['Ürün Adı'];
+      if (!guncellenecekSut) {
+        throw new Error('Excel başlıkları tanınmadı ("Güncellenecek Fiyat" sütunu yok)');
       }
-    }
 
-    // Fazladan sütunları sil
-    for (let R = range.s.r; R <= range.e.r; R++) {
-      for (let C = range.s.c; C <= range.e.c; C++) {
-        if (!columnsToKeep.includes(C)) {
-          const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
-          delete worksheet[cellAddress];
+      // Satir eslesmesi once BARKOD ile; ad ile eslestirmek kirilgan
+      // (bosluk/buyuk-kucuk harf farki, yeniden adlandirma).
+      const barkodlar = barkodSut ? sutunDegerleri(sheet, barkodSut, paylasilan) : {};
+      const adlar = adSut ? sutunDegerleri(sheet, adSut, paylasilan) : {};
+      const satirlar = new Set([...Object.keys(barkodlar), ...Object.keys(adlar)].map(Number));
+
+      const degisiklikler = [];
+      let yazilan = 0;
+
+      for (const satirNo of [...satirlar].sort((a, b) => a - b)) {
+        if (satirNo < 2) continue;
+        const barkod = barkodlar[satirNo];
+        const ad = adlar[satirNo];
+        const item =
+          (barkod && uploadedData.find((i) => String(i.barcode || '') === String(barkod))) ||
+          (ad && uploadedData.find((i) =>
+            (i.product_name || '').trim().toLowerCase() === String(ad).trim().toLowerCase()));
+
+        const tur = item?.selected_type;
+        const secili = !!item && !!tur && tur !== 'none';
+        if (secili) yazilan++;
+
+        // Trendyol'un kabul ettigi ciktida (Melontik) secilmeyen satirlar BOS
+        // birakiliyor; onceki surum "Hiçbiri" yaziyordu.
+        let deger = null;
+        if (secili) {
+          if (tur === 'flash_24h') deger = '24 Saat';
+          else if (tur === 'flash_3h') deger = '3 Saat';
+          else if (tur === 'manual') deger = 'Senin Belirlediğin Flaş Fiyatı';
         }
-      }
-    }
+        degisiklikler.push({ adres: `${guncellenecekSut}${satirNo}`, deger, tip: 's' });
 
-    // Her satırı güncelle
-    for (let R = range.s.r + 1; R <= range.e.r; R++) {
-      const row = {};
-      for (let C of columnsToKeep) {
-        const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
-        const cell = worksheet[cellAddress];
-        if (cell) {
-          const headerAddress = XLSX.utils.encode_cell({ r: range.s.r, c: C });
-          const header = worksheet[headerAddress]?.v;
-          if (header) {
-            row[header] = cell.v;
-          }
+        if (flasFiyatSut) {
+          const manuel = secili && tur === 'manual' && Number(item.manual_price) > 0
+            ? Number(item.manual_price)
+            : null;
+          degisiklikler.push({ adres: `${flasFiyatSut}${satirNo}`, deger: manuel, tip: 'n' });
         }
+
+        // Flas tarihleri, "Kampanyalı Ürün" ve tarife secenegi sutunlarina
+        // DOKUNULMUYOR; Trendyol bunlari kendi bicimiyle bekliyor.
       }
 
-      // Bu satıra karşılık gelen ürünü bul
-      const productNameKey = Object.keys(row).find(key => 
-        key.toLowerCase().includes('ürün') && key.toLowerCase().includes('adı')
-      );
-      const productName = productNameKey ? row[productNameKey] : '';
-      
-      // uploadedData'dan ürünü bul - trim ve case-insensitive match
-      const item = uploadedData.find(i => 
-        i.product_name?.trim().toLowerCase() === productName?.trim().toLowerCase()
-      );
-      
-      if (!item) {
-        console.log('✗ ÜRÜN BULUNAMADI:', productName);
-      }
+      sheet = hucreleriYaz(sheet, degisiklikler);
+      parcalar[yol] = new TextEncoder().encode(sheet);
 
-      if (item) {
-        console.log('✓ ÜRÜN BULUNDU:', productName);
-        console.log('  - selected_type:', item.selected_type);
-        console.log('  - manual_price:', item.manual_price);
-        console.log('  - manual_time_range:', item.manual_time_range);
-        
-        // Zaman aralığını belirle: manuel fiyat seçiliyse manual_time_range kullan, değilse selected_type
-        const timeRange = item.selected_type === 'manual' 
-          ? (item.manual_time_range || 'flash_3h')
-          : item.selected_type;
-        
-        // Sütunları güncelle
-        for (let C of columnsToKeep) {
-          const headerAddress = XLSX.utils.encode_cell({ r: range.s.r, c: C });
-          const header = worksheet[headerAddress]?.v?.toString() || '';
-          const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
+      const slugify = (str) => str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+      const fromStr = dateRangeValue?.from ? format(dateRangeValue.from, 'd MMMM', { locale: tr }) : '';
+      const toStr = dateRangeValue?.to ? format(dateRangeValue.to, 'd MMMM', { locale: tr }) : '';
+      const blob = new Blob([zipSync(parcalar)], {
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      });
+      const url = URL.createObjectURL(blob);
+      const baglanti = document.createElement('a');
+      baglanti.href = url;
+      baglanti.download = `flashurunler-${slugify(fromStr)}-${slugify(toStr)}.xlsx`;
+      document.body.appendChild(baglanti);
+      baglanti.click();
+      baglanti.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
 
-          // SADECE GÜNCELLENEBİLİR SÜTUNLAR
-          
-          // Güncellenecek Fiyat
-          if (header === 'Güncellenecek Fiyat') {
-            let guncellenecekFiyat = 'Hiçbiri';
-            
-            // Seçim yoksa 'Hiçbiri' (Trendyol boş satırı hatalı sayıyor; "Hiçbiri" = atla)
-            if (!item.selected_type || item.selected_type === 'none') {
-              guncellenecekFiyat = 'Hiçbiri';
-            } else if (item.selected_type === 'flash_24h') {
-              guncellenecekFiyat = '24 Saat';
-            } else if (item.selected_type === 'flash_3h') {
-              guncellenecekFiyat = '3 Saat';
-            } else if (item.selected_type === 'manual') {
-              guncellenecekFiyat = 'Senin Belirlediğin Flaş Fiyatı';
-            }
-            
-            console.log('  → Güncellenecek Fiyat:', guncellenecekFiyat);
-            worksheet[cellAddress] = { v: guncellenecekFiyat, t: 's' };
-          }
-
-          // Senin Belirlediğin Flaş Fiyatı
-          else if (header === 'Senin Belirlediğin Flaş Fiyatı') {
-            let value = '';
-            // Manuel seçildiyse ve manual_price varsa yaz
-            if (item.selected_type === 'manual' && item.manual_price && item.manual_price > 0) {
-              value = item.manual_price;
-            }
-            worksheet[cellAddress] = { v: value, t: value === '' ? 's' : 'n' };
-          }
-
-          // Flaş tarih sütunları: orijinal dosyadaki değerlere DOKUNULMAZ,
-          // aynen korunur (Trendyol bu tarihleri ve formatını bekliyor; üzerine
-          // yazılırsa boşalıyor ve hiçbir ürün güncellenmiyordu).
-
-          // Ürün Komisyon Tarife Seçeneği
-          else if (header === 'Ürün Komisyon Tarife Seçeneği') {
-            worksheet[cellAddress] = { v: item.has_commission_tariff || 'Yok', t: 's' };
-          }
-
-          // Kampanyalı Ürün - Değiştirilmez, orijinal değer korunur
-          // (Bu sütuna dokunulmaz)
-        }
-      }
+      toast.success(`Excel indirildi — ${yazilan} ürün`);
+    } catch (hata) {
+      toast.error('Excel oluşturulamadı: ' + (hata?.message || hata), { duration: 10000 });
     }
-
-    // Range'i güncelle
-    if (columnsToKeep.length > 0) {
-      const newRange = {
-        s: { r: range.s.r, c: Math.min(...columnsToKeep) },
-        e: { r: range.e.r, c: Math.max(...columnsToKeep) }
-      };
-      worksheet['!ref'] = XLSX.utils.encode_range(newRange);
-    }
-
-    const slugify = (str) => str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
-    const fromStr = dateRangeValue?.from ? format(dateRangeValue.from, 'd MMMM', { locale: tr }) : '';
-    const toStr = dateRangeValue?.to ? format(dateRangeValue.to, 'd MMMM', { locale: tr }) : '';
-    const fileName = `flashurunler-${slugify(fromStr)}-${slugify(toStr)}.xlsx`;
-    // bookSST ZORUNLU: bu bayrak olmadan SheetJS metin hucrelerini
-    // t="str" olarak yaziyor. OOXML'de t="str" FORMUL SONUCU demek, duz
-    // metin degil; Trendyol dosyayi "Yüklenen excel formatı hatalıdır"
-    // diye reddediyor (Urun Komisyon Tarifesi'nde tam bu yasandi).
-    // bookSST ile hucreler sharedStrings'e (t="s") yaziliyor — kabul
-    // edilen dosyanin bicimi budur.
-    XLSX.writeFile(workbook, fileName, { bookSST: true });
-    toast.success('Excel dosyası indirildi');
   };
 
   const filteredData = uploadedData
