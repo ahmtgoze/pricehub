@@ -23,6 +23,7 @@ import { gecerliMaliyet } from '@/lib/gecerliMaliyet';
 import { pencereleriBul, pencereKomisyonlari, tarifeSecimDegeri } from '@/lib/trendyolTarifePenceresi';
 import { unzipSync, zipSync } from 'fflate';
 import { hucreleriYaz, baslikHaritasi, paylasilanMetinler, sayfaXmlYolu, sutunDegerleri } from '@/lib/xlsxYerindeYaz';
+import { kademeFiyati, tarifeUstSiniri, sinirAsanlar } from '@/lib/trendyolTarifeKurali';
 import { komisyonHaritasi, pencereUygula, pencereAdlari, pencereDegistirilebilir,
          pencereyeGec, acikSecimiSakla, secimiOku, seciliPencereler, secimOzeti } from '@/lib/trendyolPencereSecimi';
 
@@ -465,6 +466,17 @@ export default function TrendyolPriceRange() {
     });
   };
 
+  // Bir kademeye yazilabilecek fiyat. Kademe bir ARALIK oldugu icin tavan
+  // fiyat kullanilir, ama fiyat "KOMİSYONA ESAS FİYAT"i gecemez: geciyorsa
+  // tavan oraya cekilir, kademe (ve komisyon) ayni kalir. Cekilen fiyat
+  // kademenin alt sinirinin altina duserse o kademe kullanilamaz.
+  const kademeninFiyati = (item, rangeNum) => {
+    const ilk = rangeNum === 1;
+    const ham = ilk ? item?.price_range_1_min : item?.[`price_range_${rangeNum}_max`];
+    const altSinir = ilk ? 0 : item?.[`price_range_${rangeNum}_min`];
+    return kademeFiyati(ham, altSinir, item?.current_base_price, ilk);
+  };
+
   const handlePriceSelect = (index, rangeType, price) => {
     const updated = [...uploadedData];
     if (updated[index].selected_range === rangeType) {
@@ -563,10 +575,8 @@ export default function TrendyolPriceRange() {
 
       const systemPrice = getSystemPrice(item);
       let price = 0, commissionRate = systemPrice?.commission_rate ?? 0;
-      if (bulkColumn === 'range_1') { price = item.price_range_1_min; }
-      else if (bulkColumn === 'range_2') { price = item.price_range_2_max; }
-      else if (bulkColumn === 'range_3') { price = item.price_range_3_max; }
-      else if (bulkColumn === 'range_4') { price = item.price_range_4_max; }
+      const kademeNo = Number(String(bulkColumn).replace('range_', ''));
+      price = kademeninFiyati(item, kademeNo) || 0;
 
       const { profit, profitRate } = calculateProfit(price, commissionRate, item);
       if (araliktaMi(profitRate, profit)) return { ...item, selected_range: bulkColumn, selected_price: price, secim_penceresi: secilenPencere || null };
@@ -672,12 +682,12 @@ export default function TrendyolPriceRange() {
 
       // Aralık 4'ten 1'e doğru dene (en uygun/en ucuz fiyattan başla),
       // hedefi karşılayan İLK aralıkta dur.
-      const ranges = [
-        { rangeNum: 4, price: item.price_range_4_max, commissionRate: commFor(4) },
-        { rangeNum: 3, price: item.price_range_3_max, commissionRate: commFor(3) },
-        { rangeNum: 2, price: item.price_range_2_max, commissionRate: commFor(2) },
-        { rangeNum: 1, price: item.price_range_1_min, commissionRate: commFor(1) },
-      ];
+      // Fiyatlar esas fiyata cekilmis haliyle degerlendirilir; yoksa Trendyol
+      // satiri reddediyor ve kar hesabi da gerceklesmeyen bir fiyata gore
+      // yapilmis oluyordu.
+      const ranges = [4, 3, 2, 1]
+        .map((n) => ({ rangeNum: n, price: kademeninFiyati(item, n), commissionRate: commFor(n) }))
+        .filter((r) => r.price !== null);
 
       for (const range of ranges) {
         if (!range.price || range.price <= 0) continue;
@@ -769,6 +779,18 @@ export default function TrendyolPriceRange() {
     // secilenler digerine iner; Trendyol'a ayri ayri yuklenebilsinler diye.
     // Acik tarifenin secimi henuz kutusuna yazilmamis olabilir; once katlanir.
     const veri = uploadedData.map((u) => acikSecimiSakla(u, secilenPencere));
+    // Eski kayitlardan gelen secimler esas fiyati asiyor olabilir; Trendyol
+    // bu satirlari reddediyor. Indirmeden once soyle.
+    const asanlar = sinirAsanlar(veri, (u) => secimiOku(u, u.secim_penceresi || secilenPencere).fiyat);
+    if (asanlar.length > 0) {
+      toast.error(
+        `${asanlar.length} üründe seçili fiyat komisyona esas fiyatı aşıyor; Trendyol bunları reddeder. ` +
+        `Örnek: ${asanlar[0].barkod} ₺${asanlar[0].fiyat.toFixed(2)} > ₺${asanlar[0].sinir.toFixed(2)}. ` +
+        'Bu ürünleri yeniden seçin.',
+        { duration: 12000 }
+      );
+    }
+
     const ozet = secimOzeti(veri);
     const pencereler = Object.keys(ozet)
       .filter((k) => k !== 'toplam')
@@ -1314,15 +1336,15 @@ export default function TrendyolPriceRange() {
                                 const maxPrice = item[`price_range_${rangeNum}_max`];
                                 const commission = item[`commission_${rangeNum}`] ?? 0;
 
-                               let priceToUse = 0;
-                               let headerLabel = '';
-                               if (rangeNum === 1) {
-                                 priceToUse = minPrice;
-                                 headerLabel = `₺${minPrice?.toFixed(2)} ve üzeri`;
-                               } else {
-                                 priceToUse = maxPrice;
-                                 headerLabel = `₺${maxPrice?.toFixed(2)} ve altı`;
-                               }
+                               const hamFiyat = rangeNum === 1 ? minPrice : maxPrice;
+                               const headerLabel = rangeNum === 1
+                                 ? `₺${hamFiyat?.toFixed(2)} ve üzeri`
+                                 : `₺${hamFiyat?.toFixed(2)} ve altı`;
+                               // Kademe tavani esas fiyata cekilir; asan fiyati Trendyol reddediyor
+                               const yazilabilir = kademeninFiyati(item, rangeNum);
+                               const priceToUse = yazilabilir || 0;
+                               const cekildi = yazilabilir !== null && hamFiyat > 0 && yazilabilir < hamFiyat;
+                               const ustSinir = tarifeUstSiniri(item);
 
                                const { profit, profitRate, baremUsed } = calculateProfit(priceToUse, commission, item);
                                const isProfitable = profit > 0;
@@ -1336,6 +1358,11 @@ export default function TrendyolPriceRange() {
                                       <div className="text-xs text-muted-foreground">
                                         Fiyat: ₺{rangeNum === 1 && systemPrice ? systemPrice.sale_price?.toFixed(2) : priceToUse.toFixed(2)}
                                       </div>
+                                      {cekildi && (
+                                        <div className="text-[10px] text-amber-700 dark:text-amber-400">
+                                          esas fiyat tavanı ₺{ustSinir?.toFixed(2)}
+                                        </div>
+                                      )}
                                       <div className="flex items-center justify-between gap-1">
                                         <span className="text-xs text-muted-foreground">Kom: %{commission}</span>
                                         <BaremBadge barem={baremUsed} />
@@ -1352,7 +1379,11 @@ export default function TrendyolPriceRange() {
                                         {isSelected ? 'Seçili' : 'Seç'}
                                       </Button>
                                     </div>
-                                  ) : <div className="text-center text-muted-foreground/70 text-xs">-</div>}
+                                  ) : (
+                                    <div className="text-center text-muted-foreground/70 text-xs">
+                                      {hamFiyat > 0 && ustSinir ? 'esas fiyatın üstünde' : '-'}
+                                    </div>
+                                  )}
                                 </td>
                               );
                             })}
