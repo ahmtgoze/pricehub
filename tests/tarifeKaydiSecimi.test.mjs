@@ -102,6 +102,15 @@ console.log('\n=== TARIFE KOMISYONU: O GUN GECERLI PENCERE ===');
   esit('fiyat kademeye girmezse', tarifeKomisyonu([k], OLCUT, 0).oran, null);
   // Tarife bitti: kategori komisyonuna donulsun diye null
   esit('tarife bitince tarife uygulanmaz', tarifeKomisyonu([k], { ...OLCUT, bitis: '2026-09-30', an: '2026-09-09T10:00:00+03:00' }, 488.17).oran, null);
+  // Bugun 2 Eylul (3 Gün) ama kampanya 5 Eylul'de basliyor -> 4 Gün orani
+  esit('ileride baslayan kampanya: baslangic gununun penceresi',
+    tarifeKomisyonu([k], { ...OLCUT, baslangic: '2026-09-05', bitis: '2026-09-07', an: '2026-09-02T12:00:00+03:00' }, 488.17).pencere, '4 Gün');
+  // Gelecek haftaki kampanya: bu haftanin tarifesi ortusmez -> null (kategori)
+  esit('gelecek hafta kampanya: bu haftanin tarifesi girmez',
+    tarifeKomisyonu([k], { ...OLCUT, baslangic: '2026-09-10', bitis: '2026-09-30', an: '2026-09-02' }, 488.17).oran, null);
+  // Baslamis kampanya: bugun gecerli pencere
+  esit('baslamis kampanya: bugunun penceresi',
+    tarifeKomisyonu([k], { ...OLCUT, baslangic: '2026-09-01', bitis: '2026-09-30', an: '2026-09-02T12:00:00+03:00' }, 488.17).pencere, '3 Gün');
   esit('pencereden once ilk pencere', tarifeKomisyonu([k], { ...OLCUT, baslangic: '2026-08-30', an: '2026-08-31T10:00:00+03:00' }, 488.17), { oran: 19.3, pencere: '3 Gün', kayit: k });
   esit('kayit yok', tarifeKomisyonu([], OLCUT, 488.17).oran, null);
   esit('gecersiz girdi', tarifeKomisyonu(null, OLCUT, 100).oran, null);

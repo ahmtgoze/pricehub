@@ -214,7 +214,13 @@ export function tarifeKomisyonu(kayitlar, olcut, fiyat) {
   const bos = { oran: null, pencere: null, kayit: null };
   if (!Array.isArray(kayitlar) || !olcut?.barkod) return bos;
   const { barkod, platform, baslangic, bitis } = olcut;
-  const an = olcut.an ?? new Date();
+  // Fiyat "an" icin konur; ama kampanya/etiket ILERIDE basliyorsa satis o
+  // gun olacak: pencere kampanyanin baslangic gunune gore secilir. Gecmiste
+  // baslamis kampanyada bugun gecerli (kullanici karari, 4 Eylul: "yaklasan
+  // kampanyaya bu haftanin tarifesi dahil edilemez").
+  let an = olcut.an ?? new Date();
+  const bas = gun(baslangic);
+  if (bas !== null && gun(an) !== null && bas > gun(an)) an = new Date(bas);
   const ortusenler = kayitlar.filter((k) =>
     String(k?.barcode ?? '') === String(barkod) &&
     (!platform || k?.platform_account === platform) &&
