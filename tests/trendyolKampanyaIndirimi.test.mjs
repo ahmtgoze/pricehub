@@ -1,5 +1,5 @@
 import {
-  musteriIndirimi, kampanyaFiyati, kampanyaFiyatiTersi, sepetPayi,
+  musteriIndirimi, musteriFiyati, kampanyaFiyati, kampanyaFiyatiTersi, sepetPayi,
   fiyatKuralinaUyuyorMu, kampanyaMetni, fiyatKuraliMetni, kaydiKampanyayaCevir,
   INDIRIM_TURLERI, KAMPANYA_GRUPLARI,
 } from '../src/lib/trendyolKampanyaIndirimi.js';
@@ -16,6 +16,10 @@ console.log('\n=== NET % INDIRIM ===');
   esit('musteri indirimi', musteriIndirimi(200, k), 30);
   esit('satici fiyati (karsilama yok)', kampanyaFiyati(200, k), 170);
   esit('%40 Trendyol karsilamali', kampanyaFiyati(200, { ...k, karsilama: 40 }), 182);
+  // Trendyol teyidi: komisyon musterinin odedigi fiyattan; karsilama musteri fiyatini degistirmez
+  esit('musteri fiyati karsilamadan bagimsiz', musteriFiyati(200, { ...k, karsilama: 40 }), 170);
+  esit('musteri fiyati karsilamasiz', musteriFiyati(200, k), 170);
+  esit('musteri fiyati kampanya yok', musteriFiyati(200, null), 200);
   esit('%100 karsilama -> fiyat degismez', kampanyaFiyati(200, { ...k, karsilama: 100 }), 200);
   esit('oran 0 -> fiyat degismez', kampanyaFiyati(200, { tur: 'net_percent', oran: 0 }), 200);
   esit('tersi', kampanyaFiyatiTersi(170, k), 200);

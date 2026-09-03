@@ -24,7 +24,7 @@ import { sayiyaCevirVeya } from '@/lib/turkceSayi';
 import { tarifeKomisyonu, aktifPencereOzeti } from '@/lib/tarifeKaydiSecimi';
 import {
   INDIRIM_TURLERI, KATILIM_KOSULLARI, KAMPANYA_GRUPLARI,
-  kampanyaFiyati, kampanyaFiyatiTersi, fiyatKuralinaUyuyorMu,
+  kampanyaFiyati, kampanyaFiyatiTersi, musteriFiyati, fiyatKuralinaUyuyorMu,
   kampanyaMetni, fiyatKuraliMetni, kaydiKampanyayaCevir,
 } from '@/lib/trendyolKampanyaIndirimi';
 
@@ -469,6 +469,14 @@ export default function Campaigns() {
       if (!platform) return { profit: 0, profitRate: 0, breakdown: null };
 
       const commissionRate = getProductCommissionRate(item, parseFloat(campaignPrice) || 0);
+      // Trendyol teyidi (4 Eylul 2026): komisyon MUSTERININ ODEDIGI indirimli
+      // fiyattan kesilir. Trendyol karsilamali kampanyada saticiya kalan
+      // (effPrice) musterinin odediginden yuksektir; motor komisyonu verdigi
+      // fiyattan hesapladigi icin oran, matrah farkina gore olceklenir:
+      //   komisyon = oran x musteriFiyati = (oran x musteri/effPrice) x effPrice
+      const musteriFiyat = musteriFiyati(campaignPrice, aktifKampanya);
+      const matrahOrani = effPrice > 0 && musteriFiyat > 0 ? Math.min(1, musteriFiyat / effPrice) : 1;
+      const motorKomisyonOrani = (parseFloat(commissionRate) || 0) * matrahOrani;
 
       const platformShippingRates = shippingRates.filter(r =>
         r.is_active !== false && (r.platform_id === platform.id || r.platform_type === platform.platform_type)
@@ -528,7 +536,7 @@ export default function Campaigns() {
         productVatRate: parseFloat(matchedProduct.vat_rate) || 20,
         shippingCost: parseFloat(shippingCost) || 0,
         shippingVatRate: parseFloat(shippingVatRate) || 20,
-        commissionRate: parseFloat(commissionRate) || 0,
+        commissionRate: motorKomisyonOrani,
         commissionVatRate: 20,
         platform,
         baremUsed,
@@ -542,7 +550,7 @@ export default function Campaigns() {
         profit: parseFloat(breakdown.netProfit) || 0,
         profitRate: parseFloat(breakdown.profitRate) || 0,
         breakdown, matchedProduct, platform, baremUsed,
-        commissionRate, effPrice,
+        commissionRate, effPrice, musteriFiyat,
       };
     } catch (e) {
       return { profit: 0, profitRate: 0, breakdown: null };

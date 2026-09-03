@@ -118,6 +118,18 @@ export function musteriIndirimi(fiyat, kampanya) {
 }
 
 /**
+ * MUSTERININ odedigi birim fiyat (Trendyol karsilamasi dahil tum indirim
+ * dusulmus). Trendyol teyidi (4 Eylul 2026): "Komisyon, kampanyali
+ * (indirimli) satis fiyati uzerinden hesaplanir" — yani bu tutardan, satici
+ * fiyatindan degil. Karsilama varsa satici fiyati bundan yuksektir.
+ */
+export function musteriFiyati(fiyat, kampanya) {
+  const f = sayi(fiyat);
+  if (f === null || f <= 0) return 0;
+  return kurusa(Math.max(0, f - musteriIndirimi(f, kampanya)));
+}
+
+/**
  * Kampanya uygulandiginda SATICININ eline gecen birim fiyat.
  * Indirimin Trendyol'un karsiladigi kismi saticidan cikmaz.
  *
