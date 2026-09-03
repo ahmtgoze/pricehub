@@ -751,6 +751,13 @@ pencerenin** oranıyla hesaplar; kullanıcı her pencere değişiminde (3 gün
 sonra, sonra 4 gün sonra) çıktıyı yeniden indirip yükler: "sonuç %100 doğru
 olur". Aylık kampanyada her hafta yeni tarife dosyasıyla aynı düzen sürer.
 
+> **Trendyol teyidi (4 Eyl 2026, Trendyol yapay zekâ asistanı):** "7 Günlük
+> Fiyat seçtiğinde komisyon tek bir sabit oranla değil, satışın gerçekleştiği
+> güne denk gelen tarih aralığının oranına göre kesilir. İlk 3 günde 3 günlük,
+> sonraki 4 günde 4 günlük komisyon oranı uygulanır." Ayrıca: tarife bir
+> "katılım" değildir; ürünün fiyatı tarifedeki bir kademeye denk gelirse o
+> kademenin komisyonu otomatik uygulanır (Avantajlı Etiket fiyatı dahil).
+
 Mekanizma (`src/lib/tarifeKaydiSecimi.js`): tarife yüklenirken pencerelerin
 tarihleri `pencere_tarihleri` olarak kayda yazılır (`pencereTarihiCoz`:
 "1 Eylül 08.00-4 Eylül 07.59" → ISO, yıl kaydın başlangıcından, +03:00).
