@@ -23,6 +23,8 @@ const TABLE_MAP = {
   Announcement: 'announcements',
   AnnouncementRead: 'announcement_reads',
   Message: 'messages',
+  // Kullaniciya ozel sistem bildirimleri (tarife penceresi hatirlatmasi vb.)
+  Bildirim: 'bildirimler',
   Settings: 'settings',
   User: 'user_profiles',
   // Kullanici bazli tablo gorunum tercihleri (sutun gizleme/sira/genislik/sabitleme)

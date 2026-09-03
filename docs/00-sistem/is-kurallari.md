@@ -762,6 +762,17 @@ verir. Kademe **kampanyalı satış fiyatına** göre. Eski kayıtta pencere tar
 yoksa `commission_1..4` sütunları. Sayfa başlığının altında
 `AktifPencereSatiri` bugünkü pencereyi ve tarihlerini gösterir.
 
+**Hatırlatma bildirimi (4 Eyl 2026):** `bildirimler` tablosu (RLS
+`created_by = auth.email()`, INSERT yalnızca fonksiyonla). Saatlik pg_cron
+`tarife-pencere-bildirimi` → `tarife_pencere_bildirimi_uret()`: her pencere
+için iki bildirim — **önceki gün 17:00** ("yarın … geçiliyor") ve **pencere
+başladığında** ("… başladı, Excel'i şimdi yeniden indirip yükleyin").
+Yalnızca `pencere_tarihleri` dolu tarife kaydı olan kullanıcılara gider
+(kullanıcı: "herkese gitmesin, sadece girdiyi yapanlara"). Aynı olay
+`anahtar` ile bir kez üretilir; 1 günden eski olaylar üretilmez. Zil
+menüsünde "Hatırlatmalar" bölümü olarak duyuruların üstünde görünür,
+okunmamışlar zil rozetine eklenir (`BildirimPanel`).
+
 **Kampanyalar (Plus dışı) — kaynak kuralı:** kampanya Excel'indeki
 `Ürün Komisyon Tarifesi` sütunu belirler. **Var** → 7 günlük tarife
 komisyonu (bulunamazsa kategori komisyonu). **Yok** → doğrudan kategori
