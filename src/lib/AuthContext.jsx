@@ -1,5 +1,6 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { supabase } from '@/api/supabaseClient';
+import { db } from '@/api/db';
 
 const AuthContext = createContext();
 
@@ -39,11 +40,36 @@ export const AuthProvider = ({ children }) => {
     return () => subscription.unsubscribe();
   }, []);
 
+  // 10 gunden eski promosyon Excel'leri depodan silinir.
+  //
+  // Neden burada: Supabase storage.objects'ten SQL ile silmeye izin vermiyor
+  // ("Direct deletion from storage tables is not allowed. Use the Storage
+  // API"), bu yuzden silme uygulama tarafinda yapilmali. Kayitlardaki olu
+  // baglantilari ise her gun cron temizliyor (public.eski_excelleri_sil).
+  //
+  // Oturum basina bir kez ve SESSIZ calisir; basarisiz olursa kullaniciyi
+  // ilgilendirmez, bir sonraki acilista yeniden denenir.
+  const eskiExcelleriTemizle = () => {
+    const anahtar = 'pricehub-excel-temizligi';
+    const bugun = new Date().toISOString().slice(0, 10);
+    try {
+      if (localStorage.getItem(anahtar) === bugun) return;
+    } catch { /* localStorage kapali olabilir; yine de calissin */ }
+
+    db.integrations.Core.EskiExcelleriTemizle()
+      .then(({ silinen }) => {
+        try { localStorage.setItem(anahtar, bugun); } catch { /* onemsiz */ }
+        if (silinen > 0) console.info(`[temizlik] ${silinen} eski Excel silindi`);
+      })
+      .catch((e) => console.warn('[temizlik] eski Excel silinemedi:', e?.message || e));
+  };
+
   const loadUserProfile = async (authUser) => {
     // Oturum ELDE: profil sorgusu beklenmeden auth_required temizlenir.
     // Aksi halde giris hemen sonrasinda App.jsx hala "oturum yok" gorup
     // kullaniciyi /login'e geri atiyordu.
     setAuthError(null);
+    eskiExcelleriTemizle();
     try {
       const { data: profile } = await supabase
         .from('user_profiles')

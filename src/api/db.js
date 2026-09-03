@@ -1,4 +1,5 @@
 import { supabase } from './supabaseClient';
+import { silinecekDosyalar, VARSAYILAN_GUN } from '@/lib/eskiDosyaSuzgeci';
 
 const TABLE_MAP = {
   Product: 'products',
@@ -228,6 +229,29 @@ const integrations = {
         .createSignedUrl(data.path, 60 * 60 * 24 * 365 * 10); // ~10 yıl
       if (signError) throw new Error(`[db.storage.sign] ${signError.message}`);
       return { file_url: signed.signedUrl };
+    },
+
+    /**
+     * 10 gunden eski Excel'leri depodan siler.
+     *
+     * Supabase storage.objects'ten SQL ile silmeye izin vermiyor
+     * ("Direct deletion from storage tables is not allowed. Use the Storage
+     * API"), bu yuzden silme uygulama tarafinda yapiliyor. Kova RLS'i sahibe
+     * ozel oldugu icin list() yalnizca kullanicinin kendi dosyalarini verir.
+     *
+     * Kayitlardaki olu excel_file_url baglantilarini her gun cron temizliyor
+     * (public.eski_excelleri_sil).
+     */
+    async EskiExcelleriTemizle({ gun = VARSAYILAN_GUN } = {}) {
+      const { data, error } = await supabase.storage.from('excel-files').list('', { limit: 1000 });
+      if (error) throw new Error(`[db.storage.list] ${error.message}`);
+
+      const silinecek = silinecekDosyalar(data, gun);
+      if (silinecek.length === 0) return { silinen: 0 };
+
+      const { error: silmeHatasi } = await supabase.storage.from('excel-files').remove(silinecek);
+      if (silmeHatasi) throw new Error(`[db.storage.remove] ${silmeHatasi.message}`);
+      return { silinen: silinecek.length };
     },
   },
 };
