@@ -58,33 +58,27 @@ export function tarifeKaydiSec(kayitlar, olcut) {
 }
 
 /**
- * 7 GUNLUK (BIRLESIK) KADEME KOMISYONLARI
+ * Kaydin 7 GUNLUK kademe komisyonlari [k1..k4].
  *
- * Komisyon Tarifesi sayfasi bir kayitta HER pencerenin komisyonunu saklar
- * (`pencere_komisyonlari` = { "3 Gün": [k1..k4], "4 Gün": [k1..k4] });
- * `commission_1..4` sutunlari ise yalnizca kaydedilirken EKRANDA ACIK olan
- * pencereyi tasir. Avantajli Urun Etiketi, Flas Urunler ve Kampanyalar tum
- * doneme TEK fiyat koyar; hafta boyunca iki pencerenin komisyonu da isler.
- * Bu yuzden kademe bazinda EN YUKSEK oran alinir — "7 Günlük" mantigi.
- *
- * Harita yoksa (eski kayitlar) sutunlar oldugu gibi kullanilir.
- *
- * @returns [k1, k2, k3, k4]
+ * Kullanici karari (3 Eylul 2026): "7 gunluk (3/4 gun en yuksegi) diye bir
+ * sey yok; 7 gunluk olarak tut sadece." Bu yuzden burada hesap YAPILMAZ:
+ * kaydin pencere haritasinda "7 Gün" anahtari varsa o okunur; yoksa
+ * commission_1..4 sutunlari (eski kayitlar) kullanilir.
  */
 export function yediGunKademeKomisyonlari(kayit) {
   const s = (v) => (Number.isFinite(Number(v)) ? Number(v) : 0);
   const sutun = [s(kayit?.commission_1), s(kayit?.commission_2), s(kayit?.commission_3), s(kayit?.commission_4)];
   const harita = kayit?.pencere_komisyonlari;
   if (!harita || typeof harita !== 'object') return sutun;
-  const pencereler = Object.values(harita)
-    .filter((k) => Array.isArray(k) && k.length === 4 && k.some((x) => s(x) > 0));
-  if (pencereler.length === 0) return sutun;
-  return [0, 1, 2, 3].map((i) => Math.max(sutun[i], ...pencereler.map((k) => s(k[i]))));
+  const anahtar = Object.keys(harita).find((ad) => /^\s*7\s*g/i.test(String(ad)));
+  const k = anahtar ? harita[anahtar] : null;
+  if (!Array.isArray(k) || k.length !== 4 || !k.some((x) => s(x) > 0)) return sutun;
+  return k.map(s);
 }
 
 /**
  * Fiyatin tarife kademelerinden hangisine girdigini bulup komisyonunu verir.
- * Komisyon 7 gunluk (pencereler arasi en yuksek) degerdir.
+ * Komisyon kaydin 7 GUNLUK degeridir (yediGunKademeKomisyonlari).
  * @returns komisyon orani, veya bulunamazsa null
  */
 export function kademeKomisyonu(kayit, fiyat) {
@@ -108,31 +102,27 @@ export function kademeKomisyonu(kayit, fiyat) {
 }
 
 /**
- * Fiyat icin gecerli EN YUKSEK tarife komisyonu.
+ * Urun icin gecerli 7 GUNLUK tarife komisyonu.
  *
- * Ayni donemde birden fazla pencere olabilir (3 gunluk ve 4 gunluk) ve
- * komisyonlari farklidir. Yildiz etiketi tum doneme TEK fiyat koydugu icin
- * hangi pencerenin gecerli olacagi onceden belli degil: 1-4 Eylul'de 3
- * gunlugun, 4-8 Eylul'de 4 gunlugun komisyonu isler.
- *
- * Bu yuzden EN YUKSEK komisyon alinir — en kotu durum. Dusuk olani gostermek
- * kari oldugundan yuksek gosterir ve satici ona gore fiyatlarsa zarar eder.
+ * Kampanya / etiket donemiyle ORTUSEN en guncel tarife kaydi secilir
+ * (tarifeKaydiSec) ve fiyatin girdigi kademenin 7 gunluk orani dondurulur.
+ * Kayitlar arasinda "en yuksek" ARANMAZ (kullanici karari).
  *
  * @returns komisyon orani, veya uygun kayit yoksa null
  */
-export function enYuksekTarifeKomisyonu(kayitlar, olcut, fiyat) {
+export function yediGunTarifeKomisyonu(kayitlar, olcut, fiyat) {
   if (!Array.isArray(kayitlar) || !olcut?.barkod) return null;
   const { barkod, platform, baslangic, bitis } = olcut;
-
-  const oranlar = kayitlar
-    .filter((k) =>
-      String(k?.barcode ?? '') === String(barkod) &&
-      (!platform || k?.platform_account === platform) &&
-      tarihlerOrtusuyorMu(baslangic, bitis, k?.start_date, k?.end_date)
-    )
-    .map((k) => kademeKomisyonu(k, fiyat))
-    .filter((o) => o !== null);
-
-  return oranlar.length ? Math.max(...oranlar) : null;
+  const ortusenler = kayitlar.filter((k) =>
+    String(k?.barcode ?? '') === String(barkod) &&
+    (!platform || k?.platform_account === platform) &&
+    tarihlerOrtusuyorMu(baslangic, bitis, k?.start_date, k?.end_date)
+  );
+  const zaman = (k) => gun(k?.updated_date || k?.created_at) ?? 0;
+  const sirali = [...ortusenler].sort((a, b) => zaman(b) - zaman(a));
+  for (const k of sirali) {
+    const oran = kademeKomisyonu(k, fiyat);
+    if (oran !== null) return oran;
+  }
+  return null;
 }
-

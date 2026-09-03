@@ -17,7 +17,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { toast } from 'sonner';
 import * as XLSX from 'xlsx';
 import { kayitlariTeklestir } from '@/lib/kayitTeklestirme';
-import { enYuksekTarifeKomisyonu } from '@/lib/tarifeKaydiSecimi';
+import { yediGunTarifeKomisyonu } from '@/lib/tarifeKaydiSecimi';
 import { sayiyaCevirVeya } from '@/lib/turkceSayi';
 import { unzipSync, zipSync } from 'fflate';
 import { hucreleriYaz, baslikHaritasi, paylasilanMetinler, sayfaXmlYolu, sutunDegerleri } from '@/lib/xlsxYerindeYaz';
@@ -518,7 +518,7 @@ export default function FlashProducts() {
     // KPBŞ1'in dort kaydi var, biri Temmuz'dan kalma ve komisyonlari 0.
     // O kayit secilirse kar oldugundan cok yuksek gorunuyordu.
     if (item.has_commission_tariff === 'Var' && price > 0 && item.barcode) {
-      const oran = enYuksekTarifeKomisyonu(trendyolPriceRanges, {
+      const oran = yediGunTarifeKomisyonu(trendyolPriceRanges, {
         barkod: item.barcode,
         platform: selectedPlatform,
         baslangic: item.start_date,

@@ -740,18 +740,26 @@ Eski kampanyaların kâr hesabı **değişmez** (testle doğrulandı). Yeni kay�
 doldurulur.
 
 ### Komisyon kaynağı: 7 günlük tarife
-Kampanya, Avantajlı Ürün Etiketi ve Flaş Ürünler tüm döneme **tek fiyat**
-koyar; hafta boyunca hem 3 günlük hem 4 günlük pencerenin komisyonu işler.
-Bu yüzden komisyon, Komisyon Tarifesi kaydının `pencere_komisyonlari`
-haritasından **kademe bazında en yüksek** oran alınarak bulunur
-(`yediGunKademeKomisyonlari` → `kademeKomisyonu` → `enYuksekTarifeKomisyonu`,
-`src/lib/tarifeKaydiSecimi.js`). `commission_1..4` sütunları yalnızca
-kaydederken ekranda açık olan pencereyi taşır; harita yoksa (eski kayıt)
-sütunlar kullanılır. Kademe, **kampanyalı satış fiyatına** göre bulunur.
+Kampanya, Avantajlı Ürün Etiketi ve Flaş Ürünler komisyonu Komisyon Tarifesi
+kaydının **7 günlük** verisinden okur: `pencere_komisyonlari["7 Gün"]`
+(`yediGunKademeKomisyonlari` → `kademeKomisyonu` → `yediGunTarifeKomisyonu`,
+`src/lib/tarifeKaydiSecimi.js`). Kademe, **kampanyalı satış fiyatına** göre
+bulunur. Harita yoksa veya "7 Gün" anahtarı yoksa `commission_1..4`
+sütunları (eski kayıt) kullanılır.
 
-Sıra (Kampanyalar, Plus dışı): 7 günlük tarife → tarife kaydındaki seçili
-kademe → kategori komisyonu (`commissions`). Plus kampanyaları Plus
-Tarifesi'nden okur; Plus'ta 7 günlük yok (kullanıcı inceleyecek).
+> Kullanıcı kararı (3 Eyl 2026): "7 günlük (3/4 gün en yükseği) diye bir şey
+> yok; 7 günlük olarak tut sadece." Kademe bazında en yüksek **hesaplanmaz**,
+> kayıtlar arasında da en yüksek aranmaz; dönemle örtüşen en güncel kayıt alınır.
+> Trendyol'un tarife Excel'inde ayrı bir 7 günlük komisyon sütunu **yoktur**
+> (yalnızca 3 Gün ve 4 Gün blokları); "7 Gün" değerinin nereden geleceği
+> kullanıcıyla netleştirilecek.
+
+**Kampanyalar (Plus dışı) — kaynak kuralı:** kampanya Excel'indeki
+`Ürün Komisyon Tarifesi` sütunu belirler. **Var** → 7 günlük tarife
+komisyonu (bulunamazsa kategori komisyonu). **Yok** → doğrudan kategori
+komisyonu (`commissions`). Tarife sayfasındaki seçim (`selected_range`)
+hesaba katılmaz. Plus kampanyaları Plus Tarifesi'nden okur; Plus'ta 7 günlük
+yok (kullanıcı inceleyecek).
 
 ## 8. Excel içe/dışa aktarma
 

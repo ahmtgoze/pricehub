@@ -21,7 +21,7 @@ import { sayiyaCevirVeya } from '@/lib/turkceSayi';
 import { unzipSync, zipSync } from 'fflate';
 import { hucreleriYaz, baslikHaritasi, paylasilanMetinler, sayfaXmlYolu, sutunDegerleri } from '@/lib/xlsxYerindeYaz';
 import { kademeFiyati } from '@/lib/trendyolTarifeKurali';
-import { enYuksekTarifeKomisyonu } from '@/lib/tarifeKaydiSecimi';
+import { yediGunTarifeKomisyonu } from '@/lib/tarifeKaydiSecimi';
 import BaremBadge from '@/components/ui/BaremBadge';
 import { baremSec, baremTavanFiyatlari, baremTarifesiSec } from '@/lib/baremKurali';
 import { gecerliMaliyet } from '@/lib/gecerliMaliyet';
@@ -440,11 +440,10 @@ export default function AdvantageProductTag() {
     // biri Temmuz'dan kalma, komisyonlari 0 — kar oldugundan yuksek
     // gorunebiliyordu. Artik yalnizca DONEMI ORTUSEN kayitlar sayiliyor.
     //
-    // Ayni donemde 3 gunluk ve 4 gunluk iki pencere olabiliyor ve
-    // komisyonlari farkli (19,3 / 16,6). Etiket tum doneme tek fiyat
-    // koydugu icin EN YUKSEK komisyon — en kotu durum — kullaniliyor.
+    // Komisyon, tarife kaydinin 7 GUNLUK verisinden okunur (kullanici
+    // karari: "7 gunluk olarak tut sadece").
     if (komisyonTarifesindeMi(item) && price > 0 && item.barcode) {
-      const oran = enYuksekTarifeKomisyonu(trendyolPriceRanges, {
+      const oran = yediGunTarifeKomisyonu(trendyolPriceRanges, {
         barkod: item.barcode,
         platform: selectedPlatform,
         baslangic: item.start_date,

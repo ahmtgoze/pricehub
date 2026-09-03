@@ -1,4 +1,4 @@
-import { tarifeKaydiSec, kademeKomisyonu, tarihlerOrtusuyorMu, enYuksekTarifeKomisyonu, yediGunKademeKomisyonlari } from '../src/lib/tarifeKaydiSecimi.js';
+import { tarifeKaydiSec, kademeKomisyonu, tarihlerOrtusuyorMu, yediGunTarifeKomisyonu, yediGunKademeKomisyonlari } from '../src/lib/tarifeKaydiSecimi.js';
 
 let gecen = 0, kalan = 0;
 const esit = (ad, olan, beklenen) => {
@@ -66,64 +66,60 @@ console.log('\n=== KADEME KOMISYONU ===');
   esit('komisyon 0 ise null', kademeKomisyonu(kayit({ commission_1: 0 }), 500), null);
 }
 
-console.log('\n=== EN YUKSEK KOMISYON (gercek KPBŞ1 kayitlari) ===');
+console.log('\n=== 7 GUNLUK TARIFE KOMISYONU (gercek KPBŞ1 kayitlari) ===');
 {
   const olcut = { barkod: 'KPBŞ1', platform: 'Trendyol', baslangic: '2026-09-01', bitis: '2026-09-07' };
-  const ucGun   = kayit({ start_date: '2026-09-01', end_date: '2026-09-08', commission_2: 19.3 });
-  const dortGun = kayit({ start_date: '2026-09-01', end_date: '2026-09-07', commission_2: 16.6 });
+  const eskiKayit = kayit({ start_date: '2026-09-01', end_date: '2026-09-08', commission_2: 19.3, updated_date: '2026-09-01T08:00:00Z' });
+  const yeniKayit = kayit({ start_date: '2026-09-01', end_date: '2026-09-07', commission_2: 16.6, updated_date: '2026-09-02T08:00:00Z' });
   // Temmuz kaydinda komisyonlar 0 — hesaba katilmamali
   const temmuz  = kayit({ start_date: '2026-07-21', end_date: '2026-07-28',
                           commission_1: 0, commission_2: 0, commission_3: 0, commission_4: 0 });
   // Haziran kaydi donem disi
   const haziran = kayit({ start_date: '2026-06-09', end_date: '2026-06-16', commission_2: 13.14 });
 
-  esit('en kotu durum alinir',
-    enYuksekTarifeKomisyonu([dortGun, ucGun, temmuz, haziran], olcut, 488.17), 19.3);
+  esit('en guncel ortusen kayit alinir, en yuksek ARANMAZ',
+    yediGunTarifeKomisyonu([eskiKayit, yeniKayit, temmuz, haziran], olcut, 488.17), 16.6);
   esit('donem disi kayit sayilmaz',
-    enYuksekTarifeKomisyonu([haziran], olcut, 488.17), null);
+    yediGunTarifeKomisyonu([haziran], olcut, 488.17), null);
   esit('sifir komisyon sayilmaz',
-    enYuksekTarifeKomisyonu([temmuz], { ...olcut, baslangic: '2026-07-21', bitis: '2026-07-28' }, 488.17), null);
-  esit('tek pencere', enYuksekTarifeKomisyonu([dortGun], olcut, 488.17), 16.6);
+    yediGunTarifeKomisyonu([temmuz], { ...olcut, baslangic: '2026-07-21', bitis: '2026-07-28' }, 488.17), null);
+  esit('tek kayit', yediGunTarifeKomisyonu([yeniKayit], olcut, 488.17), 16.6);
   esit('fiyat hicbir kademeye girmezse null',
-    enYuksekTarifeKomisyonu([ucGun, dortGun], olcut, 0), null);
-  esit('kayit yok', enYuksekTarifeKomisyonu([], olcut, 488.17), null);
-  esit('gecersiz girdi', enYuksekTarifeKomisyonu(null, olcut, 100), null);
-  esit('barkodsuz', enYuksekTarifeKomisyonu([ucGun], {}, 100), null);
+    yediGunTarifeKomisyonu([eskiKayit, yeniKayit], olcut, 0), null);
+  esit('kayit yok', yediGunTarifeKomisyonu([], olcut, 488.17), null);
+  esit('gecersiz girdi', yediGunTarifeKomisyonu(null, olcut, 100), null);
+  esit('barkodsuz', yediGunTarifeKomisyonu([eskiKayit], {}, 100), null);
 }
 
-console.log('\n=== 7 GUNLUK: PENCERELER ARASI EN YUKSEK ===');
+console.log('\n=== 7 GUNLUK: HARITADAKI "7 Gün" ANAHTARI, HESAP YOK ===');
 {
-  // Sutunlar 4 gunlugu tasiyor (ekranda o acikken kaydedilmis), harita
-  // iki pencereyi de biliyor. Kampanya/etiket tum hafta gecerli: 3 gunlugun
-  // yuksek orani alinmali.
+  // Sutunlar 4 gunlugu tasiyor (ekranda o acikken kaydedilmis); harita uc
+  // pencereyi de biliyor. Yalnizca "7 Gün" okunur; 3/4 gunun en yuksegi
+  // ALINMAZ (kullanici karari).
+  const k = kayit({
+    commission_1: 17.3, commission_2: 16.6, commission_3: 14.9, commission_4: 12.8,
+    pencere_komisyonlari: { '3 Gün': [20, 19.3, 17.6, 15.5], '4 Gün': [17.3, 16.6, 14.9, 12.8], '7 Gün': [18, 17, 16, 14] },
+  });
+  esit('7 Gün anahtari oldugu gibi', yediGunKademeKomisyonlari(k), [18, 17, 16, 14]);
+  esit('kademe 2', kademeKomisyonu(k, 460), 17);
+  esit('kademe 1', kademeKomisyonu(k, 500), 18);
+  esit('kademe 4', kademeKomisyonu(k, 300), 14);
+  esit('yediGunTarifeKomisyonu haritayi kullanir',
+    yediGunTarifeKomisyonu([k], { barkod: 'KPBŞ1', platform: 'Trendyol', baslangic: '2026-09-01', bitis: '2026-09-07' }, 460), 17);
+  esit('anahtar "7 gün" kucuk harfle de olur', yediGunKademeKomisyonlari(kayit({ pencere_komisyonlari: { '7 gün': [1, 2, 3, 4] } })), [1, 2, 3, 4]);
+}
+{
+  // 7 Gün anahtari YOKSA en yuksek uydurulmaz: sutunlar kullanilir
   const k = kayit({
     commission_1: 17.3, commission_2: 16.6, commission_3: 14.9, commission_4: 12.8,
     pencere_komisyonlari: { '3 Gün': [20, 19.3, 17.6, 15.5], '4 Gün': [17.3, 16.6, 14.9, 12.8] },
   });
-  esit('kademe bazinda en yuksek', yediGunKademeKomisyonlari(k), [20, 19.3, 17.6, 15.5]);
-  esit('kademe 2 fiyati 3 gunlugun oranini alir', kademeKomisyonu(k, 460), 19.3);
-  esit('kademe 1', kademeKomisyonu(k, 500), 20);
-  esit('kademe 4', kademeKomisyonu(k, 300), 15.5);
-  esit('enYuksek de haritayi kullanir',
-    enYuksekTarifeKomisyonu([k], { barkod: 'KPBŞ1', platform: 'Trendyol', baslangic: '2026-09-01', bitis: '2026-09-07' }, 460), 19.3);
-}
-{
-  // Bir pencerede bir kademe digerinden dusuk, baskasinda yuksek olabilir
-  // (sutunlar 4 gunlugu tasiyor)
-  const k = kayit({
-    commission_1: 17.3, commission_2: 16.6, commission_3: 14.9, commission_4: 12.8,
-    pencere_komisyonlari: { '3 Gün': [20, 15, 17.6, 15.5], '4 Gün': [17.3, 16.6, 14.9, 12.8] },
-  });
-  esit('karisik kademeler', yediGunKademeKomisyonlari(k), [20, 16.6, 17.6, 15.5]);
-}
-{
-  // Eski kayit: harita yok -> sutunlar
-  const k = kayit({ commission_1: 21, commission_2: 19, commission_3: 17, commission_4: 15 });
-  esit('harita yoksa sutunlar', yediGunKademeKomisyonlari(k), [21, 19, 17, 15]);
+  esit('7 Gün yoksa sutunlar (en yuksek degil)', yediGunKademeKomisyonlari(k), [17.3, 16.6, 14.9, 12.8]);
+  esit('harita yoksa sutunlar', yediGunKademeKomisyonlari(kayit({ commission_1: 21, commission_2: 19, commission_3: 17, commission_4: 15 })), [21, 19, 17, 15]);
   esit('harita bos nesne', yediGunKademeKomisyonlari(kayit({ pencere_komisyonlari: {} })), [20, 19.3, 17.6, 15.5]);
-  esit('harita sifirlarla dolu', yediGunKademeKomisyonlari(kayit({ pencere_komisyonlari: { '3 Gün': [0, 0, 0, 0] } })), [20, 19.3, 17.6, 15.5]);
-  esit('bozuk pencere (3 eleman) yok sayilir', yediGunKademeKomisyonlari(kayit({ pencere_komisyonlari: { '3 Gün': [30, 30, 30] } })), [20, 19.3, 17.6, 15.5]);
-  esit('metin sayilar', yediGunKademeKomisyonlari(kayit({ pencere_komisyonlari: { '3 Gün': ['22', '20', '18', '16'] } })), [22, 20, 18, 16]);
+  esit('7 Gün sifirlarla dolu -> sutunlar', yediGunKademeKomisyonlari(kayit({ pencere_komisyonlari: { '7 Gün': [0, 0, 0, 0] } })), [20, 19.3, 17.6, 15.5]);
+  esit('bozuk 7 Gün (3 eleman) yok sayilir', yediGunKademeKomisyonlari(kayit({ pencere_komisyonlari: { '7 Gün': [30, 30, 30] } })), [20, 19.3, 17.6, 15.5]);
+  esit('metin sayilar', yediGunKademeKomisyonlari(kayit({ pencere_komisyonlari: { '7 Gün': ['22', '20', '18', '16'] } })), [22, 20, 18, 16]);
   esit('kayit yok', yediGunKademeKomisyonlari(null), [0, 0, 0, 0]);
 }
 

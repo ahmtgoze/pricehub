@@ -20,7 +20,7 @@ import BaremBadge from '@/components/ui/BaremBadge';
 import { baremSec, baremTavanFiyatlari, baremTarifesiSec } from '@/lib/baremKurali';
 import { gecerliMaliyet } from '@/lib/gecerliMaliyet';
 import { sayiyaCevirVeya } from '@/lib/turkceSayi';
-import { enYuksekTarifeKomisyonu } from '@/lib/tarifeKaydiSecimi';
+import { yediGunTarifeKomisyonu } from '@/lib/tarifeKaydiSecimi';
 import {
   INDIRIM_TURLERI, KATILIM_KOSULLARI, KAMPANYA_GRUPLARI,
   kampanyaFiyati, kampanyaFiyatiTersi, fiyatKuralinaUyuyorMu,
@@ -420,30 +420,22 @@ export default function Campaigns() {
         if (c > 0) return c;
       }
     } else {
-      // Once Komisyon Tarifesi'nin 7 GUNLUK verisi: kampanya donemiyle
-      // ortusen kayitta, fiyatin girdigi kademenin pencereler arasi EN
-      // YUKSEK komisyonu (Avantajli Urun Etiketi / Flas Urunler ile ayni).
-      if (item.barcode && fiyat > 0) {
-        const yediGun = enYuksekTarifeKomisyonu(priceRanges, {
+      // Kullanici karari (3 Eylul 2026): kampanya Excel'indeki "Ürün Komisyon
+      // Tarifesi" sutunu belirler.
+      //   Var -> Komisyon Tarifesi sayfasindaki 7 GUNLUK tarife komisyonu
+      //          (fiyatin girdigi kademe); bulunamazsa kategori komisyonu
+      //   Yok -> dogrudan kategori komisyonu
+      // Tarife sayfasindaki SECIM (selected_range) hesaba katilmaz; tarife
+      // urunun kendi ozelligi.
+      const tarifeVar = String(item.commission_tariff || '').trim().toLocaleLowerCase('tr') === 'var';
+      if (tarifeVar && item.barcode && fiyat > 0) {
+        const yediGun = yediGunTarifeKomisyonu(priceRanges, {
           barkod: item.barcode,
           platform: selectedPlatform,
           baslangic: managingCampaign?.start_date,
           bitis: managingCampaign?.end_date,
         }, fiyat);
         if (yediGun) return yediGun;
-      }
-      const tr = matchTariffRecord(priceRanges, item);
-      if (tr) {
-        let c = 0;
-        if (tr.has_commission_tariff === 'Var' || tr.has_commission_tariff === 'true') {
-          if (tr.selected_range === 'range_1') c = tr.commission_1;
-          else if (tr.selected_range === 'range_2') c = tr.commission_2;
-          else if (tr.selected_range === 'range_3') c = tr.commission_3;
-          else if (tr.selected_range === 'range_4') c = tr.commission_4;
-          else if (tr.selected_range === 'manual') c = tr.manual_commission;
-        }
-        if (!c) c = parseFloat(tr.current_commission) || 0;
-        if (c > 0) return c;
       }
     }
     // yedek: kategori komisyonu (Komisyonlar tablosu)
