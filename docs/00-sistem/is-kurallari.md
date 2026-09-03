@@ -722,6 +722,12 @@ Kaynak: Trendyol Partner → Promosyonlar → Katılabileceğim Kampanyalar
 ### Ortak alanlar
 - **Trendyol Karşılamalı (%)** — indirimin bu payı Trendyol'dan çıkar.
   Satıcı fiyatı = fiyat − indirim × (1 − karşılama/100).
+- **Komisyon matrahı = müşterinin ödediği indirimli fiyat** (Trendyol
+  teyidi, 4 Eyl 2026: "komisyon kampanyalı satış fiyatı üzerinden; 100 TL →
+  90 TL, %20 → 18 TL"). Karşılamalı kampanyada satıcıya kalan tutar
+  müşterininkinden yüksektir; motor komisyonu verilen fiyattan hesapladığı
+  için oran `müşteriFiyatı / satıcıFiyatı` ile ölçeklenir (`musteriFiyati`,
+  Campaigns `calculateProfit`). Karşılama yoksa fark yok.
 - **Fiyat Kuralı** (`price_rule_min/max`) — "100 TL ve üzeri ürünler",
   "10 TL ve 700 TL arası ürünler", "800 TL ve altı ürünler". Aralık dışındaki
   ürün kampanyaya giremez; **Akıllı Otomatik Seç** bunları atlar ve sayar.
