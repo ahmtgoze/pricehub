@@ -15,9 +15,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { toast } from 'sonner';
 import * as XLSX from 'xlsx';
 import { plusPencereleriBul, plusPencereHaritasi, plusPencereUygula } from '@/lib/plusTarifePenceresi';
-import { pencereyeGec, acikSecimiSakla, secimiOku, secimOzeti } from '@/lib/trendyolPencereSecimi';
+import { pencereyeGec, acikSecimiSakla, secimOzeti, tekSatirSecimi, tekDosyaOzeti } from '@/lib/trendyolPencereSecimi';
 import { kayitlariTeklestir } from '@/lib/kayitTeklestirme';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { sayiyaCevirVeya } from '@/lib/turkceSayi';
 import PriceDetailModal from '@/components/modals/PriceDetailModal';
 import BaremBadge from '@/components/ui/BaremBadge';
@@ -644,31 +643,39 @@ export default function PlusProductCommissionTariff() {
     }
   };
 
-  // istenenTarife verilirse YALNIZCA o tarifenin dosyasi iner; verilmezse
-  // secim yapilan her tarife icin ayri dosya iner.
-  const handleExport = (istenenTarife = null) => {
+  // TEK DOSYA: butun pencerelerin secimleri ayni Excel'e iner.
+  const handleExport = () => {
     if (uploadedData.length === 0) { toast.error('Yüklenmiş Excel dosyası bulunamadı'); return; }
     if (!originalExcelData?.baytlar) {
       toast.error('Excel yeniden okunamıyor. Lütfen dosyayı yeniden yükleyin.', { duration: 8000 });
       return;
     }
 
+    // TEK DOSYA (kullanici karari, 3 Eylul 2026): 3 ve 4 gunluk secimler
+    // ayri yapilir, AYNI Excel'e islenir. Urun basina tek satir: yalniz 3 ->
+    // 3 gunluk metni, yalniz 4 -> 4 gunluk metni, ikisi ayni fiyatla ->
+    // dosyanin "7 Gün Tarih Aralığı" hucresindeki metin ("7 Günlük Fiyat").
+    // Fiyatlar farkliysa satir bos kalir ve kullaniciya soylenir.
     // Acik tarifenin secimi henuz kutusuna yazilmamis olabilir; once katlanir.
     const veri = uploadedData.map((u) => acikSecimiSakla(u, secilenPencere, 'selected_type'));
-    const ozet = secimOzeti(veri);
-    const tarifeler = Object.keys(ozet)
-      .filter((k) => k !== 'toplam')
-      .filter((k) => !istenenTarife || k === istenenTarife);
-    if (tarifeler.length === 0) {
-      toast.error(istenenTarife ? `"${istenenTarife}" tarifesinde seçili ürün yok` : 'Seçili ürün yok');
-      return;
+    const dosyaPencereleri = [...new Set(veri.flatMap((u) => Object.keys(u.plus_pencereleri || {})))]
+      .filter((ad) => !/^\s*7\s*g/i.test(String(ad)));
+    const ozet = tekDosyaOzeti(veri, dosyaPencereleri);
+    if (ozet.catisanlar.length > 0) {
+      toast.error(
+        `${ozet.catisanlar.length} üründe 3 günlük ve 4 günlük fiyat farklı; tek dosyada bir ürünün tek fiyatı olur. ` +
+        `Bu satırlar boş bırakıldı: ${ozet.catisanlar.slice(0, 5).join(', ')}${ozet.catisanlar.length > 5 ? '…' : ''}. ` +
+        'İkisini aynı fiyata getirin ya da birini kaldırın.',
+        { duration: 12000 }
+      );
     }
+    if (ozet.toplam === 0) { toast.error('Seçili ürün yok'); return; }
 
     const slugify = (str) => str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
     const fromStr = dateRangeValue?.from ? format(dateRangeValue.from, 'd MMMM', { locale: tr }) : '';
     const toStr = dateRangeValue?.to ? format(dateRangeValue.to, 'd MMMM', { locale: tr }) : '';
 
-    const dosyaUret = (tarife) => {
+    try {
       // KABUL EDILEN SABLONUN BICIMI (Melontik ciktisi):
       //   sharedStrings ile metin (t="s"), theme1.xml var, dataValidation ve
       //   formul YOK — yani SheetJS'in bookSST ile yazdigi bicim.
@@ -704,8 +711,17 @@ export default function PlusProductCommissionTariff() {
         const C = sut[baslik];
         return C === undefined ? undefined : ws[XLSX.utils.encode_cell({ r: R, c: C })]?.v;
       };
+      // "Tarife Seçimi" metni dosyanin kendi hucresinden: 3/4 Gün icin
+      // pencere haritasindaki metin, 7 Gün icin "7 Gün Tarih Aralığı" sutunu.
+      const secimMetni = (R, item, pencere) => {
+        if (pencere === '7 Gün') {
+          const m = oku(R, '7 Gün Tarih Aralığı');
+          return m != null && String(m).trim() ? String(m).trim() : '7 Günlük Fiyat';
+        }
+        return item?.plus_pencereleri?.[pencere]?.secimMetni || null;
+      };
 
-      let yazilan = 0;
+      const sayac = {};
       for (let R = range.s.r + 1; R <= range.e.r; R++) {
         const barkod = oku(R, 'Barkod');
         const urunId = oku(R, 'Ürün Id');
@@ -713,21 +729,21 @@ export default function PlusProductCommissionTariff() {
           (barkod != null && veri.find((i) => String(i.barcode || '') === String(barkod))) ||
           (urunId != null && veri.find((i) => String(i.product_id || '') === String(urunId)));
 
-        const secim = item ? secimiOku(item, tarife) : { kademe: 'none', fiyat: 0 };
-        const secili = secim.kademe !== 'none' && secim.fiyat > 0;
-        if (secili) yazilan++;
+        const secim = item ? tekSatirSecimi(item, dosyaPencereleri) : { pencere: null, fiyat: 0 };
+        const secili = !!secim.pencere && secim.fiyat > 0;
+        if (secili) sayac[secim.pencere] = (sayac[secim.pencere] || 0) + 1;
 
         // Sablonda secilmeyen satirlarda bu iki hucre YOK, "İptal" BOS METIN
         yaz(R, 'Plus Fiyat Seçimi', secili ? secim.fiyat : null, 'n');
-        yaz(R, 'Tarife Seçimi',
-            secili ? (item.plus_pencereleri?.[tarife]?.secimMetni || null) : null, 's');
+        yaz(R, 'Tarife Seçimi', secili ? secimMetni(R, item, secim.pencere) : null, 's');
         yaz(R, 'İptal', secili ? 'Hayır' : '', 's');
 
         // Secilen pencerenin sutununa o pencerenin Plus komisyon teklifi,
-        // digerine "-" yazilir (sablondaki gibi)
+        // digerine "-" (sablondaki gibi). 7 Gün = iki pencere birden.
         for (const pen of Object.keys(item?.plus_pencereleri || {})) {
           const oran = item.plus_pencereleri[pen]?.komisyon;
-          const dolu = secili && pen === tarife && oran > 0;
+          const kapsiyor = secim.pencere === pen || secim.pencere === '7 Gün';
+          const dolu = secili && kapsiyor && oran > 0;
           yaz(R, `Hesaplanan Komisyon (${pen})`, dolu ? oran : '-', dolu ? 'n' : 's');
         }
       }
@@ -742,22 +758,15 @@ export default function PlusProductCommissionTariff() {
       const url = URL.createObjectURL(blob);
       const baglanti = document.createElement('a');
       baglanti.href = url;
-      baglanti.download = `plus-komisyon-${slugify(fromStr)}-${slugify(toStr)}-${slugify(tarife)}.xlsx`;
+      baglanti.download = `plus-komisyon-${slugify(fromStr)}-${slugify(toStr)}.xlsx`;
       document.body.appendChild(baglanti);
       baglanti.click();
       baglanti.remove();
       setTimeout(() => URL.revokeObjectURL(url), 1000);
-      return yazilan;
-    };
 
-    try {
-      const sonuc = tarifeler.map((t) => `${t}: ${dosyaUret(t)} ürün`);
-      toast.success(
-        tarifeler.length === 1
-          ? `Excel indirildi — ${sonuc[0]}`
-          : `${tarifeler.length} Excel dosyası indirildi — ${sonuc.join(' · ')}`,
-        { duration: 8000 }
-      );
+      const parcaMetni = Object.entries(sayac).map(([ad, n]) => `${ad}: ${n}`).join(' · ');
+      const toplam = Object.values(sayac).reduce((a, b) => a + b, 0);
+      toast.success(`Excel indirildi — ${toplam} ürün${parcaMetni ? ` (${parcaMetni})` : ''}`, { duration: 8000 });
     } catch (hata) {
       toast.error('Excel oluşturulamadı: ' + (hata?.message || hata), { duration: 10000 });
     }
@@ -916,37 +925,12 @@ export default function PlusProductCommissionTariff() {
                   <Button variant="outline" onClick={handleDeleteExcel} className="text-red-600 dark:text-red-400 hover:text-red-700 dark:text-red-300 hover:bg-red-50 dark:bg-red-950/30"><Trash2 className="mr-2 h-4 w-4" />Excel'i Sil</Button>
                   <Button variant="outline" onClick={handleSave}><Check className="mr-2 h-4 w-4" />Seçimleri Kaydet ({selectedCount})</Button>
                   <Button variant="outline" onClick={() => { setUploadedData(uploadedData.map(item => ({ ...item, selected_type: 'none', selected_price: 0 }))); toast.success('Tüm seçimler kaldırıldı'); }}>Seçimleri Kaldır</Button>
-                  {/* Tek buton; basinca hangi tarifenin inecegi seciliyor.
-                      Tek tarifede secim varsa menu acmadan dogrudan iner. */}
-                  {Object.keys(seciliOzet).filter((k) => k !== 'toplam').length > 1 ? (
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="outline">
-                          <Download className="mr-2 h-4 w-4" />Excel İndir ({seciliOzet.toplam})
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="start">
-                        <DropdownMenuLabel>Hangi tarife inecek?</DropdownMenuLabel>
-                        <DropdownMenuSeparator />
-                        {Object.entries(seciliOzet)
-                          .filter(([k]) => k !== 'toplam')
-                          .map(([ad, adet]) => (
-                            <DropdownMenuItem key={ad} onSelect={() => handleExport(ad)}>
-                              {ad} — {adet} ürün
-                            </DropdownMenuItem>
-                          ))}
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem onSelect={() => handleExport()}>
-                          Hepsi (ayrı dosyalar)
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  ) : (
-                    <Button variant="outline" onClick={() => handleExport()}>
-                      <Download className="mr-2 h-4 w-4" />Excel İndir
-                      {seciliOzet.toplam > 0 && ` (${seciliOzet.toplam})`}
-                    </Button>
-                  )}
+                  {/* TEK DOSYA: 3 ve 4 gunluk secimler ayni Excel'e iner
+                      (kullanici karari, 3 Eylul 2026). Dropdown kaldirildi. */}
+                  <Button variant="outline" onClick={() => handleExport()}>
+                    <Download className="mr-2 h-4 w-4" />Excel İndir
+                    {seciliOzet.toplam > 0 && ` (${seciliOzet.toplam})`}
+                  </Button>
                 </>
               )}
             </div>

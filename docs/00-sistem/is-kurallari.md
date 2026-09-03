@@ -761,6 +761,25 @@ komisyonu (`commissions`). Tarife sayfasındaki seçim (`selected_range`)
 hesaba katılmaz. Plus kampanyaları Plus Tarifesi'nden okur; Plus'ta 7 günlük
 yok (kullanıcı inceleyecek).
 
+### Tarife çıktısı: TEK dosya (3 Eyl 2026)
+Ürün Komisyon Tarifesi ve Plus Ürün Komisyon Tarifesi'nde 3 günlük ve 4
+günlük seçimler **ayrı ayrı yapılır ama tek Excel'e yazılır**; tarife başına
+ayrı dosya ve "Excel İndir" açılır menüsü kaldırıldı. Trendyol'un dosyasında
+ürün başına tek satır/tek fiyat/tek "Tarife Seçimi" var; dosyanın formülü
+"7 Günlük Fiyat"ı iki pencere için birden hesaplar. Birleştirme
+(`tekSatirSecimi`, `src/lib/trendyolPencereSecimi.js`):
+
+| Seçim | Yazılan |
+|---|---|
+| yalnız 3 Gün | fiyat + `3 Günlük Fiyat` (Plus: 3 Gün Tarih Aralığı metni) |
+| yalnız 4 Gün | fiyat + `4 Günlük Fiyat` (Plus: 4 Gün Tarih Aralığı metni) |
+| ikisi de, aynı fiyat | fiyat + `7 Günlük Fiyat` (Plus: dosyanın `7 Gün Tarih Aralığı` hücresi) |
+| ikisi de, farklı fiyat | **çatışma**: satır boş kalır, kullanıcıya barkodlarla söylenir |
+
+Plus'ta 7 Gün seçildiğinde her iki `Hesaplanan Komisyon (N Gün)` sütunu da
+o pencerenin teklifiyle dolar. Gönderim defteri (aynı fiyatı ikinci kez
+göndermeme) pencere bazlıdır; 7 Gün için 3 ve 4'e de bakılır.
+
 ## 8. Excel içe/dışa aktarma
 
 - Sütunlar **başlık adına göre** eşleştirilir; sıra önemli değildir

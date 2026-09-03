@@ -1,6 +1,6 @@
 import { komisyonHaritasi, pencereKomisyonlariniAl, pencereUygula, pencereAdlari, kademeKarsilastir, pencereDegistirilebilir,
          secimiOku, secimVarMi, seciliPencereler, acikSecimiSakla, secimiEkranaAl, pencereyeGec, secimOzeti,
-         pencereGunu, birlesikPencere, birlesikPencereEkle }
+         pencereGunu, birlesikPencere, birlesikPencereEkle, tekSatirSecimi, tekDosyaOzeti }
   from '../src/lib/trendyolPencereSecimi.js';
 import { pencereleriBul, tarifeSecimDegeri } from '../src/lib/trendyolTarifePenceresi.js';
 
@@ -216,6 +216,46 @@ console.log('\n=== BIRLESIK PENCERE (7 Günlük Fiyat) ===');
   esit('secim degeri', tarifeSecimDegeri('7 Gün'), '7 Günlük Fiyat');
   esit('harita yoksa dokunmaz', birlesikPencereEkle(null, PENCERELER), null);
   esit('tek pencerede eklemez', birlesikPencereEkle({ '3 Gün': [1,2,3,4] }, [{ ad: '3 Gün' }]), { '3 Gün': [1,2,3,4] });
+}
+
+console.log('\n=== TEK DOSYA: tekSatirSecimi ===');
+{
+  const P = ['3 Gün', '4 Gün'];
+  const u = (secimler, barcode = 'X') => ({ barcode, secimler });
+  esit('secim yok', tekSatirSecimi(u({}), P), { pencere: null, fiyat: 0, catisma: null });
+  esit('yalniz 3 Gün', tekSatirSecimi(u({ '3 Gün': { kademe: 'range_2', fiyat: 488.17 } }), P),
+    { pencere: '3 Gün', fiyat: 488.17, catisma: null });
+  esit('yalniz 4 Gün', tekSatirSecimi(u({ '4 Gün': { kademe: 'range_3', fiyat: 441.75 } }), P),
+    { pencere: '4 Gün', fiyat: 441.75, catisma: null });
+  esit('ikisi ayni fiyat -> 7 Gün', tekSatirSecimi(u({ '3 Gün': { kademe: 'range_4', fiyat: 261.47 }, '4 Gün': { kademe: 'range_4', fiyat: 261.47 } }), P),
+    { pencere: '7 Gün', fiyat: 261.47, catisma: null });
+  esit('kurus farki ayni sayilir', tekSatirSecimi(u({ '3 Gün': { kademe: 'range_4', fiyat: 261.47 }, '4 Gün': { kademe: 'range_4', fiyat: 261.471 } }), P).pencere, '7 Gün');
+  esit('ikisi farkli fiyat -> catisma', tekSatirSecimi(u({ '3 Gün': { kademe: 'range_2', fiyat: 488.17 }, '4 Gün': { kademe: 'range_3', fiyat: 441.75 } }), P),
+    { pencere: null, fiyat: 0, catisma: { '3 Gün': 488.17, '4 Gün': 441.75 } });
+  esit('manuel fiyat da secimdir', tekSatirSecimi(u({ '3 Gün': { kademe: 'manual', fiyat: 300, manuel: 300 } }), P),
+    { pencere: '3 Gün', fiyat: 300, catisma: null });
+  esit('kademe none sayilmaz', tekSatirSecimi(u({ '3 Gün': { kademe: 'none', fiyat: 300 }, '4 Gün': { kademe: 'range_1', fiyat: 500 } }), P).pencere, '4 Gün');
+  esit('fiyat 0 sayilmaz', tekSatirSecimi(u({ '3 Gün': { kademe: 'range_1', fiyat: 0 } }), P).pencere, null);
+  esit('dosyada olmayan pencere yok sayilir', tekSatirSecimi(u({ '5 Gün': { kademe: 'range_1', fiyat: 500 } }), P).pencere, null);
+  esit('urun null', tekSatirSecimi(null, P), { pencere: null, fiyat: 0, catisma: null });
+  esit('pencereler null', tekSatirSecimi(u({ '3 Gün': { kademe: 'range_1', fiyat: 500 } }), null).pencere, null);
+  // Tarife Seçimi degeri 7 Gün icin de uretilir
+  esit('7 Gün -> "7 Günlük Fiyat"', tarifeSecimDegeri('7 Gün'), '7 Günlük Fiyat');
+}
+
+console.log('\n=== TEK DOSYA: tekDosyaOzeti ===');
+{
+  const P = ['3 Gün', '4 Gün'];
+  const urunler = [
+    { barcode: 'A', secimler: { '3 Gün': { kademe: 'range_1', fiyat: 500 } } },
+    { barcode: 'B', secimler: { '4 Gün': { kademe: 'range_1', fiyat: 500 } } },
+    { barcode: 'C', secimler: { '3 Gün': { kademe: 'range_1', fiyat: 500 }, '4 Gün': { kademe: 'range_1', fiyat: 500 } } },
+    { barcode: 'D', secimler: { '3 Gün': { kademe: 'range_1', fiyat: 500 }, '4 Gün': { kademe: 'range_2', fiyat: 450 } } },
+    { barcode: 'E', secimler: {} },
+  ];
+  esit('ozet', tekDosyaOzeti(urunler, P), { toplam: 3, catisanlar: ['D'], '3 Gün': 1, '4 Gün': 1, '7 Gün': 1 });
+  esit('bos liste', tekDosyaOzeti([], P), { toplam: 0, catisanlar: [] });
+  esit('null', tekDosyaOzeti(null, P), { toplam: 0, catisanlar: [] });
 }
 
 console.log(`\nGECEN: ${gecen}   KALAN: ${kalan}`);
