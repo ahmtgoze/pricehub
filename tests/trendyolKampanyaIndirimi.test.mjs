@@ -1,5 +1,5 @@
 import {
-  musteriIndirimi, kampanyaFiyati, kampanyaFiyatiTersi, esikIcinAdet,
+  musteriIndirimi, kampanyaFiyati, kampanyaFiyatiTersi, sepetPayi,
   fiyatKuralinaUyuyorMu, kampanyaMetni, fiyatKuraliMetni, kaydiKampanyayaCevir,
   INDIRIM_TURLERI, KAMPANYA_GRUPLARI,
 } from '../src/lib/trendyolKampanyaIndirimi.js';
@@ -35,15 +35,22 @@ console.log('\n=== X TL\'YE Y TL INDIRIM ===');
   const k = { tur: 'cart_tl', esik: 500, tutar: 100 };
   esit('esigi tek basina gecen urun: tamami iner', musteriIndirimi(600, k), 100);
   esit('tam esik', musteriIndirimi(500, k), 100);
-  esit('esigin altinda: 2 adet gerekir, indirim bolunur', musteriIndirimi(300, k), 50);
-  esit('120 TL urun: 5 adet -> 20 TL', musteriIndirimi(120, k), 20);
-  esit('adet hesabi', esikIcinAdet(120, 500), 5);
-  esit('adet hesabi esik yok', esikIcinAdet(120, 0), 1);
+  // Sepet tam esikte: indirim orani 100/500 = %20, urune fiyatinin %20'si
+  esit('esigin altinda: oransal (%20)', musteriIndirimi(300, k), 60);
+  esit('120 TL urun -> 24 TL', musteriIndirimi(120, k), 24);
+  esit('pay: 120/500', sepetPayi(120, 500), 0.24);
+  esit('pay: esik yok -> tamami', sepetPayi(120, 0), 1);
+  esit('pay: esigi gecen -> tamami', sepetPayi(600, 500), 1);
+  // Kullanicinin dosyasi: 2000 TL'ye 150 TL, %30 karsilamali, 826,99 TL poset
+  esit('2000/150: 826,99 TL urun musteri indirimi', musteriIndirimi(826.99, { tur: 'cart_tl', esik: 2000, tutar: 150 }), 62.02);
+  esit('2000/150 %30 karsilamali satici fiyati', kampanyaFiyati(826.99, { tur: 'cart_tl', esik: 2000, tutar: 150, karsilama: 30 }), 783.58);
   esit('satici fiyati %30 karsilamali', kampanyaFiyati(600, { ...k, karsilama: 30 }), 530);
   esit('esiksiz duz TL indirim (eski davranis)', kampanyaFiyati(200, { tur: 'cart_tl', esik: 0, tutar: 50 }), 150);
   esit('indirim fiyati asamaz', musteriIndirimi(30, { tur: 'cart_tl', esik: 0, tutar: 50 }), 30);
   esit('tersi (tek adet)', kampanyaFiyatiTersi(500, k), 600);
-  esit('tersi (iki adet)', kampanyaFiyatiTersi(250, k), 300);
+  esit('tersi (esigin altinda)', kampanyaFiyatiTersi(240, k), 300);
+  esit('tersi gidis-donus', kampanyaFiyatiTersi(kampanyaFiyati(300, k), k), 300);
+  esit('tersi gidis-donus (esik ustu)', kampanyaFiyatiTersi(kampanyaFiyati(900, k), k), 900);
   esit('tersi karsilamali', kampanyaFiyatiTersi(530, { ...k, karsilama: 30 }), 600);
   esit('tutar 0 -> degismez', kampanyaFiyati(600, { tur: 'cart_tl', esik: 500, tutar: 0 }), 600);
 }

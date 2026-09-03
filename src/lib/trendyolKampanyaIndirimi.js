@@ -22,11 +22,15 @@
  *              Excel'indeki "girilebilecek max fiyat" bunu zaten uygular.
  *
  * SEPET INDIRIMI URUNE NASIL DAGILIR (cart_tl)?
- *   Urun fiyati esigi tek basina gecerse indirimin tamami o urunden iner.
- *   Gecmezse musteri esige ulasmak icin n = tavan(esik / fiyat) adet alir;
- *   indirim n urune bolunur. Bu en KOTU durumdur (musteri baska pahali
- *   urunlerle esigi doldurursa bizim urunden daha az iner); kar en kotu
- *   duruma gore gosterilir.
+ *   Kullanici (3 Eylul 2026): "kampanyaya katilan urunlerin tamami dahil,
+ *   siparis verilen kampanya urunlerinin TOPLAM tutari uzerinden indirim
+ *   olur." Trendyol indirimi siparisteki urunlere tutarlari ORANINDA
+ *   dagitir. En kotu durum sepetin tam esikte olmasidir:
+ *     indirim orani = tutar / esik      (500 TL'ye 100 TL -> %20)
+ *     urun indirimi = fiyat x tutar / esik
+ *   Urun fiyati esigi tek basina geciyorsa indirimin tamami o urunden iner.
+ *   Kar en kotu duruma gore gosterilir; sepet esigi astikca gercek indirim
+ *   bundan kucuk olur.
  *
  * Mikro Ihracat grubu secilebilir ama ozel modeli (ulke bazli komisyon ve
  * kargo) henuz yok; kullanici karari: en son yapilacak.
@@ -72,15 +76,15 @@ export const KAMPANYA_GRUPLARI = [
 const yuzdeliMi = (tur) => tur === 'net_percent' || tur === 'cart_percent' || tur === 'qty_percent';
 
 /**
- * Sepet esigine ulasmak icin gereken adet (cart_tl).
- * Esik yoksa veya fiyat esigi tek basina geciyorsa 1.
+ * Sepet indiriminden urune dusen pay (0-1), cart_tl.
+ * Esik yoksa veya fiyat esigi tek basina geciyorsa 1 (tamami).
  */
-export function esikIcinAdet(fiyat, esik) {
+export function sepetPayi(fiyat, esik) {
   const f = sayi(fiyat) ?? 0;
   const e = sayi(esik) ?? 0;
-  if (f <= 0) return 1;
+  if (f <= 0) return 0;
   if (e <= 0 || f >= e) return 1;
-  return Math.ceil(e / f);
+  return f / e;
 }
 
 /**
@@ -100,8 +104,7 @@ export function musteriIndirimi(fiyat, kampanya) {
       return oran > 0 ? kurusa(f * oran / 100) : 0;
     case 'cart_tl': {
       if (tutar <= 0) return 0;
-      const n = esikIcinAdet(f, kampanya.esik);
-      return kurusa(Math.min(f, tutar / n));
+      return kurusa(Math.min(f, tutar * sepetPayi(f, kampanya.esik)));
     }
     case 'buy_x_pay_y': {
       const alX = sayi(kampanya.alX) ?? 0;
@@ -158,12 +161,11 @@ export function kampanyaFiyatiTersi(hedefEtkin, kampanya) {
     const esik = sayi(kampanya.esik) ?? 0;
     if (tutar <= 0) return kurusa(h);
     const saticiPayi = tutar * (1 - k);
-    // n adet varsayimiyla L = h + pay/n; varsayim L icin tutarli olmali
-    for (let n = 1; n <= 50; n++) {
-      const L = h + saticiPayi / n;
-      if (esikIcinAdet(L, esik) === n) return kurusa(L);
-    }
-    return kurusa(h + saticiPayi);
+    // Esigi gecen fiyat: L = h + pay. Gecmeyen: L - L x pay/esik = h
+    const ustte = h + saticiPayi;
+    if (esik <= 0 || ustte >= esik) return kurusa(ustte);
+    const kat = 1 - saticiPayi / esik;
+    return kat > 0 ? kurusa(h / kat) : 0;
   }
   return kurusa(h);
 }

@@ -709,13 +709,15 @@ Kaynak: Trendyol Partner → Promosyonlar → Katılabileceğim Kampanyalar
 |---|---|---|
 | Net %15 İndirim | `net_percent` | fiyat × %15 |
 | Sepette %40 İndirim | `cart_percent` | fiyat × %40 |
-| 500 TL'ye 100 TL İndirim | `cart_tl` | fiyat ≥ 500 ise 100 TL; değilse n = tavan(500/fiyat) adet gerekir, indirim 100/n |
+| 500 TL'ye 100 TL İndirim | `cart_tl` | fiyat ≥ 500 ise 100 TL; değilse fiyat × 100/500 (sepet tam eşikte, oransal dağılım) |
 | 3 Al 2 Öde | `buy_x_pay_y` | fiyat × (3−2)/3 |
 | 2 Adet ve Üzeri %15 İndirim | `qty_percent` | fiyat × %15 (tüm adetler) |
 
-> `cart_tl`'de eşiğin altındaki ürün için indirim **adetlere bölünür**; bu en
-> kötü durumdur (müşteri eşiği başka ürünlerle doldurursa bizimkinden daha az
-> iner). Kâr en kötü duruma göre gösterilir.
+> `cart_tl`: Trendyol sepet indirimini siparişteki kampanya ürünlerine
+> **tutarları oranında dağıtır** (kullanıcı, 3 Eyl 2026). En kötü durum sepetin
+> tam eşikte olmasıdır: indirim oranı = tutar/eşik. Örn. 2000 TL'ye 150 TL →
+> %7,5; 826,99 TL'lik ürün için 62,02 TL. Sepet eşiği aştıkça gerçek indirim
+> bundan küçüktür; kâr en kötü duruma göre gösterilir.
 
 ### Ortak alanlar
 - **Trendyol Karşılamalı (%)** — indirimin bu payı Trendyol'dan çıkar.
