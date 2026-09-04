@@ -747,9 +747,16 @@ export default function Campaigns() {
     setUploadedData(updated);
   };
 
+  // Secim kaldirilinca fiyat baslangic degerine (Maks. Girilebilecek) doner;
+  // boylece barem onerisiyle dusurulmus fiyat kalmaz, Barem Onerisi sutunu
+  // yeniden gorunur.
+  const varsayilanFiyat = (item) => (Number(item.max_price) > 0 ? Number(item.max_price) : item.campaign_price);
+  const secimiKaldir = (item) => ({ ...item, selected_type: 'none', campaign_price: varsayilanFiyat(item) });
+
   const handleSelect = (index) => {
     const updated = [...uploadedData];
-    updated[index].selected_type = updated[index].selected_type === 'campaign' ? 'none' : 'campaign';
+    if (updated[index].selected_type === 'campaign') updated[index] = secimiKaldir(updated[index]);
+    else updated[index] = { ...updated[index], selected_type: 'campaign' };
     setUploadedData(updated);
   };
 
@@ -1007,7 +1014,7 @@ export default function Campaigns() {
                     <Button variant="outline" onClick={handleSave}>
                       <Check className="mr-2 h-4 w-4" />Seçimleri Kaydet ({selectedCount})
                     </Button>
-                    <Button variant="outline" onClick={() => { setUploadedData(uploadedData.map(i => ({ ...i, selected_type: 'none' }))); toast.success('Tüm seçimler kaldırıldı'); }}>
+                    <Button variant="outline" onClick={() => { setUploadedData(uploadedData.map(secimiKaldir)); toast.success('Tüm seçimler kaldırıldı, fiyatlar başlangıç değerine döndü'); }}>
                       Seçimleri Kaldır
                     </Button>
                     <Button variant="outline" onClick={handleExport}>
