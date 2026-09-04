@@ -865,13 +865,14 @@ export default function Campaigns() {
   const baskaKampanyadaSecili = (item) => {
     if (!managingCampaign || managingCampaign.campaign_type !== 'all_countries') return null;
     const bugun = new Date(); bugun.setHours(0, 0, 0, 0);
-    // Tarihler KESISIYORSA cakisma. Yalnizca sinir gunu ortaksa (1-15 ve
-    // 15-30) cakisma DEGIL — kullanici (5 Eyl 2026): "ayni urun 2 kampanyaya
-    // katilmis olmuyor". Bitmis kampanya da sayilmaz.
+    // Tarihler kesisiyorsa cakisma; sinir gunu ortaksa (1-15 ve 15-30) da
+    // sayilir — Trendyol'da bitis 23:59, baslangic 00:00 olabilir; bu yalnizca
+    // uyari oldugu icin ihtiyatli taraf secildi (5 Eyl 2026). Bitmis kampanya
+    // sayilmaz.
     const kesisiyor = (c) => {
       const b1 = new Date(managingCampaign.start_date), e1 = new Date(managingCampaign.end_date);
       const b2 = new Date(c.start_date), e2 = new Date(c.end_date);
-      return b1 < e2 && b2 < e1 && e2 >= bugun;
+      return b1 <= e2 && b2 <= e1 && e2 >= bugun;
     };
     for (const r of savedCampaignProducts) {
       if (r.campaign_id === managingCampaign.id || r.selected_type !== 'campaign') continue;
