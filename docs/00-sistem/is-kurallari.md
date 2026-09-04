@@ -845,6 +845,31 @@ Chrome'dan okundu.)
 | Fiyat kademeye girmezse kategori komisyonu | Ortak | uyumlu |
 | Tarife bitince ne olur / yeni hafta seçimi taşınır mı / Komisyona Esas Fiyat tanımı / buybox-minimum fiyat / "Maksimum Girebileceğin Fiyat" | **dokümanda yok** | varsayım: bitince kategori; her hafta sıfırdan |
 
+### Mikro İhracat — doküman özeti (henüz uygulanmadı, kullanıcı: en son)
+Kaynak: Satıcı Bilgi Merkezi › Mikro İhracat kategorisi (21 sayfa; okunanlar:
+mikro-ihracattaki-maliyetler, mikro-ihracat-hakkinda-sikca-sorulan-sorular,
+mikro-ihracatta-indirimlerin-uygulanma-sirasi).
+
+- **Komisyon oranı ve kargo ücreti Türkiye ile aynı**; fatura **%0 KDV**.
+- **Uluslararası Hizmet Bedeli: ürün başına, KDV dahil %6** — matrah:
+  Trendyol karşılamalı indirimler hariç, diğer indirimler düşülmüş satış
+  fiyatı (yani komisyona esas fiyatla aynı mantık). İptalde uygulanmaz.
+  Güncel oran: Hesap Bilgileri › Sözleşme & Belgeler.
+- **Yurt Dışı İade Operasyon Bedeli** (yalnızca iadeye dönen üründe):
+  (TR satış fiyatı − komisyon) × **%35** (KDV dahil fiyat ≤ 2000 TL) /
+  **%30** (> 2000 TL). SSS sayfası %20/%15 ve 1.500 TL eşiği yazıyor —
+  çelişki; uygulamadan önce Sözleşme & Belgeler'den doğrulanmalı.
+- Desi limiti **10**; uzunluk 50 cm (esnek 90 cm). Fiyat TL (TR satış fiyatı).
+- Vade: Körfez 7 gün (TR'den kısa), Azerbaycan TR gibi (ayrı kalem),
+  Orta/Doğu Avrupa vade 0, sonraki ayın ilk haftası.
+- İndirim uygulanma sırası TR ile aynı (0 fiyat değişimi → 1 net → 2 koşullu
+  & kampanya → 3 birlikte al → 4 kupon); TR indirimleri Mikro İhracat'ta da
+  geçerli; TR kuponları geçerli değil. Aynı sıradakilerden en yükseği.
+
+Uygulama notu: Mikro İhracat kampanyası = genel kampanya hesabı + %6 hizmet
+bedeli − satış KDV'si 0 (ihracat) + opsiyonel iade riski satırı; desi > 10
+ürün uygun değil.
+
 ## 8. Excel içe/dışa aktarma
 
 - Sütunlar **başlık adına göre** eşleştirilir; sıra önemli değildir
