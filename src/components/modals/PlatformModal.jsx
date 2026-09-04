@@ -46,11 +46,11 @@ export default function PlatformModal({
     same_day_delivery_fee: 0,
     same_day_delivery_vat_rate: 20,
     use_barem: true,
-    barem_max_desi: 5,
-    barem1_min: 0,
-    barem1_max: 199.99,
-    barem2_min: 200,
-    barem2_max: 349.99,
+    barem_max_desi: '',
+    barem1_min: '',
+    barem1_max: '',
+    barem2_min: '',
+    barem2_max: '',
     is_active: true
   });
 
@@ -75,11 +75,11 @@ export default function PlatformModal({
         same_day_delivery_fee: platform.same_day_delivery_fee ?? 0,
         same_day_delivery_vat_rate: platform.same_day_delivery_vat_rate ?? 20,
         use_barem: platform.use_barem !== false,
-        barem_max_desi: platform.barem_max_desi ?? 5,
-        barem1_min: platform.barem1_min ?? 0,
-        barem1_max: platform.barem1_max ?? 199.99,
-        barem2_min: platform.barem2_min ?? 200,
-        barem2_max: platform.barem2_max ?? 349.99,
+        barem_max_desi: platform.barem_max_desi ?? '',
+        barem1_min: platform.barem1_min ?? '',
+        barem1_max: platform.barem1_max ?? '',
+        barem2_min: platform.barem2_min ?? '',
+        barem2_max: platform.barem2_max ?? '',
         is_active: platform.is_active !== false
       });
     } else {
@@ -102,11 +102,11 @@ export default function PlatformModal({
         same_day_delivery_fee: 0,
         same_day_delivery_vat_rate: 20,
         use_barem: true,
-        barem_max_desi: 5,
-        barem1_min: 0,
-        barem1_max: 199.99,
-        barem2_min: 200,
-        barem2_max: 349.99,
+        barem_max_desi: '',
+        barem1_min: '',
+        barem1_max: '',
+        barem2_min: '',
+        barem2_max: '',
         is_active: true
       });
     }

@@ -245,15 +245,23 @@ export const calculatePriceBreakdown = ({
 };
 
 /**
- * Satış fiyatının barem aralığında olup olmadığını kontrol et
+ * Satış fiyatının barem aralığında olup olmadığını kontrol et.
+ *
+ * BANTLAR KODA YAZILMAZ (kullanici karari, 4 Eylul 2026): sinirlar yalnizca
+ * platform ayarindan gelir. Ayar bos/0 ise barem UYGULANMAZ (desi tarifesine
+ * dusulur); eskiden burada 149,99 / 299,99 gibi yedek degerler vardi ve
+ * Trendyol bantlari degistiginde sessizce eski bantla hesapliyordu.
  */
+const bantSayisi = (v) => {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : null;
+};
 export const isPriceInBaremRange = (salePrice, platform, baremType) => {
-  if (baremType === 'barem1') {
-    return salePrice >= (platform.barem1_min || 0) && salePrice <= (platform.barem1_max || 199.99);
-  } else if (baremType === 'barem2') {
-    return salePrice >= (platform.barem2_min || 200) && salePrice <= (platform.barem2_max || 349.99);
-  }
-  return true;
+  const alt = bantSayisi(baremType === 'barem1' ? platform?.barem1_min : platform?.barem2_min);
+  const ust = bantSayisi(baremType === 'barem1' ? platform?.barem1_max : platform?.barem2_max);
+  if (baremType !== 'barem1' && baremType !== 'barem2') return true;
+  if (ust === null || ust <= 0) return false;
+  return salePrice >= (alt ?? 0) && salePrice <= ust;
 };
 
 /**
