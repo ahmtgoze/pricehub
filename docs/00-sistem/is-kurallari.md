@@ -847,7 +847,8 @@ Chrome'dan okundu.)
 | Karşılama oranı olmayan Plus kampanyasında indirimin tamamı satıcıdan | trendyol-plus-kampanyalari | uyumlu (karşılama 0) |
 | E-ticaret stopajı %1, KDV hariç matrah | e-ticaret-stopaji | uyumlu |
 | Fiyat kademeye girmezse kategori komisyonu | Ortak | uyumlu |
-| Tarife bitince ne olur / yeni hafta seçimi taşınır mı / Komisyona Esas Fiyat tanımı / buybox-minimum fiyat / "Maksimum Girebileceğin Fiyat" | **dokümanda yok** | varsayım: bitince kategori; her hafta sıfırdan |
+| Tarife bitince ne olur / yeni hafta seçimi taşınır mı / buybox-minimum fiyat | **dokümanda yok** | varsayım: bitince kategori; her hafta sıfırdan |
+| "Maksimum Girebileceğin Fiyat" | Kampanyalar sayfası SSS: kampanya satış fiyatı kampanyanın **maksimum tutarına eşit veya altında** olmalı | esas fiyat tavanı ile aynı — uyumlu |
 
 ### Mikro İhracat — doküman özeti (henüz uygulanmadı, kullanıcı: en son)
 Kaynak: Satıcı Bilgi Merkezi › Mikro İhracat kategorisi (21 sayfa; okunanlar:
@@ -876,8 +877,10 @@ bedeli − satış KDV'si 0 (ihracat) + opsiyonel iade riski satırı; desi > 10
 
 ### Satıcı Bilgi Merkezi tam taraması (4 Eyl 2026) — kâr hesabını etkileyen kurallar
 294 sayfanın tamamı çekildi (`docs/trendyol-bilgi-merkezi/tam-metin.md`, dizin
-`dizin.md`); komisyon / kargo / desi / KDV / hakediş / iade / hizmet bedeli /
-stopaj / kampanya / Plus / buybox / Mikro İhracat geçen sayfalar tam okundu.
+`dizin.md`) ve **294 sayfanın tamamı okundu** (5 Eyl 2026 sabahı bitti). Ürün
+işlemleri, sipariş-kargo, finans/e-dönüşüm, raporlar, mağaza, reklam, mobil
+uygulama ve iletişim bölümlerinde fiyat/kâr kuralı değiştiren madde yok;
+aşağıdaki tabloya yalnızca hesabı ilgilendirenler eklendi.
 
 | Konu | Doküman | Sistem | Durum |
 |---|---|---|---|
@@ -897,6 +900,24 @@ stopaj / kampanya / Plus / buybox / Mikro İhracat geçen sayfalar tam okundu.
 | Avantajlı etiket | etiket fiyatı = müşterinin gördüğü tekil satış fiyatı; haftalık; kampanya/flaş fiyatları ağırlığı azaltılarak değerlendirilir | — | uyumlu |
 | Buybox fiyatı | buybox'ı kazanan satıcının fiyatı (Trendyol Satış Fiyatı = senin fiyatın) → "Katılım Koşulu: Buybox Fiyatı veya Daha Düşük" = kampanya fiyatın buybox fiyatını geçmemeli | — | bilgi (soru 20) |
 | Plus programı ülkeleri | Türkiye, Azerbaycan, Suudi Arabistan, BAE | — | bilgi |
+| **Tarife kademesine etki etmeyen indirimler** (Platform Kuralları, Ürün Komisyon Tarifeleri) | komisyon uygulanan fiyat = müşterinin gördüğü tekil satış fiyatı, **Trendyol'un karşıladığı kampanyalar hariç**; **kuponlar, çoklu alım indirimleri ve eşikli promosyonlar fiyat kademesini değiştirmez** | Kampanyalar: kademe `effPrice` (liste − satıcı payı) ile bulunuyor; sepet/eşikli türlerde (`cart_tl`, `cart_percent`, `buy_x_pay_y`) bu kural gereği kademe **liste fiyatıyla** aranmalı — kâr hesabı yine satıcı net fiyatından | **açık — Satıcı Destek'e sorulacak; düzeltme bekliyor** |
+| Kampanya kurguları (Kampanyalar sayfası) | direkt indirimli 5 kurgu: mevcut fiyattan % / X ₺ indirim, X ₺ ve altı, son 14 gün minimum fiyattan % indirim, son 14 gün minimuma eşit-düşük; ayrıca sepette indirimli | 5 indirim türü + gruplar | uyumlu |
+| "Maksimum Girebileceğin Fiyat" | kampanyaya eklenen ürünün kampanya satış fiyatı, kampanyada belirlenen **maksimum tutara eşit veya altında** olmalı; aksi halde fiyat uyarısı | Excel satırı reddedilir (esas fiyat tavanı) | uyumlu (teyit) |
+| Türkiye + Mikro İhracat aynı ürün | Tüm Ülkeler ve Mikro İhracat kampanyasına aynı ürün dahilse **müşteri için en avantajlı promosyon** çalışır | Mikro İhracat ertelendi | bilgi |
+| Trendyol Karşılamalı İndirim faturası | müşteri faturası = satış fiyatı − **satıcının karşıladığı** indirim (100 ₺, satıcı 10 + Trendyol 10 → 90 ₺ fatura); kurumsal siparişte 80 ₺ kesilir, Trendyol payı ayrıca Trendyol'a faturalanır | satıcı net fiyatı `effPrice` | uyumlu (teyit) |
+| Kurumsal fatura hakedişi | tüm indirimler düşülmüş tutardan hakediş; Trendyol'un karşıladığı pay her ayın 25'inde "Trendyol'a Kesmem Gereken Faturalar"da listelenir, faturalanınca ödenir | — | bilgi (nakit akışı gecikmesi) |
+| Komisyon faturası günleri | ayın 1, 7, 14, 21, 28 ve son günü; iade komisyonu iade onayından sonraki ilk faturadan düşülür | — | bilgi |
+| Minimum Sipariş Adedi | müşterinin gördüğü fiyat 0–10 ₺ → en fazla 4; 10–15 ₺ → 3; 15–20 ₺ → 2 adet alt sınır tanımlanabilir; sadece TR ve AZ | yok | bilgi (ucuz poşetler için değerlendirilebilir) |
+| Barem altı destek şartları (Program 2) | ≤10 desi, standart kargo firması, listede fiyatı olmayan firmalar hariç; bölünmüş pakette yalnız bir paket; iade paketleri dahil değil (Başarılı Satıcı rozeti varken hariç) | `barem_max_desi` 10; iade barem yok | uyumlu |
+| Ek kargo ücretleri | paket bölme, ağır taşıma, teslimat bölgesi dışı, ek yakıt vb. kargo firması faturası satıcıya yansır | yok | bilgi |
+| Desi bilgisi yoksa | kargo firmasından desi gelmezse satıcının **ortalama desisi** ile fiyatlanır | ürün desisi | bilgi |
+| Aşırı yüksek / düşük fiyat kilidi | ortalamanın %155 (≤100 ₺) / %105 (≤3000 ₺) / %75 (>3000 ₺) üstü → görünürlük düşer, kilitlenebilir; ortalamanın %70 altı → kilitlenir; satıcı fiyatı onaylayıp açar | yok | bilgi (fiyat önerisinde uyarı olabilir) |
+| Kampanya süresince fiyat | kampanya başlayınca fiyat sabitlenir, artırılamaz; artırmak için kampanyadan çıkmak gerekir; ekstra indirim yapılabilir | — | bilgi |
+| Bugün Kargoda son sipariş saati | 11:00–14:00 arası seçilir; değişiklik ertesi sabah 07:00'de geçerli; hafta sonu/tatilde Bugün Kargoda oluşmaz; Cuma saat sonrası → Cumartesi kargo | hizmet bedeli 5,99 seçimi | bilgi |
+| Reklam cirosu | sepette indirimli, müşterinin ödediği fiyat; günlük bütçe ürün başına 10–5.000 ₺, reklam toplamı ≤50.000 ₺ | yok | bilgi |
+| Komisyonlu influencer | komisyon = satılan ürün fiyatı × oran (satış olunca ödenir) | yok | bilgi |
+| Ürün kalite kapatmaları | düşük performansta 7 → 14 → 30 gün satışa kapatma | — | bilgi |
+| Satıcı puanı renkleri | ≥9,0 koyu yeşil; 8,5–9 yeşil; 8,0–8,5 açık yeşil; 7–8 turuncu; <7 kırmızı; Salı akşamı hesaplanır | — | bilgi |
 
 ## 8. Excel içe/dışa aktarma
 
