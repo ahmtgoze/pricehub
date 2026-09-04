@@ -768,7 +768,7 @@ export default function Campaigns() {
       if (!matched) { skipNoProduct++; return item; }
       const commRec = getCommissionRecord(item);
       if (!commRec) { skipNoCommission++; return item; }
-      if (baskaKampanyadaSecili(item)) { skipBaska++; return item; }
+      const baskaKampanyada = !!baskaKampanyadaSecili(item);
       let price = item.max_price || item.campaign_price;
       if (!price || price <= 0) return item;
       // Barem onerisi: max fiyat desi tarifesine dusuyor ama biraz asagisi
@@ -778,6 +778,7 @@ export default function Campaigns() {
       if (oneri && !isBelowFloor(item, oneri.fiyat)) { price = oneri.fiyat; baremliSecim++; }
       if (isBelowFloor(item, price)) { skipBelow++; return item; }
       selectedCount++;
+      if (baskaKampanyada) skipBaska++;
       return { ...item, selected_type: 'campaign', campaign_price: price };
     });
     setUploadedData(updated);
@@ -786,7 +787,7 @@ export default function Campaigns() {
     if (skipNoProduct > 0) parts.push(`⚠️ ${skipNoProduct} sistem ürünüyle eşleşmedi`);
     if (skipNoCommission > 0) parts.push(`⚠️ ${skipNoCommission} komisyon/kâr tabanı yok`);
     if (skipBelow > 0) parts.push(`🔴 ${skipBelow} kâr tabanının altında`);
-    if (skipBaska > 0) parts.push(`⚠️ ${skipBaska} başka Genel kampanyada seçili (atlandı)`);
+    if (skipBaska > 0) parts.push(`⚠️ ${skipBaska}'i başka Genel kampanyada da seçili — üstteki düğmeyle taşı veya diğerinde bırak`);
     if (selectedCount === 0) toast.warning(parts.join(' • ') || 'Uygun ürün bulunamadı');
     else toast.success(parts.join(' • '));
   };
@@ -804,20 +805,20 @@ export default function Campaigns() {
     let secilen = 0, baremli = 0, baska = 0;
     const updated = uploadedData.map(item => {
       if (!visible.has(item.barcode)) return item;
-      if (baskaKampanyadaSecili(item)) { baska++; return item; }
+      const baskaKampanyada = !!baskaKampanyadaSecili(item);
       const price = item.campaign_price || item.max_price;
       if (!price || price <= 0) return item;
       // Once barem onerisi (Akilli Otomatik Sec ile ayni): barem tavani kar
       // oranini artiriyor ve aralik tutuyorsa o fiyat; yoksa girilen fiyat.
       const oneri = baremOnerisiHesapla(item, price);
-      if (oneri && araliktaMi(oneri.profitRate, oneri.profit)) { secilen++; baremli++; return { ...item, selected_type: 'campaign', campaign_price: oneri.fiyat }; }
+      if (oneri && araliktaMi(oneri.profitRate, oneri.profit)) { secilen++; baremli++; if (baskaKampanyada) baska++; return { ...item, selected_type: 'campaign', campaign_price: oneri.fiyat }; }
       const { profit, profitRate } = calculateProfit(price, item);
-      if (araliktaMi(profitRate, profit)) { secilen++; return { ...item, selected_type: 'campaign', campaign_price: price }; }
+      if (araliktaMi(profitRate, profit)) { secilen++; if (baskaKampanyada) baska++; return { ...item, selected_type: 'campaign', campaign_price: price }; }
       if (item.selected_type === 'campaign') return secimiKaldir(item);
       return item;
     });
     setUploadedData(updated);
-    toast.success(`${secilen > 0 ? `${secilen} ürün seçildi${baremli > 0 ? ` (${baremli}'i barem önerisiyle)` : ''}` : 'Aralığa giren ürün yok'}${baska > 0 ? ` • ${baska} başka Genel kampanyada seçili (atlandı)` : ''}`);
+    toast.success(`${secilen > 0 ? `${secilen} ürün seçildi${baremli > 0 ? ` (${baremli}'i barem önerisiyle)` : ''}` : 'Aralığa giren ürün yok'}${baska > 0 ? ` • ${baska}'i başka Genel kampanyada da seçili — üstteki düğmeyle taşı veya diğerinde bırak` : ''}`);
   };
 
   const openDetailModal = (item) => {
