@@ -670,15 +670,19 @@ export default function Campaigns() {
         }
 
         setUploadProgress({ current: 0, total: parsed.length });
+        // Kaydedilen satirlar id'leriyle tutulur; yoksa "Kaydet" ayni urunu
+        // guncellemek yerine ikinci kez olusturur (kopya satir).
+        const kaydedilen = [];
         for (let i = 0; i < parsed.length; i += 30) {
           const batch = parsed.slice(i, i + 30);
           if (i === 0 && batch.length > 0 && excelFileUrl) batch[0].excel_file_url = excelFileUrl;
-          await CampaignProduct.bulkCreate(batch);
+          const sonuc = await CampaignProduct.bulkCreate(batch);
+          kaydedilen.push(...(Array.isArray(sonuc) && sonuc.length === batch.length ? sonuc : batch));
           setUploadProgress({ current: Math.min(i + 30, parsed.length), total: parsed.length });
           if (i + 30 < parsed.length) await new Promise(res => setTimeout(res, 150));
         }
 
-        setUploadedData(parsed);
+        setUploadedData(kaydedilen);
         setUploadProgress({ current: 0, total: 0 });
         queryClient.invalidateQueries({ queryKey: ['campaignProducts'] });
         toast.success(`${parsed.length} ürün yüklendi`);
