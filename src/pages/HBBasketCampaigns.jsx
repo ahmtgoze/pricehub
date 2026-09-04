@@ -16,7 +16,7 @@ import { tr } from 'date-fns/locale';
 import { toast } from 'sonner';
 import * as XLSX from 'xlsx';
 import PriceDetailModal from '@/components/modals/PriceDetailModal';
-import { baremSec, baremTarifesiSec } from '@/lib/baremKurali';
+import { baremSec, baremTarifesiSec, baremTavanFiyatlari } from '@/lib/baremKurali';
 import { kampanyaSayfasiniKur, otomatikGenislikler, bosSkuSutunu, SKU_BASLIGI } from '@/lib/hbSepetDisaAktarim';
 import { kdvDahilOran, komisyonEtiketi } from '@/lib/hbKomisyon';
 import { havuzdaCalistir, tekrarDene } from '@/lib/istekHavuzu';
@@ -450,13 +450,68 @@ export default function HBBasketCampaigns() {
   const kampanyaKari = (fiyat, item) =>
     calculateProfit(odenecekFiyat(fiyat), item.discounted_commission, item);
 
+  // odenecekFiyat'in tersi: musterinin odeyecegi tutari veren girilecek fiyat.
+  const girilecekFiyat = (odenecek) => {
+    const p = Number(odenecek) || 0;
+    if (p <= 0) return 0;
+    const ind = kampanyaIndirimi;
+    const d = Number(ind?.deger);
+    if (!ind?.tur || !Number.isFinite(d) || d <= 0) return p;
+    const sonuc = ind.tur === 'yuzde' ? p / (1 - d / 100) : p + d;
+    return Math.round(sonuc * 100) / 100;
+  };
+
+  // Barem esikleri HB platform kaydindan (sayfaya sabit yazilmaz).
+  const seciliPlatformKaydi = uniquePlatforms.find((p) => p.name === selectedPlatform);
+  const [BAREM2_UST, BAREM1_UST] = baremTavanFiyatlari(seciliPlatformKaydi);
+
+  /**
+   * Barem onerisi: girilen fiyatla musterinin odedigi tutar desi tarifesine
+   * dusuyorsa, odenecek tutari barem tavanina cekmek kar ORANINI artiriyor
+   * mu? Ekrandaki sutun ve Akilli Otomatik Sec ayni hesabi kullanir.
+   */
+  const baremOnerisiHesapla = (item, fiyat) => {
+    const f = Number(fiyat) || 0;
+    if (f <= 0) return null;
+    const mevcut = kampanyaKari(f, item);
+    if (!mevcut.breakdown) return null;
+    if (mevcut.baremUsed === 'barem1' || mevcut.baremUsed === 'barem2') return null;
+    const maks = Number(item.max_price) || 0;
+    let oneri = null;
+    for (const [tavan, ad, tip] of [[BAREM2_UST, 'Barem 2', 'barem2'], [BAREM1_UST, 'Barem 1', 'barem1']]) {
+      const aday = girilecekFiyat(tavan);
+      if (!aday || aday <= 0 || aday >= f) continue;
+      if (maks > 0 && aday > maks) continue;
+      const c = kampanyaKari(aday, item);
+      if (c.baremUsed !== tip || c.profitRate <= mevcut.profitRate) continue;
+      if (!oneri || c.profitRate > oneri.profitRate) {
+        oneri = { fiyat: aday, profit: c.profit, profitRate: c.profitRate, ad, karArtisi: c.profitRate - mevcut.profitRate };
+      }
+    }
+    return oneri;
+  };
+
+  const renderBaremOnerisi = (item) => {
+    const oneri = baremOnerisiHesapla(item, item.campaign_price);
+    if (!oneri) return <div className="text-center text-muted-foreground/70 text-xs">-</div>;
+    return (
+      <div className="border border-border rounded-lg p-2 bg-secondary text-left">
+        <div className="text-xs font-semibold text-foreground mb-1">{oneri.ad} Önerisi</div>
+        <div className="text-xs text-muted-foreground">Fiyat: ₺{oneri.fiyat.toFixed(2)}</div>
+        <div className="text-xs font-semibold text-emerald-600 mt-1">+₺{oneri.profit.toFixed(2)} (%{oneri.profitRate.toFixed(1)})</div>
+        <div className="text-xs font-medium text-foreground mt-1">+%{oneri.karArtisi.toFixed(1)} kâr artışı</div>
+        <Button size="sm" variant="outline" className="w-full mt-2 h-7 text-xs" onClick={() => handleCampaignPriceChange(item, String(oneri.fiyat))}>Uygula</Button>
+      </div>
+    );
+  };
+
   // Fiyat yine girilebilecek MAX fiyattir; secim olcusu ise Komisyonlar
   // sayfasindaki INDIRIMLI hedeflerdir (is-kurallari "Akilli Otomatik Sec").
   // Onceki hal "kar sifirin ustundeyse sec" diyordu; %1 karla kampanyaya
   // girmek anlamli degil, ustelik komisyon KDV'si ve sepet indirimi
   // duzeltildikten sonra marjlar iyice daraldi.
   const handleSmartAutoSelect = () => {
-    const sayac = { secilen: 0, eslesmeyen: 0, hedefsiz: 0, tutmayan: 0, zatenSecili: 0, fiyatsiz: 0 };
+    const sayac = { secilen: 0, eslesmeyen: 0, hedefsiz: 0, tutmayan: 0, zatenSecili: 0, fiyatsiz: 0, baremli: 0 };
     const ekOran = parseFloat(minKarOrani) || 0;
     const ekTutar = parseFloat(minKarTutari) || 0;
 
@@ -467,17 +522,26 @@ export default function HBBasketCampaigns() {
       const urun = getMatchedProduct(item);
       if (!urun) { sayac.eslesmeyen++; return item; }
 
-      const fiyat = item.max_price || item.current_price || 0;
+      let fiyat = item.max_price || item.current_price || 0;
       if (fiyat <= 0) { sayac.fiyatsiz++; return item; }
 
       const hedefler = hedefleriCoz(komisyonBul(commissions, hbPlatforms, urun));
       if (!hedefVarMi(hedefler)) { sayac.hedefsiz++; return { ...item, campaign_price: fiyat }; }
 
+      // Sayfadaki ek alt sinirlar
+      const ekUygunMu = (kar, oran) => (ekOran <= 0 || oran >= ekOran) && (ekTutar <= 0 || kar >= ekTutar);
+
+      // Barem onerisi: max fiyat desi tarifesine dusuyor ama biraz asagisi
+      // barem tavanina giriyor ve kar orani artiyorsa o fiyat kullanilir
+      // (Barem Onerisi sutunuyla ayni hesap).
+      const oneri = baremOnerisiHesapla(item, fiyat);
+      if (oneri && hedefTutuyorMu(oneri.profit, oneri.profitRate, hedefler).uygun && ekUygunMu(oneri.profit, oneri.profitRate)) {
+        fiyat = oneri.fiyat; sayac.baremli++;
+      }
+
       const { profit, profitRate } = kampanyaKari(fiyat, item);
       const { uygun } = hedefTutuyorMu(profit, profitRate, hedefler);
-
-      // Sayfadaki ek alt sinirlar
-      const ekUygun = (ekOran <= 0 || profitRate >= ekOran) && (ekTutar <= 0 || profit >= ekTutar);
+      const ekUygun = ekUygunMu(profit, profitRate);
 
       if (uygun && ekUygun) { sayac.secilen++; return { ...item, campaign_price: fiyat, selected: true }; }
       sayac.tutmayan++;
@@ -487,7 +551,7 @@ export default function HBBasketCampaigns() {
     setUploadedData(guncel);
 
     const parcalar = [];
-    if (sayac.secilen > 0) parcalar.push(`✅ ${sayac.secilen} ürün seçildi`);
+    if (sayac.secilen > 0) parcalar.push(`✅ ${sayac.secilen} ürün seçildi${sayac.baremli > 0 ? ` (${sayac.baremli}'i barem önerisiyle)` : ''}`);
     if (sayac.zatenSecili > 0) parcalar.push(`${sayac.zatenSecili} zaten seçili`);
     if (sayac.tutmayan > 0) parcalar.push(`${sayac.tutmayan} hedef kârı tutmadı`);
     if (sayac.hedefsiz > 0) parcalar.push(`⚠️ ${sayac.hedefsiz} üründe indirimli hedef tanımlı değil`);
@@ -803,6 +867,7 @@ export default function HBBasketCampaigns() {
                         <th className="p-3 text-center font-semibold min-w-[150px]">Kampanyaya Dahil Edilebilecek Maksimum Fiyat</th>
                         <th className="p-3 text-center font-semibold min-w-[210px]">Kampanyalı Fiyat</th>
                         <th className="p-3 text-center font-semibold min-w-[150px]">Müşterinin Ödediği Tutar</th>
+                        <th className="p-3 text-center font-semibold min-w-[150px]">Barem Önerisi</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -854,6 +919,7 @@ export default function HBBasketCampaigns() {
                                 </div>
                               )}
                             </td>
+                            <td className="p-3 text-center">{matchedProduct ? renderBaremOnerisi(item) : <span className="text-muted-foreground/70 text-xs">-</span>}</td>
                           </tr>
                         );
                       })}

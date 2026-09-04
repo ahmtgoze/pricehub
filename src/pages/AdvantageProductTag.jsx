@@ -482,6 +482,7 @@ export default function AdvantageProductTag() {
     let skippedNoMatch = 0;
     let skippedNoCommission = 0;
     let skippedTargetNotMet = 0;
+    let baremliSecim = 0;
 
     const updated = uploadedData.map(item => {
       // Elle fiyat girilen seçimleri koru; diğer tüm önceki seçimleri sıfırlayıp baştan değerlendir
@@ -542,6 +543,17 @@ export default function AdvantageProductTag() {
 
         if (meetsTarget) {
           selectedCount++;
+          // Barem onerisi: aralik fiyati desi tarifesine dusuyor, biraz
+          // asagisi barem tavanina giriyor ve kar orani artiyorsa (hedefler
+          // de tutuyorsa) manuel fiyat olarak barem tavani kullanilir.
+          const oneri = baremOnerisiHesapla(item, range.price);
+          if (oneri && (minAmount == null || oneri.profit >= minAmount) &&
+              (targetRate == null || oneri.profitRate >= targetRate) &&
+              (targetAmount == null || oneri.profit >= targetAmount)) {
+            baremliSecim++;
+            return { ...item, selected_range: 'manual', selected_price: oneri.price, manual_price: oneri.price,
+              manual_profit: oneri.profit, manual_profit_rate: oneri.profitRate, manual_commission: oneri.komisyon };
+          }
           return { ...item, selected_range: range.rangeType, selected_price: range.price };
         }
       }
@@ -553,7 +565,7 @@ export default function AdvantageProductTag() {
     setUploadedData(updated);
 
     const parts = [];
-    if (selectedCount > 0) parts.push(`✅ ${selectedCount} ürün seçildi`);
+    if (selectedCount > 0) parts.push(`✅ ${selectedCount} ürün seçildi${baremliSecim > 0 ? ` (${baremliSecim}'i barem önerisiyle manuel)` : ''}`);
     if (skippedAlreadySelected > 0) parts.push(`${skippedAlreadySelected} zaten seçili/manuel`);
     if (skippedNoProduct > 0) parts.push(`⚠️ ${skippedNoProduct} sistem ürünüyle eşleşmedi`);
     if (skippedNoMatch > 0) parts.push(`⚠️ ${skippedNoMatch} komisyon kaydı bulunamadı`);
@@ -774,37 +786,39 @@ export default function AdvantageProductTag() {
    * esigine cekmenin kari artirip artirmadigini hesaplar. Yalnizca EKRANDA
    * gosterilir — sabit Excel sablonuna dahil DEGILDIR.
    */
-  const renderBaremSuggestionCell = (item, index) => {
-    const seciliFiyat = Number(item.selected_price) || 0;
-    if (!seciliFiyat) return <div className="text-center text-muted-foreground/70 text-xs">-</div>;
-
+  // Ekrandaki sutun ve Akilli Otomatik Sec ayni hesabi kullanir. Yoksa null.
+  const baremOnerisiHesapla = (item, seciliFiyat) => {
+    if (!seciliFiyat || seciliFiyat <= 0) return null;
     const mevcutKomisyon = getDynamicCommissionForPrice(item, seciliFiyat);
     const mevcut = calculateProfit(seciliFiyat, mevcutKomisyon, item);
+    if (!mevcut.breakdown) return null;
 
     // Zaten bir barem tarifesindeyse onerilecek bir sey yok
-    if (mevcut.baremUsed === 'barem1' || mevcut.baremUsed === 'barem2') {
-      return <div className="text-center text-muted-foreground/70 text-xs">-</div>;
-    }
+    if (mevcut.baremUsed === 'barem1' || mevcut.baremUsed === 'barem2') return null;
 
     let oneri = null;
     if (seciliFiyat > BAREM2_UST) {
       const c = calculateProfit(BAREM2_UST, mevcutKomisyon, item);
       if (c.baremUsed === 'barem2' && c.profitRate > mevcut.profitRate) {
-        oneri = { price: BAREM2_UST, profit: c.profit, profitRate: c.profitRate, baremType: 'Barem 2' };
+        oneri = { price: BAREM2_UST, profit: c.profit, profitRate: c.profitRate, baremType: 'Barem 2', komisyon: mevcutKomisyon, karArtisi: c.profitRate - mevcut.profitRate };
       }
     }
     if (seciliFiyat > BAREM1_UST) {
       const c = calculateProfit(BAREM1_UST, mevcutKomisyon, item);
       if (c.baremUsed === 'barem1' && c.profitRate > mevcut.profitRate) {
         if (!oneri || c.profitRate > oneri.profitRate) {
-          oneri = { price: BAREM1_UST, profit: c.profit, profitRate: c.profitRate, baremType: 'Barem 1' };
+          oneri = { price: BAREM1_UST, profit: c.profit, profitRate: c.profitRate, baremType: 'Barem 1', komisyon: mevcutKomisyon, karArtisi: c.profitRate - mevcut.profitRate };
         }
       }
     }
+    return oneri;
+  };
 
+  const renderBaremSuggestionCell = (item, index) => {
+    const oneri = baremOnerisiHesapla(item, Number(item.selected_price) || 0);
     if (!oneri) return <div className="text-center text-muted-foreground/70 text-xs">-</div>;
-
-    const karArtisi = oneri.profitRate - mevcut.profitRate;
+    const karArtisi = oneri.karArtisi;
+    const mevcutKomisyon = oneri.komisyon;
 
     return (
       <div className="border border-border rounded-lg p-2 bg-secondary">

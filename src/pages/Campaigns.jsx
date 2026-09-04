@@ -356,15 +356,16 @@ export default function Campaigns() {
    * dusuyorsa, etkin fiyati barem esigine cekecek kampanya fiyatini onerir.
    * Yalnizca ekranda gosterilir; Excel sablonuna dahil degildir.
    */
-  const renderBaremOnerisi = (item, realIndex) => {
-    const mevcutFiyat = parseFloat(item.campaign_price) || 0;
-    if (!mevcutFiyat) return <span className="text-muted-foreground/70 text-xs">-</span>;
-
+  /**
+   * Barem onerisi: girilen fiyat desi tarifesine dusuyorsa, fiyati barem
+   * tavanina cekmek kar ORANINI artiriyor mu? Ekrandaki sutun ve Akilli
+   * Otomatik Sec ayni hesabi kullanir. Yoksa null.
+   */
+  const baremOnerisiHesapla = (item, mevcutFiyat) => {
+    if (!mevcutFiyat || mevcutFiyat <= 0) return null;
     const mevcut = calculateProfit(mevcutFiyat, item);
-    if (!mevcut.breakdown) return <span className="text-muted-foreground/70 text-xs">-</span>;
-    if (mevcut.baremUsed === 'barem1' || mevcut.baremUsed === 'barem2') {
-      return <span className="text-muted-foreground/70 text-xs">-</span>;
-    }
+    if (!mevcut.breakdown) return null;
+    if (mevcut.baremUsed === 'barem1' || mevcut.baremUsed === 'barem2') return null;
 
     const maks = parseFloat(item.max_price) || 0;
     let oneri = null;
@@ -373,16 +374,21 @@ export default function Campaigns() {
       if (!aday || aday <= 0) continue;
       if (aday >= mevcutFiyat) continue;          // fiyati dusurerek bareme inilir
       if (maks > 0 && aday > maks) continue;      // max girilebilir asilmasin
+      if (aktifKampanya && !fiyatKuralinaUyuyorMu(aday, aktifKampanya)) continue;
       const c = calculateProfit(aday, item);
       if (c.baremUsed !== tip) continue;
       if (c.profitRate <= mevcut.profitRate) continue;
       if (!oneri || c.profitRate > oneri.profitRate) {
-        oneri = { fiyat: aday, profit: c.profit, profitRate: c.profitRate, ad };
+        oneri = { fiyat: aday, profit: c.profit, profitRate: c.profitRate, ad, karArtisi: c.profitRate - mevcut.profitRate };
       }
     }
+    return oneri;
+  };
 
+  const renderBaremOnerisi = (item, realIndex) => {
+    const oneri = baremOnerisiHesapla(item, parseFloat(item.campaign_price) || 0);
     if (!oneri) return <span className="text-muted-foreground/70 text-xs">-</span>;
-    const karArtisi = oneri.profitRate - mevcut.profitRate;
+    const karArtisi = oneri.karArtisi;
 
     return (
       <div className="border border-border rounded-lg p-2 bg-secondary text-left">
@@ -706,24 +712,29 @@ export default function Campaigns() {
   };
 
   const handleSmartAutoSelect = () => {
-    let selectedCount = 0, skipNoProduct = 0, skipNoCommission = 0, skipBelow = 0, skipKural = 0;
+    let selectedCount = 0, skipNoProduct = 0, skipNoCommission = 0, skipBelow = 0, skipKural = 0, baremliSecim = 0;
     const updated = uploadedData.map(item => {
       if (item.selected_type === 'campaign') return item;
       const matched = getMatchedProduct(item);
       if (!matched) { skipNoProduct++; return item; }
       const commRec = getCommissionRecord(item);
       if (!commRec) { skipNoCommission++; return item; }
-      const price = item.max_price || item.campaign_price;
+      let price = item.max_price || item.campaign_price;
       if (!price || price <= 0) return item;
       // Trendyol'un "Fiyat Kuralı" disindaki urun kampanyaya giremez
       if (aktifKampanya && !fiyatKuralinaUyuyorMu(price, aktifKampanya)) { skipKural++; return item; }
+      // Barem onerisi: max fiyat desi tarifesine dusuyor ama biraz asagisi
+      // barem tavanina giriyorsa ve kar orani artiyorsa o fiyat kullanilir
+      // (Barem Onerisi sutunuyla ayni hesap).
+      const oneri = baremOnerisiHesapla(item, price);
+      if (oneri && !isBelowFloor(item, oneri.fiyat)) { price = oneri.fiyat; baremliSecim++; }
       if (isBelowFloor(item, price)) { skipBelow++; return item; }
       selectedCount++;
       return { ...item, selected_type: 'campaign', campaign_price: price };
     });
     setUploadedData(updated);
     const parts = [];
-    if (selectedCount > 0) parts.push(`✅ ${selectedCount} ürün seçildi (max fiyattan)`);
+    if (selectedCount > 0) parts.push(`✅ ${selectedCount} ürün seçildi (max fiyattan${baremliSecim > 0 ? `, ${baremliSecim}'i barem önerisiyle` : ''})`);
     if (skipNoProduct > 0) parts.push(`⚠️ ${skipNoProduct} sistem ürünüyle eşleşmedi`);
     if (skipNoCommission > 0) parts.push(`⚠️ ${skipNoCommission} komisyon/kâr tabanı yok`);
     if (skipBelow > 0) parts.push(`🔴 ${skipBelow} kâr tabanının altında`);
