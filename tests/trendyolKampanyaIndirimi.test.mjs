@@ -1,6 +1,6 @@
 import {
   musteriIndirimi, musteriFiyati, kampanyaFiyati, kampanyaFiyatiTersi, sepetPayi,
-  beklenenSepetle, fiyatKuralinaUyuyorMu, kampanyaMetni, fiyatKuraliMetni, kaydiKampanyayaCevir,
+  beklenenSepetle, dosyaAdindanKampanya, fiyatKuralinaUyuyorMu, kampanyaMetni, fiyatKuraliMetni, kaydiKampanyayaCevir,
   INDIRIM_TURLERI, KAMPANYA_GRUPLARI,
 } from '../src/lib/trendyolKampanyaIndirimi.js';
 
@@ -140,6 +140,25 @@ console.log('\n=== METINLER (Trendyol ekranindaki gibi) ===');
   esit('kural: arasi', fiyatKuraliMetni({ kuralMin: 10, kuralMax: 700 }), '10 TL ve 700 TL arası ürünler');
   esit('kural: ve alti', fiyatKuraliMetni({ kuralMax: 800 }), '800 TL ve altı ürünler');
   esit('kural yok', fiyatKuraliMetni({}), '');
+}
+
+console.log('\n=== DOSYA ADINDAN KAMPANYA ===');
+{
+  const a = dosyaAdindanKampanya('2000-tl-uzeri-150-tl-indirim-30-trendyol-karsilamali-mobilya-hali-aydinlatma-bahce-yapi-market_2026-09-03_20-02_tr-TR_part_1.xlsx');
+  esit('genel sepet: tur', a.campaign_type, 'all_countries');
+  esit('genel sepet: indirim', [a.discount_kind, a.threshold_amount, a.discount_amount], ['cart_tl', 2000, 150]);
+  esit('genel sepet: karsilama', a.trendyol_coverage_rate, 30);
+  esit('genel sepet: ad', a.campaign_name, '2000 tl uzeri 150 tl indirim 30 trendyol karsilamali mobilya hali aydinlatma bahce yapi market');
+  const b = dosyaAdindanKampanya('okula-donus-kategorilerinde-1000-tl-uzeri-150-tl-indirim_2026-09-03_20-02_tr-TR_part_1.xlsx');
+  esit('okula donus', [b.campaign_type, b.discount_kind, b.threshold_amount, b.discount_amount, b.trendyol_coverage_rate], ['all_countries', 'cart_tl', 1000, 150, null]);
+  const c = dosyaAdindanKampanya('trendyol-plus-musterilerine-ozel-ek-5-indirim_2026-09-03_20-03_tr-TR_part_1.xlsx');
+  esit('plus ek %5', [c.campaign_type, c.discount_kind, c.discount_amount, c.threshold_amount], ['trendyol_plus', 'net_percent', 5, null]);
+  esit('plus ad', c.campaign_name, 'Trendyol plus musterilerine ozel ek 5 indirim');
+  const d = dosyaAdindanKampanya('C:\\\\indir\\\\mikro-ihracat-4-al-3-ode.xlsx');
+  esit('yol ayiklanir, mikro ihracat', [d.campaign_type, d.discount_kind], ['mikro_ihracat', null]);
+  esit('tanimsiz ad -> tur genel, indirim yok', dosyaAdindanKampanya('promotion-downloaded.xlsx').discount_kind, null);
+  esit('bos -> null', dosyaAdindanKampanya(''), null);
+  esit('bos -> null 2', dosyaAdindanKampanya(null), null);
 }
 
 console.log('\n=== ESKI KAYIT UYUMU ===');

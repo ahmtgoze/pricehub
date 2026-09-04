@@ -200,6 +200,48 @@ export function beklenenSepetle(kampanya) {
   return { ...kampanya, sepet };
 }
 
+/**
+ * Trendyol'un "Ürün Ekle" ile indirilen kampanya Excel'inin DOSYA ADINDAN
+ * kampanya bilgilerini cikarir. Dosyanin icinde kampanya bilgisi yoktur;
+ * yalnizca ad tasir. Ornekler:
+ *   2000-tl-uzeri-150-tl-indirim-30-trendyol-karsilamali-mobilya-..._2026-09-03_20-02_tr-TR_part_1.xlsx
+ *   okula-donus-kategorilerinde-1000-tl-uzeri-150-tl-indirim_2026-09-03_20-02_tr-TR_part_1.xlsx
+ *   trendyol-plus-musterilerine-ozel-ek-5-indirim_2026-09-03_20-03_tr-TR_part_1.xlsx
+ * Tarih dosya adinda yoktur (sondaki tarih indirme anidir) — kullanici girer.
+ * Hicbir sey cikarilamazsa null.
+ */
+export function dosyaAdindanKampanya(dosyaAdi) {
+  if (!dosyaAdi || typeof dosyaAdi !== 'string') return null;
+  let slug = dosyaAdi.split(/[\\/]/).pop().toLowerCase().replace(/\.xlsx?$/i, '');
+  slug = slug.replace(/_\d{4}-\d{2}-\d{2}.*$/, '').replace(/_part_\d+$/, '');
+  if (!slug) return null;
+
+  const tip = slug.includes('trendyol-plus') ? 'trendyol_plus'
+    : (slug.includes('mikro-ihracat') || slug.includes('yurt-disi')) ? 'mikro_ihracat'
+    : 'all_countries';
+
+  const sonuc = {
+    campaign_type: tip,
+    campaign_name: slug.replace(/-/g, ' ').replace(/^./, (c) => c.toLocaleUpperCase('tr-TR')),
+    discount_kind: null, discount_amount: null, threshold_amount: null, trendyol_coverage_rate: null,
+  };
+
+  const karsilama = slug.match(/(\d+)-trendyol-karsilamali/);
+  if (karsilama) sonuc.trendyol_coverage_rate = Number(karsilama[1]);
+
+  const sepet = slug.match(/(\d+)-tl-uzeri-(\d+)-tl-indirim/);
+  const yuzde = slug.match(/(?:^|-)(?:ek-)?(\d+)-indirim(?:-|$)/);
+  if (sepet) {
+    sonuc.discount_kind = 'cart_tl';
+    sonuc.threshold_amount = Number(sepet[1]);
+    sonuc.discount_amount = Number(sepet[2]);
+  } else if (yuzde) {
+    sonuc.discount_kind = 'net_percent';
+    sonuc.discount_amount = Number(yuzde[1]);
+  }
+  return sonuc;
+}
+
 /** Urun fiyati kampanyanin "Fiyat Kuralı" araligina giriyor mu? */
 export function fiyatKuralinaUyuyorMu(fiyat, kampanya) {
   const f = sayi(fiyat);

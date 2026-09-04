@@ -14,6 +14,8 @@ const TABLE_MAP = {
   PackageItem: 'package_items',
   UpdateReport: 'update_reports',
   Campaign: 'campaigns',
+  // Kampanya Excel'inden gelen urun satirlari + secimler (Kampanyalar > Urun Ekle)
+  CampaignProduct: 'campaign_products',
   FlashProduct: 'flash_products',
   AdvantageProductTag: 'advantage_product_tags',
   PlusProductCommissionTariff: 'plus_product_commission_tariffs',
