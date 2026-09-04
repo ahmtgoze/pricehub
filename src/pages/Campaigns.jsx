@@ -1083,8 +1083,11 @@ export default function Campaigns() {
           <Button variant="outline" onClick={closeManager} className="mb-4">← Kampanyalara Dön</Button>
           <div className="mb-8">
             <h1 className="ph-title">Ürünler — {getTypeLabel(managingCampaign.campaign_type)}</h1>
-            <p className="ph-subtitle">{campaignTitle(managingCampaign)} · {safeDate(managingCampaign.start_date)} - {safeDate(managingCampaign.end_date)}</p>
-            <AktifPencereSatiri ozet={aktifPencereOzeti(priceRanges, selectedPlatform)} />
+            <p className="ph-subtitle">{managingCampaign.campaign_name || getTypeLabel(managingCampaign.campaign_type)}</p>
+            <p className="text-sm text-muted-foreground mt-1">
+              {[kampanyaMetni(aktifKampanya), aktifKampanya?.karsilama > 0 ? `%${aktifKampanya.karsilama} Trendyol karşılamalı` : '', `${safeDate(managingCampaign.start_date)} - ${safeDate(managingCampaign.end_date)}`].filter(Boolean).join(' · ')}
+            </p>
+            <AktifPencereSatiri ozet={aktifPencereOzeti(priceRanges, selectedPlatform)} boyut="text-sm" />
           </div>
 
           <Card className="mb-6">

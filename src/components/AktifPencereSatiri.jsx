@@ -17,11 +17,11 @@ const tarih = (iso) => {
  * oranidir; kullanici pencere degisince ciktiyi yeniden indirir. Tarife
  * kaydi hic yoksa hicbir sey cizmez.
  */
-export default function AktifPencereSatiri({ ozet }) {
+export default function AktifPencereSatiri({ ozet, boyut = 'text-xs' }) {
   if (!ozet) return null;
   if (ozet.bitti) {
     return (
-      <p className="text-xs text-amber-700 dark:text-amber-400 mt-1">
+      <p className={`${boyut} text-amber-700 dark:text-amber-400 mt-1`}>
         Tarife dönemi bitti{ozet.bitis ? ` (${tarih(ozet.bitis)})` : ''} — Trendyol'dan yeni tarife Excel'ini indirip Komisyon Tarifesi'ne yükleyin; o zamana kadar kategori komisyonu kullanılır.
       </p>
     );
@@ -29,7 +29,7 @@ export default function AktifPencereSatiri({ ozet }) {
   if (!ozet.pencere) return null;
   const aralik = [tarih(ozet.baslangic), tarih(ozet.bitis)].filter(Boolean).join(' – ');
   return (
-    <p className="text-xs text-muted-foreground mt-1">
+    <p className={`${boyut} text-muted-foreground mt-1`}>
       Bugün geçerli tarife penceresi: <span className="font-semibold text-foreground">{ozet.pencere}</span>
       {aralik ? ` (${aralik})` : ''} — komisyon bu pencerenin oranıyla hesaplanır; pencere değişince Excel'i yeniden indir.
     </p>
