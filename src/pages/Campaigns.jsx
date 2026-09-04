@@ -913,6 +913,16 @@ export default function Campaigns() {
     } catch (error) { toast.error('Taşıma hatası: ' + (error?.message || 'Bilinmeyen hata')); }
   };
 
+  // "Secilenleri diger kampanyada birak": secili cakisanlarin BU kampanyadaki
+  // secimi kaldirilir (fiyat baslangica doner); digerinde secili kalirlar.
+  const secilenleriDigerindeBirak = () => {
+    const liste = seciliCakisanlar();
+    if (liste.length === 0) { toast.info('Seçilenler arasında başka kampanyada olan ürün yok'); return; }
+    const idx = new Set(liste.map(x => x.realIndex));
+    setUploadedData(uploadedData.map((it, i) => (idx.has(i) ? secimiKaldir(it) : it)));
+    toast.success(`${liste.length} ürün bu kampanyanın seçiminden çıkarıldı; diğer kampanyada seçili kaldı.`);
+  };
+
   const handleSave = async () => {
     const selectedItems = uploadedData.filter(item => item.selected_type === 'campaign');
     if (selectedItems.length === 0) { toast.error('Lütfen en az bir ürün seçin'); return; }
@@ -1133,9 +1143,14 @@ export default function Campaigns() {
                       <Download className="mr-2 h-4 w-4" />Excel İndir{selectedCount > 0 && ` (${selectedCount})`}
                     </Button>
                     {seciliCakisanlar().length > 0 && (
-                      <Button variant="outline" onClick={secilenleriBuKampanyayaTasi} className="border-blue-300 text-blue-700 hover:bg-blue-50 dark:text-blue-300 dark:hover:bg-blue-950/30" title="Seçtiğin ürünler arasında başka Genel kampanyada olanları oradan çıkarır; burada seçili kalırlar">
-                        <AlertTriangle className="mr-2 h-4 w-4" />Seçilenleri bu kampanyaya taşı ({seciliCakisanlar().length})
-                      </Button>
+                      <>
+                        <Button variant="outline" onClick={secilenleriBuKampanyayaTasi} className="border-blue-300 text-blue-700 hover:bg-blue-50 dark:text-blue-300 dark:hover:bg-blue-950/30" title="Seçtiğin ürünler arasında başka Genel kampanyada olanları oradan çıkarır; burada seçili kalırlar">
+                          <AlertTriangle className="mr-2 h-4 w-4" />Seçilenleri bu kampanyaya taşı ({seciliCakisanlar().length})
+                        </Button>
+                        <Button variant="outline" onClick={secilenleriDigerindeBirak} className="border-blue-300 text-blue-700 hover:bg-blue-50 dark:text-blue-300 dark:hover:bg-blue-950/30" title="Seçtiğin çakışan ürünleri bu kampanyanın seçiminden çıkarır; diğer kampanyada kalırlar">
+                          Seçilenleri diğer kampanyada bırak ({seciliCakisanlar().length})
+                        </Button>
+                      </>
                     )}
                   </>
                 )}
@@ -1220,7 +1235,7 @@ export default function Campaigns() {
                                 <div className="font-medium text-foreground flex items-center gap-2">
                                   <span>{item.product_name || '-'}</span>
                                   {(() => { const d = baskaKampanyadaSecili(item); return d ? (
-                                    <span className="shrink-0 text-blue-500 cursor-help" title={`Bu ürün şu kampanyada seçili: ${campaignTitle(d)} (${safeDate(d.start_date)} - ${safeDate(d.end_date)}). Buraya almak için ürünü seçip üstteki "Seçilenleri bu kampanyaya taşı" düğmesine bas.`}>
+                                    <span className="shrink-0 text-blue-500 cursor-default" title={`Bu ürün "${d.campaign_name || getTypeLabel(d.campaign_type)}" kampanyasında aktif olarak seçilidir (${safeDate(d.start_date)} - ${safeDate(d.end_date)}).`}>
                                       <AlertTriangle className="h-5 w-5" />
                                     </span>) : null; })()}
                                 </div>
