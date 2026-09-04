@@ -929,6 +929,16 @@ export default function Campaigns() {
     } catch (error) { toast.error('Taşıma hatası: ' + (error?.message || 'Bilinmeyen hata')); }
   };
 
+  // Cakisanlari BU kampanyanin seciminden kaldir: diger kampanyada secili
+  // kalirlar, burada secim ve fiyat baslangica doner.
+  const cakisanlariSecimdenKaldir = () => {
+    const liste = cakisanUrunler().filter(x => x.item.selected_type === 'campaign');
+    if (liste.length === 0) { toast.info('Bu kampanyada seçili çakışan ürün yok'); return; }
+    const idx = new Set(liste.map(x => x.realIndex));
+    setUploadedData(uploadedData.map((it, i) => (idx.has(i) ? secimiKaldir(it) : it)));
+    toast.success(`${liste.length} ürün bu kampanyanın seçiminden kaldırıldı; diğer kampanyada seçili kaldı. Kaydet'i unutma.`);
+  };
+
   const handleSave = async () => {
     const selectedItems = uploadedData.filter(item => item.selected_type === 'campaign');
     if (selectedItems.length === 0) { toast.error('Lütfen en az bir ürün seçin'); return; }
@@ -1146,9 +1156,16 @@ export default function Campaigns() {
                       <Download className="mr-2 h-4 w-4" />Excel İndir{selectedCount > 0 && ` (${selectedCount})`}
                     </Button>
                     {cakisanUrunler().length > 0 && (
-                      <Button variant="outline" onClick={tumunuBuKampanyayaTasi} className="border-amber-300 text-amber-800 hover:bg-amber-50 dark:text-amber-300 dark:hover:bg-amber-950/30" title="Başka Genel kampanyada seçili olan tüm ürünleri oradan çıkarıp burada seç">
-                        Çakışanları bu kampanyaya taşı ({cakisanUrunler().length})
-                      </Button>
+                      <>
+                        <Button variant="outline" onClick={tumunuBuKampanyayaTasi} className="border-amber-300 text-amber-800 hover:bg-amber-50 dark:text-amber-300 dark:hover:bg-amber-950/30" title="Başka Genel kampanyada seçili olan tüm ürünleri oradan çıkarıp burada seç">
+                          Çakışanları bu kampanyaya taşı ({cakisanUrunler().length})
+                        </Button>
+                        {cakisanUrunler().some(x => x.item.selected_type === 'campaign') && (
+                          <Button variant="outline" onClick={cakisanlariSecimdenKaldir} className="border-amber-300 text-amber-800 hover:bg-amber-50 dark:text-amber-300 dark:hover:bg-amber-950/30" title="Çakışan ürünleri bu kampanyanın seçiminden çıkar; diğer kampanyada seçili kalsınlar">
+                            Çakışanları seçimden kaldır ({cakisanUrunler().filter(x => x.item.selected_type === 'campaign').length})
+                          </Button>
+                        )}
+                      </>
                     )}
                   </>
                 )}
