@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import AktifPencereSatiri from '@/components/AktifPencereSatiri';
 import { db } from '@/api/db';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Plus, Edit2, Trash2, Calendar as CalendarIcon, Download, Sparkles, Check, Info, Upload, Filter, Package, HelpCircle } from 'lucide-react';
+import { Plus, Edit2, Trash2, Calendar as CalendarIcon, Download, Sparkles, Check, Info, Upload, Filter, Package, HelpCircle, AlertTriangle } from 'lucide-react';
 import { calculatePriceBreakdown, findDesiShippingRate } from '@/components/PriceCalculationEngine';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -1131,7 +1131,7 @@ export default function Campaigns() {
                     </Button>
                     {seciliCakisanlar().length > 0 && (
                       <Button variant="outline" onClick={secilenleriBuKampanyayaTasi} className="border-blue-300 text-blue-700 hover:bg-blue-50 dark:text-blue-300 dark:hover:bg-blue-950/30" title="Seçtiğin ürünler arasında başka Genel kampanyada olanları oradan çıkarır; burada seçili kalırlar">
-                        <Info className="mr-2 h-4 w-4" />Seçilenleri bu kampanyaya taşı ({seciliCakisanlar().length})
+                        <AlertTriangle className="mr-2 h-4 w-4" />Seçilenleri bu kampanyaya taşı ({seciliCakisanlar().length})
                       </Button>
                     )}
                   </>
@@ -1214,11 +1214,11 @@ export default function Campaigns() {
                           return (
                             <tr key={item.id || realIndex} className={`border-b hover:bg-secondary ${isSelected ? 'bg-secondary' : ''}`}>
                               <td className="p-3">
-                                <div className="font-medium text-foreground flex items-start gap-1">
+                                <div className="font-medium text-foreground flex items-center gap-2">
                                   <span>{item.product_name || '-'}</span>
                                   {(() => { const d = baskaKampanyadaSecili(item); return d ? (
                                     <span className="shrink-0 text-blue-500 cursor-help" title={`Bu ürün şu kampanyada seçili: ${campaignTitle(d)} (${safeDate(d.start_date)} - ${safeDate(d.end_date)}). Buraya almak için ürünü seçip üstteki "Seçilenleri bu kampanyaya taşı" düğmesine bas.`}>
-                                      <Info className="h-4 w-4" />
+                                      <AlertTriangle className="h-5 w-5" />
                                     </span>) : null; })()}
                                 </div>
                                 <div className="text-xs text-muted-foreground">{item.barcode}</div>
