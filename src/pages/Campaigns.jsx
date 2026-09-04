@@ -127,6 +127,12 @@ export default function Campaigns() {
     queryFn: () => Product.filter({ created_by: userEmail }),
     enabled: !!userEmail,
   });
+  // Sistem fiyati (Fiyatlar sayfasindaki kayit) — Avantajli/Tarife sayfalariyla ayni kaynak
+  const { data: productPrices = [] } = useQuery({
+    queryKey: ['productPrices', userEmail],
+    queryFn: () => db.entities.ProductPrice.filter({ created_by: userEmail }),
+    enabled: !!userEmail,
+  });
   const { data: commissions = [] } = useQuery({
     queryKey: ['commissions', userEmail],
     queryFn: () => Commission.filter({ created_by: userEmail }),
@@ -396,6 +402,17 @@ export default function Campaigns() {
 
   // Saticinin eline gecen birim fiyat: indirim turune gore hesaplanir,
   // Trendyol'un karsiladigi pay saticidan dusulmez.
+  const getSystemPrice = (item) => {
+    const matchedProduct = getMatchedProduct(item);
+    if (!matchedProduct) return null;
+    const platformObj = uniquePlatforms.find(p => p.name === selectedPlatform);
+    if (!platformObj) return null;
+    const priceInfo = productPrices.find(pp => pp.product_id === matchedProduct.id && pp.platform_id === platformObj.id);
+    if (!priceInfo) return null;
+    const commRec = getCommissionRecord(item);
+    return { ...priceInfo, commission_rate: priceInfo.commission_rate ?? commRec?.commission_rate ?? 0 };
+  };
+
   const getCommissionRecord = (item) => {
     const matchedProduct = getMatchedProduct(item);
     if (!matchedProduct) return null;
@@ -1008,29 +1025,28 @@ export default function Campaigns() {
                     <table className="w-full text-sm">
                       <thead className="bg-secondary border-b">
                         <tr>
-                          <th className="p-3 text-center font-semibold w-10">Seç</th>
                           <th className="p-3 text-left font-semibold min-w-[200px]">Ürün</th>
                           <th className="p-3 text-center font-semibold">Stok</th>
                           <th className="p-3 text-center font-semibold min-w-[120px]">Kategori</th>
-                          <th className="p-3 text-center font-semibold min-w-[130px]">Güncel Fiyat</th>
+                          <th className="p-3 text-center font-semibold min-w-[140px]">Sistem Fiyatı</th>
                           <th className="p-3 text-center font-semibold min-w-[130px]">Maks. Girilebilecek</th>
-                          <th className="p-3 text-center font-semibold min-w-[200px]">Girilen Fiyat</th>
-                          <th className="p-3 text-center font-semibold min-w-[150px]">İndirimli Fiyat</th>
+                          <th className="p-3 text-center font-semibold min-w-[150px]">Girilen Fiyat</th>
                           <th className="p-3 text-center font-semibold min-w-[150px]">Barem Önerisi</th>
+                          <th className="p-3 text-center font-semibold min-w-[170px]">İndirim Uygulanmış Fiyat</th>
                         </tr>
                       </thead>
                       <tbody>
                         {sortedData.map((item) => {
                           const realIndex = uploadedData.indexOf(item);
                           const matched = getMatchedProduct(item);
+                          const systemPrice = getSystemPrice(item);
                           const calc = calculateProfit(item.campaign_price, item);
                           const below = item.campaign_price > 0 ? isBelowFloor(item, item.campaign_price) : false;
                           const overMax = item.max_price > 0 && parseFloat(item.campaign_price) > item.max_price;
                           const isSelected = item.selected_type === 'campaign';
-                          const guncel = matched && Number(item.current_sale_price) > 0 ? calculateProfit(Number(item.current_sale_price), item) : null;
+                          const karli = calc.profit > 0 && !below;
                           return (
                             <tr key={item.id || realIndex} className={`border-b hover:bg-secondary ${isSelected ? 'bg-secondary' : ''}`}>
-                              <td className="p-3 text-center"><input type="checkbox" checked={isSelected} onChange={() => handleSelect(realIndex)} className="h-4 w-4" /></td>
                               <td className="p-3">
                                 <div className="font-medium text-foreground">{item.product_name || '-'}</div>
                                 <div className="text-xs text-muted-foreground">{item.barcode}</div>
@@ -1041,51 +1057,50 @@ export default function Campaigns() {
                                 {matched ? <div className="text-center text-xs font-medium text-muted-foreground">{matched.category_name}</div> : <div className="text-center text-muted-foreground/70 text-xs">-</div>}
                               </td>
                               <td className="p-3">
-                                <div className="text-center">
-                                  <div className="font-semibold text-foreground">₺{Number(item.current_sale_price || 0).toFixed(2)}</div>
-                                  {guncel?.breakdown && (
-                                    <>
-                                      <div className="text-xs text-muted-foreground">{matched.desi} desi • {guncel.baremUsed === 'barem1' ? 'Barem 1' : guncel.baremUsed === 'barem2' ? 'Barem 2' : 'Desi'}</div>
-                                      <div className="text-xs text-muted-foreground">Kom: %{guncel.commissionRate || 0}</div>
-                                      <div className={`text-xs font-medium ${guncel.profit > 0 ? 'text-green-600' : 'text-red-600'}`}>₺{guncel.profit.toFixed(2)} (%{guncel.profitRate.toFixed(1)})</div>
-                                    </>
-                                  )}
-                                </div>
-                              </td>
-                              <td className="p-3 text-center font-semibold text-muted-foreground">₺{Number(item.max_price || 0).toFixed(2)}</td>
-                              <td className="p-3">
-                                <div className={`border rounded-lg p-2 ${isSelected ? 'border-primary bg-secondary' : 'border-border'}`}>
-                                  <Input type="number" step="0.01" value={item.campaign_price} onChange={(e) => handlePriceChange(realIndex, e.target.value)}
-                                    className={`h-8 text-xs ${overMax ? 'border-red-400' : ''}`} />
-                                  {overMax && <div className="text-[10px] text-red-500 mt-1">Maks. girilebilecek fiyatı aşıyor</div>}
-                                  {aktifKampanya && <div className="text-[11px] text-muted-foreground mt-1">{kampanyaMetni(aktifKampanya)}{aktifKampanya.karsilama > 0 ? ` · %${aktifKampanya.karsilama} Trendyol` : ''}</div>}
-                                  <Button size="sm" variant={isSelected ? 'default' : 'outline'} onClick={() => handleSelect(realIndex)} disabled={!matched} className="w-full mt-2 h-7 text-xs">
-                                    {isSelected ? 'Seçili' : 'Seç'}
-                                  </Button>
-                                </div>
-                              </td>
-                              <td className="p-3">
-                                {matched && calc.breakdown ? (
+                                {systemPrice ? (
                                   <div className="text-center">
-                                    <div className="font-semibold text-foreground">₺{Number(calc.effPrice || 0).toFixed(2)}</div>
-                                    {Number(calc.musteriFiyat) > 0 && Math.abs(Number(calc.musteriFiyat) - Number(calc.effPrice)) > 0.005 && (
-                                      <div className="text-[11px] text-muted-foreground">müşteri öder ₺{Number(calc.musteriFiyat).toFixed(2)}</div>
-                                    )}
-                                    <div className="flex items-center justify-center gap-1 text-xs text-muted-foreground">
-                                      <span>Kom: %{calc.commissionRate || 0}</span>
-                                      <BaremBadge barem={calc.baremUsed} />
+                                    <div className="font-semibold text-foreground">₺{Number(systemPrice.sale_price || 0).toFixed(2)}</div>
+                                    <div className="text-xs text-muted-foreground">Kom: %{systemPrice.commission_rate || 0}</div>
+                                    <div className={`text-xs font-medium ${(systemPrice.profit_rate || 0) > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                      ₺{Number(systemPrice.net_profit || 0).toFixed(2)} (%{Number(systemPrice.profit_rate || 0).toFixed(1)})
                                     </div>
-                                    <div className="flex items-center justify-center gap-1 mt-1">
-                                      <span className={`text-xs font-semibold ${below ? 'text-red-600' : calc.profit > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                                        {calc.profit > 0 ? '+' : ''}₺{calc.profit.toFixed(2)} (%{calc.profitRate.toFixed(1)})
-                                      </span>
-                                      <Button size="sm" variant="ghost" className="h-5 w-5 p-0" onClick={() => openDetailModal(item)}><Info className="h-3 w-3" /></Button>
-                                    </div>
-                                    {below && <div className="text-[10px] text-red-500">kâr tabanının altında</div>}
                                   </div>
                                 ) : <div className="text-center text-muted-foreground/70 text-xs">-</div>}
                               </td>
+                              <td className="p-3 text-center font-semibold text-muted-foreground">₺{Number(item.max_price || 0).toFixed(2)}</td>
+                              <td className="p-3">
+                                <Input type="number" step="0.01" value={item.campaign_price} onChange={(e) => handlePriceChange(realIndex, e.target.value)}
+                                  className={`h-8 text-xs text-center ${overMax ? 'border-red-400' : ''}`} />
+                                {overMax && <div className="text-[10px] text-red-500 mt-1 text-center">Maks. girilebilecek fiyatı aşıyor</div>}
+                              </td>
                               <td className="p-3 text-center">{matched ? renderBaremOnerisi(item, realIndex) : <span className="text-muted-foreground/70 text-xs">-</span>}</td>
+                              <td className="p-3">
+                                {matched && calc.breakdown ? (
+                                  <div className={`border rounded-lg p-2 ${isSelected ? 'border-primary bg-secondary' : 'border-border'}`}>
+                                    {aktifKampanya && <div className="text-xs font-semibold text-muted-foreground mb-1">{kampanyaMetni(aktifKampanya)}{aktifKampanya.karsilama > 0 ? ` · %${aktifKampanya.karsilama} Trendyol` : ''}</div>}
+                                    <div className="text-xs text-muted-foreground text-center">
+                                      <div className="font-bold text-sm text-foreground">₺{Number(calc.effPrice || 0).toFixed(2)}</div>
+                                      {Number(calc.musteriFiyat) > 0 && Math.abs(Number(calc.musteriFiyat) - Number(calc.effPrice)) > 0.005 && (
+                                        <div className="text-[10px]">müşteri öder ₺{Number(calc.musteriFiyat).toFixed(2)}</div>
+                                      )}
+                                    </div>
+                                    <div className="flex items-center justify-between gap-1">
+                                      <span className="text-xs text-muted-foreground">Kom: %{calc.commissionRate || 0}</span>
+                                      <BaremBadge barem={calc.baremUsed} />
+                                    </div>
+                                    <div className="flex items-center justify-between mt-1">
+                                      <div className={`text-xs font-semibold ${karli ? 'text-green-600' : 'text-red-600'}`}>
+                                        {calc.profit > 0 ? '+' : ''}₺{calc.profit.toFixed(2)} (%{calc.profitRate.toFixed(1)})
+                                      </div>
+                                      <Button size="sm" variant="ghost" className="h-5 w-5 p-0" onClick={() => openDetailModal(item)}><Info className="h-3 w-3" /></Button>
+                                    </div>
+                                    {below && <div className="text-[10px] text-red-500">kâr tabanının altında</div>}
+                                    <Button size="sm" variant={isSelected ? 'default' : 'outline'} onClick={() => handleSelect(realIndex)} className="w-full mt-2 h-7 text-xs">
+                                      {isSelected ? 'Seçili' : 'Seç'}
+                                    </Button>
+                                  </div>
+                                ) : <div className="text-center text-muted-foreground/70 text-xs">-</div>}
+                              </td>
                             </tr>
                           );
                         })}
