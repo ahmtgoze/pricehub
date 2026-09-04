@@ -450,8 +450,12 @@ export default function Campaigns() {
     if (!platformObj) return null;
     const priceInfo = productPrices.find(pp => pp.product_id === matchedProduct.id && pp.platform_id === platformObj.id);
     if (!priceInfo) return null;
+    // product_prices.commission_rate kaydinda hep 0 duruyor (Fiyatlar sayfasi
+    // yazmiyor); Avantajli sayfasi gibi once kategori komisyonu kullanilir.
     const commRec = getCommissionRecord(item);
-    return { ...priceInfo, commission_rate: priceInfo.commission_rate ?? commRec?.commission_rate ?? 0 };
+    const kategoriOrani = parseFloat(commRec?.commission_rate) || 0;
+    const kayitOrani = parseFloat(priceInfo.commission_rate) || 0;
+    return { ...priceInfo, commission_rate: kategoriOrani > 0 ? kategoriOrani : kayitOrani };
   };
 
   const getCommissionRecord = (item) => {
