@@ -1235,9 +1235,16 @@ export default function Campaigns() {
                                 <div className="font-medium text-foreground flex items-center gap-2">
                                   <span>{item.product_name || '-'}</span>
                                   {(() => { const d = baskaKampanyadaSecili(item); return d ? (
-                                    <span className="shrink-0 text-blue-500 cursor-default" title={`Bu ürün "${d.campaign_name || getTypeLabel(d.campaign_type)}" kampanyasında aktif olarak seçilidir (${safeDate(d.start_date)} - ${safeDate(d.end_date)}).`}>
-                                      <AlertTriangle className="h-5 w-5" />
-                                    </span>) : null; })()}
+                                    <Popover>
+                                      <PopoverTrigger asChild>
+                                        <button type="button" className="shrink-0 text-blue-500 hover:text-blue-600" aria-label="Başka kampanyada seçili">
+                                          <AlertTriangle className="h-5 w-5" />
+                                        </button>
+                                      </PopoverTrigger>
+                                      <PopoverContent align="start" className="w-72 text-xs">
+                                        Bu ürün <span className="font-semibold">"{d.campaign_name || getTypeLabel(d.campaign_type)}"</span> kampanyasında aktif olarak seçilidir ({safeDate(d.start_date)} - {safeDate(d.end_date)}).
+                                      </PopoverContent>
+                                    </Popover>) : null; })()}
                                 </div>
                                 <div className="text-xs text-muted-foreground">{item.barcode}</div>
                                 {!matched && <div className="text-xs text-rose-500">eşleşmedi</div>}
