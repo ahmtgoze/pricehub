@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import AktifPencereSatiri from '@/components/AktifPencereSatiri';
 import { db } from '@/api/db';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Plus, Edit2, Trash2, Calendar as CalendarIcon, Download, Sparkles, Check, Info, Upload, Filter, Package } from 'lucide-react';
+import { Plus, Edit2, Trash2, Calendar as CalendarIcon, Download, Sparkles, Check, Info, Upload, Filter, Package, HelpCircle } from 'lucide-react';
 import { calculatePriceBreakdown, findDesiShippingRate } from '@/components/PriceCalculationEngine';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -24,7 +24,7 @@ import { sayiyaCevirVeya } from '@/lib/turkceSayi';
 import { tarifeKomisyonu, aktifPencereOzeti } from '@/lib/tarifeKaydiSecimi';
 import {
   INDIRIM_TURLERI, KAMPANYA_GRUPLARI,
-  kampanyaFiyati, kampanyaFiyatiTersi, musteriFiyati,
+  kampanyaFiyati, kampanyaFiyatiTersi, musteriFiyati, musteriIndirimi,
   kampanyaMetni, kaydiKampanyayaCevir, dosyaAdindanKampanya,
 } from '@/lib/trendyolKampanyaIndirimi';
 
@@ -373,6 +373,47 @@ export default function Campaigns() {
       }
     }
     return oneri;
+  };
+
+  /**
+   * "Indirim Uygulanmis Fiyat" nasil bulundu? Girilen fiyattan adim adim:
+   * musterinin gordugu indirim, Trendyol'un karsiladigi kisim, saticinin
+   * payi ve kalan (satici net) — kar bu son rakamdan hesaplanir.
+   */
+  const indirimAciklamasi = (girilen) => {
+    const f = Number(girilen) || 0;
+    if (!aktifKampanya || f <= 0) return null;
+    const k = aktifKampanya;
+    const musteri = musteriIndirimi(f, k);
+    const kars = Math.min(1, Math.max(0, (Number(k.karsilama) || 0) / 100));
+    const trendyol = Math.round(musteri * kars * 100) / 100;
+    const satici = Math.round((musteri - trendyol) * 100) / 100;
+    const net = Math.round((f - satici) * 100) / 100;
+    const tl = (n) => `₺${Number(n).toFixed(2)}`;
+    const oran = (n) => `%${(f > 0 ? (n / f) * 100 : 0).toFixed(1)}`;
+    const satirlar = [];
+    if (k.tur === 'cart_tl') {
+      const esik = Number(k.esik) || 0;
+      if (esik > 0 && f < esik) {
+        satirlar.push(`Sepet eşiği ${tl(esik)}, ürün eşiğin altında: müşteri eşiğe birden fazla ürünle ulaşır. İndirim ürünlere fiyat oranında dağılır → bu ürünün payı ${tl(k.tutar)} × ${tl(f)} / ${tl(esik)} = ${tl(musteri)} (${oran(musteri)}).`);
+      } else {
+        satirlar.push(`Ürün tek başına eşiği ${esik > 0 ? tl(esik) + "'yi " : ''}geçiyor: indirimin tamamı bu üründe → ${tl(musteri)} (${oran(musteri)}).`);
+      }
+    } else if (k.tur === 'buy_x_pay_y') {
+      satirlar.push(`${k.alX} Al ${k.odeY} Öde: ${k.alX} adette ${k.alX - k.odeY} adet bedava → adet başına ${tl(musteri)} (${oran(musteri)}).`);
+    } else if (k.tur === 'qty_percent') {
+      satirlar.push(`${k.minAdet}+ adette %${k.oran} indirim → ${tl(f)} × %${k.oran} = ${tl(musteri)}.`);
+    } else {
+      satirlar.push(`Müşteri indirimi: ${tl(f)} × %${k.oran} = ${tl(musteri)}.`);
+    }
+    if (kars > 0) {
+      satirlar.push(`Trendyol karşılıyor (%${k.karsilama}): ${tl(trendyol)}. Satıcı payı: ${tl(satici)} (${oran(satici)}).`);
+    } else {
+      satirlar.push(`Trendyol karşılama yok; indirimin tamamı satıcıdan: ${tl(satici)}.`);
+    }
+    satirlar.push(`Satıcı net: ${tl(f)} − ${tl(satici)} = ${tl(net)}. Komisyon, tarife kademesi, kargo baremi ve kâr bu tutardan hesaplanır.`);
+    if (kars > 0) satirlar.push(`Müşterinin ödediği: ${tl(f)} − ${tl(musteri)} = ${tl(f - musteri)}.`);
+    return satirlar;
   };
 
   const renderBaremOnerisi = (item, realIndex) => {
@@ -1077,7 +1118,23 @@ export default function Campaigns() {
                               <td className="p-3">
                                 {matched && calc.breakdown ? (
                                   <div className={`border rounded-lg p-2 ${isSelected ? 'border-primary bg-secondary' : 'border-border'}`}>
-                                    {aktifKampanya && <div className="text-xs font-semibold text-muted-foreground mb-1">{kampanyaMetni(aktifKampanya)}{aktifKampanya.karsilama > 0 ? ` · %${aktifKampanya.karsilama} Trendyol` : ''}</div>}
+                                    {aktifKampanya && (
+                                      <div className="flex items-start justify-between gap-1 mb-1">
+                                        <div className="text-xs font-semibold text-muted-foreground">{kampanyaMetni(aktifKampanya)}{aktifKampanya.karsilama > 0 ? ` · %${aktifKampanya.karsilama} Trendyol` : ''}</div>
+                                        <Popover>
+                                          <PopoverTrigger asChild>
+                                            <button type="button" className="text-muted-foreground hover:text-foreground shrink-0" title="Bu fiyat nasıl bulundu?"><HelpCircle className="h-3.5 w-3.5" /></button>
+                                          </PopoverTrigger>
+                                          <PopoverContent align="end" className="w-80 text-xs space-y-2">
+                                            <div className="font-semibold text-foreground">İndirim uygulanmış fiyat nasıl bulundu?</div>
+                                            <div className="text-muted-foreground">Girilen fiyat: ₺{Number(item.campaign_price || 0).toFixed(2)}</div>
+                                            <ol className="list-decimal pl-4 space-y-1 text-foreground">
+                                              {(indirimAciklamasi(item.campaign_price) || []).map((satir, i) => <li key={i}>{satir}</li>)}
+                                            </ol>
+                                          </PopoverContent>
+                                        </Popover>
+                                      </div>
+                                    )}
                                     <div className="text-xs text-muted-foreground text-center">
                                       <div className="font-bold text-sm text-foreground">₺{Number(calc.effPrice || 0).toFixed(2)}</div>
                                       {Number(calc.musteriFiyat) > 0 && Math.abs(Number(calc.musteriFiyat) - Number(calc.effPrice)) > 0.005 && (
