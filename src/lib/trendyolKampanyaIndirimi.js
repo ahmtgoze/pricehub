@@ -104,10 +104,7 @@ export function musteriIndirimi(fiyat, kampanya) {
       return oran > 0 ? kurusa(f * oran / 100) : 0;
     case 'cart_tl': {
       if (tutar <= 0) return 0;
-      // `sepet` verilmisse (beklenen ortalama sepet) pay ona gore; esikten
-      // kucuk olamaz cunku indirim ancak esikte calisir.
-      const sepet = Math.max(sayi(kampanya.esik) ?? 0, sayi(kampanya.sepet) ?? 0);
-      return kurusa(Math.min(f, tutar * sepetPayi(f, sepet)));
+      return kurusa(Math.min(f, tutar * sepetPayi(f, kampanya.esik)));
     }
     case 'buy_x_pay_y': {
       const alX = sayi(kampanya.alX) ?? 0;
@@ -183,21 +180,6 @@ export function kampanyaFiyatiTersi(hedefEtkin, kampanya) {
     return kat > 0 ? kurusa(h / kat) : 0;
   }
   return kurusa(h);
-}
-
-/**
- * Beklenen ortalama sepetle hesap: kampanya nesnesine `sepet` ekler.
- * Yalnizca sepet TL indiriminde ve beklenen sepet esikten BUYUKSE anlamli;
- * aksi halde null (en kotu durumla ayni sonuc).
- * En kotu durum (tam esik) her zaman ayrica hesaplanir; bu sadece "gercekte
- * muhtemelen su kadar kalir" gostergesidir.
- */
-export function beklenenSepetle(kampanya) {
-  if (!kampanya || kampanya.tur !== 'cart_tl') return null;
-  const sepet = sayi(kampanya.beklenenSepet) ?? 0;
-  const esik = sayi(kampanya.esik) ?? 0;
-  if (sepet <= 0 || sepet <= esik) return null;
-  return { ...kampanya, sepet };
 }
 
 /**
@@ -325,7 +307,6 @@ export function kaydiKampanyayaCevir(row) {
     odeY: sayi(row.pay_y) ?? 0,
     minAdet: sayi(row.min_qty) ?? 0,
     karsilama: sayi(row.trendyol_coverage_rate) ?? 0,
-    beklenenSepet: sayi(row.expected_cart_amount) ?? 0,
     kuralMin: kuralMin ?? 0,
     kuralMax: kuralMax ?? 0,
     katilim: row.participation_condition || '',

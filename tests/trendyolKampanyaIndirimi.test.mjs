@@ -1,6 +1,6 @@
 import {
   musteriIndirimi, musteriFiyati, kampanyaFiyati, kampanyaFiyatiTersi, sepetPayi,
-  beklenenSepetle, dosyaAdindanKampanya, fiyatKuralinaUyuyorMu, kampanyaMetni, fiyatKuraliMetni, kaydiKampanyayaCevir,
+  dosyaAdindanKampanya, fiyatKuralinaUyuyorMu, kampanyaMetni, fiyatKuraliMetni, kaydiKampanyayaCevir,
   INDIRIM_TURLERI, KAMPANYA_GRUPLARI,
 } from '../src/lib/trendyolKampanyaIndirimi.js';
 
@@ -57,32 +57,6 @@ console.log('\n=== X TL\'YE Y TL INDIRIM ===');
   esit('tersi gidis-donus (esik ustu)', kampanyaFiyatiTersi(kampanyaFiyati(900, k), k), 900);
   esit('tersi karsilamali', kampanyaFiyatiTersi(530, { ...k, karsilama: 30 }), 600);
   esit('tutar 0 -> degismez', kampanyaFiyati(600, { tur: 'cart_tl', esik: 500, tutar: 0 }), 600);
-}
-
-console.log('\n=== BEKLENEN ORTALAMA SEPET ===');
-{
-  const k = { tur: 'cart_tl', esik: 2000, tutar: 200 };
-  // en kotu durum: tam esik -> %10
-  esit('en kotu durum 300 TL', kampanyaFiyati(300, k), 270);
-  // beklenen 2600 -> 300 x 200/2600 = 23,08
-  const b = beklenenSepetle({ ...k, beklenenSepet: 2600 });
-  esit('beklenen nesnesi sepet tasir', b.sepet, 2600);
-  esit('beklenen 2600: musteri indirimi', musteriIndirimi(300, b), 23.08);
-  esit('beklenen 2600: satici fiyati', kampanyaFiyati(300, b), 276.92);
-  esit('beklenen 2600 %40 karsilamali', kampanyaFiyati(300, { ...b, karsilama: 40 }), 286.15);
-  // urun beklenen sepetten pahaliysa pay tamami
-  esit('urun 3000 > beklenen 2600 -> tamami', musteriIndirimi(3000, b), 200);
-  // beklenen esikten kucuk / esit / bos -> null (en kotu durumla ayni)
-  esit('beklenen < esik -> null', beklenenSepetle({ ...k, beklenenSepet: 1500 }), null);
-  esit('beklenen = esik -> null', beklenenSepetle({ ...k, beklenenSepet: 2000 }), null);
-  esit('beklenen yok -> null', beklenenSepetle(k), null);
-  esit('yuzdeli turde -> null', beklenenSepetle({ tur: 'net_percent', oran: 10, beklenenSepet: 3000 }), null);
-  // tersi (fiyat onerisi) beklenen sepeti DIKKATE ALMAZ, en kotu durum
-  esit('tersi en kotu durumdan', kampanyaFiyatiTersi(270, b), 300);
-  // sepet alanı varsayilan hesabi etkilemez
-  esit('beklenenSepet alani tek basina etkisiz', kampanyaFiyati(300, { ...k, beklenenSepet: 2600 }), 270);
-  // kayit cevirici
-  esit('kayittan beklenenSepet', kaydiKampanyayaCevir({ discount_kind: 'cart_tl', discount_amount: 200, threshold_amount: 2000, expected_cart_amount: 2600 }).beklenenSepet, 2600);
 }
 
 console.log('\n=== X AL Y ODE ===');

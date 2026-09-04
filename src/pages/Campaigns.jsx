@@ -25,7 +25,7 @@ import { tarifeKomisyonu, aktifPencereOzeti } from '@/lib/tarifeKaydiSecimi';
 import {
   INDIRIM_TURLERI, KATILIM_KOSULLARI, KAMPANYA_GRUPLARI,
   kampanyaFiyati, kampanyaFiyatiTersi, musteriFiyati, fiyatKuralinaUyuyorMu,
-  kampanyaMetni, fiyatKuraliMetni, kaydiKampanyayaCevir, beklenenSepetle, dosyaAdindanKampanya,
+  kampanyaMetni, fiyatKuraliMetni, kaydiKampanyayaCevir, dosyaAdindanKampanya,
 } from '@/lib/trendyolKampanyaIndirimi';
 
 const Campaign = db.entities.Campaign;
@@ -71,7 +71,6 @@ const emptyForm = {
   price_rule_max: '',
   participation_condition: 'none',
   trendyol_coverage_rate: '',
-  expected_cart_amount: '',
 };
 
 /** Form alanlarini fiyat modelinin bekledigi kampanya nesnesine cevirir. */
@@ -84,7 +83,6 @@ const formuKampanyayaCevir = (f) => ({
   odeY: Number(f.pay_y) || 0,
   minAdet: Number(f.min_qty) || 0,
   karsilama: Number(f.trendyol_coverage_rate) || 0,
-  beklenenSepet: Number(f.expected_cart_amount) || 0,
   kuralMin: Number(f.price_rule_min) || 0,
   kuralMax: Number(f.price_rule_max) || 0,
 });
@@ -234,7 +232,6 @@ export default function Campaigns() {
       price_rule_max: veya(k.kuralMax),
       participation_condition: k.katilim || 'none',
       trendyol_coverage_rate: c.trendyol_coverage_rate ?? '',
-      expected_cart_amount: c.expected_cart_amount ?? '',
     });
     setShowForm(true);
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -278,7 +275,6 @@ export default function Campaigns() {
       cart_amount: null,
       cart_condition: null,
       trendyol_coverage_rate: n(formData.trendyol_coverage_rate),
-      expected_cart_amount: tur === 'cart_tl' ? n(formData.expected_cart_amount) : null,
       is_active: true,
     };
     try {
@@ -488,10 +484,6 @@ export default function Campaigns() {
   const aktifKampanya = managingCampaign ? kaydiKampanyayaCevir(managingCampaign) : null;
   const etkinFiyatIcinKampanyaFiyati = (hedefEtkin) =>
     (aktifKampanya ? kampanyaFiyatiTersi(hedefEtkin, aktifKampanya) : 0);
-
-  // Beklenen ortalama sepet girildiyse (sepet TL indirimi, esikten buyuk):
-  // en kotu durum (tam esik) yaninda beklenen kar da gosterilir.
-  const beklenenKampanya = beklenenSepetle(aktifKampanya);
 
   const calculateProfit = (campaignPrice, item, kampanya = aktifKampanya) => {
     try {
@@ -766,16 +758,6 @@ export default function Campaigns() {
     toast.success('Toplu seçim yapıldı');
   };
 
-  const beklenenSepetiKaydet = async () => {
-    if (!managingCampaign?.id) return;
-    const v = managingCampaign.expected_cart_amount;
-    const deger = (v === '' || v === null || v === undefined || Number.isNaN(Number(v))) ? null : Number(v);
-    try {
-      await Campaign.update(managingCampaign.id, { expected_cart_amount: deger });
-      queryClient.invalidateQueries({ queryKey: ['campaigns'] });
-    } catch (error) { toast.error('Beklenen sepet kaydedilemedi: ' + (error?.message || 'Bilinmeyen hata')); }
-  };
-
   const openDetailModal = (item) => {
     const price = item.campaign_price || item.max_price;
     const calc = calculateProfit(price, item);
@@ -940,26 +922,11 @@ export default function Campaigns() {
             <h1 className="ph-title">Ürün Ekle — {getTypeLabel(managingCampaign.campaign_type)}</h1>
             <AktifPencereSatiri ozet={aktifPencereOzeti(priceRanges, selectedPlatform)} />
             <p className="text-muted-foreground mt-1">{campaignTitle(managingCampaign)} · {safeDate(managingCampaign.start_date)} - {safeDate(managingCampaign.end_date)}</p>
-            {beklenenKampanya && (
-              <p className="text-sm text-muted-foreground mt-1">
-                Net Kâr en kötü duruma göre (sepet tam eşikte, {Number(aktifKampanya.esik).toLocaleString('tr-TR')} ₺);
-                Beklenen Kâr {Number(beklenenKampanya.sepet).toLocaleString('tr-TR')} ₺'lik ortalama sepete göre.
-              </p>
-            )}
           </div>
 
           <Card className="mb-6">
             <CardContent className="pt-6 space-y-4">
-              <div className={`grid grid-cols-1 gap-4 ${aktifKampanya?.tur === 'cart_tl' ? 'md:grid-cols-4' : 'md:grid-cols-3'}`}>
-                {aktifKampanya?.tur === 'cart_tl' && (
-                  <div className="space-y-2">
-                    <Label>Beklenen Ortalama Sepet (₺)</Label>
-                    <Input type="number" placeholder={`Opsiyonel — eşik ${Number(aktifKampanya.esik) || 0} ₺`}
-                      value={managingCampaign.expected_cart_amount ?? ''}
-                      onChange={(e) => setManagingCampaign({ ...managingCampaign, expected_cart_amount: e.target.value === '' ? null : parseFloat(e.target.value) })}
-                      onBlur={beklenenSepetiKaydet} />
-                  </div>
-                )}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="space-y-2">
                   <Label>Platform</Label>
                   {trendyolPlatforms.length === 1 ? (
@@ -1032,7 +999,6 @@ export default function Campaigns() {
                         <th className="p-3 text-right">Girilen Fiyat</th>
                         <th className="p-3 text-right">Net Kâr</th>
                         <th className="p-3 text-right">Kâr %</th>
-                        {beklenenKampanya && <th className="p-3 text-right" title="Beklenen ortalama sepete göre">Beklenen Kâr</th>}
                         <th className="p-3 text-center min-w-[150px]">Barem Önerisi</th>
                         <th className="p-3 text-center">Detay</th>
                       </tr>
@@ -1042,7 +1008,6 @@ export default function Campaigns() {
                         const realIndex = uploadedData.indexOf(item);
                         const matched = getMatchedProduct(item);
                         const calc = calculateProfit(item.campaign_price, item);
-                        const beklenen = beklenenKampanya && matched ? calculateProfit(item.campaign_price, item, beklenenKampanya) : null;
                         const below = item.campaign_price > 0 ? isBelowFloor(item, item.campaign_price) : false;
                         const overMax = item.max_price > 0 && parseFloat(item.campaign_price) > item.max_price;
                         const isSelected = item.selected_type === 'campaign';
@@ -1067,11 +1032,6 @@ export default function Campaigns() {
                               {matched && <BaremBadge barem={calc.baremUsed} className="ml-1" />}
                               {below && <div className="text-[10px] text-red-500">taban altı</div>}
                             </td>
-                            {beklenenKampanya && (
-                              <td className="p-3 text-right text-muted-foreground">
-                                {beklenen ? <>{beklenen.profit.toFixed(2)} ₺<div className="text-[11px]">%{beklenen.profitRate.toFixed(1)}</div></> : '-'}
-                              </td>
-                            )}
                             <td className="p-3 text-center">{matched ? renderBaremOnerisi(item, realIndex) : <span className="text-muted-foreground/70 text-xs">-</span>}</td>
                             <td className="p-3 text-center"><Button size="sm" variant="ghost" onClick={() => openDetailModal(item)} disabled={!matched}><Info className="h-4 w-4" /></Button></td>
                           </tr>
@@ -1206,11 +1166,6 @@ export default function Campaigns() {
                       </div>
                     </div>
                     <p className="text-xs text-muted-foreground -mt-2">Ürün eşiğin altındaysa müşteri eşiğe ulaşmak için birden fazla alır; indirim adetlere bölünerek hesaplanır.</p>
-                    <div className="space-y-2">
-                      <Label>Beklenen Ortalama Sepet (TL)</Label>
-                      <Input type="number" placeholder="Opsiyonel — örn. 2600" value={formData.expected_cart_amount} onChange={alan('expected_cart_amount')} />
-                      <p className="text-xs text-muted-foreground">Kâr her zaman en kötü duruma (sepet tam eşikte) göre hesaplanır. Buraya Sipariş Dağılım raporundaki eşiği geçen siparişlerin ortalamasını yazarsan yanına bir de "Beklenen Kâr" sütunu gelir. Eşikten küçükse yok sayılır.</p>
-                    </div>
                   </>
                 )}
 
@@ -1300,7 +1255,6 @@ export default function Campaigns() {
                       {fiyatKuraliMetni(kaydiKampanyayaCevir(campaign)) ? <Badge variant="outline">{fiyatKuraliMetni(kaydiKampanyayaCevir(campaign))}</Badge> : null}
                       {campaign.participation_condition ? <Badge variant="outline">{KATILIM_KOSULLARI.find(x => x.value === campaign.participation_condition)?.label || campaign.participation_condition}</Badge> : null}
                       {Number(campaign.trendyol_coverage_rate) > 0 ? <Badge className="bg-amber-100 text-amber-700">%{campaign.trendyol_coverage_rate} karşılama</Badge> : null}
-                      {beklenenSepetle(kaydiKampanyayaCevir(campaign)) ? <Badge variant="outline">beklenen sepet {Number(campaign.expected_cart_amount).toLocaleString('tr-TR')} ₺</Badge> : null}
                       {campaign.is_active ? <Badge className="bg-green-100 text-green-700">Aktif</Badge> : <Badge className="bg-border text-muted-foreground">İnaktif</Badge>}
                     </div>
                     <p className="text-sm text-muted-foreground mt-3">{safeDate(campaign.start_date)} - {safeDate(campaign.end_date)}</p>
