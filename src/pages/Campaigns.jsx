@@ -883,36 +883,22 @@ export default function Campaigns() {
     return null;
   };
 
-  /**
-   * "Bu kampanyaya taşı": urunu diger Genel kampanyanin kaydindan dusurur ve
-   * burada secer. Kullanici istegi (5 Eyl 2026): her kampanyada, urun
-   * bazinda dugme olsun.
-   */
-  const buKampanyayaTasi = async (item, realIndex) => {
-    const diger = baskaKampanyadaSecili(item);
-    if (!diger) return;
-    try {
-      const kayitlar = savedCampaignProducts.filter(r =>
-        r.campaign_id === diger.id && r.selected_type === 'campaign' && String(r.barcode) === String(item.barcode));
-      await Promise.all(kayitlar.map(r => CampaignProduct.update(r.id, { selected_type: 'none' })));
-      queryClient.invalidateQueries({ queryKey: ['campaignProducts'] });
-      const updated = [...uploadedData];
-      updated[realIndex] = { ...updated[realIndex], selected_type: 'campaign' };
-      setUploadedData(updated);
-      toast.success(`${item.product_name || item.barcode}: "${campaignTitle(diger)}" kampanyasından çıkarıldı, burada seçildi. Kaydet'i unutma.`);
-    } catch (error) { toast.error('Taşıma hatası: ' + (error?.message || 'Bilinmeyen hata')); }
-  };
-
-  // Cakisan urunlerin tamamini (listedeki) toplu tasima.
-  const cakisanUrunler = () => uploadedData
+  // Secili olup baska Genel kampanyada da secili olan urunler.
+  const seciliCakisanlar = () => uploadedData
     .map((item, realIndex) => ({ item, realIndex, diger: baskaKampanyadaSecili(item) }))
-    .filter(x => x.diger);
+    .filter(x => x.diger && x.item.selected_type === 'campaign');
 
-  const tumunuBuKampanyayaTasi = async () => {
-    const liste = cakisanUrunler();
-    if (liste.length === 0) { toast.info('Başka kampanyada seçili ürün yok'); return; }
+  /**
+   * "Secilenleri bu kampanyaya tasi": kullanici urunleri tek tek secer, bu
+   * dugme secilenleri diger Genel kampanyanin kaydindan dusurur; burada
+   * secili kalirlar (kullanici istegi, 5 Eyl 2026 — satir basi dugme ve
+   * sari kutu kaldirildi, sayfa karisiyordu).
+   */
+  const secilenleriBuKampanyayaTasi = async () => {
+    const liste = seciliCakisanlar();
+    if (liste.length === 0) { toast.info('Seçilenler arasında başka kampanyada olan ürün yok'); return; }
     const adlar = [...new Set(liste.map(x => campaignTitle(x.diger)))].join(', ');
-    if (!window.confirm(`${liste.length} ürün ${adlar} kampanyasından çıkarılıp bu kampanyada seçilecek. Devam?`)) return;
+    if (!window.confirm(`${liste.length} ürün "${adlar}" kampanyasından çıkarılacak, bu kampanyada seçili kalacak. Devam?`)) return;
     try {
       const kayitlar = savedCampaignProducts.filter(r =>
         r.selected_type === 'campaign' && r.campaign_id !== managingCampaign.id &&
@@ -923,20 +909,8 @@ export default function Campaigns() {
         if (i + 30 < kayitlar.length) await new Promise(r => setTimeout(r, 150));
       }
       queryClient.invalidateQueries({ queryKey: ['campaignProducts'] });
-      const idx = new Set(liste.map(x => x.realIndex));
-      setUploadedData(uploadedData.map((it, i) => (idx.has(i) ? { ...it, selected_type: 'campaign' } : it)));
-      toast.success(`${liste.length} ürün bu kampanyaya taşındı ve seçildi. Kaydet'i unutma.`);
+      toast.success(`${liste.length} ürün diğer kampanyadan çıkarıldı. Kaydet'i unutma.`);
     } catch (error) { toast.error('Taşıma hatası: ' + (error?.message || 'Bilinmeyen hata')); }
-  };
-
-  // Cakisanlari BU kampanyanin seciminden kaldir: diger kampanyada secili
-  // kalirlar, burada secim ve fiyat baslangica doner.
-  const cakisanlariSecimdenKaldir = () => {
-    const liste = cakisanUrunler().filter(x => x.item.selected_type === 'campaign');
-    if (liste.length === 0) { toast.info('Bu kampanyada seçili çakışan ürün yok'); return; }
-    const idx = new Set(liste.map(x => x.realIndex));
-    setUploadedData(uploadedData.map((it, i) => (idx.has(i) ? secimiKaldir(it) : it)));
-    toast.success(`${liste.length} ürün bu kampanyanın seçiminden kaldırıldı; diğer kampanyada seçili kaldı. Kaydet'i unutma.`);
   };
 
   const handleSave = async () => {
@@ -1155,17 +1129,10 @@ export default function Campaigns() {
                     <Button variant="outline" onClick={handleExport}>
                       <Download className="mr-2 h-4 w-4" />Excel İndir{selectedCount > 0 && ` (${selectedCount})`}
                     </Button>
-                    {cakisanUrunler().length > 0 && (
-                      <>
-                        <Button variant="outline" onClick={tumunuBuKampanyayaTasi} className="border-amber-300 text-amber-800 hover:bg-amber-50 dark:text-amber-300 dark:hover:bg-amber-950/30" title="Başka Genel kampanyada seçili olan tüm ürünleri oradan çıkarıp burada seç">
-                          Çakışanları bu kampanyaya taşı ({cakisanUrunler().length})
-                        </Button>
-                        {cakisanUrunler().some(x => x.item.selected_type === 'campaign') && (
-                          <Button variant="outline" onClick={cakisanlariSecimdenKaldir} className="border-amber-300 text-amber-800 hover:bg-amber-50 dark:text-amber-300 dark:hover:bg-amber-950/30" title="Çakışan ürünleri bu kampanyanın seçiminden çıkar; diğer kampanyada seçili kalsınlar">
-                            Çakışanları seçimden kaldır ({cakisanUrunler().filter(x => x.item.selected_type === 'campaign').length})
-                          </Button>
-                        )}
-                      </>
+                    {seciliCakisanlar().length > 0 && (
+                      <Button variant="outline" onClick={secilenleriBuKampanyayaTasi} className="border-blue-300 text-blue-700 hover:bg-blue-50 dark:text-blue-300 dark:hover:bg-blue-950/30" title="Seçtiğin ürünler arasında başka Genel kampanyada olanları oradan çıkarır; burada seçili kalırlar">
+                        <Info className="mr-2 h-4 w-4" />Seçilenleri bu kampanyaya taşı ({seciliCakisanlar().length})
+                      </Button>
                     )}
                   </>
                 )}
@@ -1247,18 +1214,15 @@ export default function Campaigns() {
                           return (
                             <tr key={item.id || realIndex} className={`border-b hover:bg-secondary ${isSelected ? 'bg-secondary' : ''}`}>
                               <td className="p-3">
-                                <div className="font-medium text-foreground">{item.product_name || '-'}</div>
+                                <div className="font-medium text-foreground flex items-start gap-1">
+                                  <span>{item.product_name || '-'}</span>
+                                  {(() => { const d = baskaKampanyadaSecili(item); return d ? (
+                                    <span className="shrink-0 text-blue-500 cursor-help" title={`Bu ürün şu kampanyada seçili: ${campaignTitle(d)} (${safeDate(d.start_date)} - ${safeDate(d.end_date)}). Buraya almak için ürünü seçip üstteki "Seçilenleri bu kampanyaya taşı" düğmesine bas.`}>
+                                      <Info className="h-4 w-4" />
+                                    </span>) : null; })()}
+                                </div>
                                 <div className="text-xs text-muted-foreground">{item.barcode}</div>
                                 {!matched && <div className="text-xs text-rose-500">eşleşmedi</div>}
-                                {(() => { const d = baskaKampanyadaSecili(item); return d ? (
-                                  <div className="mt-1 flex flex-wrap items-center gap-1">
-                                    <span className="rounded px-1.5 py-0.5 text-[11px] font-medium bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300" title={`${campaignTitle(d)} · ${safeDate(d.start_date)} - ${safeDate(d.end_date)}`}>
-                                      başka kampanyada seçili: {d.campaign_name || getTypeLabel(d.campaign_type)}
-                                    </span>
-                                    <Button size="sm" variant="outline" className="h-6 px-2 text-[11px]" onClick={() => buKampanyayaTasi(item, realIndex)} title="Diğer kampanyadan çıkar, bu kampanyada seç">
-                                      Bu kampanyaya taşı
-                                    </Button>
-                                  </div>) : null; })()}
                               </td>
                               <td className="p-3 text-center">{item.current_stock}</td>
                               <td className="p-3">
