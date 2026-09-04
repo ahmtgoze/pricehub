@@ -799,17 +799,23 @@ export default function Campaigns() {
       oran <= (Number.isNaN(maxRate) ? Infinity : maxRate) &&
       tutar <= (Number.isNaN(maxAmount) ? Infinity : maxAmount);
     const visible = new Set(sortedData.map(i => i.barcode));
+    let secilen = 0, baremli = 0;
     const updated = uploadedData.map(item => {
       if (!visible.has(item.barcode)) return item;
       const price = item.campaign_price || item.max_price;
       if (!price || price <= 0) return item;
       const { profit, profitRate } = calculateProfit(price, item);
-      if (araliktaMi(profitRate, profit)) return { ...item, selected_type: 'campaign', campaign_price: price };
-      if (item.selected_type === 'campaign') return { ...item, selected_type: 'none' };
+      if (araliktaMi(profitRate, profit)) { secilen++; return { ...item, selected_type: 'campaign', campaign_price: price }; }
+      // Girilen fiyat araliga girmiyorsa barem onerisi dene (Akilli Otomatik
+      // Sec ile ayni hesap): barem tavani kar oranini artiriyor ve aralik
+      // tutuyorsa o fiyatla sec.
+      const oneri = baremOnerisiHesapla(item, price);
+      if (oneri && araliktaMi(oneri.profitRate, oneri.profit)) { secilen++; baremli++; return { ...item, selected_type: 'campaign', campaign_price: oneri.fiyat }; }
+      if (item.selected_type === 'campaign') return secimiKaldir(item);
       return item;
     });
     setUploadedData(updated);
-    toast.success('Toplu seçim yapıldı');
+    toast.success(secilen > 0 ? `${secilen} ürün seçildi${baremli > 0 ? ` (${baremli}'i barem önerisiyle)` : ''}` : 'Aralığa giren ürün yok');
   };
 
   const openDetailModal = (item) => {
