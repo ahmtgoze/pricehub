@@ -1016,9 +1016,9 @@ export default function Campaigns() {
                         <th className="p-3 w-10"></th>
                         <th className="p-3">Ürün</th>
                         <th className="p-3 text-right">Stok</th>
-                        <th className="p-3 text-right">Mevcut Fiyat</th>
-                        <th className="p-3 text-right">Max Girilebilir</th>
-                        <th className="p-3 text-right">Kampanya Fiyatı</th>
+                        <th className="p-3 text-right">Güncel Fiyat</th>
+                        <th className="p-3 text-right">Maks. Girilebilecek</th>
+                        <th className="p-3 text-right">Girilen Fiyat</th>
                         <th className="p-3 text-right">Net Kâr</th>
                         <th className="p-3 text-right">Kâr %</th>
                         {beklenenKampanya && <th className="p-3 text-right" title="Beklenen ortalama sepete göre">Beklenen Kâr</th>}
