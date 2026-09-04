@@ -191,26 +191,24 @@ export default function Campaigns() {
   // ===================== KAMPANYA FORMU =====================
   const resetForm = () => { setFormData({ ...emptyForm }); setEditingId(null); setBekleyenDosya(null); };
 
-  // Listedeki "Excel Yükle": dosya adindan kampanya bilgilerini doldurup
-  // formu acar; tarih kullanicidan alinir, olusturulunca urunler yuklenir.
-  const handleListeExcel = (e) => {
+  // Formdaki Excel alani: dosya adindan kampanya bilgilerini doldurur
+  // (secilmis tarihler korunur); olusturulunca urunler bu dosyadan yuklenir.
+  const handleFormExcel = (e) => {
     const file = e.target.files?.[0];
-    e.target.value = '';
-    if (!file) return;
+    if (!file) { setBekleyenDosya(null); return; }
     const bilgi = dosyaAdindanKampanya(file.name);
-    setEditingId(null);
     setFormData({
       ...emptyForm,
-      campaign_type: bilgi?.campaign_type || 'all_countries',
-      campaign_name: bilgi?.campaign_name || '',
-      discount_kind: bilgi?.discount_kind || 'net_percent',
-      discount_amount: bilgi?.discount_amount ?? '',
-      threshold_amount: bilgi?.threshold_amount ?? '',
-      trendyol_coverage_rate: bilgi?.trendyol_coverage_rate ?? '',
+      start_date: formData.start_date,
+      end_date: formData.end_date,
+      campaign_type: bilgi?.campaign_type || formData.campaign_type || 'all_countries',
+      campaign_name: bilgi?.campaign_name || formData.campaign_name || '',
+      discount_kind: bilgi?.discount_kind || formData.discount_kind || 'net_percent',
+      discount_amount: bilgi?.discount_amount ?? formData.discount_amount ?? '',
+      threshold_amount: bilgi?.threshold_amount ?? formData.threshold_amount ?? '',
+      trendyol_coverage_rate: bilgi?.trendyol_coverage_rate ?? formData.trendyol_coverage_rate ?? '',
     });
     setBekleyenDosya(file);
-    setShowForm(true);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
     toast.success(bilgi?.discount_kind
       ? 'Kampanya bilgileri dosya adından dolduruldu; tarihleri girip Oluştur\'a basın'
       : 'Dosya adından indirim bilgisi çıkarılamadı; kampanya bilgilerini girip Oluştur\'a basın');
@@ -1100,35 +1098,25 @@ export default function Campaigns() {
             <h1 className="ph-title">Kampanyalar</h1>
             <p className="text-muted-foreground mt-1">Kampanya oluşturun ve yönetin</p>
           </div>
-          <div className="flex gap-2">
-            <Button asChild variant="outline">
-              <label className="cursor-pointer">
-                <Upload className="mr-2 h-4 w-4" />Excel Yükle
-                <input type="file" accept=".xlsx,.xls" className="hidden" onChange={handleListeExcel} />
-              </label>
-            </Button>
-            <Button onClick={() => (showForm ? (resetForm(), setShowForm(false)) : openNew())} className="bg-primary hover:bg-black dark:hover:bg-white/90">
-              <Plus className="mr-2 h-4 w-4" />Yeni Kampanya
-            </Button>
-          </div>
+          <Button onClick={() => (showForm ? (resetForm(), setShowForm(false)) : openNew())} className="bg-primary hover:bg-black dark:hover:bg-white/90">
+            <Plus className="mr-2 h-4 w-4" />Kampanyaya Katıl
+          </Button>
         </div>
-
-        {!showForm && (
-          <Card className="mb-6">
-            <CardContent className="py-4 text-sm text-muted-foreground">
-              Trendyol'da kampanyanın "Ürün Ekle" ekranından indirdiğin Excel'i <span className="font-medium text-foreground">Excel Yükle</span> ile ver: kampanya türü, indirim ve karşılama oranı dosya adından dolur, sen tarihleri girersin; Oluştur'a basınca ürünler yüklenir. Mevcut bir kampanyaya Excel yüklemek için kartındaki <span className="font-medium text-foreground">Ürün Ekle</span>.
-            </CardContent>
-          </Card>
-        )}
 
         {showForm && (
           <Card className="mb-6">
-            <CardHeader><CardTitle>{editingId ? 'Kampanyayı Düzenle' : 'Yeni Kampanya'}</CardTitle></CardHeader>
+            <CardHeader><CardTitle>{editingId ? 'Kampanyayı Düzenle' : 'Kampanyaya Katıl'}</CardTitle></CardHeader>
             <CardContent>
-              {bekleyenDosya && (
-                <div className="mb-4 rounded-lg border border-border bg-secondary px-3 py-2 text-sm">
-                  <span className="text-muted-foreground">Excel: </span><span className="font-medium">{bekleyenDosya.name}</span>
-                  <span className="text-muted-foreground"> — bilgileri kontrol et, tarihleri gir; Oluştur'a basınca ürünler bu dosyadan yüklenir.</span>
+              {!editingId && (
+                <div className="mb-4 space-y-2">
+                  <Label>Kampanya Excel'i (Trendyol'da kampanyanın "Ürün Ekle" ekranından indirdiğin dosya)</Label>
+                  <input type="file" accept=".xlsx,.xls" onChange={handleFormExcel}
+                    className="block w-full text-sm text-muted-foreground file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-secondary file:text-foreground hover:file:bg-border" />
+                  {bekleyenDosya ? (
+                    <p className="text-xs text-muted-foreground"><Upload className="inline h-3 w-3 mr-1" />{bekleyenDosya.name} — kampanya türü, eşik, indirim ve karşılama dosya adından dolduruldu; kontrol et, tarihleri gir, Oluştur'a bas: ürünler bu dosyadan yüklenir.</p>
+                  ) : (
+                    <p className="text-xs text-muted-foreground">Dosyayı verince koşullar dosya adından dolar; sen tarihleri girersin. Dosyasız da oluşturabilir, Excel'i sonra kartındaki "Ürün Ekle" ile yükleyebilirsin.</p>
+                  )}
                 </div>
               )}
               <form onSubmit={handleSubmit} className="space-y-4">
