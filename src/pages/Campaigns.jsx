@@ -903,6 +903,32 @@ export default function Campaigns() {
     } catch (error) { toast.error('Taşıma hatası: ' + (error?.message || 'Bilinmeyen hata')); }
   };
 
+  // Cakisan urunlerin tamamini (listedeki) toplu tasima.
+  const cakisanUrunler = () => uploadedData
+    .map((item, realIndex) => ({ item, realIndex, diger: baskaKampanyadaSecili(item) }))
+    .filter(x => x.diger);
+
+  const tumunuBuKampanyayaTasi = async () => {
+    const liste = cakisanUrunler();
+    if (liste.length === 0) { toast.info('Başka kampanyada seçili ürün yok'); return; }
+    const adlar = [...new Set(liste.map(x => campaignTitle(x.diger)))].join(', ');
+    if (!window.confirm(`${liste.length} ürün ${adlar} kampanyasından çıkarılıp bu kampanyada seçilecek. Devam?`)) return;
+    try {
+      const kayitlar = savedCampaignProducts.filter(r =>
+        r.selected_type === 'campaign' && r.campaign_id !== managingCampaign.id &&
+        liste.some(x => x.diger.id === r.campaign_id && String(x.item.barcode) === String(r.barcode)));
+      for (let i = 0; i < kayitlar.length; i += 30) {
+        const batch = kayitlar.slice(i, i + 30);
+        await Promise.all(batch.map(r => CampaignProduct.update(r.id, { selected_type: 'none' })));
+        if (i + 30 < kayitlar.length) await new Promise(r => setTimeout(r, 150));
+      }
+      queryClient.invalidateQueries({ queryKey: ['campaignProducts'] });
+      const idx = new Set(liste.map(x => x.realIndex));
+      setUploadedData(uploadedData.map((it, i) => (idx.has(i) ? { ...it, selected_type: 'campaign' } : it)));
+      toast.success(`${liste.length} ürün bu kampanyaya taşındı ve seçildi. Kaydet'i unutma.`);
+    } catch (error) { toast.error('Taşıma hatası: ' + (error?.message || 'Bilinmeyen hata')); }
+  };
+
   const handleSave = async () => {
     const selectedItems = uploadedData.filter(item => item.selected_type === 'campaign');
     if (selectedItems.length === 0) { toast.error('Lütfen en az bir ürün seçin'); return; }
@@ -1119,6 +1145,11 @@ export default function Campaigns() {
                     <Button variant="outline" onClick={handleExport}>
                       <Download className="mr-2 h-4 w-4" />Excel İndir{selectedCount > 0 && ` (${selectedCount})`}
                     </Button>
+                    {cakisanUrunler().length > 0 && (
+                      <Button variant="outline" onClick={tumunuBuKampanyayaTasi} className="border-amber-300 text-amber-800 hover:bg-amber-50 dark:text-amber-300 dark:hover:bg-amber-950/30" title="Başka Genel kampanyada seçili olan tüm ürünleri oradan çıkarıp burada seç">
+                        Çakışanları bu kampanyaya taşı ({cakisanUrunler().length})
+                      </Button>
+                    )}
                   </>
                 )}
               </div>
