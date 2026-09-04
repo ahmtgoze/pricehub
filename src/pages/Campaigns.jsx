@@ -761,13 +761,14 @@ export default function Campaigns() {
   };
 
   const handleSmartAutoSelect = () => {
-    let selectedCount = 0, skipNoProduct = 0, skipNoCommission = 0, skipBelow = 0, baremliSecim = 0;
+    let selectedCount = 0, skipNoProduct = 0, skipNoCommission = 0, skipBelow = 0, baremliSecim = 0, skipBaska = 0;
     const updated = uploadedData.map(item => {
       if (item.selected_type === 'campaign') return item;
       const matched = getMatchedProduct(item);
       if (!matched) { skipNoProduct++; return item; }
       const commRec = getCommissionRecord(item);
       if (!commRec) { skipNoCommission++; return item; }
+      if (baskaKampanyadaSecili(item)) { skipBaska++; return item; }
       let price = item.max_price || item.campaign_price;
       if (!price || price <= 0) return item;
       // Barem onerisi: max fiyat desi tarifesine dusuyor ama biraz asagisi
@@ -785,6 +786,7 @@ export default function Campaigns() {
     if (skipNoProduct > 0) parts.push(`⚠️ ${skipNoProduct} sistem ürünüyle eşleşmedi`);
     if (skipNoCommission > 0) parts.push(`⚠️ ${skipNoCommission} komisyon/kâr tabanı yok`);
     if (skipBelow > 0) parts.push(`🔴 ${skipBelow} kâr tabanının altında`);
+    if (skipBaska > 0) parts.push(`⚠️ ${skipBaska} başka Genel kampanyada seçili (atlandı)`);
     if (selectedCount === 0) toast.warning(parts.join(' • ') || 'Uygun ürün bulunamadı');
     else toast.success(parts.join(' • '));
   };
@@ -799,9 +801,10 @@ export default function Campaigns() {
       oran <= (Number.isNaN(maxRate) ? Infinity : maxRate) &&
       tutar <= (Number.isNaN(maxAmount) ? Infinity : maxAmount);
     const visible = new Set(sortedData.map(i => i.barcode));
-    let secilen = 0, baremli = 0;
+    let secilen = 0, baremli = 0, baska = 0;
     const updated = uploadedData.map(item => {
       if (!visible.has(item.barcode)) return item;
+      if (baskaKampanyadaSecili(item)) { baska++; return item; }
       const price = item.campaign_price || item.max_price;
       if (!price || price <= 0) return item;
       // Once barem onerisi (Akilli Otomatik Sec ile ayni): barem tavani kar
@@ -814,7 +817,7 @@ export default function Campaigns() {
       return item;
     });
     setUploadedData(updated);
-    toast.success(secilen > 0 ? `${secilen} ürün seçildi${baremli > 0 ? ` (${baremli}'i barem önerisiyle)` : ''}` : 'Aralığa giren ürün yok');
+    toast.success(`${secilen > 0 ? `${secilen} ürün seçildi${baremli > 0 ? ` (${baremli}'i barem önerisiyle)` : ''}` : 'Aralığa giren ürün yok'}${baska > 0 ? ` • ${baska} başka Genel kampanyada seçili (atlandı)` : ''}`);
   };
 
   const openDetailModal = (item) => {
@@ -852,9 +855,51 @@ export default function Campaigns() {
     });
   };
 
+  /**
+   * Trendyol kurali (kullanici gozlemi, 5 Eyl 2026): bir urun ayni anda tek
+   * GENEL kampanyada olur; ikinciye eklenince ilkinden duser. Plus (ek
+   * indirim) ve Mikro Ihracat (ayri bolge) cakisma sayilmaz. Tarihleri
+   * kesisen, bitmemis baska bir Genel kampanyada SECILI olan urunun o
+   * kampanyasini dondurur; yoksa null.
+   */
+  const baskaKampanyadaSecili = (item) => {
+    if (!managingCampaign || managingCampaign.campaign_type !== 'all_countries') return null;
+    const bugun = new Date(); bugun.setHours(0, 0, 0, 0);
+    const kesisiyor = (c) => {
+      const b1 = new Date(managingCampaign.start_date), e1 = new Date(managingCampaign.end_date);
+      const b2 = new Date(c.start_date), e2 = new Date(c.end_date);
+      return b1 <= e2 && b2 <= e1 && e2 >= bugun;
+    };
+    for (const r of savedCampaignProducts) {
+      if (r.campaign_id === managingCampaign.id || r.selected_type !== 'campaign') continue;
+      if (!item.barcode || String(r.barcode) !== String(item.barcode)) continue;
+      const c = campaigns.find(x => x.id === r.campaign_id);
+      if (c && c.campaign_type === 'all_countries' && kesisiyor(c)) return c;
+    }
+    return null;
+  };
+
   const handleSave = async () => {
     const selectedItems = uploadedData.filter(item => item.selected_type === 'campaign');
     if (selectedItems.length === 0) { toast.error('Lütfen en az bir ürün seçin'); return; }
+    // Baska Genel kampanyada secili urunler: Trendyol'daki gibi son kampanya
+    // kazanir; kullanici onaylarsa digerinin kaydindan dusulur.
+    const cakisanlar = selectedItems.map(i => ({ item: i, diger: baskaKampanyadaSecili(i) })).filter(x => x.diger);
+    if (cakisanlar.length > 0) {
+      const adlar = [...new Set(cakisanlar.map(x => campaignTitle(x.diger)))].join(', ');
+      const ok = window.confirm(`${cakisanlar.length} ürün başka Genel kampanyada da seçili (${adlar}).\n\nTrendyol bir ürünü aynı anda tek Genel kampanyada tutar; son eklendiği kampanyaya taşır.\n\nKaydet ve bu ürünleri diğer kampanyadan çıkar?`);
+      if (!ok) return;
+      try {
+        const digerKayitlar = savedCampaignProducts.filter(r =>
+          r.selected_type === 'campaign' && r.campaign_id !== managingCampaign.id &&
+          cakisanlar.some(x => x.diger.id === r.campaign_id && String(x.item.barcode) === String(r.barcode)));
+        for (let i = 0; i < digerKayitlar.length; i += 30) {
+          const batch = digerKayitlar.slice(i, i + 30);
+          await Promise.all(batch.map(r => CampaignProduct.update(r.id, { selected_type: 'none' })));
+          if (i + 30 < digerKayitlar.length) await new Promise(r => setTimeout(r, 150));
+        }
+      } catch (error) { toast.error('Diğer kampanyadan çıkarma hatası: ' + error.message); return; }
+    }
     const cols = ['campaign_id','platform_account','barcode','product_name','product_code','category','brand','color','size','stock_code','current_stock','current_sale_price','max_price','campaign_price','commission_tariff','listing_id','selected_type','calculated_commission','calculated_profit','calculated_profit_rate','matched_product_id'];
     const clean = (item) => {
       const o = {};
@@ -1133,6 +1178,10 @@ export default function Campaigns() {
                                 <div className="font-medium text-foreground">{item.product_name || '-'}</div>
                                 <div className="text-xs text-muted-foreground">{item.barcode}</div>
                                 {!matched && <div className="text-xs text-rose-500">eşleşmedi</div>}
+                                {(() => { const d = baskaKampanyadaSecili(item); return d ? (
+                                  <div className="mt-1 inline-block rounded px-1.5 py-0.5 text-[11px] font-medium bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300" title={`${campaignTitle(d)} · ${safeDate(d.start_date)} - ${safeDate(d.end_date)}`}>
+                                    başka kampanyada seçili: {d.campaign_name || getTypeLabel(d.campaign_type)}
+                                  </div>) : null; })()}
                               </td>
                               <td className="p-3 text-center">{item.current_stock}</td>
                               <td className="p-3">
