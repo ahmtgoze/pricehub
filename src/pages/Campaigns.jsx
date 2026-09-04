@@ -23,7 +23,7 @@ import { gecerliMaliyet } from '@/lib/gecerliMaliyet';
 import { sayiyaCevirVeya } from '@/lib/turkceSayi';
 import { tarifeKomisyonu, aktifPencereOzeti } from '@/lib/tarifeKaydiSecimi';
 import {
-  INDIRIM_TURLERI, KATILIM_KOSULLARI, KAMPANYA_GRUPLARI,
+  INDIRIM_TURLERI, KAMPANYA_GRUPLARI,
   kampanyaFiyati, kampanyaFiyatiTersi, musteriFiyati, fiyatKuralinaUyuyorMu,
   kampanyaMetni, fiyatKuraliMetni, kaydiKampanyayaCevir, dosyaAdindanKampanya,
 } from '@/lib/trendyolKampanyaIndirimi';
@@ -69,7 +69,6 @@ const emptyForm = {
   min_qty: '',
   price_rule_min: '',
   price_rule_max: '',
-  participation_condition: 'none',
   trendyol_coverage_rate: '',
 };
 
@@ -230,7 +229,6 @@ export default function Campaigns() {
       min_qty: veya(k.minAdet),
       price_rule_min: veya(k.kuralMin),
       price_rule_max: veya(k.kuralMax),
-      participation_condition: k.katilim || 'none',
       trendyol_coverage_rate: c.trendyol_coverage_rate ?? '',
     });
     setShowForm(true);
@@ -271,7 +269,7 @@ export default function Campaigns() {
       min_qty: tur === 'qty_percent' ? n(formData.min_qty) : null,
       price_rule_min: n(formData.price_rule_min),
       price_rule_max: n(formData.price_rule_max),
-      participation_condition: formData.participation_condition === 'none' ? null : formData.participation_condition,
+      participation_condition: null,
       cart_amount: null,
       cart_condition: null,
       trendyol_coverage_rate: n(formData.trendyol_coverage_rate),
@@ -1200,20 +1198,6 @@ export default function Campaigns() {
 
                 {formData.campaign_type && (
                   <div className="space-y-2">
-                    <Label>Katılım Koşulu</Label>
-                    <Select value={formData.participation_condition} onValueChange={(v) => setFormData({ ...formData, participation_condition: v })}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">Belirtilmemiş</SelectItem>
-                        {KATILIM_KOSULLARI.map(t => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                    <p className="text-xs text-muted-foreground">Bilgi amaçlı; Trendyol'un Excel'indeki "girilebilecek max fiyat" bu koşulu zaten uygular.</p>
-                  </div>
-                )}
-
-                {formData.campaign_type && (
-                  <div className="space-y-2">
                     <Label>Trendyol Karşılama Oranı (%)</Label>
                     <div className="relative">
                       <Input type="number" placeholder="Opsiyonel — örn. 40" value={formData.trendyol_coverage_rate}
@@ -1253,7 +1237,6 @@ export default function Campaigns() {
                       <Badge className="bg-secondary text-muted-foreground">{getTypeLabel(campaign.campaign_type)}</Badge>
                       <Badge variant="outline">{kampanyaMetni(kaydiKampanyayaCevir(campaign))}</Badge>
                       {fiyatKuraliMetni(kaydiKampanyayaCevir(campaign)) ? <Badge variant="outline">{fiyatKuraliMetni(kaydiKampanyayaCevir(campaign))}</Badge> : null}
-                      {campaign.participation_condition ? <Badge variant="outline">{KATILIM_KOSULLARI.find(x => x.value === campaign.participation_condition)?.label || campaign.participation_condition}</Badge> : null}
                       {Number(campaign.trendyol_coverage_rate) > 0 ? <Badge className="bg-amber-100 text-amber-700">%{campaign.trendyol_coverage_rate} karşılama</Badge> : null}
                       {campaign.is_active ? <Badge className="bg-green-100 text-green-700">Aktif</Badge> : <Badge className="bg-border text-muted-foreground">İnaktif</Badge>}
                     </div>

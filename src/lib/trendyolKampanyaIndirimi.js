@@ -17,9 +17,6 @@
  *   kuralMin / kuralMax  "Fiyat Kuralı: 100 TL ve üzeri ürünler",
  *              "10 TL ve 700 TL arası ürünler", "800 TL ve altı ürünler"
  *              — bu araligin disindaki urun kampanyaya GIREMEZ.
- *   katilim    "Katılım Koşulu: Buybox Fiyatı veya Daha Düşük" /
- *              "Minimum Fiyat veya Daha Düşük" — bilgi amacli; Trendyol'un
- *              Excel'indeki "girilebilecek max fiyat" bunu zaten uygular.
  *
  * SEPET INDIRIMI URUNE NASIL DAGILIR (cart_tl)?
  *   Kullanici (3 Eylul 2026): "kampanyaya katilan urunlerin tamami dahil,
@@ -56,10 +53,9 @@ export const INDIRIM_TURLERI = [
 ];
 
 /** Trendyol'un "Katılım Koşulu" secenekleri. */
-export const KATILIM_KOSULLARI = [
-  { value: 'buybox', label: 'Buybox Fiyatı veya Daha Düşük' },
-  { value: 'min_price', label: 'Minimum Fiyat veya Daha Düşük' },
-];
+// Katilim kosulu (buybox / minimum fiyat) sistemde tutulmaz: Trendyol bunu
+// zaten uygulayip Excel'deki "Maksimum Girebileceğin Fiyat" sutununa yazar
+// (5 Eyl 2026 kontrolu: genel kampanyalarda 144/146 satirda max < mevcut).
 
 /**
  * Kampanya gruplari — kullanici karari: UC cesit var.
@@ -309,6 +305,5 @@ export function kaydiKampanyayaCevir(row) {
     karsilama: sayi(row.trendyol_coverage_rate) ?? 0,
     kuralMin: kuralMin ?? 0,
     kuralMax: kuralMax ?? 0,
-    katilim: row.participation_condition || '',
   };
 }

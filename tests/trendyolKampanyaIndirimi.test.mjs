@@ -166,7 +166,7 @@ console.log('\n=== ESKI KAYIT UYUMU ===');
     participation_condition: 'buybox', trendyol_coverage_rate: 30,
   };
   const c6 = kaydiKampanyayaCevir(yeni);
-  esit('yeni kayit', [c6.tur, c6.alX, c6.odeY, c6.kuralMin, c6.kuralMax, c6.katilim, c6.karsilama], ['buy_x_pay_y', 3, 2, 10, 5000, 'buybox', 30]);
+  esit('yeni kayit', [c6.tur, c6.alX, c6.odeY, c6.kuralMin, c6.kuralMax, c6.karsilama], ['buy_x_pay_y', 3, 2, 10, 5000, 30]);
   const yeniTl = { discount_kind: 'cart_tl', discount_amount: 100, threshold_amount: 500 };
   const c7 = kaydiKampanyayaCevir(yeniTl);
   esit('yeni cart_tl', [c7.tutar, c7.esik], [100, 500]);
