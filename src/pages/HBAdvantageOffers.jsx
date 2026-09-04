@@ -57,6 +57,10 @@ export default function HBAdvantageOffers() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCategory, setFilterCategory] = useState('');
   const [minStock, setMinStock] = useState('');
+  const [bulkMinProfitRate, setBulkMinProfitRate] = useState('');
+  const [bulkMinProfitAmount, setBulkMinProfitAmount] = useState('');
+  const [bulkMaxProfitRate, setBulkMaxProfitRate] = useState('');
+  const [bulkMaxProfitAmount, setBulkMaxProfitAmount] = useState('');
   const [maxStock, setMaxStock] = useState('');
   const [sortBy, setSortBy] = useState('');
   const [detailModal, setDetailModal] = useState({ open: false, product: null, priceData: null, calculationDetails: null });
@@ -363,6 +367,38 @@ export default function HBAdvantageOffers() {
     else toast.success(parcalar.join(' • '));
   };
 
+  // Toplu Sec: dort kutu birlikte (bos olan sart sayilmaz). En dusuk fiyatli
+  // kademeden baslayip araliga giren ilk kademe secilir; elle fiyat girilen
+  // satirlara dokunulmaz. Diger promosyon sayfalariyla ayni mantik.
+  const handleBulkSelect = () => {
+    const minRate = parseFloat(bulkMinProfitRate) || 0;
+    const minAmount = parseFloat(bulkMinProfitAmount) || 0;
+    const maxRate = bulkMaxProfitRate !== '' ? parseFloat(bulkMaxProfitRate) : Infinity;
+    const maxAmount = bulkMaxProfitAmount !== '' ? parseFloat(bulkMaxProfitAmount) : Infinity;
+    const araliktaMi = (oran, tutar) =>
+      oran >= minRate && tutar >= minAmount &&
+      oran <= (Number.isNaN(maxRate) ? Infinity : maxRate) &&
+      tutar <= (Number.isNaN(maxAmount) ? Infinity : maxAmount);
+    const gorunen = new Set(sortedData);
+    let secilen = 0;
+    const guncel = uploadedData.map((item) => {
+      if (!gorunen.has(item)) return item;
+      if (item.selected_tier === 'manual' || (item.manual_price && item.manual_price > 0)) return item;
+      if (!getMatchedProduct(item)) return item;
+      const adaylar = [1, 2, 3]
+        .map((n) => ({ tier: `tier${n}`, ...tierInfo(item, n) }))
+        .filter((c) => c.price > 0 && c.commission > 0)
+        .sort((a, b) => a.price - b.price);
+      for (const aday of adaylar) {
+        const { profit, profitRate } = calculateProfit(aday.price, aday.commission, item);
+        if (araliktaMi(profitRate, profit)) { secilen++; return { ...item, selected_tier: aday.tier, selected_price: aday.price }; }
+      }
+      return item.selected_tier !== 'none' ? { ...item, selected_tier: 'none', selected_price: 0 } : item;
+    });
+    setUploadedData(guncel);
+    toast.success(secilen > 0 ? `${secilen} teklif seçildi` : 'Aralığa giren teklif yok');
+  };
+
   const openDetailModal = (price, commissionRate, item) => {
     const calc = calculateProfit(price, commissionRate, item);
     const matchedProduct = calc.matchedProduct || getMatchedProduct(item);
@@ -524,6 +560,19 @@ export default function HBAdvantageOffers() {
               </CardContent>
             </Card>
 
+            <Card className="mb-6">
+              <CardHeader><CardTitle>Toplu Seçim</CardTitle></CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                  <Input type="number" placeholder="Min Kâr Oranı (%)" value={bulkMinProfitRate} onChange={(e) => setBulkMinProfitRate(e.target.value)} />
+                  <Input type="number" placeholder="Min Kâr Tutarı (₺)" value={bulkMinProfitAmount} onChange={(e) => setBulkMinProfitAmount(e.target.value)} />
+                  <Input type="number" placeholder="Maks Kâr Oranı (%)" value={bulkMaxProfitRate} onChange={(e) => setBulkMaxProfitRate(e.target.value)} />
+                  <Input type="number" placeholder="Maks Kâr Tutarı (₺)" value={bulkMaxProfitAmount} onChange={(e) => setBulkMaxProfitAmount(e.target.value)} />
+                  <Button onClick={handleBulkSelect} variant="outline">Toplu Seç</Button>
+                </div>
+                <p className="text-xs text-muted-foreground mt-2">Dolu kutuların hepsi birlikte aranır; en düşük fiyatlı kademeden başlar, aralığa giren ilk kademe seçilir. Elle fiyat girilen satırlara dokunmaz.</p>
+              </CardContent>
+            </Card>
             <Card>
               <CardHeader><CardTitle>Kârlılık Analizi ({filteredData.length} teklif)</CardTitle></CardHeader>
               <CardContent>

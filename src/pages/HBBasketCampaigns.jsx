@@ -71,6 +71,10 @@ export default function HBBasketCampaigns() {
   // USTUNE biner; ikisi de saglanmadan urun secilmez.
   const [minKarOrani, setMinKarOrani] = useState('');
   const [minKarTutari, setMinKarTutari] = useState('');
+  const [bulkMinProfitRate, setBulkMinProfitRate] = useState('');
+  const [bulkMinProfitAmount, setBulkMinProfitAmount] = useState('');
+  const [bulkMaxProfitRate, setBulkMaxProfitRate] = useState('');
+  const [bulkMaxProfitAmount, setBulkMaxProfitAmount] = useState('');
 
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCategory, setFilterCategory] = useState('');
@@ -562,6 +566,35 @@ export default function HBBasketCampaigns() {
     else toast.success(parcalar.join(' • '));
   };
 
+  // Toplu Sec: dort kutu birlikte (bos olan sart sayilmaz). Once barem
+  // onerisi (kar oranini artiriyor ve aralik tutuyorsa o fiyat), sonra
+  // girilen/max fiyat. Kampanyalar sayfasiyla ayni mantik.
+  const handleBulkSelect = () => {
+    const minRate = parseFloat(bulkMinProfitRate) || 0;
+    const minAmount = parseFloat(bulkMinProfitAmount) || 0;
+    const maxRate = bulkMaxProfitRate !== '' ? parseFloat(bulkMaxProfitRate) : Infinity;
+    const maxAmount = bulkMaxProfitAmount !== '' ? parseFloat(bulkMaxProfitAmount) : Infinity;
+    const araliktaMi = (oran, tutar) =>
+      oran >= minRate && tutar >= minAmount &&
+      oran <= (Number.isNaN(maxRate) ? Infinity : maxRate) &&
+      tutar <= (Number.isNaN(maxAmount) ? Infinity : maxAmount);
+    const gorunen = new Set(sortedData);
+    let secilen = 0, baremli = 0;
+    const guncel = uploadedData.map((item) => {
+      if (!gorunen.has(item)) return item;
+      if (!getMatchedProduct(item)) return item;
+      const fiyat = Number(item.campaign_price) > 0 ? Number(item.campaign_price) : (Number(item.max_price) || Number(item.current_price) || 0);
+      if (fiyat <= 0) return item;
+      const oneri = baremOnerisiHesapla(item, fiyat);
+      if (oneri && araliktaMi(oneri.profitRate, oneri.profit)) { secilen++; baremli++; return { ...item, selected: true, campaign_price: oneri.fiyat }; }
+      const { profit, profitRate } = kampanyaKari(fiyat, item);
+      if (araliktaMi(profitRate, profit)) { secilen++; return { ...item, selected: true, campaign_price: fiyat }; }
+      return item.selected ? { ...item, selected: false } : item;
+    });
+    setUploadedData(guncel);
+    toast.success(secilen > 0 ? `${secilen} ürün seçildi${baremli > 0 ? ` (${baremli}'i barem önerisiyle)` : ''}` : 'Aralığa giren ürün yok');
+  };
+
   const openDetailModal = (price, commissionRate, item) => {
     const calc = calculateProfit(price, commissionRate, item);
     const matchedProduct = calc.matchedProduct || getMatchedProduct(item);
@@ -853,6 +886,19 @@ export default function HBBasketCampaigns() {
               </CardContent>
             </Card>
 
+            <Card className="mb-6">
+              <CardHeader><CardTitle>Toplu Seçim</CardTitle></CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                  <Input type="number" placeholder="Min Kâr Oranı (%)" value={bulkMinProfitRate} onChange={(e) => setBulkMinProfitRate(e.target.value)} />
+                  <Input type="number" placeholder="Min Kâr Tutarı (₺)" value={bulkMinProfitAmount} onChange={(e) => setBulkMinProfitAmount(e.target.value)} />
+                  <Input type="number" placeholder="Maks Kâr Oranı (%)" value={bulkMaxProfitRate} onChange={(e) => setBulkMaxProfitRate(e.target.value)} />
+                  <Input type="number" placeholder="Maks Kâr Tutarı (₺)" value={bulkMaxProfitAmount} onChange={(e) => setBulkMaxProfitAmount(e.target.value)} />
+                  <Button onClick={handleBulkSelect} variant="outline">Toplu Seç</Button>
+                </div>
+                <p className="text-xs text-muted-foreground mt-2">Dolu kutuların hepsi birlikte aranır; önce barem önerisi denenir, sonra girilen fiyat.</p>
+              </CardContent>
+            </Card>
             <Card>
               <CardHeader><CardTitle>Kârlılık Analizi ({filteredData.length} ürün)</CardTitle></CardHeader>
               <CardContent>
