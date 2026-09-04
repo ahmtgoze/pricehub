@@ -189,7 +189,7 @@ Bugünkü değerler:
 
 | Platform | Barem 1 | Barem 2 | Desi tavanı |
 |---|---|---|---|
-| Trendyol | 0 – 149,99 ₺ | 150 – 299,99 ₺ | 10 |
+| Trendyol | 0 – 199,99 ₺ | 200 – 349,99 ₺ (350+ desi) | 10 |
 | HepsiBurada | 0 – 199,99 ₺ | 200 – 399,99 ₺ | 40 |
 | Web Sitesi | — barem yok — | | |
 
@@ -879,7 +879,7 @@ stopaj / kampanya / Plus / buybox / Mikro İhracat geçen sayfalar tam okundu.
 |---|---|---|---|
 | Platform Hizmet Bedeli | gönderi başına **10,99 + KDV**; Bugün Kargoda etiketli ve zamanında teslimde **4,99 + KDV**; iade paketinde yok; mikro ihracatta yok; paket bölmede etiketli pakete 4,99, diğerine 10,99 | 13,18 / 5,99 (KDV dahil) | uyumlu |
 | Kargo barem fiyatları (10 Ağu 2026) | Tablo 1 (1 gün termin / Bugün Kargoda / Hızlı Teslimat başarılı): TEX-PTT 38,74 / 70,41; Aras 48,33 / 79,16 … Tablo 2 (aksi halde): TEX-PTT 73,33 / 78,74; Aras 80,83 / 86,24 … (KDV hariç) | shipping_rates: TEX 46,49 / 84,49 (Bugün Kargoda) · 88,00 / 94,49 (normal) = tablo × 1,20 | uyumlu |
-| **Kargo barem bantları** | **0–199,99 ₺ ve 200–349,99 ₺; 350 ₺ ve üzeri desi fiyatı** ("Kargo baremi standart 350 TL") | platform ayarı **0–149,99 / 150–299,99** | **UYUMSUZ — kullanıcı onayıyla güncellenecek** |
+| **Kargo barem bantları** | **0–199,99 ₺ ve 200–349,99 ₺; 350 ₺ ve üzeri desi fiyatı** ("Kargo baremi standart 350 TL"; Akademi eğitimi 11822 "Trendyol Kargo Barem Altı Uygulaması") | platform ayarı 4 Eyl 2026'da **0–199,99 / 200–349,99** yapıldı (svs, gozepack, yönetici şablonu); eskisi 0–149,99 / 150–299,99 idi | **düzeltildi** (kullanıcı teyidi) |
 | Barem dışı | 10 desi üzeri paketler ve listede fiyatı olmayan firmalar (CEVA, Horoz) barem dışı; satıcı öder modelde barem yok | `barem_max_desi` 10 | uyumlu |
 | Desi | en × boy × yükseklik / 3000; poşette uçtan uca; ağırlık desiyi aşarsa ağırlık | — | bilgi |
 | Paket bölme | sipariş toplamı barem altındaysa yalnız BİR paket barem, diğerleri desi; barem üstündeyse hepsi desi | çoklu paket → barem yok, desiler toplanır | uyumlu (ihtiyatlı) |
