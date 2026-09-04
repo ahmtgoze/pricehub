@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import AktifPencereSatiri from '@/components/AktifPencereSatiri';
 import { db } from '@/api/db';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Plus, Edit2, Trash2, Calendar as CalendarIcon, Download, Sparkles, Check, Info, Upload, Filter, Package, HelpCircle, AlertTriangle } from 'lucide-react';
+import { Plus, Edit2, Trash2, Calendar as CalendarIcon, Download, Sparkles, Check, Info, Upload, Filter, Package, HelpCircle } from 'lucide-react';
 import { calculatePriceBreakdown, findDesiShippingRate } from '@/components/PriceCalculationEngine';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -761,14 +761,13 @@ export default function Campaigns() {
   };
 
   const handleSmartAutoSelect = () => {
-    let selectedCount = 0, skipNoProduct = 0, skipNoCommission = 0, skipBelow = 0, baremliSecim = 0, skipBaska = 0;
+    let selectedCount = 0, skipNoProduct = 0, skipNoCommission = 0, skipBelow = 0, baremliSecim = 0;
     const updated = uploadedData.map(item => {
       if (item.selected_type === 'campaign') return item;
       const matched = getMatchedProduct(item);
       if (!matched) { skipNoProduct++; return item; }
       const commRec = getCommissionRecord(item);
       if (!commRec) { skipNoCommission++; return item; }
-      const baskaKampanyada = !!baskaKampanyadaSecili(item);
       let price = item.max_price || item.campaign_price;
       if (!price || price <= 0) return item;
       // Barem onerisi: max fiyat desi tarifesine dusuyor ama biraz asagisi
@@ -778,7 +777,6 @@ export default function Campaigns() {
       if (oneri && !isBelowFloor(item, oneri.fiyat)) { price = oneri.fiyat; baremliSecim++; }
       if (isBelowFloor(item, price)) { skipBelow++; return item; }
       selectedCount++;
-      if (baskaKampanyada) skipBaska++;
       return { ...item, selected_type: 'campaign', campaign_price: price };
     });
     setUploadedData(updated);
@@ -787,7 +785,6 @@ export default function Campaigns() {
     if (skipNoProduct > 0) parts.push(`⚠️ ${skipNoProduct} sistem ürünüyle eşleşmedi`);
     if (skipNoCommission > 0) parts.push(`⚠️ ${skipNoCommission} komisyon/kâr tabanı yok`);
     if (skipBelow > 0) parts.push(`🔴 ${skipBelow} kâr tabanının altında`);
-    if (skipBaska > 0) parts.push(`⚠️ ${skipBaska}'i başka Genel kampanyada da seçili — üstteki düğmeyle taşı veya diğerinde bırak`);
     if (selectedCount === 0) toast.warning(parts.join(' • ') || 'Uygun ürün bulunamadı');
     else toast.success(parts.join(' • '));
   };
@@ -802,23 +799,22 @@ export default function Campaigns() {
       oran <= (Number.isNaN(maxRate) ? Infinity : maxRate) &&
       tutar <= (Number.isNaN(maxAmount) ? Infinity : maxAmount);
     const visible = new Set(sortedData.map(i => i.barcode));
-    let secilen = 0, baremli = 0, baska = 0;
+    let secilen = 0, baremli = 0;
     const updated = uploadedData.map(item => {
       if (!visible.has(item.barcode)) return item;
-      const baskaKampanyada = !!baskaKampanyadaSecili(item);
       const price = item.campaign_price || item.max_price;
       if (!price || price <= 0) return item;
       // Once barem onerisi (Akilli Otomatik Sec ile ayni): barem tavani kar
       // oranini artiriyor ve aralik tutuyorsa o fiyat; yoksa girilen fiyat.
       const oneri = baremOnerisiHesapla(item, price);
-      if (oneri && araliktaMi(oneri.profitRate, oneri.profit)) { secilen++; baremli++; if (baskaKampanyada) baska++; return { ...item, selected_type: 'campaign', campaign_price: oneri.fiyat }; }
+      if (oneri && araliktaMi(oneri.profitRate, oneri.profit)) { secilen++; baremli++; return { ...item, selected_type: 'campaign', campaign_price: oneri.fiyat }; }
       const { profit, profitRate } = calculateProfit(price, item);
-      if (araliktaMi(profitRate, profit)) { secilen++; if (baskaKampanyada) baska++; return { ...item, selected_type: 'campaign', campaign_price: price }; }
+      if (araliktaMi(profitRate, profit)) { secilen++; return { ...item, selected_type: 'campaign', campaign_price: price }; }
       if (item.selected_type === 'campaign') return secimiKaldir(item);
       return item;
     });
     setUploadedData(updated);
-    toast.success(`${secilen > 0 ? `${secilen} ürün seçildi${baremli > 0 ? ` (${baremli}'i barem önerisiyle)` : ''}` : 'Aralığa giren ürün yok'}${baska > 0 ? ` • ${baska}'i başka Genel kampanyada da seçili — üstteki düğmeyle taşı veya diğerinde bırak` : ''}`);
+    toast.success(`${secilen > 0 ? `${secilen} ürün seçildi${baremli > 0 ? ` (${baremli}'i barem önerisiyle)` : ''}` : 'Aralığa giren ürün yok'}`);
   };
 
   const openDetailModal = (item) => {
@@ -856,95 +852,9 @@ export default function Campaigns() {
     });
   };
 
-  /**
-   * Trendyol kurali (kullanici gozlemi, 5 Eyl 2026): bir urun ayni anda tek
-   * GENEL kampanyada olur; ikinciye eklenince ilkinden duser. Plus (ek
-   * indirim) ve Mikro Ihracat (ayri bolge) cakisma sayilmaz. Tarihleri
-   * kesisen, bitmemis baska bir Genel kampanyada SECILI olan urunun o
-   * kampanyasini dondurur; yoksa null.
-   */
-  const baskaKampanyadaSecili = (item) => {
-    if (!managingCampaign || managingCampaign.campaign_type !== 'all_countries') return null;
-    const bugun = new Date(); bugun.setHours(0, 0, 0, 0);
-    // Tarihler kesisiyorsa cakisma; sinir gunu ortaksa (1-15 ve 15-30) da
-    // sayilir — Trendyol'da bitis 23:59, baslangic 00:00 olabilir; bu yalnizca
-    // uyari oldugu icin ihtiyatli taraf secildi (5 Eyl 2026). Bitmis kampanya
-    // sayilmaz.
-    const kesisiyor = (c) => {
-      const b1 = new Date(managingCampaign.start_date), e1 = new Date(managingCampaign.end_date);
-      const b2 = new Date(c.start_date), e2 = new Date(c.end_date);
-      return b1 <= e2 && b2 <= e1 && e2 >= bugun;
-    };
-    for (const r of savedCampaignProducts) {
-      if (r.campaign_id === managingCampaign.id || r.selected_type !== 'campaign') continue;
-      if (!item.barcode || String(r.barcode) !== String(item.barcode)) continue;
-      const c = campaigns.find(x => x.id === r.campaign_id);
-      if (c && c.campaign_type === 'all_countries' && kesisiyor(c)) return c;
-    }
-    return null;
-  };
-
-  // Secili olup baska Genel kampanyada da secili olan urunler.
-  const seciliCakisanlar = () => uploadedData
-    .map((item, realIndex) => ({ item, realIndex, diger: baskaKampanyadaSecili(item) }))
-    .filter(x => x.diger && x.item.selected_type === 'campaign');
-
-  /**
-   * "Secilenleri bu kampanyaya tasi": kullanici urunleri tek tek secer, bu
-   * dugme secilenleri diger Genel kampanyanin kaydindan dusurur; burada
-   * secili kalirlar (kullanici istegi, 5 Eyl 2026 — satir basi dugme ve
-   * sari kutu kaldirildi, sayfa karisiyordu).
-   */
-  const secilenleriBuKampanyayaTasi = async () => {
-    const liste = seciliCakisanlar();
-    if (liste.length === 0) { toast.info('Seçilenler arasında başka kampanyada olan ürün yok'); return; }
-    const adlar = [...new Set(liste.map(x => campaignTitle(x.diger)))].join(', ');
-    if (!window.confirm(`${liste.length} ürün "${adlar}" kampanyasından çıkarılacak, bu kampanyada seçili kalacak. Devam?`)) return;
-    try {
-      const kayitlar = savedCampaignProducts.filter(r =>
-        r.selected_type === 'campaign' && r.campaign_id !== managingCampaign.id &&
-        liste.some(x => x.diger.id === r.campaign_id && String(x.item.barcode) === String(r.barcode)));
-      for (let i = 0; i < kayitlar.length; i += 30) {
-        const batch = kayitlar.slice(i, i + 30);
-        await Promise.all(batch.map(r => CampaignProduct.update(r.id, { selected_type: 'none' })));
-        if (i + 30 < kayitlar.length) await new Promise(r => setTimeout(r, 150));
-      }
-      queryClient.invalidateQueries({ queryKey: ['campaignProducts'] });
-      toast.success(`${liste.length} ürün diğer kampanyadan çıkarıldı. Kaydet'i unutma.`);
-    } catch (error) { toast.error('Taşıma hatası: ' + (error?.message || 'Bilinmeyen hata')); }
-  };
-
-  // "Secilenleri diger kampanyada birak": secili cakisanlarin BU kampanyadaki
-  // secimi kaldirilir (fiyat baslangica doner); digerinde secili kalirlar.
-  const secilenleriDigerindeBirak = () => {
-    const liste = seciliCakisanlar();
-    if (liste.length === 0) { toast.info('Seçilenler arasında başka kampanyada olan ürün yok'); return; }
-    const idx = new Set(liste.map(x => x.realIndex));
-    setUploadedData(uploadedData.map((it, i) => (idx.has(i) ? secimiKaldir(it) : it)));
-    toast.success(`${liste.length} ürün bu kampanyanın seçiminden çıkarıldı; diğer kampanyada seçili kaldı.`);
-  };
-
   const handleSave = async () => {
     const selectedItems = uploadedData.filter(item => item.selected_type === 'campaign');
     if (selectedItems.length === 0) { toast.error('Lütfen en az bir ürün seçin'); return; }
-    // Baska Genel kampanyada secili urunler: Trendyol'daki gibi son kampanya
-    // kazanir; kullanici onaylarsa digerinin kaydindan dusulur.
-    const cakisanlar = selectedItems.map(i => ({ item: i, diger: baskaKampanyadaSecili(i) })).filter(x => x.diger);
-    if (cakisanlar.length > 0) {
-      const adlar = [...new Set(cakisanlar.map(x => campaignTitle(x.diger)))].join(', ');
-      const ok = window.confirm(`${cakisanlar.length} ürün başka Genel kampanyada da seçili (${adlar}).\n\nTrendyol bir ürünü aynı anda tek Genel kampanyada tutar; son eklendiği kampanyaya taşır.\n\nKaydet ve bu ürünleri diğer kampanyadan çıkar?`);
-      if (!ok) return;
-      try {
-        const digerKayitlar = savedCampaignProducts.filter(r =>
-          r.selected_type === 'campaign' && r.campaign_id !== managingCampaign.id &&
-          cakisanlar.some(x => x.diger.id === r.campaign_id && String(x.item.barcode) === String(r.barcode)));
-        for (let i = 0; i < digerKayitlar.length; i += 30) {
-          const batch = digerKayitlar.slice(i, i + 30);
-          await Promise.all(batch.map(r => CampaignProduct.update(r.id, { selected_type: 'none' })));
-          if (i + 30 < digerKayitlar.length) await new Promise(r => setTimeout(r, 150));
-        }
-      } catch (error) { toast.error('Diğer kampanyadan çıkarma hatası: ' + error.message); return; }
-    }
     const cols = ['campaign_id','platform_account','barcode','product_name','product_code','category','brand','color','size','stock_code','current_stock','current_sale_price','max_price','campaign_price','commission_tariff','listing_id','selected_type','calculated_commission','calculated_profit','calculated_profit_rate','matched_product_id'];
     const clean = (item) => {
       const o = {};
@@ -1143,16 +1053,6 @@ export default function Campaigns() {
                     <Button variant="outline" onClick={handleExport}>
                       <Download className="mr-2 h-4 w-4" />Excel İndir{selectedCount > 0 && ` (${selectedCount})`}
                     </Button>
-                    {seciliCakisanlar().length > 0 && (
-                      <>
-                        <Button variant="outline" onClick={secilenleriBuKampanyayaTasi} className="border-blue-300 text-blue-700 hover:bg-blue-50 dark:text-blue-300 dark:hover:bg-blue-950/30" title="Seçtiğin ürünler arasında başka Genel kampanyada olanları oradan çıkarır; burada seçili kalırlar">
-                          <AlertTriangle className="mr-2 h-4 w-4" />Seçilenleri bu kampanyaya taşı ({seciliCakisanlar().length})
-                        </Button>
-                        <Button variant="outline" onClick={secilenleriDigerindeBirak} className="border-blue-300 text-blue-700 hover:bg-blue-50 dark:text-blue-300 dark:hover:bg-blue-950/30" title="Seçtiğin çakışan ürünleri bu kampanyanın seçiminden çıkarır; diğer kampanyada kalırlar">
-                          Seçilenleri diğer kampanyada bırak ({seciliCakisanlar().length})
-                        </Button>
-                      </>
-                    )}
                   </>
                 )}
               </div>
@@ -1233,20 +1133,7 @@ export default function Campaigns() {
                           return (
                             <tr key={item.id || realIndex} className={`border-b hover:bg-secondary ${isSelected ? 'bg-secondary' : ''}`}>
                               <td className="p-3">
-                                <div className="font-medium text-foreground flex items-center gap-2">
-                                  <span>{item.product_name || '-'}</span>
-                                  {(() => { const d = baskaKampanyadaSecili(item); return d ? (
-                                    <Popover>
-                                      <PopoverTrigger asChild>
-                                        <button type="button" className="shrink-0 text-blue-500 hover:text-blue-600" aria-label="Başka kampanyada seçili">
-                                          <AlertTriangle className="h-5 w-5" />
-                                        </button>
-                                      </PopoverTrigger>
-                                      <PopoverContent align="start" className="w-72 text-xs">
-                                        Bu ürün <span className="font-semibold">"{d.campaign_name || getTypeLabel(d.campaign_type)}"</span> kampanyasında aktif olarak seçilidir ({safeDate(d.start_date)} - {safeDate(d.end_date)}).
-                                      </PopoverContent>
-                                    </Popover>) : null; })()}
-                                </div>
+                                <div className="font-medium text-foreground">{item.product_name || '-'}</div>
                                 <div className="text-xs text-muted-foreground">{item.barcode}</div>
                                 {!matched && <div className="text-xs text-rose-500">eşleşmedi</div>}
                               </td>
