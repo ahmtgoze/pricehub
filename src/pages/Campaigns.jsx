@@ -913,6 +913,23 @@ export default function Campaigns() {
     }
     if (colL === -1) { toast.error('Excelde fiyat sütunu bulunamadı ("Kampanyalı Satış Fiyatı" veya "İndirim Uygulanmadan Önceki Fiyat")'); return; }
 
+    // Yalnizca SECILI satirlar dosyaya yazilir; secilmeyenler cikarilir.
+    // Trendyol fiyati bos satiri "hatali" sayiyordu (kullanici, 5 Eyl 2026:
+    // "sadece kampanyaya katilacaklar onayli gozukur"). Orijinal calisma
+    // kitabi DEGISTIRILMEZ; yeni bir sayfa kurulur ki secim degisince
+    // tekrar indirilebilsin.
+    const kopyaHucre = (R, C) => {
+      const h = worksheet[XLSX.utils.encode_cell({ r: R, c: C })];
+      return h ? { ...h } : null;
+    };
+    const yeniSayfa = {};
+    let yeniSatir = 0;
+    for (let C = range.s.c; C <= range.e.c; C++) {
+      const h = kopyaHucre(range.s.r, C);
+      if (h) yeniSayfa[XLSX.utils.encode_cell({ r: yeniSatir, c: C })] = h;
+    }
+    yeniSatir++;
+
     let written = 0;
     for (let R = range.s.r + 1; R <= range.e.r; R++) {
       const barcode = colBarkod >= 0 ? worksheet[XLSX.utils.encode_cell({ r: R, c: colBarkod })]?.v : null;
@@ -921,17 +938,25 @@ export default function Campaigns() {
         (barcode != null && i.barcode && String(i.barcode) === String(barcode)) ||
         (listing != null && i.listing_id && String(i.listing_id) === String(listing))
       );
-      if (item && item.selected_type === 'campaign' && item.campaign_price > 0) {
-        worksheet[XLSX.utils.encode_cell({ r: R, c: colL })] = { v: Number(item.campaign_price), t: 'n', z: '0.00' };
-        written++;
+      if (!(item && item.selected_type === 'campaign' && item.campaign_price > 0)) continue;
+      for (let C = range.s.c; C <= range.e.c; C++) {
+        const h = C === colL
+          ? { v: Number(item.campaign_price), t: 'n', z: '0.00' }
+          : kopyaHucre(R, C);
+        if (h) yeniSayfa[XLSX.utils.encode_cell({ r: yeniSatir, c: C })] = h;
       }
+      yeniSatir++;
+      written++;
     }
     if (written === 0) { toast.error('Seçili ürün yok'); return; }
+    yeniSayfa['!ref'] = XLSX.utils.encode_range({ s: { r: 0, c: range.s.c }, e: { r: yeniSatir - 1, c: range.e.c } });
+    if (worksheet['!cols']) yeniSayfa['!cols'] = worksheet['!cols'];
+    const yeniKitap = { SheetNames: [sheetName], Sheets: { [sheetName]: yeniSayfa } };
 
     const slug = (s) => (s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
     const fileName = `kampanya-${slug(getTypeLabel(managingCampaign.campaign_type))}-${written}urun.xlsx`;
-    XLSX.writeFile(workbook, fileName, { bookSST: true });
-    toast.success(`${written} ürün için Excel indirildi`);
+    XLSX.writeFile(yeniKitap, fileName, { bookSST: true });
+    toast.success(`${written} ürün için Excel indirildi (yalnızca seçili satırlar)`);
   };
 
   const filteredData = uploadedData.filter(item => {
