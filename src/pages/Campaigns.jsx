@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import AktifPencereSatiri from '@/components/AktifPencereSatiri';
 import { db } from '@/api/db';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Plus, Edit2, Trash2, Calendar as CalendarIcon, Download, Sparkles, Check, Info, Upload, Filter } from 'lucide-react';
+import { Plus, Edit2, Trash2, Calendar as CalendarIcon, Download, Sparkles, Check, Info, Upload, Filter, Package } from 'lucide-react';
 import { calculatePriceBreakdown, findDesiShippingRate } from '@/components/PriceCalculationEngine';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -921,7 +921,7 @@ export default function Campaigns() {
         <div className="ph-page mx-auto">
           <Button variant="outline" onClick={closeManager} className="mb-4">← Kampanyalara Dön</Button>
           <div className="mb-8">
-            <h1 className="ph-title">Ürün Ekle — {getTypeLabel(managingCampaign.campaign_type)}</h1>
+            <h1 className="ph-title">Ürünler — {getTypeLabel(managingCampaign.campaign_type)}</h1>
             <p className="ph-subtitle">{campaignTitle(managingCampaign)} · {safeDate(managingCampaign.start_date)} - {safeDate(managingCampaign.end_date)}</p>
             <AktifPencereSatiri ozet={aktifPencereOzeti(priceRanges, selectedPlatform)} />
           </div>
@@ -1154,7 +1154,7 @@ export default function Campaigns() {
                   {bekleyenDosya ? (
                     <p className="text-xs text-muted-foreground"><Upload className="inline h-3 w-3 mr-1" />{bekleyenDosya.name} — kampanya türü, eşik, indirim ve karşılama dosya adından dolduruldu; kontrol et, tarihleri gir, Oluştur'a bas: ürünler bu dosyadan yüklenir.</p>
                   ) : (
-                    <p className="text-xs text-muted-foreground">Dosyayı verince koşullar dosya adından dolar; sen tarihleri girersin. Dosyasız da oluşturabilir, Excel'i sonra kartındaki "Ürün Ekle" ile yükleyebilirsin.</p>
+                    <p className="text-xs text-muted-foreground">Dosyayı verince koşullar dosya adından dolar; sen tarihleri girersin. Dosyasız da oluşturabilir, Excel'i sonra kartındaki "Ürünler" ekranından yükleyebilirsin.</p>
                   )}
                 </div>
               )}
@@ -1295,7 +1295,7 @@ export default function Campaigns() {
                     <p className="text-sm text-muted-foreground mt-3">{safeDate(campaign.start_date)} - {safeDate(campaign.end_date)}</p>
                   </div>
                   <div className="flex gap-2 shrink-0">
-                    <Button size="sm" className="bg-primary hover:bg-black dark:hover:bg-white/90" onClick={() => openManager(campaign)}><Plus className="h-4 w-4 mr-1" />Ürün Ekle</Button>
+                    <Button size="sm" className="bg-primary hover:bg-black dark:hover:bg-white/90" onClick={() => openManager(campaign)}><Package className="h-4 w-4 mr-1" />Ürünler</Button>
                     <Button size="sm" variant="outline" onClick={() => openEdit(campaign)}><Edit2 className="h-4 w-4" /></Button>
                     <Button size="sm" variant="outline" className="text-red-600 hover:text-red-700" onClick={() => handleDelete(campaign.id)}><Trash2 className="h-4 w-4" /></Button>
                   </div>
