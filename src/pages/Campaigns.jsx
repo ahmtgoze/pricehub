@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import AktifPencereSatiri from '@/components/AktifPencereSatiri';
 import { db } from '@/api/db';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Plus, Edit2, Trash2, Calendar as CalendarIcon, Download, Sparkles, Check, Info, Upload } from 'lucide-react';
+import { Plus, Edit2, Trash2, Calendar as CalendarIcon, Download, Sparkles, Check, Info, Upload, Filter } from 'lucide-react';
 import { calculatePriceBreakdown, findDesiShippingRate } from '@/components/PriceCalculationEngine';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -903,31 +903,56 @@ export default function Campaigns() {
       <div className="min-h-screen bg-secondary">
         <div className="ph-page mx-auto">
           <Button variant="outline" onClick={closeManager} className="mb-4">← Kampanyalara Dön</Button>
-          <div className="mb-6">
+          <div className="mb-8">
             <h1 className="ph-title">Ürün Ekle — {getTypeLabel(managingCampaign.campaign_type)}</h1>
+            <p className="ph-subtitle">{campaignTitle(managingCampaign)} · {safeDate(managingCampaign.start_date)} - {safeDate(managingCampaign.end_date)}</p>
             <AktifPencereSatiri ozet={aktifPencereOzeti(priceRanges, selectedPlatform)} />
-            <p className="text-muted-foreground mt-1">{campaignTitle(managingCampaign)} · {safeDate(managingCampaign.start_date)} - {safeDate(managingCampaign.end_date)}</p>
           </div>
 
           <Card className="mb-6">
-            <CardContent className="pt-6 space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <CardHeader><CardTitle>Platform ve Excel</CardTitle></CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>Platform</Label>
+                  <Label>Platform *</Label>
                   {trendyolPlatforms.length === 1 ? (
                     <div className="flex items-center h-10 px-3 border border-border rounded-xl bg-secondary text-sm font-medium">{trendyolPlatforms[0]?.name}</div>
                   ) : (
                     <Select value={selectedPlatform} onValueChange={setSelectedPlatform}>
-                      <SelectTrigger><SelectValue placeholder="Platform" /></SelectTrigger>
+                      <SelectTrigger><SelectValue placeholder="Platform seçin" /></SelectTrigger>
                       <SelectContent>{trendyolPlatforms.map(p => <SelectItem key={p.id} value={p.name}>{p.name}</SelectItem>)}</SelectContent>
                     </Select>
                   )}
                 </div>
-                <div className="space-y-2 md:col-span-2">
-                  <Label>Kampanya Excel'i (Trendyol'dan "Ürün Ekle" ile indirdiğin dosya)</Label>
-                  <input type="file" accept=".xlsx,.xls" onChange={handleFileUpload}
-                    className="block w-full text-sm text-muted-foreground file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-secondary file:text-foreground hover:file:bg-border" />
+                <div className="space-y-2">
+                  <Label>Kampanya Excel'i</Label>
+                  <p className="text-xs text-muted-foreground">Trendyol'da kampanyanın "Ürün Ekle" ekranından indirdiğin dosya. Yeni dosya önceki satırların yerine geçer.</p>
                 </div>
+              </div>
+              <div className="flex flex-wrap gap-3">
+                <Button onClick={() => document.getElementById('kampanyaExcelUpload').click()} disabled={!selectedPlatform} className="bg-primary hover:bg-black dark:hover:bg-white/90">
+                  <Upload className="mr-2 h-4 w-4" />{uploadedData.length > 0 ? 'Yeni Excel Yükle' : 'Excel Yükle'}
+                </Button>
+                <input id="kampanyaExcelUpload" type="file" accept=".xlsx,.xls" onChange={handleFileUpload} className="hidden" />
+                {uploadedData.length > 0 && (
+                  <>
+                    <Button onClick={handleSmartAutoSelect} className="bg-primary hover:bg-black dark:hover:bg-white/90 text-primary-foreground gap-2">
+                      <Sparkles className="h-4 w-4" />Akıllı Otomatik Seç
+                    </Button>
+                    <Button variant="outline" onClick={handleDeleteExcel} className="text-red-600 dark:text-red-400 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/30">
+                      <Trash2 className="mr-2 h-4 w-4" />Excel'i Sil
+                    </Button>
+                    <Button variant="outline" onClick={handleSave}>
+                      <Check className="mr-2 h-4 w-4" />Seçimleri Kaydet ({selectedCount})
+                    </Button>
+                    <Button variant="outline" onClick={() => { setUploadedData(uploadedData.map(i => ({ ...i, selected_type: 'none' }))); toast.success('Tüm seçimler kaldırıldı'); }}>
+                      Seçimleri Kaldır
+                    </Button>
+                    <Button variant="outline" onClick={handleExport}>
+                      <Download className="mr-2 h-4 w-4" />Excel İndir{selectedCount > 0 && ` (${selectedCount})`}
+                    </Button>
+                  </>
+                )}
               </div>
               {uploadProgress.total > 0 && (<p className="text-sm text-muted-foreground">Yükleniyor: {uploadProgress.current}/{uploadProgress.total}</p>)}
             </CardContent>
@@ -935,95 +960,138 @@ export default function Campaigns() {
 
           {uploadedData.length > 0 && (
             <>
-              <div className="flex flex-wrap items-center gap-3 mb-4">
-                <Input placeholder="Ürün ara..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-56" />
-                <Select value={filterCategory || 'all'} onValueChange={(v) => setFilterCategory(v === 'all' ? '' : v)}>
-                  <SelectTrigger className="w-48"><SelectValue placeholder="Kategori" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Tüm kategoriler</SelectItem>
-                    {allCategories.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-                <Select value={siraSecimi} onValueChange={setSiraSecimi}>
-                  <SelectTrigger className="w-56"><SelectValue placeholder="Sırala" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="default">Varsayılan</SelectItem>
-                    <SelectItem value="rate_desc">Kâr oranı: yüksek → düşük</SelectItem>
-                    <SelectItem value="rate_asc">Kâr oranı: düşük → yüksek</SelectItem>
-                    <SelectItem value="price_desc">Kampanya fiyatı: yüksek → düşük</SelectItem>
-                    <SelectItem value="price_asc">Kampanya fiyatı: düşük → yüksek</SelectItem>
-                    <SelectItem value="name_asc">Ürün adı: A → Z</SelectItem>
-                    <SelectItem value="name_desc">Ürün adı: Z → A</SelectItem>
-                  </SelectContent>
-                </Select>
-                <Button onClick={handleSmartAutoSelect} className="bg-primary hover:bg-black dark:hover:bg-white/90"><Sparkles className="h-4 w-4 mr-1" />Akıllı Otomatik Seç</Button>
-                <div className="flex items-center gap-2">
-                  <Input type="number" placeholder="min %" value={bulkMinProfitRate} onChange={(e) => setBulkMinProfitRate(e.target.value)} className="w-24" />
-                  <Input type="number" placeholder="min TL" value={bulkMinProfitAmount} onChange={(e) => setBulkMinProfitAmount(e.target.value)} className="w-24" />
-                  <Input type="number" placeholder="maks %" value={bulkMaxProfitRate} onChange={(e) => setBulkMaxProfitRate(e.target.value)} className="w-24" />
-                  <Input type="number" placeholder="maks TL" value={bulkMaxProfitAmount} onChange={(e) => setBulkMaxProfitAmount(e.target.value)} className="w-24" />
-                  <Button variant="outline" onClick={handleBulkSelect}>Toplu Seç</Button>
-                </div>
-                <div className="flex-1" />
-                <Badge className="bg-primary text-primary-foreground">{selectedCount} seçili</Badge>
-                <Button onClick={handleSave} className="bg-green-600 hover:bg-green-700"><Check className="h-4 w-4 mr-1" />Kaydet</Button>
-                <Button onClick={handleExport} variant="outline"><Download className="h-4 w-4 mr-1" />Excel İndir</Button>
-                <Button onClick={handleDeleteExcel} variant="outline" className="text-red-600 hover:text-red-700"><Trash2 className="h-4 w-4 mr-1" />Excel'i Sil</Button>
-              </div>
+              <Card className="mb-6">
+                <CardHeader><CardTitle className="flex items-center gap-2"><Filter className="h-5 w-5" />Filtreler</CardTitle></CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <Input placeholder="Ürün adı veya barkod ara..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+                    <Select value={filterCategory || 'all'} onValueChange={(v) => setFilterCategory(v === 'all' ? '' : v)}>
+                      <SelectTrigger><SelectValue placeholder="Kategori" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Tüm kategoriler</SelectItem>
+                        {allCategories.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                    <Select value={siraSecimi} onValueChange={setSiraSecimi}>
+                      <SelectTrigger><SelectValue placeholder="Sırala" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="default">Sıralama Yok</SelectItem>
+                        <SelectItem value="name_asc">Ürün Adı (A-Z)</SelectItem>
+                        <SelectItem value="name_desc">Ürün Adı (Z-A)</SelectItem>
+                        <SelectItem value="rate_desc">Kâr Oranı (Azalan)</SelectItem>
+                        <SelectItem value="rate_asc">Kâr Oranı (Artan)</SelectItem>
+                        <SelectItem value="price_desc">Girilen Fiyat (Azalan)</SelectItem>
+                        <SelectItem value="price_asc">Girilen Fiyat (Artan)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="mb-6">
+                <CardHeader><CardTitle>Toplu Seçim</CardTitle></CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                    <Input type="number" placeholder="Min Kâr Oranı (%)" value={bulkMinProfitRate} onChange={(e) => setBulkMinProfitRate(e.target.value)} />
+                    <Input type="number" placeholder="Min Kâr Tutarı (₺)" value={bulkMinProfitAmount} onChange={(e) => setBulkMinProfitAmount(e.target.value)} />
+                    <Input type="number" placeholder="Maks Kâr Oranı (%)" value={bulkMaxProfitRate} onChange={(e) => setBulkMaxProfitRate(e.target.value)} />
+                    <Input type="number" placeholder="Maks Kâr Tutarı (₺)" value={bulkMaxProfitAmount} onChange={(e) => setBulkMaxProfitAmount(e.target.value)} />
+                    <Button onClick={handleBulkSelect} variant="outline">Toplu Seç</Button>
+                  </div>
+                </CardContent>
+              </Card>
 
               <Card>
-                <CardContent className="p-0 overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead className="bg-secondary border-b">
-                      <tr className="text-left text-muted-foreground">
-                        <th className="p-3 w-10"></th>
-                        <th className="p-3">Ürün</th>
-                        <th className="p-3 text-right">Stok</th>
-                        <th className="p-3 text-right">Güncel Fiyat</th>
-                        <th className="p-3 text-right">Maks. Girilebilecek</th>
-                        <th className="p-3 text-right">Girilen Fiyat</th>
-                        <th className="p-3 text-right">Net Kâr</th>
-                        <th className="p-3 text-right">Kâr %</th>
-                        <th className="p-3 text-center min-w-[150px]">Barem Önerisi</th>
-                        <th className="p-3 text-center">Detay</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {sortedData.map((item) => {
-                        const realIndex = uploadedData.indexOf(item);
-                        const matched = getMatchedProduct(item);
-                        const calc = calculateProfit(item.campaign_price, item);
-                        const below = item.campaign_price > 0 ? isBelowFloor(item, item.campaign_price) : false;
-                        const overMax = item.max_price > 0 && parseFloat(item.campaign_price) > item.max_price;
-                        const isSelected = item.selected_type === 'campaign';
-                        return (
-                          <tr key={item.id || realIndex} className={`border-b hover:bg-secondary ${isSelected ? 'bg-secondary' : ''}`}>
-                            <td className="p-3"><input type="checkbox" checked={isSelected} onChange={() => handleSelect(realIndex)} className="h-4 w-4" /></td>
-                            <td className="p-3">
-                              <div className="font-medium text-foreground">{item.product_name || '-'}</div>
-                              <div className="text-xs text-muted-foreground/70">{item.barcode}{matched ? '' : ' · ⚠️ eşleşmedi'}</div>
-                            </td>
-                            <td className="p-3 text-right">{item.current_stock}</td>
-                            <td className="p-3 text-right">{Number(item.current_sale_price).toFixed(2)} ₺</td>
-                            <td className="p-3 text-right font-medium">{Number(item.max_price).toFixed(2)} ₺</td>
-                            <td className="p-3 text-right">
-                              <Input type="number" value={item.campaign_price} onChange={(e) => handlePriceChange(realIndex, e.target.value)}
-                                className={`w-28 text-right ml-auto ${overMax ? 'border-red-400' : ''}`} />
-                              {overMax && <div className="text-[10px] text-red-500 mt-1">Max'ı aşıyor!</div>}
-                            </td>
-                            <td className={`p-3 text-right font-semibold ${below ? 'text-red-600' : 'text-green-600'}`}>{matched ? `${calc.profit.toFixed(2)} ₺` : '-'}</td>
-                            <td className={`p-3 text-right font-semibold ${below ? 'text-red-600' : 'text-green-600'}`}>
-                              {matched ? `%${calc.profitRate.toFixed(1)}` : '-'}
-                              {matched && <BaremBadge barem={calc.baremUsed} className="ml-1" />}
-                              {below && <div className="text-[10px] text-red-500">taban altı</div>}
-                            </td>
-                            <td className="p-3 text-center">{matched ? renderBaremOnerisi(item, realIndex) : <span className="text-muted-foreground/70 text-xs">-</span>}</td>
-                            <td className="p-3 text-center"><Button size="sm" variant="ghost" onClick={() => openDetailModal(item)} disabled={!matched}><Info className="h-4 w-4" /></Button></td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
+                <CardHeader><CardTitle>Kârlılık Analizi ({sortedData.length} ürün · {selectedCount} seçili)</CardTitle></CardHeader>
+                <CardContent>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead className="bg-secondary border-b">
+                        <tr>
+                          <th className="p-3 text-center font-semibold w-10">Seç</th>
+                          <th className="p-3 text-left font-semibold min-w-[200px]">Ürün</th>
+                          <th className="p-3 text-center font-semibold">Stok</th>
+                          <th className="p-3 text-center font-semibold min-w-[120px]">Kategori</th>
+                          <th className="p-3 text-center font-semibold min-w-[130px]">Güncel Fiyat</th>
+                          <th className="p-3 text-center font-semibold min-w-[130px]">Maks. Girilebilecek</th>
+                          <th className="p-3 text-center font-semibold min-w-[200px]">Girilen Fiyat</th>
+                          <th className="p-3 text-center font-semibold min-w-[150px]">İndirimli Fiyat</th>
+                          <th className="p-3 text-center font-semibold min-w-[150px]">Barem Önerisi</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {sortedData.map((item) => {
+                          const realIndex = uploadedData.indexOf(item);
+                          const matched = getMatchedProduct(item);
+                          const calc = calculateProfit(item.campaign_price, item);
+                          const below = item.campaign_price > 0 ? isBelowFloor(item, item.campaign_price) : false;
+                          const overMax = item.max_price > 0 && parseFloat(item.campaign_price) > item.max_price;
+                          const isSelected = item.selected_type === 'campaign';
+                          const guncel = matched && Number(item.current_sale_price) > 0 ? calculateProfit(Number(item.current_sale_price), item) : null;
+                          return (
+                            <tr key={item.id || realIndex} className={`border-b hover:bg-secondary ${isSelected ? 'bg-secondary' : ''}`}>
+                              <td className="p-3 text-center"><input type="checkbox" checked={isSelected} onChange={() => handleSelect(realIndex)} className="h-4 w-4" /></td>
+                              <td className="p-3">
+                                <div className="font-medium text-foreground">{item.product_name || '-'}</div>
+                                <div className="text-xs text-muted-foreground">{item.barcode}</div>
+                                {!matched && <div className="text-xs text-rose-500">eşleşmedi</div>}
+                              </td>
+                              <td className="p-3 text-center">{item.current_stock}</td>
+                              <td className="p-3">
+                                {matched ? <div className="text-center text-xs font-medium text-muted-foreground">{matched.category_name}</div> : <div className="text-center text-muted-foreground/70 text-xs">-</div>}
+                              </td>
+                              <td className="p-3">
+                                <div className="text-center">
+                                  <div className="font-semibold text-foreground">₺{Number(item.current_sale_price || 0).toFixed(2)}</div>
+                                  {guncel?.breakdown && (
+                                    <>
+                                      <div className="text-xs text-muted-foreground">{matched.desi} desi • {guncel.baremUsed === 'barem1' ? 'Barem 1' : guncel.baremUsed === 'barem2' ? 'Barem 2' : 'Desi'}</div>
+                                      <div className="text-xs text-muted-foreground">Kom: %{guncel.commissionRate || 0}</div>
+                                      <div className={`text-xs font-medium ${guncel.profit > 0 ? 'text-green-600' : 'text-red-600'}`}>₺{guncel.profit.toFixed(2)} (%{guncel.profitRate.toFixed(1)})</div>
+                                    </>
+                                  )}
+                                </div>
+                              </td>
+                              <td className="p-3 text-center font-semibold text-muted-foreground">₺{Number(item.max_price || 0).toFixed(2)}</td>
+                              <td className="p-3">
+                                <div className={`border rounded-lg p-2 ${isSelected ? 'border-primary bg-secondary' : 'border-border'}`}>
+                                  <Input type="number" step="0.01" value={item.campaign_price} onChange={(e) => handlePriceChange(realIndex, e.target.value)}
+                                    className={`h-8 text-xs ${overMax ? 'border-red-400' : ''}`} />
+                                  {overMax && <div className="text-[10px] text-red-500 mt-1">Maks. girilebilecek fiyatı aşıyor</div>}
+                                  {aktifKampanya && <div className="text-[11px] text-muted-foreground mt-1">{kampanyaMetni(aktifKampanya)}{aktifKampanya.karsilama > 0 ? ` · %${aktifKampanya.karsilama} Trendyol` : ''}</div>}
+                                  <Button size="sm" variant={isSelected ? 'default' : 'outline'} onClick={() => handleSelect(realIndex)} disabled={!matched} className="w-full mt-2 h-7 text-xs">
+                                    {isSelected ? 'Seçili' : 'Seç'}
+                                  </Button>
+                                </div>
+                              </td>
+                              <td className="p-3">
+                                {matched && calc.breakdown ? (
+                                  <div className="text-center">
+                                    <div className="font-semibold text-foreground">₺{Number(calc.effPrice || 0).toFixed(2)}</div>
+                                    {Number(calc.musteriFiyat) > 0 && Math.abs(Number(calc.musteriFiyat) - Number(calc.effPrice)) > 0.005 && (
+                                      <div className="text-[11px] text-muted-foreground">müşteri öder ₺{Number(calc.musteriFiyat).toFixed(2)}</div>
+                                    )}
+                                    <div className="flex items-center justify-center gap-1 text-xs text-muted-foreground">
+                                      <span>Kom: %{calc.commissionRate || 0}</span>
+                                      <BaremBadge barem={calc.baremUsed} />
+                                    </div>
+                                    <div className="flex items-center justify-center gap-1 mt-1">
+                                      <span className={`text-xs font-semibold ${below ? 'text-red-600' : calc.profit > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                        {calc.profit > 0 ? '+' : ''}₺{calc.profit.toFixed(2)} (%{calc.profitRate.toFixed(1)})
+                                      </span>
+                                      <Button size="sm" variant="ghost" className="h-5 w-5 p-0" onClick={() => openDetailModal(item)}><Info className="h-3 w-3" /></Button>
+                                    </div>
+                                    {below && <div className="text-[10px] text-red-500">kâr tabanının altında</div>}
+                                  </div>
+                                ) : <div className="text-center text-muted-foreground/70 text-xs">-</div>}
+                              </td>
+                              <td className="p-3 text-center">{matched ? renderBaremOnerisi(item, realIndex) : <span className="text-muted-foreground/70 text-xs">-</span>}</td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
                 </CardContent>
               </Card>
             </>
