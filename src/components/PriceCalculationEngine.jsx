@@ -249,9 +249,9 @@ export const calculatePriceBreakdown = ({
  */
 export const isPriceInBaremRange = (salePrice, platform, baremType) => {
   if (baremType === 'barem1') {
-    return salePrice >= (platform.barem1_min || 0) && salePrice <= (platform.barem1_max || 149.99);
+    return salePrice >= (platform.barem1_min || 0) && salePrice <= (platform.barem1_max || 199.99);
   } else if (baremType === 'barem2') {
-    return salePrice >= (platform.barem2_min || 150) && salePrice <= (platform.barem2_max || 299.99);
+    return salePrice >= (platform.barem2_min || 200) && salePrice <= (platform.barem2_max || 349.99);
   }
   return true;
 };

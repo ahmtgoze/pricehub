@@ -48,9 +48,9 @@ export default function PlatformModal({
     use_barem: true,
     barem_max_desi: 5,
     barem1_min: 0,
-    barem1_max: 149.99,
-    barem2_min: 150,
-    barem2_max: 299.99,
+    barem1_max: 199.99,
+    barem2_min: 200,
+    barem2_max: 349.99,
     is_active: true
   });
 
@@ -77,9 +77,9 @@ export default function PlatformModal({
         use_barem: platform.use_barem !== false,
         barem_max_desi: platform.barem_max_desi ?? 5,
         barem1_min: platform.barem1_min ?? 0,
-        barem1_max: platform.barem1_max ?? 149.99,
-        barem2_min: platform.barem2_min ?? 150,
-        barem2_max: platform.barem2_max ?? 299.99,
+        barem1_max: platform.barem1_max ?? 199.99,
+        barem2_min: platform.barem2_min ?? 200,
+        barem2_max: platform.barem2_max ?? 349.99,
         is_active: platform.is_active !== false
       });
     } else {
@@ -104,9 +104,9 @@ export default function PlatformModal({
         use_barem: true,
         barem_max_desi: 5,
         barem1_min: 0,
-        barem1_max: 149.99,
-        barem2_min: 150,
-        barem2_max: 299.99,
+        barem1_max: 199.99,
+        barem2_min: 200,
+        barem2_max: 349.99,
         is_active: true
       });
     }
