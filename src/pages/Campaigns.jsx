@@ -804,13 +804,12 @@ export default function Campaigns() {
       if (!visible.has(item.barcode)) return item;
       const price = item.campaign_price || item.max_price;
       if (!price || price <= 0) return item;
-      const { profit, profitRate } = calculateProfit(price, item);
-      if (araliktaMi(profitRate, profit)) { secilen++; return { ...item, selected_type: 'campaign', campaign_price: price }; }
-      // Girilen fiyat araliga girmiyorsa barem onerisi dene (Akilli Otomatik
-      // Sec ile ayni hesap): barem tavani kar oranini artiriyor ve aralik
-      // tutuyorsa o fiyatla sec.
+      // Once barem onerisi (Akilli Otomatik Sec ile ayni): barem tavani kar
+      // oranini artiriyor ve aralik tutuyorsa o fiyat; yoksa girilen fiyat.
       const oneri = baremOnerisiHesapla(item, price);
       if (oneri && araliktaMi(oneri.profitRate, oneri.profit)) { secilen++; baremli++; return { ...item, selected_type: 'campaign', campaign_price: oneri.fiyat }; }
+      const { profit, profitRate } = calculateProfit(price, item);
+      if (araliktaMi(profitRate, profit)) { secilen++; return { ...item, selected_type: 'campaign', campaign_price: price }; }
       if (item.selected_type === 'campaign') return secimiKaldir(item);
       return item;
     });

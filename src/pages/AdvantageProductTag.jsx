@@ -601,17 +601,16 @@ export default function AdvantageProductTag() {
         return item;
       }
 
-      const { profit, profitRate } = calculateProfit(price, commissionRate, item);
-      if (araliktaMi(profitRate, profit)) { secilen++; return { ...item, selected_range: bulkColumn, selected_price: price }; }
-      // Kolon fiyati araliga girmiyorsa barem onerisi dene (Akilli Otomatik
-      // Sec ile ayni hesap): barem tavani kar oranini artiriyor ve aralik
-      // tutuyorsa manuel fiyat olarak sec.
+      // Once barem onerisi (Akilli Otomatik Sec ile ayni): barem tavani kar
+      // oranini artiriyor ve aralik tutuyorsa manuel fiyat; yoksa kolon fiyati.
       const oneri = baremOnerisiHesapla(item, price);
       if (oneri && araliktaMi(oneri.profitRate, oneri.profit)) {
         secilen++; baremli++;
         return { ...item, selected_range: 'manual', selected_price: oneri.price, manual_price: oneri.price,
           manual_profit: oneri.profit, manual_profit_rate: oneri.profitRate, manual_commission: oneri.komisyon };
       }
+      const { profit, profitRate } = calculateProfit(price, commissionRate, item);
+      if (araliktaMi(profitRate, profit)) { secilen++; return { ...item, selected_range: bulkColumn, selected_price: price }; }
       if (item.selected_range === bulkColumn) return { ...item, selected_range: 'none', selected_price: 0 };
       return item;
     });
