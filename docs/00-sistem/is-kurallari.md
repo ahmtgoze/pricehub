@@ -705,7 +705,7 @@ Kaynak: Trendyol Partner → Promosyonlar → Katılabileceğim Kampanyalar
 | Grup | Bizde | Not |
 |---|---|---|
 | Genel Kampanyalar (Tüm Ülkeler, Okul İhtiyaçları vb. dönemsel başlıklar dahil) | `all_countries` | dönemsel başlıklar ayrı grup DEĞİL (kullanıcı kararı) |
-| Trendyol Plus — Ek İndirim | `trendyol_plus` | komisyon Plus Tarifesi'nden |
+| Trendyol Plus — Ek İndirim | `trendyol_plus` | komisyon **Ürün Komisyon Tarifesi'nden** (Genel ile aynı kaynak; kullanıcı teyidi 5 Eyl 2026). Plus indirimi sıra 2.5: Genel kampanya (sıra 2) sonrası fiyata bir daha iner; Plus Tarifesi'nde Plus fiyatı seçiliyse Plus indirimi o ürüne uygulanmaz |
 | Mikro İhracat | `mikro_ihracat` | seçilebilir; ülke bazlı komisyon/kargo modeli **henüz yok**, en son yapılacak — şimdilik genel gibi hesaplanır |
 
 ### İndirim türleri ("İndirim Detayı" satırı)
@@ -799,12 +799,12 @@ Yalnızca `pencere_tarihleri` dolu tarife kaydı olan kullanıcılara gider
 menüsünde "Hatırlatmalar" bölümü olarak duyuruların üstünde görünür,
 okunmamışlar zil rozetine eklenir (`BildirimPanel`).
 
-**Kampanyalar (Plus dışı) — kaynak kuralı:** kampanya Excel'indeki
+**Kampanyalar (Plus dahil) — kaynak kuralı:** kampanya Excel'indeki
 `Ürün Komisyon Tarifesi` sütunu belirler. **Var** → 7 günlük tarife
 komisyonu (bulunamazsa kategori komisyonu). **Yok** → doğrudan kategori
 komisyonu (`commissions`). Tarife sayfasındaki seçim (`selected_range`)
-hesaba katılmaz. Plus kampanyaları Plus Tarifesi'nden okur; Plus'ta 7 günlük
-yok (kullanıcı inceleyecek).
+hesaba katılmaz. **Plus kampanyaları da aynı kaynaktan okur** (5 Eyl 2026'ya
+kadar Plus Tarifesi'nden okuyordu; kullanıcı düzeltti, dal kaldırıldı).
 
 ### Tarife çıktısı: TEK dosya (3 Eyl 2026)
 Ürün Komisyon Tarifesi ve Plus Ürün Komisyon Tarifesi'nde 3 günlük ve 4

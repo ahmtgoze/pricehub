@@ -169,12 +169,6 @@ export default function Campaigns() {
     queryFn: () => db.entities.TrendyolPriceRange.filter({ created_by: userEmail }),
     enabled: !!userEmail,
   });
-  // Plus Ürün Komisyon Tarifesi (Plus kampanyaları için komisyon kaynağı)
-  const { data: plusTariffs = [] } = useQuery({
-    queryKey: ['plusProductCommissionTariffs', userEmail],
-    queryFn: () => db.entities.PlusProductCommissionTariff.filter({ created_by: userEmail }),
-    enabled: !!userEmail,
-  });
 
   const uniquePlatforms = platforms.filter((p, idx, arr) => arr.findIndex(x => x.id === p.id) === idx);
   const trendyolPlatforms = uniquePlatforms
@@ -471,32 +465,12 @@ export default function Campaigns() {
     ) || null;
   };
 
-  // Bir tarife tablosunda ürünün kaydını bul (seçimi olan + en güncel tercih edilir)
-  const matchTariffRecord = (records, item) => {
-    const matchedProduct = getMatchedProduct(item);
-    const cands = records.filter(r =>
-      (item.matched_product_id && r.matched_product_id === item.matched_product_id) ||
-      (matchedProduct && r.matched_product_id === matchedProduct.id) ||
-      (r.barcode && item.barcode && String(r.barcode) === String(item.barcode))
-    );
-    if (cands.length === 0) return null;
-    const hasSel = (r) => ((r.selected_range && r.selected_range !== 'none') || (r.selected_type && r.selected_type !== 'none')) ? 1 : 0;
-    return [...cands].sort((a, b) => {
-      if (hasSel(a) !== hasSel(b)) return hasSel(b) - hasSel(a);
-      return String(b.start_date || '').localeCompare(String(a.start_date || ''));
-    })[0];
-  };
-
-  // Ürünün komisyon oranı — kampanya türüne göre ilgili tarife sayfasından çekilir
+  // Ürünün komisyon oranı — TUM kampanya turlerinde (Plus dahil) ayni kaynak.
+  // Kullanici teyidi (5 Eylul 2026): Plus kampanyasi da Urun Komisyon
+  // Tarifesi'nden okur, Plus Komisyon Tarifesi'nden DEGIL; eski Plus dali
+  // kaldirildi.
   const getProductCommissionRate = (item, fiyat = 0) => {
-    const isPlus = managingCampaign?.campaign_type === 'trendyol_plus';
-    if (isPlus) {
-      const pr = matchTariffRecord(plusTariffs, item);
-      if (pr) {
-        const c = parseFloat(pr.plus_commission_offer) || parseFloat(pr.calculated_commission) || parseFloat(pr.current_commission) || 0;
-        if (c > 0) return c;
-      }
-    } else {
+    {
       // Kullanici karari (3 Eylul 2026): kampanya Excel'indeki "Ürün Komisyon
       // Tarifesi" sutunu belirler.
       //   Var -> Komisyon Tarifesi'nde BUGUN gecerli pencerenin komisyonu
