@@ -879,6 +879,26 @@ export default function Campaigns() {
     return null;
   };
 
+  /**
+   * "Bu kampanyaya taşı": urunu diger Genel kampanyanin kaydindan dusurur ve
+   * burada secer. Kullanici istegi (5 Eyl 2026): her kampanyada, urun
+   * bazinda dugme olsun.
+   */
+  const buKampanyayaTasi = async (item, realIndex) => {
+    const diger = baskaKampanyadaSecili(item);
+    if (!diger) return;
+    try {
+      const kayitlar = savedCampaignProducts.filter(r =>
+        r.campaign_id === diger.id && r.selected_type === 'campaign' && String(r.barcode) === String(item.barcode));
+      await Promise.all(kayitlar.map(r => CampaignProduct.update(r.id, { selected_type: 'none' })));
+      queryClient.invalidateQueries({ queryKey: ['campaignProducts'] });
+      const updated = [...uploadedData];
+      updated[realIndex] = { ...updated[realIndex], selected_type: 'campaign' };
+      setUploadedData(updated);
+      toast.success(`${item.product_name || item.barcode}: "${campaignTitle(diger)}" kampanyasından çıkarıldı, burada seçildi. Kaydet'i unutma.`);
+    } catch (error) { toast.error('Taşıma hatası: ' + (error?.message || 'Bilinmeyen hata')); }
+  };
+
   const handleSave = async () => {
     const selectedItems = uploadedData.filter(item => item.selected_type === 'campaign');
     if (selectedItems.length === 0) { toast.error('Lütfen en az bir ürün seçin'); return; }
@@ -1179,8 +1199,13 @@ export default function Campaigns() {
                                 <div className="text-xs text-muted-foreground">{item.barcode}</div>
                                 {!matched && <div className="text-xs text-rose-500">eşleşmedi</div>}
                                 {(() => { const d = baskaKampanyadaSecili(item); return d ? (
-                                  <div className="mt-1 inline-block rounded px-1.5 py-0.5 text-[11px] font-medium bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300" title={`${campaignTitle(d)} · ${safeDate(d.start_date)} - ${safeDate(d.end_date)}`}>
-                                    başka kampanyada seçili: {d.campaign_name || getTypeLabel(d.campaign_type)}
+                                  <div className="mt-1 flex flex-wrap items-center gap-1">
+                                    <span className="rounded px-1.5 py-0.5 text-[11px] font-medium bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300" title={`${campaignTitle(d)} · ${safeDate(d.start_date)} - ${safeDate(d.end_date)}`}>
+                                      başka kampanyada seçili: {d.campaign_name || getTypeLabel(d.campaign_type)}
+                                    </span>
+                                    <Button size="sm" variant="outline" className="h-6 px-2 text-[11px]" onClick={() => buKampanyayaTasi(item, realIndex)} title="Diğer kampanyadan çıkar, bu kampanyada seç">
+                                      Bu kampanyaya taşı
+                                    </Button>
                                   </div>) : null; })()}
                               </td>
                               <td className="p-3 text-center">{item.current_stock}</td>
