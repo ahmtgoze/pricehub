@@ -842,6 +842,7 @@ Chrome'dan okundu.)
 | Plus tarifeleri her **Salı 08:00** yayınlanır (kullanıcı: Ürün tarifesi de) | plus-komisyon-tarifeleri | Salı 08:00 bildirimi |
 | Plus fiyatı TSF'den ve tarife fiyatından yüksek girilemez | plus-komisyon-tarifeleri | uyumlu (min tavan) |
 | Sepet indirimi ürünlere fiyat oranında dağıtılır (700/300 → 140/60); kısmi iadede o ürünün payı iade | indirim | uyumlu (`sepetPayi`) |
+| **Beklenen ortalama sepet** (5 Eyl 2026): kâr her zaman en kötü duruma (sepet tam eşikte) göre; kampanyaya "Beklenen Ortalama Sepet" girilirse (Sipariş Dağılım raporundaki eşiği geçen siparişlerin ortalaması) tabloya "Beklenen Kâr" sütunu eklenir; pay = fiyat × indirim / beklenen sepet. Eşikten küçük/eşit değer yok sayılır. **Fiyat önerisi ve Excel çıktısı en kötü duruma göre kalır** | `campaigns.expected_cart_amount`, `beklenenSepetle` | karar |
 | Aynı uygulanma sırasındaki indirimlerden en yükseği geçerli; net indirim kampanyayla birlikte | indirimlerin-uygulanma-sirasi | bilgi |
 | Komisyon oranları KDV **dahil** | trendyol-komisyonlari | uyumlu |
 | Karşılama oranı olmayan Plus kampanyasında indirimin tamamı satıcıdan | trendyol-plus-kampanyalari | uyumlu (karşılama 0) |
