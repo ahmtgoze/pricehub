@@ -654,8 +654,16 @@ export default function MarketplaceProducts() {
     setDeleteDialogOpen(false);
   };
 
+  // Secilenler icinde gercekten eslesmis olanlar; "Baglari Ayir" yalnizca
+  // bunlar icin anlamli (eslesmemis urunde kesilecek bag yok).
+  const seciliEslesmisler = Array.from(selectedRows).filter((id) => {
+    const mp = marketplaceProducts.find((m) => m.id === id);
+    return !!(mp && (mp.matched_product_id || mp.status === 'matched'));
+  });
+
   const handleUnmatchSelected = async () => {
-    const ids = Array.from(selectedRows);
+    const ids = seciliEslesmisler;
+    if (ids.length === 0) { toast.info('Seçilenler arasında eşleşmiş ürün yok'); return; }
     setProgressPopup({ title: 'Bağlar Kesiliyor', current: 0, total: ids.length, currentItemName: '' });
     let done = 0;
     for (const id of ids) {
@@ -984,9 +992,11 @@ export default function MarketplaceProducts() {
               </FiltreEtiketi>
               {selectedRows.size > 0 && (
                 <>
-                  <Button variant="secondary" size="sm" onClick={handleUnmatchSelected}>
-                    <X className="w-4 h-4 mr-2" />Bağları Ayır ({selectedRows.size})
-                  </Button>
+                  {seciliEslesmisler.length > 0 && (
+                    <Button variant="secondary" size="sm" onClick={handleUnmatchSelected}>
+                      <X className="w-4 h-4 mr-2" />Bağları Ayır ({seciliEslesmisler.length})
+                    </Button>
+                  )}
                   <Button variant="destructive" size="sm" onClick={() => setDeleteDialogOpen(true)}>
                     <Trash2 className="w-4 h-4 mr-2" />Seçilenleri Sil ({selectedRows.size})
                   </Button>
