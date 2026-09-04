@@ -14,9 +14,9 @@
  * Ek alanlar (ayni ekrandan):
  *   karsilama  "% 40 Trendyol Karşılamalı" — indirimin bu kadari Trendyol'dan
  *              cikar, kalani saticidan. Kar hesabi SATICININ payini dusurur.
- *   kuralMin / kuralMax  "Fiyat Kuralı: 100 TL ve üzeri ürünler",
- *              "10 TL ve 700 TL arası ürünler", "800 TL ve altı ürünler"
- *              — bu araligin disindaki urun kampanyaya GIREMEZ.
+ *   (Fiyat Kurali alt/ust sinir alani 5 Eyl 2026'da kaldirildi: kullanici
+ *   karari — urun eleme kurali tutulmaz; Excel'deki Maksimum Girebilecegin
+ *   Fiyat yeterli.)
  *
  * SEPET INDIRIMI URUNE NASIL DAGILIR (cart_tl)?
  *   Kullanici (3 Eylul 2026): "kampanyaya katilan urunlerin tamami dahil,
@@ -220,17 +220,6 @@ export function dosyaAdindanKampanya(dosyaAdi) {
   return sonuc;
 }
 
-/** Urun fiyati kampanyanin "Fiyat Kuralı" araligina giriyor mu? */
-export function fiyatKuralinaUyuyorMu(fiyat, kampanya) {
-  const f = sayi(fiyat);
-  if (f === null) return false;
-  const min = sayi(kampanya?.kuralMin);
-  const max = sayi(kampanya?.kuralMax);
-  if (min !== null && min > 0 && f < min) return false;
-  if (max !== null && max > 0 && f > max) return false;
-  return true;
-}
-
 const duz = (n) => {
   const v = sayi(n);
   if (v === null) return '';
@@ -255,16 +244,6 @@ export function kampanyaMetni(kampanya) {
   }
 }
 
-/** "Fiyat Kuralı" metni: "100 TL ve üzeri ürünler" / "10 TL ve 700 TL arası ürünler". */
-export function fiyatKuraliMetni(kampanya) {
-  const min = sayi(kampanya?.kuralMin), max = sayi(kampanya?.kuralMax);
-  const varMin = min !== null && min > 0, varMax = max !== null && max > 0;
-  if (varMin && varMax) return `${duz(min)} TL ve ${duz(max)} TL arası ürünler`;
-  if (varMin) return `${duz(min)} TL ve üzeri ürünler`;
-  if (varMax) return `${duz(max)} TL ve altı ürünler`;
-  return '';
-}
-
 /**
  * Veritabani satirini (campaigns tablosu) kampanya nesnesine cevirir.
  *
@@ -274,7 +253,7 @@ export function fiyatKuraliMetni(kampanya) {
  *   percent            -> net_percent (oran = discount_amount)
  *   tl                 -> cart_tl     (tutar = discount_amount,
  *                                      esik = cart_condition 'over' ise cart_amount)
- *   cart_amount + over/under, tl disinda -> fiyat kurali (min / max)
+ *   cart_amount + over/under, tl disinda -> yok sayilir (fiyat kurali kaldirildi)
  * Boylece eski kampanyalarin kar hesabi degismez.
  */
 export function kaydiKampanyayaCevir(row) {
@@ -286,13 +265,7 @@ export function kaydiKampanyayaCevir(row) {
 
   const sepet = sayi(row.cart_amount);
   let esik = sayi(row.threshold_amount);
-  let kuralMin = sayi(row.price_rule_min);
-  let kuralMax = sayi(row.price_rule_max);
-  if (sepet !== null && sepet > 0) {
-    if (tur === 'cart_tl' && esik === null && row.cart_condition !== 'under') esik = sepet;
-    else if (row.cart_condition === 'under' && kuralMax === null) kuralMax = sepet;
-    else if (row.cart_condition !== 'under' && kuralMin === null && tur !== 'cart_tl') kuralMin = sepet;
-  }
+  if (sepet !== null && sepet > 0 && tur === 'cart_tl' && esik === null && row.cart_condition !== 'under') esik = sepet;
 
   return {
     tur,
@@ -303,7 +276,5 @@ export function kaydiKampanyayaCevir(row) {
     odeY: sayi(row.pay_y) ?? 0,
     minAdet: sayi(row.min_qty) ?? 0,
     karsilama: sayi(row.trendyol_coverage_rate) ?? 0,
-    kuralMin: kuralMin ?? 0,
-    kuralMax: kuralMax ?? 0,
   };
 }

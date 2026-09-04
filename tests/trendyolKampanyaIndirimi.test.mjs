@@ -1,6 +1,6 @@
 import {
   musteriIndirimi, musteriFiyati, kampanyaFiyati, kampanyaFiyatiTersi, sepetPayi,
-  dosyaAdindanKampanya, fiyatKuralinaUyuyorMu, kampanyaMetni, fiyatKuraliMetni, kaydiKampanyayaCevir,
+  dosyaAdindanKampanya, kampanyaMetni, kaydiKampanyayaCevir,
   INDIRIM_TURLERI, KAMPANYA_GRUPLARI,
 } from '../src/lib/trendyolKampanyaIndirimi.js';
 
@@ -88,18 +88,6 @@ console.log('\n=== GECERSIZ GIRDI ===');
   esit('karsilama sinir disi (150) -> 100 sayilir', kampanyaFiyati(200, { tur: 'net_percent', oran: 10, karsilama: 150 }), 200);
 }
 
-console.log('\n=== FIYAT KURALI ===');
-{
-  esit('100 ve uzeri: 99 giremez', fiyatKuralinaUyuyorMu(99, { kuralMin: 100 }), false);
-  esit('100 ve uzeri: 100 girer', fiyatKuralinaUyuyorMu(100, { kuralMin: 100 }), true);
-  esit('10-700 arasi: 701 giremez', fiyatKuralinaUyuyorMu(701, { kuralMin: 10, kuralMax: 700 }), false);
-  esit('10-700 arasi: 350 girer', fiyatKuralinaUyuyorMu(350, { kuralMin: 10, kuralMax: 700 }), true);
-  esit('800 ve alti: 800 girer', fiyatKuralinaUyuyorMu(800, { kuralMax: 800 }), true);
-  esit('kural yok: her fiyat girer', fiyatKuralinaUyuyorMu(5, {}), true);
-  esit('kural 0 = yok', fiyatKuralinaUyuyorMu(5, { kuralMin: 0, kuralMax: 0 }), true);
-  esit('fiyat yok', fiyatKuralinaUyuyorMu(null, {}), false);
-}
-
 console.log('\n=== METINLER (Trendyol ekranindaki gibi) ===');
 {
   esit('net', kampanyaMetni({ tur: 'net_percent', oran: 15 }), 'Net %15 İndirim');
@@ -110,10 +98,6 @@ console.log('\n=== METINLER (Trendyol ekranindaki gibi) ===');
   esit('adet', kampanyaMetni({ tur: 'qty_percent', minAdet: 2, oran: 15 }), '2 Adet ve Üzeri %15 İndirim');
   esit('ondalik oran virgulle', kampanyaMetni({ tur: 'net_percent', oran: 27.5 }), 'Net %27,5 İndirim');
   esit('bos', kampanyaMetni(null), '');
-  esit('kural: ve uzeri', fiyatKuraliMetni({ kuralMin: 100 }), '100 TL ve üzeri ürünler');
-  esit('kural: arasi', fiyatKuraliMetni({ kuralMin: 10, kuralMax: 700 }), '10 TL ve 700 TL arası ürünler');
-  esit('kural: ve alti', fiyatKuraliMetni({ kuralMax: 800 }), '800 TL ve altı ürünler');
-  esit('kural yok', fiyatKuraliMetni({}), '');
 }
 
 console.log('\n=== DOSYA ADINDAN KAMPANYA ===');
@@ -154,11 +138,11 @@ console.log('\n=== ESKI KAYIT UYUMU ===');
 
   const eskiYuzdeAlti = { discount_type: 'percent', discount_amount: 10, cart_amount: 700, cart_condition: 'under' };
   const c4 = kaydiKampanyayaCevir(eskiYuzdeAlti);
-  esit('percent + sepet alti -> fiyat kurali max', [c4.tur, c4.kuralMax, c4.kuralMin], ['net_percent', 700, 0]);
+  esit('percent + sepet alti -> net %, esik yok', [c4.tur, c4.esik], ['net_percent', 0]);
 
   const eskiYuzdeUstu = { discount_type: 'percent', discount_amount: 10, cart_amount: 100, cart_condition: 'over' };
   const c5 = kaydiKampanyayaCevir(eskiYuzdeUstu);
-  esit('percent + sepet uzeri -> fiyat kurali min', [c5.kuralMin, c5.kuralMax], [100, 0]);
+  esit('percent + sepet uzeri -> esik yok', [c5.tur, c5.esik], ['net_percent', 0]);
 
   // yeni kayit
   const yeni = {
@@ -166,7 +150,7 @@ console.log('\n=== ESKI KAYIT UYUMU ===');
     participation_condition: 'buybox', trendyol_coverage_rate: 30,
   };
   const c6 = kaydiKampanyayaCevir(yeni);
-  esit('yeni kayit', [c6.tur, c6.alX, c6.odeY, c6.kuralMin, c6.kuralMax, c6.karsilama], ['buy_x_pay_y', 3, 2, 10, 5000, 30]);
+  esit('yeni kayit', [c6.tur, c6.alX, c6.odeY, c6.karsilama], ['buy_x_pay_y', 3, 2, 30]);
   const yeniTl = { discount_kind: 'cart_tl', discount_amount: 100, threshold_amount: 500 };
   const c7 = kaydiKampanyayaCevir(yeniTl);
   esit('yeni cart_tl', [c7.tutar, c7.esik], [100, 500]);
