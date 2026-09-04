@@ -1155,7 +1155,6 @@ export default function Campaigns() {
                                       </div>
                                       <Button size="sm" variant="ghost" className="h-5 w-5 p-0" onClick={() => openDetailModal(item)}><Info className="h-3 w-3" /></Button>
                                     </div>
-                                    {below && <div className="text-[10px] text-red-500">kâr tabanının altında</div>}
                                     <Button size="sm" variant={isSelected ? 'default' : 'outline'} onClick={() => handleSelect(realIndex)} className="w-full mt-2 h-7 text-xs">
                                       {isSelected ? 'Seçili' : 'Seç'}
                                     </Button>
