@@ -587,6 +587,7 @@ export default function AdvantageProductTag() {
       oran <= (Number.isNaN(maxRate) ? Infinity : maxRate) &&
       tutar <= (Number.isNaN(maxAmount) ? Infinity : maxAmount);
 
+    let secilen = 0, baremli = 0;
     const updated = uploadedData.map(item => {
       if (item.selected_range !== 'none' && item.selected_range !== bulkColumn) return item;
 
@@ -601,13 +602,22 @@ export default function AdvantageProductTag() {
       }
 
       const { profit, profitRate } = calculateProfit(price, commissionRate, item);
-      if (araliktaMi(profitRate, profit)) return { ...item, selected_range: bulkColumn, selected_price: price };
+      if (araliktaMi(profitRate, profit)) { secilen++; return { ...item, selected_range: bulkColumn, selected_price: price }; }
+      // Kolon fiyati araliga girmiyorsa barem onerisi dene (Akilli Otomatik
+      // Sec ile ayni hesap): barem tavani kar oranini artiriyor ve aralik
+      // tutuyorsa manuel fiyat olarak sec.
+      const oneri = baremOnerisiHesapla(item, price);
+      if (oneri && araliktaMi(oneri.profitRate, oneri.profit)) {
+        secilen++; baremli++;
+        return { ...item, selected_range: 'manual', selected_price: oneri.price, manual_price: oneri.price,
+          manual_profit: oneri.profit, manual_profit_rate: oneri.profitRate, manual_commission: oneri.komisyon };
+      }
       if (item.selected_range === bulkColumn) return { ...item, selected_range: 'none', selected_price: 0 };
       return item;
     });
 
     setUploadedData(updated);
-    toast.success('Toplu seçim yapıldı');
+    toast.success(secilen > 0 ? `${secilen} ürün seçildi${baremli > 0 ? ` (${baremli}'i barem önerisiyle manuel)` : ''}` : 'Aralığa giren ürün yok');
   };
 
   const handlePriceSelect = (index, rangeType, price) => {
