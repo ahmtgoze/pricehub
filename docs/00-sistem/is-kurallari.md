@@ -193,7 +193,11 @@ Bugünkü değerler:
 | HepsiBurada | 0 – 199,99 ₺ | 200 – 399,99 ₺ | 40 |
 | Web Sitesi | — barem yok — | | |
 
-> ⚠️ Bu rakamlar **koda yazılmaz.** Promosyon sayfalarında bir dönem yazılmıştı
+> ⚠️ Bu rakamlar **koda yazılmaz** — motorda yedek değer de yoktur (4 Eyl
+> 2026): platform ayarında bant boşsa barem uygulanmaz, desi tarifesine
+> düşülür. Yeni platform formları da bantları boş açar. Trendyol/HB'de motor
+> bantları **yönetici şablonu platformundan** okur (`systemAdminPlatforms`).
+> Promosyon sayfalarında bir dönem yazılmıştı
 > ve HepsiBurada sayfaları Trendyol'un bantlarını uyguluyordu → kâr yanlış
 > çıkıyordu. Artık hepsi `baremKurali.js` üzerinden platformdan okur.
 
