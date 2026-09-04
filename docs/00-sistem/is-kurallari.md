@@ -870,6 +870,30 @@ Uygulama notu: Mikro İhracat kampanyası = genel kampanya hesabı + %6 hizmet
 bedeli − satış KDV'si 0 (ihracat) + opsiyonel iade riski satırı; desi > 10
 ürün uygun değil.
 
+### Satıcı Bilgi Merkezi tam taraması (4 Eyl 2026) — kâr hesabını etkileyen kurallar
+294 sayfanın tamamı çekildi (`docs/trendyol-bilgi-merkezi/tam-metin.md`, dizin
+`dizin.md`); komisyon / kargo / desi / KDV / hakediş / iade / hizmet bedeli /
+stopaj / kampanya / Plus / buybox / Mikro İhracat geçen sayfalar tam okundu.
+
+| Konu | Doküman | Sistem | Durum |
+|---|---|---|---|
+| Platform Hizmet Bedeli | gönderi başına **10,99 + KDV**; Bugün Kargoda etiketli ve zamanında teslimde **4,99 + KDV**; iade paketinde yok; mikro ihracatta yok; paket bölmede etiketli pakete 4,99, diğerine 10,99 | 13,18 / 5,99 (KDV dahil) | uyumlu |
+| Kargo barem fiyatları (10 Ağu 2026) | Tablo 1 (1 gün termin / Bugün Kargoda / Hızlı Teslimat başarılı): TEX-PTT 38,74 / 70,41; Aras 48,33 / 79,16 … Tablo 2 (aksi halde): TEX-PTT 73,33 / 78,74; Aras 80,83 / 86,24 … (KDV hariç) | shipping_rates: TEX 46,49 / 84,49 (Bugün Kargoda) · 88,00 / 94,49 (normal) = tablo × 1,20 | uyumlu |
+| **Kargo barem bantları** | **0–199,99 ₺ ve 200–349,99 ₺; 350 ₺ ve üzeri desi fiyatı** ("Kargo baremi standart 350 TL") | platform ayarı **0–149,99 / 150–299,99** | **UYUMSUZ — kullanıcı onayıyla güncellenecek** |
+| Barem dışı | 10 desi üzeri paketler ve listede fiyatı olmayan firmalar (CEVA, Horoz) barem dışı; satıcı öder modelde barem yok | `barem_max_desi` 10 | uyumlu |
+| Desi | en × boy × yükseklik / 3000; poşette uçtan uca; ağırlık desiyi aşarsa ağırlık | — | bilgi |
+| Paket bölme | sipariş toplamı barem altındaysa yalnız BİR paket barem, diğerleri desi; barem üstündeyse hepsi desi | çoklu paket → barem yok, desiler toplanır | uyumlu (ihtiyatlı) |
+| İade kargosu | iade kargo bedeli satıcıya faturalanır (Trendyol anlaşması üzerinden). Barem sayfası "barem desteğine dahil iadelerde Tablo 1"; SSS "iade gönderilerinde barem uygulaması yok" — **çelişki** | özel kargoda paket başına iade payı; standartta iade maliyeti yok | eksik (ileride "iade riski" satırı) |
+| Ek kargo bedelleri | 100 desi+ ağır kargo, AT dışı teslimat, tekrar sevk, başarısız teslimat — kargo firması faturaladığı gibi yansır | yok | bilgi |
+| Komisyon KDV | oranlara KDV dahil; komisyon faturaları KDV dahil rakamlardan, ekstra KDV yok; faturalar ayın 7/14/21/28/son günü | KDV dahil oran | uyumlu |
+| İade komisyonu | sonraki komisyon faturasından mahsup; iade vade öncesi gelirse satış kaydı sıfırlanır | — | bilgi |
+| Hakediş | teslim tarihi + vade; Pzt-Sal-Çar vadeler Perşembe, Per-Cum-Cts-Paz vadeler Pazartesi ödenir; kargo faturası hakedişten düşülür | — | bilgi |
+| E-ticaret stopajı | %1, KDV hariç matrah; platform hizmet bedeli faturalarında stopaj yok | withholding %1 | uyumlu |
+| Ticari seviye / özel gruplar | komisyon oranı seviyeye, Kadın Girişimci (200.000 ₺ ciroya kadar özel oran), Kadın Kooperatifi (%0 → %1), lokasyon bazlı satıcı gruplarına göre değişir | `commissions` tablosu elle | bilgi |
+| Avantajlı etiket | etiket fiyatı = müşterinin gördüğü tekil satış fiyatı; haftalık; kampanya/flaş fiyatları ağırlığı azaltılarak değerlendirilir | — | uyumlu |
+| Buybox fiyatı | buybox'ı kazanan satıcının fiyatı (Trendyol Satış Fiyatı = senin fiyatın) → "Katılım Koşulu: Buybox Fiyatı veya Daha Düşük" = kampanya fiyatın buybox fiyatını geçmemeli | — | bilgi (soru 20) |
+| Plus programı ülkeleri | Türkiye, Azerbaycan, Suudi Arabistan, BAE | — | bilgi |
+
 ## 8. Excel içe/dışa aktarma
 
 - Sütunlar **başlık adına göre** eşleştirilir; sıra önemli değildir
