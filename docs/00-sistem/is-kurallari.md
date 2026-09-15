@@ -829,6 +829,18 @@ ayrı dosya ve "Excel İndir" açılır menüsü kaldırıldı. Trendyol'un dosy
 > adını her zaman birleşik pencere sanıp atıyordu → "Seçili ürün yok".
 > Düzeltme: `gercekPencereler` yalnızca 3+4'ün yanındaki 7'yi atar, tek
 > başına 7 dosyanın kendi penceresidir (Ürün ve Plus tarifesi sayfaları).
+> İkinci kırılma: kayıttan yüklenince "açık pencere" adı yalnız Excel
+> yüklerken ayarlanıyordu; tek pencerede seçici olmadığı için boş kalıyor,
+> seçimler kutuya yazılamıyor, Kaydet 0 sayıyordu → pencere artık kayıttaki
+> `tarife_penceresi`nden türetilir (iki sayfa).
+> **Diğer sayfalar** (Avantajlı, Flaş, Kampanya, Fiyatlar): `tarifeKomisyonu`
+> kayıttaki pencere tarihlerinden o gün geçerli pencereyi bulur; tek pencerede
+> "7 Gün" döner, kademe komisyonu aynı yoldan gelir; değişiklik gerekmedi
+> (gerçek kayıtla doğrulandı 15 Eyl 2026).
+> **Bildirim** (`tarife_pencere_bildirimi_uret`, saatlik): olaylar kayıttaki
+> pencere tarihlerinden türer; tek pencerede ara bildirim yok, bitiş bildirimi
+> son pencerenin bitişinde (22 Eyl 07:59) ve Salı 08:00 bildirimi düşer.
+> Düzeltme: pencere zaten başlamışsa "yarın … geçiliyor" üretilmez.
 
 Plus'ta 7 Gün seçildiğinde her iki `Hesaplanan Komisyon (N Gün)` sütunu da
 o pencerenin teklifiyle dolar. Gönderim defteri (aynı fiyatı ikinci kez
