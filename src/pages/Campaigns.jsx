@@ -1012,7 +1012,7 @@ export default function Campaigns() {
         anahtar: `plus-secim|${managingCampaign?.id || ''}|${Date.now()}`,
         tur: 'plus_secim',
         baslik: `Plus seçimleri yenilendi: ${secili} ürün uygun`,
-        icerik: `Tarife, avantajlı, flaş ve kampanya sayfalarındaki güncel seçimlere göre ${degisen} ürünün Plus durumu değişti (${eklenen} eklendi, ${cikan} çıktı). Plus kampanyasını açıp Excel İndir ile Trendyol'a yükleyin; çıkanları Trendyol'da "Daha Önce Eklediklerim"den kaldırın.`,
+        icerik: `Tarife, avantajlı, flaş ve kampanya sayfalarındaki güncel seçimlere göre ${degisen} ürünün Plus durumu değişti (${eklenen} eklendi, ${cikan} çıktı). Excel İndir'e basın; Trendyol'da Plus kampanyasındaki ürünleri toplu çıkarıp yeni Excel'i yükleyin.`,
       });
       queryClient.invalidateQueries({ queryKey: ['bildirimler'] });
     } catch (e) { console.warn('Plus bildirimi yazılamadı', e); }
