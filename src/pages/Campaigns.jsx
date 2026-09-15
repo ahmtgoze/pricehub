@@ -114,18 +114,18 @@ export default function Campaigns() {
     queryFn: () => Campaign.filter({ created_by: userEmail }),
     enabled: !!userEmail,
   });
-  const { data: platforms = [] } = useQuery({
+  const { data: platforms = [], isFetched: platformsHazir } = useQuery({
     queryKey: ['platforms', userEmail],
     queryFn: () => Platform.filter({ created_by: userEmail }),
     enabled: !!userEmail,
   });
-  const { data: products = [] } = useQuery({
+  const { data: products = [], isFetched: productsHazir } = useQuery({
     queryKey: ['products', userEmail],
     queryFn: () => Product.filter({ created_by: userEmail }),
     enabled: !!userEmail,
   });
   // Sistem fiyati (Fiyatlar sayfasindaki kayit) — Avantajli/Tarife sayfalariyla ayni kaynak
-  const { data: productPrices = [] } = useQuery({
+  const { data: productPrices = [], isFetched: productPricesHazir } = useQuery({
     queryKey: ['productPrices', userEmail],
     queryFn: () => db.entities.ProductPrice.filter({ created_by: userEmail }),
     enabled: !!userEmail,
@@ -135,22 +135,22 @@ export default function Campaigns() {
     queryFn: () => Commission.filter({ created_by: userEmail }),
     enabled: !!userEmail,
   });
-  const { data: shippingRates = [] } = useQuery({
+  const { data: shippingRates = [], isFetched: shippingRatesHazir } = useQuery({
     queryKey: ['shippingRates'],
     queryFn: () => ShippingRate.list('-id', 10000),
     enabled: !!userEmail,
   });
-  const { data: packages = [] } = useQuery({
+  const { data: packages = [], isFetched: packagesHazir } = useQuery({
     queryKey: ['packages'],
     queryFn: () => db.entities.Package.list(),
     enabled: !!userEmail,
   });
-  const { data: settings = [] } = useQuery({
+  const { data: settings = [], isFetched: settingsHazir } = useQuery({
     queryKey: ['settings', userEmail],
     queryFn: () => db.entities.Settings.filter({ created_by: userEmail }),
     enabled: !!userEmail,
   });
-  const { data: marketplaceProducts = [] } = useQuery({
+  const { data: marketplaceProducts = [], isFetched: marketplaceProductsHazir } = useQuery({
     queryKey: ['marketplaceProducts', userEmail],
     queryFn: () => MarketplaceProduct.filter({ created_by: userEmail }),
     enabled: !!userEmail,
@@ -996,8 +996,11 @@ export default function Campaigns() {
       return uygun ? { ...item, selected_type: 'campaign', campaign_price: fiyat } : secimiKaldir(item);
     });
     if (degisen === 0) return;
-    setUploadedData(guncel);
     const secili = guncel.filter((i) => i.selected_type === 'campaign').length;
+    // Hicbir urun uygun cikmadiysa veri eksik olabilir (platform/kargo
+    // yuklenmemis); secimleri silip kaydetme.
+    if (secili === 0) return;
+    setUploadedData(guncel);
     toast.info(`Plus seçimleri bugünkü verilere göre yenilendi: ${secili} ürün uygun, ${degisen} ürünün seçimi değişti`);
     await handleSave(guncel);
   };
@@ -1005,13 +1008,13 @@ export default function Campaigns() {
   React.useEffect(() => {
     if (!managingCampaign) { plusYenilenenKampanya.current = null; return; }
     if (!plusKampanyasiMi || uploadedData.length === 0) return;
-    const hazir = [priceRangesHazir, advantageTagsHazir, flashProductsHazir, plusTariffsHazir, savedCampaignProductsHazir, commissionsHazir, campaignsHazir].every(Boolean);
+    const hazir = [priceRangesHazir, advantageTagsHazir, flashProductsHazir, plusTariffsHazir, savedCampaignProductsHazir, commissionsHazir, campaignsHazir, platformsHazir, productsHazir, shippingRatesHazir, packagesHazir, settingsHazir, marketplaceProductsHazir, productPricesHazir].every(Boolean);
     if (!hazir) return;
     if (plusYenilenenKampanya.current === managingCampaign.id) return;
     plusYenilenenKampanya.current = managingCampaign.id;
     plusSecimleriYenile();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [managingCampaign?.id, plusKampanyasiMi, uploadedData.length, priceRangesHazir, advantageTagsHazir, flashProductsHazir, plusTariffsHazir, savedCampaignProductsHazir, commissionsHazir, campaignsHazir]);
+  }, [managingCampaign?.id, plusKampanyasiMi, uploadedData.length, priceRangesHazir, advantageTagsHazir, flashProductsHazir, plusTariffsHazir, savedCampaignProductsHazir, commissionsHazir, campaignsHazir, platformsHazir, productsHazir, shippingRatesHazir, packagesHazir, settingsHazir, marketplaceProductsHazir, productPricesHazir]);
 
   const handleDeleteExcel = async () => {
     const ids = new Set();
