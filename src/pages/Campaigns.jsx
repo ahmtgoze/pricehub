@@ -1003,6 +1003,19 @@ export default function Campaigns() {
     setUploadedData(guncel);
     toast.info(`Plus seçimleri bugünkü verilere göre yenilendi: ${secili} ürün uygun, ${degisen} ürünün seçimi değişti`);
     await handleSave(guncel);
+    // Zil bildirimi (kullanici, 15 Eylul 2026): Plus secimi her degistiginde
+    // kayit kalsin. Yalniz secim DEGISTIGINDE yazilir; her kayitta degil.
+    try {
+      const eklenen = guncel.filter((g, i) => g.selected_type === 'campaign' && veri[i]?.selected_type !== 'campaign').length;
+      const cikan = degisen - eklenen;
+      await db.entities.Bildirim.create({
+        anahtar: `plus-secim|${managingCampaign?.id || ''}|${Date.now()}`,
+        tur: 'plus_secim',
+        baslik: `Plus seçimleri yenilendi: ${secili} ürün uygun`,
+        icerik: `Tarife, avantajlı, flaş ve kampanya sayfalarındaki güncel seçimlere göre ${degisen} ürünün Plus durumu değişti (${eklenen} eklendi, ${cikan} çıktı). Plus kampanyasını açıp Excel İndir ile Trendyol'a yükleyin; çıkanları Trendyol'da "Daha Önce Eklediklerim"den kaldırın.`,
+      });
+      queryClient.invalidateQueries({ queryKey: ['bildirimler'] });
+    } catch (e) { console.warn('Plus bildirimi yazılamadı', e); }
   };
   const plusYenilenenKampanya = React.useRef(null);
   React.useEffect(() => {
@@ -1031,6 +1044,24 @@ export default function Campaigns() {
       }
       queryClient.invalidateQueries({ queryKey: ['campaignProducts'] });
     } catch (e) { console.error('Silme hatası:', e); }
+  };
+
+  // 'Secimleri Kaldir' KAYDEDER (kullanici, 15 Eylul 2026): Plus ek kampanyasi
+  // ve bildirimler kayitli secime bakar; yalniz ekrani temizlemek Plus'i eski
+  // secimle hesaplatiyordu.
+  const secimleriKaldirVeKaydet = async () => {
+    const temiz = uploadedData.map(secimiKaldir);
+    setUploadedData(temiz);
+    toast.success('Tüm seçimler kaldırıldı ve kaydedildi, fiyatlar başlangıç değerine döndü');
+    try {
+      const kayitli = temiz.filter((i) => i.id);
+      for (let i = 0; i < kayitli.length; i += 30) {
+        const b = kayitli.slice(i, i + 30);
+        await Promise.all(b.map((it) => CampaignProduct.update(it.id, { selected_type: 'none', campaign_price: it.campaign_price })));
+        if (i + 30 < kayitli.length) await new Promise((r) => setTimeout(r, 150));
+      }
+      queryClient.invalidateQueries({ queryKey: ['campaignProducts'] });
+    } catch (e) { toast.error('Kayıt hatası: ' + (e?.message || e)); }
   };
 
   const handleExport = () => {
@@ -1193,7 +1224,7 @@ export default function Campaigns() {
                     <Button variant="outline" onClick={handleSave}>
                       <Check className="mr-2 h-4 w-4" />Seçimleri Kaydet ({selectedCount})
                     </Button>
-                    <Button variant="outline" onClick={() => { setUploadedData(uploadedData.map(secimiKaldir)); toast.success('Tüm seçimler kaldırıldı, fiyatlar başlangıç değerine döndü'); }}>
+                    <Button variant="outline" onClick={secimleriKaldirVeKaydet}>
                       Seçimleri Kaldır
                     </Button>
                     <Button variant="outline" onClick={handleExport}>

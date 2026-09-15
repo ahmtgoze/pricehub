@@ -650,6 +650,24 @@ export default function PlusProductCommissionTariff() {
   };
 
   // TEK DOSYA: butun pencerelerin secimleri ayni Excel'e iner.
+  // 'Secimleri Kaldir' KAYDEDER (kullanici, 15 Eylul 2026): Plus ek kampanyasi
+  // ve bildirimler kayitli secime bakar; yalniz ekrani temizlemek Plus'i eski
+  // secimle hesaplatiyordu.
+  const secimleriKaldirVeKaydet = async () => {
+    const temiz = uploadedData.map((item) => ({ ...item, selected_type: 'none', selected_price: 0, manual_price: 0, secimler: {} }));
+    setUploadedData(temiz);
+    toast.success('Tüm seçimler kaldırıldı ve kaydedildi');
+    try {
+      const kayitli = temiz.filter((i) => i.id);
+      for (let i = 0; i < kayitli.length; i += 30) {
+        const b = kayitli.slice(i, i + 30);
+        await Promise.all(b.map((it) => PlusEntity.update(it.id, { selected_type: 'none', selected_price: 0, manual_price: 0, secimler: {} })));
+        if (i + 30 < kayitli.length) await new Promise((r) => setTimeout(r, 150));
+      }
+      queryClient.invalidateQueries({ queryKey: ['plusProductCommissionTariffs'] });
+    } catch (e) { toast.error('Kayıt hatası: ' + (e?.message || e)); }
+  };
+
   const handleExport = () => {
     if (uploadedData.length === 0) { toast.error('Yüklenmiş Excel dosyası bulunamadı'); return; }
     if (!originalExcelData?.baytlar) {
@@ -935,7 +953,7 @@ export default function PlusProductCommissionTariff() {
                   <Button onClick={handleSmartAutoSelect} className="bg-primary hover:bg-black dark:hover:bg-white/90 text-primary-foreground gap-2"><Sparkles className="h-4 w-4" />Akıllı Otomatik Seç</Button>
                   <Button variant="outline" onClick={handleDeleteExcel} className="text-red-600 dark:text-red-400 hover:text-red-700 dark:text-red-300 hover:bg-red-50 dark:bg-red-950/30"><Trash2 className="mr-2 h-4 w-4" />Excel'i Sil</Button>
                   <Button variant="outline" onClick={handleSave}><Check className="mr-2 h-4 w-4" />Seçimleri Kaydet ({selectedCount})</Button>
-                  <Button variant="outline" onClick={() => { setUploadedData(uploadedData.map(item => ({ ...item, selected_type: 'none', selected_price: 0 }))); toast.success('Tüm seçimler kaldırıldı'); }}>Seçimleri Kaldır</Button>
+                  <Button variant="outline" onClick={secimleriKaldirVeKaydet}>Seçimleri Kaldır</Button>
                   {/* TEK DOSYA: 3 ve 4 gunluk secimler ayni Excel'e iner
                       (kullanici karari, 3 Eylul 2026). Dropdown kaldirildi. */}
                   <Button variant="outline" onClick={() => handleExport()}>

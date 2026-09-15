@@ -816,6 +816,24 @@ export default function TrendyolPriceRange() {
   };
 
   // TEK DOSYA: butun pencerelerin secimleri ayni Excel'e iner.
+  // 'Secimleri Kaldir' KAYDEDER (kullanici, 15 Eylul 2026): Plus ek kampanyasi
+  // ve bildirimler kayitli secime bakar; yalniz ekrani temizlemek Plus'i eski
+  // secimle hesaplatiyordu.
+  const secimleriKaldirVeKaydet = async () => {
+    const temiz = uploadedData.map((item) => ({ ...item, selected_range: 'none', selected_price: 0, manual_price: 0, secimler: {}, secim_penceresi: null }));
+    setUploadedData(temiz);
+    toast.success('Tüm seçimler kaldırıldı ve kaydedildi');
+    try {
+      const kayitli = temiz.filter((i) => i.id);
+      for (let i = 0; i < kayitli.length; i += 30) {
+        const b = kayitli.slice(i, i + 30);
+        await Promise.all(b.map((it) => TrendyolPriceRangeEntity.update(it.id, { selected_range: 'none', selected_price: 0, manual_price: 0, secimler: {}, secim_penceresi: null })));
+        if (i + 30 < kayitli.length) await new Promise((r) => setTimeout(r, 150));
+      }
+      queryClient.invalidateQueries({ queryKey: ['trendyolPriceRanges'] });
+    } catch (e) { toast.error('Kayıt hatası: ' + (e?.message || e)); }
+  };
+
   const handleExport = () => {
     if (uploadedData.length === 0) { toast.error('Yüklenmiş Excel dosyası bulunamadı'); return; }
     if (!originalExcelData) { toast.error('Orijinal Excel dosyası bulunamadı'); return; }
@@ -1224,7 +1242,7 @@ export default function TrendyolPriceRange() {
                   <Button variant="outline" onClick={handleSave}>
                     <Check className="mr-2 h-4 w-4" />Seçimleri Kaydet ({seciliOzet.toplam})
                   </Button>
-                  <Button variant="outline" onClick={() => { setUploadedData(uploadedData.map(item => ({ ...item, selected_range: 'none', selected_price: 0 }))); toast.success('Tüm seçimler kaldırıldı'); }}>
+                  <Button variant="outline" onClick={secimleriKaldirVeKaydet}>
                     Seçimleri Kaldır
                   </Button>
                   {/* TEK DOSYA: 3 ve 4 gunluk secimler ayni Excel'e iner

@@ -891,6 +891,24 @@ export default function FlashProducts() {
     toast.success('Toplu seçim yapıldı');
   };
 
+  // 'Secimleri Kaldir' KAYDEDER (kullanici, 15 Eylul 2026): Plus ek kampanyasi
+  // ve bildirimler kayitli secime bakar; yalniz ekrani temizlemek Plus'i eski
+  // secimle hesaplatiyordu.
+  const secimleriKaldirVeKaydet = async () => {
+    const temiz = uploadedData.map((item) => ({ ...item, selected_type: 'none', selected_price: 0, manual_price: 0, selected_time_range: null }));
+    setUploadedData(temiz);
+    toast.success('Tüm seçimler kaldırıldı ve kaydedildi');
+    try {
+      const kayitli = temiz.filter((i) => i.id);
+      for (let i = 0; i < kayitli.length; i += 30) {
+        const b = kayitli.slice(i, i + 30);
+        await Promise.all(b.map((it) => db.entities.FlashProduct.update(it.id, { selected_type: 'none', selected_price: 0, manual_price: 0, selected_time_range: null })));
+        if (i + 30 < kayitli.length) await new Promise((r) => setTimeout(r, 150));
+      }
+      queryClient.invalidateQueries({ queryKey: ['flashProducts'] });
+    } catch (e) { toast.error('Kayıt hatası: ' + (e?.message || e)); }
+  };
+
   const handleExport = () => {
     if (uploadedData.length === 0) { toast.error('İndirilebilecek veri bulunamadı'); return; }
     if (!originalExcelData?.baytlar) {
@@ -1343,11 +1361,7 @@ export default function FlashProducts() {
                   </Button>
                   <Button 
                     variant="outline"
-                    onClick={() => {
-                      const updated = uploadedData.map(item => ({ ...item, selected_type: 'none', selected_price: 0 }));
-                      setUploadedData(updated);
-                      toast.success('Tüm seçimler kaldırıldı');
-                    }}
+                    onClick={secimleriKaldirVeKaydet}
                   >
                     Seçimleri Kaldır
                   </Button>
