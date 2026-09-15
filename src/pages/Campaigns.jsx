@@ -22,7 +22,7 @@ import { baremSec, baremTavanFiyatlari, baremTarifesiSec } from '@/lib/baremKura
 import { gecerliMaliyet } from '@/lib/gecerliMaliyet';
 import { sayiyaCevirVeya } from '@/lib/turkceSayi';
 import { tarifeKomisyonu, aktifPencereOzeti } from '@/lib/tarifeKaydiSecimi';
-import { zincirKur, KAYNAK, bugunMetni as bugunMetniUret } from '@/lib/zincirHesabi';
+import { zincirKur, sira0Adaylari, KAYNAK, bugunMetni as bugunMetniUret } from '@/lib/zincirHesabi';
 import { INDIRIM_TURLERI, KAMPANYA_GRUPLARI, kampanyaFiyati, kampanyaFiyatiTersi, musteriFiyati, musteriIndirimi, kampanyaMetni, kaydiKampanyayaCevir, dosyaAdindanKampanya } from '@/lib/trendyolKampanyaIndirimi';
 
 const Campaign = db.entities.Campaign;
@@ -810,7 +810,22 @@ export default function Campaigns() {
   // Secim kaldirilinca fiyat baslangic degerine (Maks. Girilebilecek) doner;
   // boylece barem onerisiyle dusurulmus fiyat kalmaz, Barem Onerisi sutunu
   // yeniden gorunur.
-  const varsayilanFiyat = (item) => (Number(item.max_price) > 0 ? Number(item.max_price) : item.campaign_price);
+  // VARSAYILAN GIRILEN FIYAT (kullanici, 15 Eylul 2026): kampanyaya yazilan
+  // fiyat Trendyol'da SATIS FIYATI olur ("hangi fiyattan girersen o
+  // kaydolur, tavan ustu haric"). Maks. fiyati yazmak, tarife/avantajli ile
+  // indirilmis fiyati geri yukseltirdi. Bu yuzden varsayilan = urunun diger
+  // sayfalardaki en dusuk secili fiyati (maks.'i asmaz); yoksa maks.
+  const digerSayfalarTabani = (item) => {
+    if (!aktifKampanya) return 0;
+    const haric = [KAYNAK.PLUS_GIRILEN, kampanyaMetni(aktifKampanya)];
+    const adaylar = sira0Adaylari(item, zincirKaynaklari, { bugun: bugunMetni, platform: selectedPlatform, haric });
+    return adaylar.length ? Math.min(...adaylar.map((a) => a.fiyat)) : 0;
+  };
+  const varsayilanFiyat = (item) => {
+    const maks = Number(item.max_price) > 0 ? Number(item.max_price) : Number(item.campaign_price) || 0;
+    const taban = digerSayfalarTabani(item);
+    return taban > 0 && taban < maks ? Math.round(taban * 100) / 100 : maks;
+  };
   const secimiKaldir = (item) => ({ ...item, selected_type: 'none', campaign_price: varsayilanFiyat(item) });
 
   const handleSelect = (index) => {
@@ -839,7 +854,7 @@ export default function Campaigns() {
       if (!matched) { skipNoProduct++; return item; }
       const commRec = getCommissionRecord(item);
       if (!commRec) { skipNoCommission++; return item; }
-      let price = item.max_price || item.campaign_price;
+      let price = varsayilanFiyat(item);
       if (!price || price <= 0) return item;
       // Barem onerisi: max fiyat desi tarifesine dusuyor ama biraz asagisi
       // barem tavanina giriyorsa ve kar orani artiyorsa o fiyat secilir
@@ -1320,6 +1335,8 @@ export default function Campaigns() {
                                 <Input type="number" step="0.01" value={item.campaign_price} onChange={(e) => handlePriceChange(realIndex, e.target.value)}
                                   className={`h-8 text-xs text-center ${overMax ? 'border-red-400' : ''}`} />
                                 {overMax && <div className="text-[10px] text-red-500 mt-1 text-center">Maks. girilebilecek fiyatı aşıyor</div>}
+                                {(() => { const t = digerSayfalarTabani(item); return t > 0 && t < Number(item.max_price) && Math.abs(Number(item.campaign_price) - t) < 0.005
+                                  ? <div className="text-[10px] text-muted-foreground mt-1 text-center">diğer promosyondaki fiyata eşitlendi</div> : null; })()}
                               </td>
                               <td className="p-3 text-center">{matched ? renderBaremOnerisi(item, realIndex) : <span className="text-muted-foreground/70 text-xs">-</span>}</td>
                               <td className="p-3">
