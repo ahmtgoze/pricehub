@@ -1230,7 +1230,14 @@ export default function FlashProducts() {
 
               <div className="space-y-2">
                 <Label>Tarih Aralığı *</Label>
-                <Popover onOpenChange={(open) => { if (open) { tarihDokunuldu.current = true; setCalendarKey(k => k + 1); } }}>
+                <Popover onOpenChange={(open) => {
+                  // Acilirken aralik TEMIZLENIR (Avantajli Urun Etiketi ile ayni):
+                  // eski aralik secili kalinca tiklanan gun yeni baslangic
+                  // olmuyor, araligi uzatiyordu ("1 Eylul sabit kalmis").
+                  // tarihDokunuldu sayesinde bosalan aralik son kayda geri
+                  // sicramaz; liste de oldugu gibi kalir.
+                  if (open) { tarihDokunuldu.current = true; setDateRangeValue({ from: undefined, to: undefined }); setCalendarKey(k => k + 1); }
+                }}>
                   <PopoverTrigger asChild>
                     <Button variant="outline" className="w-full justify-start text-left font-normal">
                       <CalendarIcon className="mr-2 h-4 w-4" />
