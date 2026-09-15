@@ -30,6 +30,12 @@ export default function FlashProducts() {
   const [userEmail, setUserEmail] = useState(null);
   const [selectedPlatform, setSelectedPlatform] = useState('');
   const [dateRangeValue, setDateRangeValue] = useState({ from: undefined, to: undefined });
+  // Takvim bir kez acildiktan sonra otomatik "en son kayit" yuklemesi
+  // yapilmaz. Aralik secerken ilk gun tiklaninca aralik yarim kalir
+  // (to: undefined); asagidaki effect bunu "tarih yok" sanip son kaydin
+  // tarihini geri yukluyordu — kullanici tarihi hic degistiremiyordu
+  // (15 Eylul 2026: "ayin biri sabit kalmis").
+  const tarihDokunuldu = React.useRef(false);
   const [uploadedData, setUploadedData] = useState([]);
   const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0 });
   const [originalExcelData, setOriginalExcelData] = useState(null);
@@ -145,6 +151,7 @@ export default function FlashProducts() {
     if (!selectedPlatform || savedFlashProducts.length === 0) return;
 
     if (!dateRangeValue?.from || !dateRangeValue?.to) {
+      if (tarihDokunuldu.current) return;
       const platformRecords = savedFlashProducts.filter(r => r.platform_account === selectedPlatform);
       if (platformRecords.length > 0) {
         const latest = platformRecords.reduce((a, b) => (a.end_date > b.end_date ? a : b));
@@ -1207,7 +1214,7 @@ export default function FlashProducts() {
 
               <div className="space-y-2">
                 <Label>Tarih Aralığı *</Label>
-                <Popover onOpenChange={(open) => { if (open) setCalendarKey(k => k + 1); }}>
+                <Popover onOpenChange={(open) => { if (open) { tarihDokunuldu.current = true; setCalendarKey(k => k + 1); } }}>
                   <PopoverTrigger asChild>
                     <Button variant="outline" className="w-full justify-start text-left font-normal">
                       <CalendarIcon className="mr-2 h-4 w-4" />
