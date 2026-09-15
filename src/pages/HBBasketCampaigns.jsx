@@ -729,6 +729,8 @@ export default function HBBasketCampaigns() {
       (silinen > 0 ? ` · ${silinen} ürün dosyadan çıkarıldı` : '') +
       ' · Excel indirildi'
     );
+    // Excel indirilince secimler de KAYDEDILIR (15 Eylul 2026, tum sayfalarda ayni kural).
+    handleSaveSelections();
   };
 
   const allCategories = [...new Set(uploadedData.map((it) => getMatchedProduct(it)?.category_name || it.category).filter(Boolean))].sort();
