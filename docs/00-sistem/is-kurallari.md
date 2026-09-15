@@ -1074,3 +1074,5 @@ zaten eşittir.
 ## 12. Bilinen sınırlar
 
 - Kargo tarifesi "dosya/evrak" gönderisi kavramını içermez.
+
+| **Flaş: aralık dışı teklif seçilemez** (15 Eyl 2026): Trendyol sonraki haftanın flaş günlerini erkenden aynı dosyaya koyabiliyor ("15–22 yükledik ama excelde 24 var, onu sayma"). Kontrol **teklif bazında**: fiyatı > 0, tarihleri var ve tarihleri seçilen aralığın içinde ise seçilebilir; aksi halde fiyatı sıfırlanır (Akıllı/Toplu/tıkla/manuel hiçbiri seçemez), hücrede "Aralık dışı · 24 Eyl · sonraki hafta" görünür (`aralik_disi_24h/3h` sütunları). İki teklifi de dışarıda olan satır listeye alınmaz. Önceden tarihi OLMAYAN teklif "aralıkta" sayılıyordu | `flasTeklifleriAyikla` (`src/lib/flasTarihAraligi.js`, 15 test) | karar |

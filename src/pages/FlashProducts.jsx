@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { format } from 'date-fns';
+import { flasTeklifleriAyikla } from '@/lib/flasTarihAraligi';
 import { tr } from 'date-fns/locale';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -45,6 +46,11 @@ export default function FlashProducts() {
   const [localSelections, setLocalSelections] = useState({});
   const [detailModal, setDetailModal] = useState({ open: false, product: null, priceData: null, calculationDetails: null });
   const [excludedCount, setExcludedCount] = useState(0);
+  // "2026-09-24 – 2026-09-25" -> "24 Eyl – 25 Eyl" (aralik disi teklif etiketi)
+  const aralikDisiMetni = (m) => String(m || '').split(' – ').map((t) => {
+    const d = new Date(t + 'T00:00:00');
+    return Number.isFinite(d.getTime()) ? format(d, 'd MMM', { locale: tr }) : t;
+  }).join(' – ');
   const [filterColumn, setFilterColumn] = useState('');
   const [minStock, setMinStock] = useState('');
   const [maxStock, setMaxStock] = useState('');
@@ -329,11 +335,18 @@ export default function FlashProducts() {
           const start3h = tarihOku(['3 saat flaş başlangıç', '3 saat başlangıç', '3h başlangıç']);
           const end3h = tarihOku(['3 saat flaş bitiş', '3 saat bitiş', '3h bitiş']);
 
-          // Tarih aralığı kontrolü
-          const isInRange24h = !start24h || !end24h || (start24h >= startDate && end24h <= endDate);
-          const isInRange3h = !start3h || !end3h || (start3h >= startDate && end3h <= endDate);
-          
-          if (!isInRange24h && !isInRange3h) {
+          // Tarih araligi kontrolu TEKLIF BAZINDA (src/lib/flasTarihAraligi.js):
+          // secilen araligin disindaki teklifin fiyati sifirlanir, boylece
+          // hicbir secim yolu onu secemez; iki teklifi de disarida olan satir
+          // atlanir. Trendyol sonraki haftanin gunlerini erkenden ayni
+          // dosyaya koyabiliyor (kullanici, 15 Eylul 2026).
+          const teklifler = flasTeklifleriAyikla({
+            price_24h: sayiyaCevirVeya(findColumnValue(row, ['24 saat fiyat', '24h fiyat'])),
+            start_24h: start24h, end_24h: end24h,
+            price_3h: sayiyaCevirVeya(findColumnValue(row, ['3 saat fiyat', '3h fiyat'])),
+            start_3h: start3h, end_3h: end3h,
+          }, { baslangic: startDate, bitis: endDate });
+          if (teklifler.atla) {
             excludedProductsCount++;
             return null;
           }
@@ -347,12 +360,15 @@ export default function FlashProducts() {
             // ("480,17"); parseFloat bunu 480 yapiyordu. Yildizli urun
             // dosyasinda tam bu yasandi.
             stock: sayiyaCevirVeya(findColumnValue(row, ['stok'])),
-            price_24h: sayiyaCevirVeya(findColumnValue(row, ['24 saat fiyat', '24h fiyat'])),
+            price_24h: teklifler.degerler.price_24h,
             start_24h: start24h,
             end_24h: end24h,
-            price_3h: sayiyaCevirVeya(findColumnValue(row, ['3 saat fiyat', '3h fiyat'])),
+            price_3h: teklifler.degerler.price_3h,
             start_3h: start3h,
             end_3h: end3h,
+            // Aralik disindaki teklifin tarihi (gosterim): "sonraki hafta"
+            aralik_disi_24h: teklifler.degerler.aralik_disi_24h,
+            aralik_disi_3h: teklifler.degerler.aralik_disi_3h,
             master_product_id: masterProductId,
             commission_rate: commissionRate,
             has_commission_tariff: hasCommissionTariff,
@@ -1603,6 +1619,10 @@ export default function FlashProducts() {
                                     <div className="text-center text-muted-foreground/70 text-xs">-</div>
                                   )}
                                 </div>
+                              ) : item.aralik_disi_24h ? (
+                                <div className="text-[11px] text-amber-700 dark:text-amber-400 leading-tight">
+                                  Aralık dışı<br />{aralikDisiMetni(item.aralik_disi_24h)}<br /><span className="text-muted-foreground/70">sonraki hafta</span>
+                                </div>
                               ) : (
                                 <span className="text-muted-foreground/70">-</span>
                               )}
@@ -1682,6 +1702,10 @@ export default function FlashProducts() {
                                   ) : (
                                     <div className="text-center text-muted-foreground/70 text-xs">-</div>
                                   )}
+                                </div>
+                              ) : item.aralik_disi_3h ? (
+                                <div className="text-[11px] text-amber-700 dark:text-amber-400 leading-tight">
+                                  Aralık dışı<br />{aralikDisiMetni(item.aralik_disi_3h)}<br /><span className="text-muted-foreground/70">sonraki hafta</span>
                                 </div>
                               ) : (
                                 <span className="text-muted-foreground/70">-</span>
