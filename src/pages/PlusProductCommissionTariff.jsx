@@ -148,6 +148,12 @@ export default function PlusProductCommissionTariff() {
     // SIFIRLANMIS gibi gorunuyordu. Urun basina secimi olan kayit tutulur.
     const filtered = kayitlariTeklestir(eslesenler);
     setUploadedData(filtered);
+    // Acik pencere kayittan turetilir (bkz. TrendyolPriceRange: tek
+    // pencereli dosyada secici yok, ad bos kalinca secimler kutuya
+    // yazilamiyordu).
+    const kayitPenceresi = filtered.find((r) => r.tarife_penceresi)?.tarife_penceresi
+      || Object.keys(filtered[0]?.plus_pencereleri || {})[0] || '';
+    if (kayitPenceresi) setSecilenPencere((onceki) => onceki || kayitPenceresi);
 
     const recordWithExcel = filtered.find(r => r.excel_file_url);
     if (recordWithExcel) {

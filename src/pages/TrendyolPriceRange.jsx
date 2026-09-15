@@ -172,6 +172,15 @@ export default function TrendyolPriceRange() {
     // SIFIRLANMIS gibi gorunuyordu. Urun basina secimi olan kayit tutulur.
     const filtered = kayitlariTeklestir(eslesenler);
     setUploadedData(filtered);
+    // ACIK PENCERE kayittan turetilir. Onceden yalnizca Excel yuklenirken
+    // ayarlaniyordu; sayfa yeniden acilinca bos kaliyordu. Iki pencereli
+    // haftalarda kullanici secicide pencereyi secince doluyordu; TEK
+    // pencereli dosyada (15 Eylul 2026) secici yok, ad bos kaldi ve
+    // ekrandaki secimler kutuya yazilamadigi icin Kaydet 0 sayiyor,
+    // Excel Indir "Seçili ürün yok" diyordu.
+    const kayitPenceresi = filtered.find((r) => r.tarife_penceresi)?.tarife_penceresi
+      || pencereAdlari(filtered[0] || {})[0] || '';
+    if (kayitPenceresi) setSecilenPencere((onceki) => onceki || kayitPenceresi);
     // Excel'i restore et (sayfa değişimi sonrası state sıfırlanmış olabilir)
     const recordWithExcel = filtered.find(r => r.excel_file_url);
     if (recordWithExcel) {
