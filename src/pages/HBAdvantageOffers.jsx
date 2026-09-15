@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { db } from '@/api/db';
 import { useQuery } from '@tanstack/react-query';
-import { Upload, Download, Filter, AlertCircle, Info, Trash2, Sparkles } from 'lucide-react';
+import { Upload, Download, Filter, AlertCircle, Info, Trash2, Sparkles, Calendar as CalendarIcon } from 'lucide-react';
 import { calculatePriceBreakdown, findDesiShippingRate } from '@/components/PriceCalculationEngine';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,6 +9,10 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { format } from 'date-fns';
+import { tr } from 'date-fns/locale';
 import { toast } from 'sonner';
 import * as XLSX from 'xlsx';
 import PriceDetailModal from '@/components/modals/PriceDetailModal';
@@ -16,6 +20,7 @@ import { baremSec, baremTarifesiSec } from '@/lib/baremKurali';
 import { kdvDahilOran, komisyonEtiketi } from '@/lib/hbKomisyon';
 import { gecerliMaliyet } from '@/lib/gecerliMaliyet';
 import { hedefleriCoz, hedefVarMi, hedefTutuyorMu, komisyonBul } from '@/lib/hedefKarSecimi';
+import { hbTeklifleriOku, hbTeklifSutunlari, dosyaTarihAraligi, teklifAralikta } from '@/lib/hbAvantajliTeklifDosyasi';
 
 const Product = db.entities.Product;
 const Platform = db.entities.Platform;
@@ -53,6 +58,12 @@ export default function HBAdvantageOffers() {
   const [selectedPlatform, setSelectedPlatform] = useState('');
   const [uploadedData, setUploadedData] = useState([]);
   const [originalExcelData, setOriginalExcelData] = useState(null);
+  // Tarih araligi: dosyadaki tekliflerin Başlangıç/Bitiş'inden otomatik
+  // dolar (kullanici istegi 15 Eylul 2026: "tarih girisi yok, ekle").
+  // Kullanici takvimi actiktan sonra dosya araligi bir daha yazilmaz.
+  const [dateRangeValue, setDateRangeValue] = useState({ from: undefined, to: undefined });
+  const [calendarKey, setCalendarKey] = useState(0);
+  const tarihDokunuldu = React.useRef(false);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCategory, setFilterCategory] = useState('');
@@ -233,6 +244,19 @@ export default function HBAdvantageOffers() {
     }
   }
 
+  const secilenAralik = () => (dateRangeValue?.from && dateRangeValue?.to
+    ? { baslangic: format(dateRangeValue.from, 'yyyy-MM-dd'), bitis: format(dateRangeValue.to, 'yyyy-MM-dd') }
+    : null);
+  // Teklifin tarihi secilen araligin disinda mi? (HB sonraki haftanin
+  // tekliflerini erkenden listeleyebilir; Flas Urunler ile ayni kural.)
+  const aralikDisi = (item) => !teklifAralikta(item, secilenAralik());
+  const gunSaat = (t, saat) => {
+    if (!t) return '';
+    const d = new Date(t + 'T00:00:00');
+    return (Number.isFinite(d.getTime()) ? format(d, 'd MMM', { locale: tr }) : t) + (saat ? ` ${saat}` : '');
+  };
+  const teklifTarihMetni = (item) => (item.baslangic ? `${gunSaat(item.baslangic, item.baslangic_saat)} – ${gunSaat(item.bitis, item.bitis_saat)}` : '');
+
   const handleFileUpload = (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -250,28 +274,35 @@ export default function HBAdvantageOffers() {
           }) || workbook.SheetNames[workbook.SheetNames.length - 1];
         }
         const worksheet = workbook.Sheets[sheetName];
-        const jsonData = XLSX.utils.sheet_to_json(worksheet);
-        setOriginalExcelData({ workbook, sheetName });
+        // Basliklar src/lib/hbAvantajliTeklifDosyasi.js ile taninir: HB'nin
+        // 15 Eylul 2026 yeni bicimi (iki baslik satiri, "Mevcut Fiyat",
+        // "Teklif N" + "Üst Fiyat/Komisyon", "Fiyatı Güncelle", Başlangıç/
+        // Bitiş) ve eski bicim birlikte desteklenir.
+        const satirlar = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: null });
+        const { sutunlar, teklifler } = hbTeklifleriOku(satirlar);
+        if (!sutunlar) { toast.error('Excel başlıkları tanınmadı ("SKU" sütunu yok)'); return; }
+        setOriginalExcelData({ workbook, sheetName, sutunlar });
 
-        const parsed = jsonData.map((raw) => {
-          const row = normalizeRow(raw);
-          const sku = String(row['SKU'] ?? '').trim();
+        const parsed = teklifler.map((t) => {
           const item = {
-            offer_code: row['Teklif Kodu'] ?? '',
-            product_name: row['Ürün Adı'] ?? '',
-            sku,
-            seller_stock_code: String(row['Satıcı Stok Kodu'] ?? row['Satıcı stok kodu'] ?? '').trim(),
-            barcode: String(row['Barkod'] ?? '').trim(),
-            category: row['Kategori'] ?? '',
-            stock: parseNum(row['Mevcut Stok'] ?? row['Stok']),
-            current_price: parseNum(row['Güncel Fiyat']),
-            current_commission: kdvDahilOran(parsePercent(row['Güncel Komisyon'])),
-            tier1_price: parseNum(row['Teklif 1 Katılabileceğiniz Maximum Fiyat']),
-            tier1_commission: kdvDahilOran(parsePercent(row['Komisyon Teklifi 1'])),
-            tier2_price: parseNum(row['Teklif 2 Katılabileceğiniz Maximum Fiyat']),
-            tier2_commission: kdvDahilOran(parsePercent(row['Komisyon Teklifi 2'])),
-            tier3_price: parseNum(row['Teklif 3 Katılabileceğiniz Maximum Fiyat']),
-            tier3_commission: kdvDahilOran(parsePercent(row['Komisyon Teklifi 3'])),
+            offer_code: t.teklifKodu ?? '',
+            product_name: t.urunAdi,
+            sku: t.sku,
+            seller_stock_code: t.saticiStokKodu,
+            barcode: t.barkod,
+            category: t.kategori,
+            stock: parseNum(t.stok),
+            current_price: parseNum(t.mevcutFiyat),
+            current_commission: kdvDahilOran(parsePercent(t.mevcutKomisyon)),
+            tier1_price: parseNum(t.teklif1Fiyat),
+            tier1_commission: kdvDahilOran(parsePercent(t.teklif1Komisyon)),
+            tier2_price: parseNum(t.teklif2Fiyat),
+            tier2_commission: kdvDahilOran(parsePercent(t.teklif2Komisyon)),
+            tier3_price: parseNum(t.teklif3Fiyat),
+            tier3_commission: kdvDahilOran(parsePercent(t.teklif3Komisyon)),
+            baslangic: t.baslangic, baslangic_saat: t.baslangicSaat,
+            bitis: t.bitis, bitis_saat: t.bitisSaat,
+            excel_satir: t.satir,
             selected_tier: 'none',
             selected_price: 0,
             manual_price: 0,
@@ -279,10 +310,14 @@ export default function HBAdvantageOffers() {
           const matched = getMatchedProduct(item);
           item.matched_product_id = matched?.id || null;
           return item;
-        }).filter((it) => it.sku || it.product_name);
+        });
 
         setUploadedData(parsed);
-        toast.success(`${parsed.length} teklif yüklendi`);
+        const dosyaAraligi = dosyaTarihAraligi(teklifler);
+        if (dosyaAraligi && !tarihDokunuldu.current) {
+          setDateRangeValue({ from: new Date(dosyaAraligi.baslangic + 'T00:00:00'), to: new Date(dosyaAraligi.bitis + 'T00:00:00') });
+        }
+        toast.success(`${parsed.length} teklif yüklendi${dosyaAraligi ? ` · ${gunSaat(dosyaAraligi.baslangic)} – ${gunSaat(dosyaAraligi.bitis)}` : ''}`);
       } catch (error) {
         toast.error('Excel dosyası okunamadı: ' + error.message);
       }
@@ -293,6 +328,7 @@ export default function HBAdvantageOffers() {
   const tierInfo = (item, n) => ({ price: item[`tier${n}_price`] || 0, commission: item[`tier${n}_commission`] || 0 });
 
   const handleTierSelect = (item, tier, price) => {
+    if (aralikDisi(item)) { toast.error('Bu teklifin tarihi seçilen aralığın dışında (sonraki hafta); seçilemez.'); return; }
     setUploadedData((prev) => prev.map((it) => {
       if (it !== item) return it;
       if (it.selected_tier === tier) return { ...it, selected_tier: 'none', selected_price: 0 };
@@ -322,9 +358,10 @@ export default function HBAdvantageOffers() {
   // (is-kurallari.md, "Akilli Otomatik Sec"). Diger alti sayfa boyle
   // calisiyordu, yalnizca bu sayfa disarida kalmisti.
   const handleSmartAutoSelect = () => {
-    const sayac = { secilen: 0, eslesmeyen: 0, hedefsiz: 0, tutmayan: 0, zatenSecili: 0 };
+    const sayac = { secilen: 0, eslesmeyen: 0, hedefsiz: 0, tutmayan: 0, zatenSecili: 0, aralikDisi: 0 };
 
     const guncel = uploadedData.map((item) => {
+      if (aralikDisi(item)) { sayac.aralikDisi++; return item; }
       if (item.selected_tier !== 'none' || (item.manual_price && item.manual_price > 0)) {
         sayac.zatenSecili++; return item;
       }
@@ -362,6 +399,7 @@ export default function HBAdvantageOffers() {
     if (sayac.tutmayan > 0) parcalar.push(`${sayac.tutmayan} hedef kârı tutmadı`);
     if (sayac.hedefsiz > 0) parcalar.push(`⚠️ ${sayac.hedefsiz} üründe indirimli hedef tanımlı değil`);
     if (sayac.eslesmeyen > 0) parcalar.push(`⚠️ ${sayac.eslesmeyen} ürün eşleşmedi`);
+    if (sayac.aralikDisi > 0) parcalar.push(`📅 ${sayac.aralikDisi} teklif tarih aralığı dışında (sonraki hafta)`);
 
     if (sayac.secilen === 0) toast.warning(parcalar.join(' • ') || 'Hedefi tutan teklif bulunamadı');
     else toast.success(parcalar.join(' • '));
@@ -383,6 +421,7 @@ export default function HBAdvantageOffers() {
     let secilen = 0;
     const guncel = uploadedData.map((item) => {
       if (!gorunen.has(item)) return item;
+      if (aralikDisi(item)) return item;
       if (item.selected_tier === 'manual' || (item.manual_price && item.manual_price > 0)) return item;
       if (!getMatchedProduct(item)) return item;
       const adaylar = [1, 2, 3]
@@ -435,26 +474,25 @@ export default function HBAdvantageOffers() {
     const { workbook, sheetName } = originalExcelData;
     const worksheet = workbook.Sheets[sheetName];
     const range = XLSX.utils.decode_range(worksheet['!ref']);
-    // Başlık -> kolon index haritası (normalize ile)
-    const headerCol = {};
-    for (let C = range.s.c; C <= range.e.c; C++) {
-      const h = worksheet[XLSX.utils.encode_cell({ r: range.s.r, c: C })]?.v;
-      if (h) headerCol[norm(h)] = C;
-    }
-    const skuCol = headerCol['SKU'];
-    const fiyatGirCol = headerCol['Fiyat Gir'];
-    if (fiyatGirCol === undefined) { toast.error('"Fiyat Gir" sütunu bulunamadı'); return; }
+    // Sutunlar dosyadan taninir (eski "Fiyat Gir" / yeni "Fiyatı Güncelle";
+    // yeni bicimde veri 3. satirdan baslar).
+    const sut = originalExcelData.sutunlar
+      || hbTeklifSutunlari(XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: null }));
+    if (!sut || sut.fiyatGuncelle < 0) { toast.error('"Fiyatı Güncelle" (ya da "Fiyat Gir") sütunu bulunamadı'); return; }
     let written = 0;
-    for (let R = range.s.r + 1; R <= range.e.r; R++) {
-      const sku = String(worksheet[XLSX.utils.encode_cell({ r: R, c: skuCol })]?.v ?? '').trim();
+    for (let R = sut.veri; R <= range.e.r; R++) {
+      const sku = norm(worksheet[XLSX.utils.encode_cell({ r: R, c: sut.sku })]?.v);
+      if (!sku) continue;
       const item = uploadedData.find((i) => i.sku === sku);
-      if (item && item.selected_tier !== 'none' && item.selected_price > 0) {
-        worksheet[XLSX.utils.encode_cell({ r: R, c: fiyatGirCol })] = { v: item.selected_price, t: 'n' };
+      const adres = XLSX.utils.encode_cell({ r: R, c: sut.fiyatGuncelle });
+      if (item && item.selected_tier !== 'none' && item.selected_price > 0 && !aralikDisi(item)) {
+        worksheet[adres] = { v: item.selected_price, t: 'n' };
         written++;
       }
     }
-    XLSX.writeFile(workbook, `hepsiburada-avantajli-teklifler.xlsx`);
-    toast.success(`${written} ürün için fiyat yazıldı, Excel indirildi`);
+    if (written === 0) { toast.error('Seçili teklif yok'); return; }
+    XLSX.writeFile(workbook, 'hepsiburada-avantajli-teklifler.xlsx', { bookSST: true });
+    toast.success(`${written} teklif için fiyat yazıldı, Excel indirildi`);
   };
 
   const allCategories = [...new Set(uploadedData.map((it) => getMatchedProduct(it)?.category_name || it.category).filter(Boolean))].sort();
@@ -514,6 +552,32 @@ export default function HBAdvantageOffers() {
                     <SelectContent>{hbPlatforms.map((p) => <SelectItem key={p.id} value={p.name}>{p.name}</SelectItem>)}</SelectContent>
                   </Select>
                 )}
+              </div>
+              <div className="space-y-2">
+                <Label>Tarih Aralığı</Label>
+                <Popover onOpenChange={(open) => {
+                  // Acilirken aralik temizlenir: eski aralik secili kalinca
+                  // tiklanan gun yeni baslangic olmuyor, araligi uzatiyordu.
+                  if (open) { tarihDokunuldu.current = true; setDateRangeValue({ from: undefined, to: undefined }); setCalendarKey((k) => k + 1); }
+                }}>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className="w-full justify-start text-left font-normal">
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {dateRangeValue?.from ? (
+                        dateRangeValue.to
+                          ? <>{format(dateRangeValue.from, 'd MMM yyyy', { locale: tr })} - {format(dateRangeValue.to, 'd MMM yyyy', { locale: tr })}</>
+                          : format(dateRangeValue.from, 'd MMM yyyy', { locale: tr })
+                      ) : <span>Dosyadan gelir; değiştirmek için seçin</span>}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar key={calendarKey} mode="range" selected={dateRangeValue}
+                      onSelect={(range) => setDateRangeValue(range || { from: undefined, to: undefined })}
+                      defaultMonth={new Date()} numberOfMonths={2} locale={tr}
+                      classNames={{ day_today: 'bg-primary font-bold text-primary-foreground' }} />
+                  </PopoverContent>
+                </Popover>
+                <p className="text-[11px] text-muted-foreground">Tekliflerin Başlangıç/Bitiş tarihi dosyadan okunur. Aralığın dışındaki teklif (sonraki hafta) seçilemez.</p>
               </div>
             </div>
             <div className="flex flex-wrap gap-3">
@@ -599,6 +663,11 @@ export default function HBAdvantageOffers() {
                             <td className="p-3">
                               <div className="font-medium text-foreground">{item.product_name}</div>
                               <div className="text-xs text-muted-foreground font-mono">{item.sku}</div>
+                              {teklifTarihMetni(item) && (
+                                <div className={`text-[11px] ${aralikDisi(item) ? 'text-amber-700 dark:text-amber-400 font-medium' : 'text-muted-foreground/70'}`}>
+                                  {teklifTarihMetni(item)}{aralikDisi(item) ? ' · Aralık dışı, sonraki hafta' : ''}
+                                </div>
+                              )}
                               {matchedProduct ? <div className="text-xs text-emerald-600">{matchedProduct.category_name || matchedProduct.name}</div> : <div className="text-xs text-rose-500">eşleşmedi</div>}
                             </td>
                             <td className="p-3 text-center">{item.stock}</td>
@@ -617,7 +686,7 @@ export default function HBAdvantageOffers() {
                               const isSelected = item.selected_tier === `tier${n}`;
                               return (
                                 <td key={n} className="p-3">
-                                  {price > 0 ? (
+                                  {price > 0 && !aralikDisi(item) ? (
                                     <div className={`border rounded-lg p-2 ${isSelected ? 'border-primary bg-secondary' : 'border-border'}`}>
                                       <div className="text-xs font-semibold text-muted-foreground mb-1">₺{price.toFixed(2)} ve altı</div>
                                       <div className="text-xs text-muted-foreground">Kom: {commLabel(commission)}</div>
@@ -627,7 +696,7 @@ export default function HBAdvantageOffers() {
                                       </div>
                                       <Button size="sm" variant={isSelected ? 'default' : 'outline'} onClick={() => handleTierSelect(item, `tier${n}`, price)} className="w-full mt-2 h-7 text-xs">{isSelected ? 'Seçili' : 'Seç'}</Button>
                                     </div>
-                                  ) : <div className="text-center text-muted-foreground/70 text-xs">-</div>}
+                                  ) : <div className="text-center text-muted-foreground/70 text-xs">{price > 0 ? 'Aralık dışı' : '-'}</div>}
                                 </td>
                               );
                             })}
@@ -647,7 +716,7 @@ export default function HBAdvantageOffers() {
                                     </div>
                                   );
                                 })()}
-                                <Button size="sm" variant={item.selected_tier === 'manual' ? 'default' : 'outline'} onClick={() => handleTierSelect(item, 'manual', item.manual_price)} className="w-full h-7 text-xs" disabled={!item.manual_price || item.manual_price <= 0}>{item.selected_tier === 'manual' ? 'Seçili' : 'Seç'}</Button>
+                                <Button size="sm" variant={item.selected_tier === 'manual' ? 'default' : 'outline'} onClick={() => handleTierSelect(item, 'manual', item.manual_price)} className="w-full h-7 text-xs" disabled={!item.manual_price || item.manual_price <= 0 || aralikDisi(item)}>{item.selected_tier === 'manual' ? 'Seçili' : 'Seç'}</Button>
                               </div>
                             </td>
                           </tr>
