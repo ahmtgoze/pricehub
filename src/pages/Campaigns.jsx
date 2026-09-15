@@ -109,7 +109,7 @@ export default function Campaigns() {
     db.auth.me().then(user => setUserEmail(user.email)).catch(() => {});
   }, []);
 
-  const { data: campaigns = [] } = useQuery({
+  const { data: campaigns = [], isFetched: campaignsHazir } = useQuery({
     queryKey: ['campaigns', userEmail],
     queryFn: () => Campaign.filter({ created_by: userEmail }),
     enabled: !!userEmail,
@@ -130,7 +130,7 @@ export default function Campaigns() {
     queryFn: () => db.entities.ProductPrice.filter({ created_by: userEmail }),
     enabled: !!userEmail,
   });
-  const { data: commissions = [] } = useQuery({
+  const { data: commissions = [], isFetched: commissionsHazir } = useQuery({
     queryKey: ['commissions', userEmail],
     queryFn: () => Commission.filter({ created_by: userEmail }),
     enabled: !!userEmail,
@@ -155,29 +155,29 @@ export default function Campaigns() {
     queryFn: () => MarketplaceProduct.filter({ created_by: userEmail }),
     enabled: !!userEmail,
   });
-  const { data: savedCampaignProducts = [] } = useQuery({
+  const { data: savedCampaignProducts = [], isFetched: savedCampaignProductsHazir } = useQuery({
     queryKey: ['campaignProducts', userEmail],
     queryFn: () => CampaignProduct.filter({ created_by: userEmail }),
     enabled: !!userEmail,
   });
   // Plus zinciri icin diger promosyon secimleri (taban fiyat adaylari)
-  const { data: advantageTags = [] } = useQuery({
+  const { data: advantageTags = [], isFetched: advantageTagsHazir } = useQuery({
     queryKey: ['advantageProductTags', userEmail],
     queryFn: () => db.entities.AdvantageProductTag.filter({ created_by: userEmail }),
     enabled: !!userEmail,
   });
-  const { data: flashProducts = [] } = useQuery({
+  const { data: flashProducts = [], isFetched: flashProductsHazir } = useQuery({
     queryKey: ['flashProducts', userEmail],
     queryFn: () => db.entities.FlashProduct.filter({ created_by: userEmail }),
     enabled: !!userEmail,
   });
-  const { data: plusTariffs = [] } = useQuery({
+  const { data: plusTariffs = [], isFetched: plusTariffsHazir } = useQuery({
     queryKey: ['plusProductCommissionTariffs', userEmail],
     queryFn: () => db.entities.PlusProductCommissionTariff.filter({ created_by: userEmail }),
     enabled: !!userEmail,
   });
   // Ürün Komisyon Tarifesi (normal kampanyalar için komisyon kaynağı)
-  const { data: priceRanges = [] } = useQuery({
+  const { data: priceRanges = [], isFetched: priceRangesHazir } = useQuery({
     queryKey: ['trendyolPriceRanges', userEmail],
     queryFn: () => db.entities.TrendyolPriceRange.filter({ created_by: userEmail }),
     enabled: !!userEmail,
@@ -977,6 +977,41 @@ export default function Campaigns() {
       queryClient.invalidateQueries({ queryKey: ['campaignProducts'] });
     } catch (error) { toast.error('Kayıt hatası: ' + error.message); }
   };
+
+  // PLUS SECIMLERI KALICI DEGIL (kullanici, 15 Eylul 2026): "promosyon
+  // sayfalarinda ya da kampanyalarda degisiklik yaptigimda ya da sureleri
+  // bittiginde Plus'ta karlilik otomatik degismeli, secimler kalkmali;
+  // yoksa olmayan bir kampanya uzerinden dip fiyat hesaplar". Plus ekrani
+  // her acilista, o gunku kayitli secimlere gore (zincirli hesap, kar
+  // tabani) secimleri yeniden yapar ve kaydeder. Liste fiyati sabit kalir.
+  const plusSecimleriYenile = async (veri = uploadedData) => {
+    let degisen = 0;
+    const guncel = veri.map((item) => {
+      if (!getMatchedProduct(item)) return item;
+      const fiyat = varsayilanFiyat(item);
+      const uygun = fiyat > 0 && !isBelowFloor(item, fiyat);
+      const secili = item.selected_type === 'campaign';
+      if (uygun === secili) return item;
+      degisen++;
+      return uygun ? { ...item, selected_type: 'campaign', campaign_price: fiyat } : secimiKaldir(item);
+    });
+    if (degisen === 0) return;
+    setUploadedData(guncel);
+    const secili = guncel.filter((i) => i.selected_type === 'campaign').length;
+    toast.info(`Plus seçimleri bugünkü verilere göre yenilendi: ${secili} ürün uygun, ${degisen} ürünün seçimi değişti`);
+    await handleSave(guncel);
+  };
+  const plusYenilenenKampanya = React.useRef(null);
+  React.useEffect(() => {
+    if (!managingCampaign) { plusYenilenenKampanya.current = null; return; }
+    if (!plusKampanyasiMi || uploadedData.length === 0) return;
+    const hazir = [priceRangesHazir, advantageTagsHazir, flashProductsHazir, plusTariffsHazir, savedCampaignProductsHazir, commissionsHazir, campaignsHazir].every(Boolean);
+    if (!hazir) return;
+    if (plusYenilenenKampanya.current === managingCampaign.id) return;
+    plusYenilenenKampanya.current = managingCampaign.id;
+    plusSecimleriYenile();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [managingCampaign?.id, plusKampanyasiMi, uploadedData.length, priceRangesHazir, advantageTagsHazir, flashProductsHazir, plusTariffsHazir, savedCampaignProductsHazir, commissionsHazir, campaignsHazir]);
 
   const handleDeleteExcel = async () => {
     const ids = new Set();
