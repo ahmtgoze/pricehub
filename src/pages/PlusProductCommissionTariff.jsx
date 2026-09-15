@@ -774,6 +774,10 @@ export default function PlusProductCommissionTariff() {
       const parcaMetni = Object.entries(sayac).map(([ad, n]) => `${ad}: ${n}`).join(' · ');
       const toplam = Object.values(sayac).reduce((a, b) => a + b, 0);
       toast.success(`Excel indirildi — ${toplam} ürün${parcaMetni ? ` (${parcaMetni})` : ''}`, { duration: 8000 });
+    // Excel indirilince secimler de KAYDEDILIR (15 Eylul 2026): Plus
+    // ekranindaki taban fiyat ve bildirimler kayitli secime bakar; kullanici
+    // ciktiyi alip Kaydet'e basmiyordu.
+      handleSave();
     } catch (hata) {
       toast.error('Excel oluşturulamadı: ' + (hata?.message || hata), { duration: 10000 });
     }

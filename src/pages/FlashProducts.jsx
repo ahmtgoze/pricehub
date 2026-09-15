@@ -986,6 +986,10 @@ export default function FlashProducts() {
       setTimeout(() => URL.revokeObjectURL(url), 1000);
 
       toast.success(`Excel indirildi — ${yazilan} ürün`);
+    // Excel indirilince secimler de KAYDEDILIR (15 Eylul 2026): Plus
+    // ekranindaki taban fiyat ve bildirimler kayitli secime bakar; kullanici
+    // ciktiyi alip Kaydet'e basmiyordu.
+      handleSaveSelections();
     } catch (hata) {
       toast.error('Excel oluşturulamadı: ' + (hata?.message || hata), { duration: 10000 });
     }

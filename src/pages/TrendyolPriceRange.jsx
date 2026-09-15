@@ -965,6 +965,10 @@ export default function TrendyolPriceRange() {
       (atlanan ? `. ${atlanan} ürün atlandı: aynı fiyatla zaten gönderilmişti; Trendyol bunları hata sayıyor.` : ''),
       { duration: 10000 }
     );
+    // Excel indirilince secimler de KAYDEDILIR (15 Eylul 2026): Plus
+    // ekranindaki taban fiyat ve bildirimler kayitli secime bakar; kullanici
+    // ciktiyi alip Kaydet'e basmiyordu.
+    handleSave();
   };
 
   const getMatchedProduct = (item) => {
