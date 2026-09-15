@@ -21,9 +21,9 @@ import BaremBadge from '@/components/ui/BaremBadge';
 import { baremSec, baremTavanFiyatlari, baremTarifesiSec } from '@/lib/baremKurali';
 import { gecerliMaliyet } from '@/lib/gecerliMaliyet';
 import { sayiyaCevirVeya } from '@/lib/turkceSayi';
-import { tarifeKomisyonu, aktifPencereOzeti, aktifPencere } from '@/lib/tarifeKaydiSecimi';
-import { secimiOku } from '@/lib/trendyolPencereSecimi';
-import { INDIRIM_TURLERI, KAMPANYA_GRUPLARI, kampanyaFiyati, kampanyaFiyatiTersi, musteriFiyati, musteriIndirimi, kampanyaMetni, kaydiKampanyayaCevir, dosyaAdindanKampanya, plusZincirliFiyat } from '@/lib/trendyolKampanyaIndirimi';
+import { tarifeKomisyonu, aktifPencereOzeti } from '@/lib/tarifeKaydiSecimi';
+import { zincirKur, KAYNAK, bugunMetni as bugunMetniUret } from '@/lib/zincirHesabi';
+import { INDIRIM_TURLERI, KAMPANYA_GRUPLARI, kampanyaFiyati, kampanyaFiyatiTersi, musteriFiyati, musteriIndirimi, kampanyaMetni, kaydiKampanyayaCevir, dosyaAdindanKampanya } from '@/lib/trendyolKampanyaIndirimi';
 
 const Campaign = db.entities.Campaign;
 // DIKKAT: 5 Eyl 2026'ya kadar bu entity TABLE_MAP'te yoktu; try/catch icindeki
@@ -423,7 +423,8 @@ export default function Campaigns() {
     } else {
       satirlar.push('Bugün süren bir sepet kampanyasında seçili değil; sepet indirimi yok.');
     }
-    satirlar.push(`Plus %${Number(aktifKampanya?.oran) || 0}, sipariş anında bu tutara iner: ${tl(etki.zincir.plusIndirim)}, tamamı senden → Plus müşterisi öder ${tl(etki.zincir.musteriFiyat)}.`);
+    if (etki.plus) satirlar.push(`Plus %${Number(etki.plus.oran) || 0}, sipariş anında bu tutara iner: ${tl(etki.zincir.plusIndirim)}, tamamı senden → Plus müşterisi öder ${tl(etki.zincir.musteriFiyat)}.`);
+    else satirlar.push(`Ürün Plus ek indirim kampanyasında seçili değil; Plus indirimi yok. Müşteri öder ${tl(etki.zincir.musteriFiyat)}.`);
     satirlar.push(`Sana kalan: ${tl(etki.taban.fiyat)} − ${tl(etki.zincir.saticiPayi)} = ${tl(etki.zincir.saticiNet)}. Komisyon ve tarife kademesi bu tutardan; kâr için sağdaki "i" düğmesi.`);
     return satirlar;
   };
@@ -562,92 +563,26 @@ export default function Campaigns() {
   const aktifKampanya = managingCampaign ? kaydiKampanyayaCevir(managingCampaign) : null;
   const plusKampanyasiMi = managingCampaign?.campaign_type === 'trendyol_plus';
 
-  // PLUS KAMPANYASI GENEL KAMPANYANIN USTUNE INER (kullanici teyidi 15 Eylul
-  // 2026, Trendyol ekrani). Urun bugun suren bir Genel kampanyada secili ve
-  // kayitliysa, o kampanyanin musteri indirimi once dusulur, Plus %5 kalan
-  // fiyata iner. Ayni siradaki birden fazla Genel kampanyadan EN YUKSEK
-  // indirim gecerli (Satici Bilgi Merkezi). Donus: { kampanya, kayit, genel, zincir }
-  const bugunMetni = (() => { const d = new Date(); const p = (n) => String(n).padStart(2, '0'); return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`; })();
-  const genelKampanyaEtkisi = (item) => {
-    if (!plusKampanyasiMi || !aktifKampanya) return null;
-    // TABAN FIYAT = sira 0'daki en dusuk fiyat (kullanici karari 15 Eylul
-    // 2026: "1500 urun, komisyonlu 1450, avantajli 1400, flasli 1380 -> en
-    // dusugu uzerinden"). Adaylar: Plus'a girilen, Komisyon Tarifesi'nde
-    // bugunku pencerenin secimi, Avantajli Etiket secimi, Flas secimi,
-    // Genel kampanyalara yazilan fiyatlar. Sonra Genel kampanyalardan taban
-    // uzerinde EN YUKSEK musteri indirimi (ayni sirada yalniz biri gecer),
-    // Plus %5 de kalanin ustune.
-    const ayniUrun = (r) =>
-      (item.barcode && r?.barcode && String(r.barcode) === String(item.barcode)) ||
-      (item.stock_code && String(r?.stock_code || r?.seller_stock_code || '') === String(item.stock_code));
-    const surer = (r) => String(r?.start_date || '').slice(0, 10) <= bugunMetni && String(r?.end_date || '').slice(0, 10) >= bugunMetni;
-    const trendyolMu = (r) => !r?.platform_account || r.platform_account === selectedPlatform;
-    const adaylar = [];
-    const girilen = Number(item.campaign_price) || 0;
-    if (girilen > 0) adaylar.push({ fiyat: girilen, kaynak: 'Plus girilen' });
-    for (const r of priceRanges) {
-      if (!ayniUrun(r) || !trendyolMu(r) || !surer(r)) continue;
-      const pen = aktifPencere(r);
-      const sec = pen ? secimiOku(r, pen) : null;
-      let f = 0;
-      if (sec && sec.kademe !== 'none') f = Number(sec.fiyat) || Number(sec.manuel) || 0;
-      else if (r.selected_range && r.selected_range !== 'none') f = Number(r.selected_range === 'manual' ? r.manual_price : r.selected_price) || 0;
-      if (f > 0) adaylar.push({ fiyat: f, kaynak: 'Komisyon Tarifesi' });
-    }
-    for (const r of advantageTags) {
-      if (!ayniUrun(r) || !trendyolMu(r) || !surer(r)) continue;
-      const f = r.selected_range && r.selected_range !== 'none' ? Number(r.selected_range === 'manual' ? r.manual_price : r.selected_price) || 0 : 0;
-      if (f > 0) adaylar.push({ fiyat: f, kaynak: 'Avantajlı Etiket' });
-    }
-    for (const r of flashProducts) {
-      if (!ayniUrun(r) || !trendyolMu(r) || !surer(r)) continue;
-      const f = r.selected_type && r.selected_type !== 'none' ? Number(r.selected_type === 'manual' ? r.manual_price : r.selected_price) || 0 : 0;
-      if (f > 0) adaylar.push({ fiyat: f, kaynak: 'Flaş' });
-    }
-    const genelKayitlar = [];
-    for (const c of campaigns) {
-      if (c.campaign_type === 'trendyol_plus' || c.is_active === false || !surer(c)) continue;
-      const kayit = savedCampaignProducts.find((cp) => cp.campaign_id === c.id && cp.selected_type === 'campaign' && Number(cp.campaign_price) > 0 && ayniUrun(cp));
-      if (!kayit) continue;
-      const genel = kaydiKampanyayaCevir(c);
-      genelKayitlar.push({ kampanya: c, kayit, genel });
-      adaylar.push({ fiyat: Number(kayit.campaign_price), kaynak: kampanyaMetni(genel) });
-    }
-    if (adaylar.length === 0) return null;
-    const taban = adaylar.reduce((a, b) => (b.fiyat < a.fiyat ? b : a));
-    if (genelKayitlar.length === 0 && taban.fiyat >= girilen) return null;   // ne kampanya ne daha dusuk fiyat: kutu yok
-    let enIyi = null;
-    for (const g of genelKayitlar) {
-      const indirim = musteriIndirimi(taban.fiyat, g.genel);
-      // Esit indirimde karsilamasi DUSUK olan (saticinin payi yuksek = en kotu durum)
-      const dahaKotu = enIyi && indirim === enIyi.indirim && (Number(g.genel.karsilama) || 0) < (Number(enIyi.genel.karsilama) || 0);
-      if (!enIyi || indirim > enIyi.indirim || dahaKotu) enIyi = { ...g, indirim };
-    }
-    const zincir = plusZincirliFiyat(taban.fiyat, enIyi ? enIyi.genel : null, aktifKampanya);
-    if (!zincir) return null;
-    // PLUS KOMISYON TARIFESI: Plus'a ozel fiyat secildiyse Plus musterisi o
-    // fiyati gorur ve Plus %5 UYGULANMAZ (Satici Bilgi Merkezi, uygulanma
-    // sirasi). En dip fiyat kurali (kullanici 15 Eylul 2026): zincirin
-    // sonucu ile Plus tarife fiyatinin DUSUGU alinir; tarife kazanirsa
-    // komisyon da tarifenin teklif orani.
-    let plusTarife = null;
-    for (const r of plusTariffs) {
-      if (!ayniUrun(r) || !trendyolMu(r) || !surer(r)) continue;
-      const fiyatlar = [];
-      if (r.selected_type && r.selected_type !== 'none') fiyatlar.push(Number(r.selected_type === 'manual' ? r.manual_price : r.selected_price) || 0);
-      for (const sec of Object.values(r.secimler || {})) { if (sec && sec.kademe && sec.kademe !== 'none') fiyatlar.push(Number(sec.fiyat) || Number(sec.manuel) || 0); }
-      const f = Math.min(...fiyatlar.filter((x) => x > 0));
-      if (!Number.isFinite(f) || f <= 0) continue;
-      const komisyon = parseFloat(r.plus_commission_offer) || parseFloat(r.calculated_commission) || parseFloat(r.current_commission) || null;
-      if (!plusTarife || f < plusTarife.fiyat) plusTarife = { fiyat: f, komisyon };
-    }
-    if (plusTarife && plusTarife.fiyat < zincir.musteriFiyat) {
-      return {
-        taban, adaylar, kampanya: null, genel: null, plusTarife,
-        zincir: { musteriFiyat: plusTarife.fiyat, saticiNet: plusTarife.fiyat, genelIndirim: 0, plusIndirim: 0, saticiPayi: 0, komisyon: plusTarife.komisyon ?? undefined },
-      };
-    }
-    return { taban, adaylar, kampanya: enIyi?.kampanya || null, genel: enIyi?.genel || null, zincir };
+  // ZINCIR (src/lib/zincirHesabi.js): bu kampanyadaki aday fiyat, urunun diger
+  // sayfalardaki KAYITLI secimleriyle birlestirilir (en dusuk satis fiyati ->
+  // en yuksek sepet indirimi -> Plus %5). Hem Plus hem Genel kampanya
+  // ekranlari bunu kullanir; kar tabani ve Akilli Sec zincir sonuna bakar
+  // (kullanici, 15 Eylul 2026: "hepsine girecegim ama cakismalar hedef
+  // karin altina dusurmesin").
+  const bugunMetni = bugunMetniUret();
+  const zincirKaynaklari = { priceRanges, advantageTags, flashProducts, plusTariffs, campaigns, campaignProducts: savedCampaignProducts };
+  const genelKampanyaEtkisi = (item, fiyat = item?.campaign_price) => {
+    if (!aktifKampanya || !managingCampaign) return null;
+    const f = Number(fiyat) || 0;
+    if (f <= 0) return null;
+    const ortak = { urun: item, kaynaklar: zincirKaynaklari, bugun: bugunMetni, platform: selectedPlatform };
+    const z = plusKampanyasiMi
+      ? zincirKur({ ...ortak, aday: { kaynak: KAYNAK.PLUS_GIRILEN, fiyat: f }, plus: { oran: aktifKampanya.oran, karsilama: aktifKampanya.karsilama } })
+      : zincirKur({ ...ortak, ekGenel: { kampanyaId: managingCampaign.id, genel: aktifKampanya, ad: kampanyaMetni(aktifKampanya), fiyat: f } });
+    if (!z) return null;
+    // calculateProfit'in bekledigi "zincir" nesnesi + aciklama icin ayrintilar
+    return { ...z, kampanya: z.genel?.kampanya || null, genel: z.genel?.genel || null,
+      zincir: { musteriFiyat: z.musteriFiyat, saticiNet: z.saticiNet, genelIndirim: z.genelIndirim, plusIndirim: z.plusIndirim, saticiPayi: z.saticiPayi, komisyon: z.komisyon ?? undefined } };
   };
   const etkinFiyatIcinKampanyaFiyati = (hedefEtkin) =>
     (aktifKampanya ? kampanyaFiyatiTersi(hedefEtkin, aktifKampanya) : 0);
@@ -762,7 +697,7 @@ export default function Campaigns() {
     let { profit, profitRate } = calculateProfit(campaignPrice, item);
     // Plus'ta Genel kampanya ustune hesap daha dusukse karar ona gore
     // (kullanici, 15 Eylul 2026: "karar kampanya surerken dusuk olana gore").
-    const etki = genelKampanyaEtkisi(item);
+    const etki = genelKampanyaEtkisi(item, campaignPrice);
     if (etki) {
       const z = calculateProfit(campaignPrice, item, aktifKampanya, etki.zincir);
       if (z.breakdown && z.profit < profit) { profit = z.profit; profitRate = z.profitRate; }
@@ -1351,7 +1286,7 @@ export default function Campaigns() {
                           // kucuk bilgi satiri olur (kullanici, 15 Eylul 2026: "gercek
                           // karlilik bizim hesapladigimizdan hesaplanmali").
                           const sadePlus = calculateProfit(item.campaign_price, item);
-                          const etki = genelKampanyaEtkisi(item);
+                          const etki = genelKampanyaEtkisi(item, item.campaign_price);
                           const zincirli = etki ? calculateProfit(item.campaign_price, item, aktifKampanya, etki.zincir) : null;
                           const calc = zincirli?.breakdown ? zincirli : sadePlus;
                           const below = item.campaign_price > 0 ? isBelowFloor(item, item.campaign_price) : false;
