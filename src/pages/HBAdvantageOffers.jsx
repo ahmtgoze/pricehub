@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { db } from '@/api/db';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { havuzdaCalistir, tekrarDene } from '@/lib/istekHavuzu';
 import { Upload, Download, Filter, AlertCircle, Info, Trash2, Sparkles, Calendar as CalendarIcon } from 'lucide-react';
 import { calculatePriceBreakdown, findDesiShippingRate } from '@/components/PriceCalculationEngine';
 import { Button } from '@/components/ui/button';
@@ -27,6 +28,7 @@ const Platform = db.entities.Platform;
 const Commission = db.entities.Commission;
 const ShippingRate = db.entities.ShippingRate;
 const MarketplaceProduct = db.entities.MarketplaceProduct;
+const OfferEntity = db.entities.HBAdvantageOffer;
 
 // Excel başlıklarındaki satır sonu/çoklu boşlukları normalize eder ("Teklif 1 \nKatılabileceğiniz Maximum Fiyat\n" → tek satır)
 const norm = (s) => String(s ?? '').replace(/\s+/g, ' ').trim();
@@ -55,6 +57,8 @@ const commLabel = komisyonEtiketi;
 
 export default function HBAdvantageOffers() {
   const [userEmail, setUserEmail] = useState(null);
+  const queryClient = useQueryClient();
+  const [kaydediliyor, setKaydediliyor] = useState(false);
   const [selectedPlatform, setSelectedPlatform] = useState('');
   const [uploadedData, setUploadedData] = useState([]);
   const [originalExcelData, setOriginalExcelData] = useState(null);
@@ -88,6 +92,10 @@ export default function HBAdvantageOffers() {
   const { data: settings = [] } = useQuery({ queryKey: ['settings', userEmail], queryFn: () => db.entities.Settings.filter({ created_by: userEmail }), enabled: !!userEmail });
   const { data: marketplaceProducts = [] } = useQuery({ queryKey: ['marketplaceProducts', userEmail], queryFn: () => MarketplaceProduct.filter({ created_by: userEmail }), enabled: !!userEmail });
   const { data: productPrices = [] } = useQuery({ queryKey: ['productPrices', userEmail], queryFn: () => db.entities.ProductPrice.filter({ created_by: userEmail }), enabled: !!userEmail });
+  // KAYIT (15 Eyl 2026, kullanici): sayfa oturumluktu; artik platform + donem
+  // (dosyadaki Baslangic/Bitis) bazinda kayit tutar. Excel Indir secimleri
+  // kaydeder; sayfa acilinca son donem geri yuklenir. Desen: HB Sepet.
+  const { data: kayitliTeklifler = [] } = useQuery({ queryKey: ['hbAdvantageOffers', userEmail], queryFn: () => OfferEntity.filter({ created_by: userEmail }), enabled: !!userEmail });
 
   const uniquePlatforms = platforms.filter((p, idx, arr) => arr.findIndex((x) => x.id === p.id) === idx);
   const hbPlatforms = uniquePlatforms
@@ -257,12 +265,86 @@ export default function HBAdvantageOffers() {
   };
   const teklifTarihMetni = (item) => (item.baslangic ? `${gunSaat(item.baslangic, item.baslangic_saat)} – ${gunSaat(item.bitis, item.bitis_saat)}` : '');
 
+  const donem = React.useMemo(() => (dateRangeValue?.from && dateRangeValue?.to
+    ? { baslangic: format(dateRangeValue.from, 'yyyy-MM-dd'), bitis: format(dateRangeValue.to, 'yyyy-MM-dd') }
+    : null), [dateRangeValue?.from, dateRangeValue?.to]);
+
+  const KAYIT_SUTUNLARI = ['platform_account','start_date','end_date','offer_code','product_name','sku','seller_stock_code','barcode','category','stock',
+    'current_price','current_commission','tier1_price','tier1_commission','tier2_price','tier2_commission','tier3_price','tier3_commission',
+    'baslangic','baslangic_saat','bitis','bitis_saat','excel_satir','selected_tier','selected_price','manual_price','matched_product_id','excel_file_url'];
+
+  // Donemin eski kayitlarini silip listeyi yeniden yazar.
+  const donemeYaz = async (satirlar, d = donem) => {
+    if (!selectedPlatform || !d) return { toplam: 0, basarisiz: 0 };
+    const eskiler = kayitliTeklifler.filter((r) => r.platform_account === selectedPlatform && r.start_date === d.baslangic && r.end_date === d.bitis);
+    await havuzdaCalistir(eskiler, 16, (r) => tekrarDene(() => OfferEntity.delete(r.id)));
+    const yazilacak = satirlar.map((it) => {
+      const o = { platform_account: selectedPlatform, start_date: d.baslangic, end_date: d.bitis };
+      KAYIT_SUTUNLARI.forEach((c) => { if (it[c] !== undefined && !(c in o)) o[c] = it[c]; });
+      return o;
+    });
+    const { basarisiz } = await havuzdaCalistir(yazilacak, 16, (k) => tekrarDene(() => OfferEntity.create(k)));
+    queryClient.invalidateQueries({ queryKey: ['hbAdvantageOffers'] });
+    return { toplam: yazilacak.length, basarisiz: basarisiz.length };
+  };
+
+  const handleSaveSelections = async (satirlar = uploadedData, d = donem) => {
+    if (!selectedPlatform || !d) { toast.error('Platform ve tarih aralığı gerekli'); return; }
+    if (satirlar.length === 0) { toast.error('Kaydedilecek liste yok'); return; }
+    setKaydediliyor(true);
+    try {
+      const { toplam, basarisiz } = await donemeYaz(satirlar, d);
+      if (basarisiz > 0) toast.error(`${toplam - basarisiz} kayıt yazıldı, ${basarisiz} tanesi başarısız`);
+      else toast.success(`${toplam} teklif ${d.baslangic} – ${d.bitis} dönemine kaydedildi`);
+    } catch (hata) { toast.error('Kaydetme hatası: ' + (hata?.message || hata)); }
+    finally { setKaydediliyor(false); }
+  };
+
+  // Temizle ekrani bosaltir VE donemin kayitlarini siler.
+  const handleClear = async () => {
+    setUploadedData([]); setOriginalExcelData(null);
+    if (!selectedPlatform || !donem) { toast.success('Liste temizlendi'); return; }
+    const eskiler = kayitliTeklifler.filter((r) => r.platform_account === selectedPlatform && r.start_date === donem.baslangic && r.end_date === donem.bitis);
+    if (eskiler.length === 0) { toast.success('Liste temizlendi'); return; }
+    try {
+      await havuzdaCalistir(eskiler, 16, (r) => tekrarDene(() => OfferEntity.delete(r.id)));
+      queryClient.invalidateQueries({ queryKey: ['hbAdvantageOffers'] });
+      toast.success(`Liste ve ${eskiler.length} kayıt silindi`);
+    } catch (hata) { toast.error('Kayıtlar silinemedi: ' + (hata?.message || hata)); }
+  };
+
+  // Geri yukleme: donem secili degilse en son donem; donem seciliyse o
+  // donemin kayitlari. Excel'i depodan geri getirir (cikti sablona yazar).
+  React.useEffect(() => {
+    if (!selectedPlatform || kayitliTeklifler.length === 0) return;
+    const platformKayitlari = kayitliTeklifler.filter((r) => r.platform_account === selectedPlatform);
+    if (platformKayitlari.length === 0) return;
+    if (!donem) {
+      if (tarihDokunuldu.current) return;
+      const son = platformKayitlari.reduce((a, b) => (String(b.end_date) > String(a.end_date) ? b : a));
+      setDateRangeValue({ from: new Date(son.start_date + 'T00:00:00'), to: new Date(son.end_date + 'T00:00:00') });
+      return;
+    }
+    const donemKayitlari = platformKayitlari.filter((r) => r.start_date === donem.baslangic && r.end_date === donem.bitis);
+    if (donemKayitlari.length === 0) return;
+    setUploadedData(donemKayitlari.map((r) => ({ ...r, selected_tier: r.selected_tier || 'none', selected_price: Number(r.selected_price) || 0, manual_price: Number(r.manual_price) || 0 })));
+    const excelli = donemKayitlari.find((r) => r.excel_file_url);
+    if (!excelli) return;
+    fetch(excelli.excel_file_url).then((r) => r.arrayBuffer()).then((ab) => {
+      const wb = XLSX.read(new Uint8Array(ab), { type: 'array' });
+      const sn = wb.SheetNames.find((n) => norm(n) === 'Teklifler') || wb.SheetNames[0];
+      const sutunlar = hbTeklifSutunlari(XLSX.utils.sheet_to_json(wb.Sheets[sn], { header: 1, defval: null }));
+      setOriginalExcelData({ workbook: wb, sheetName: sn, sutunlar });
+    }).catch((e) => console.error('Excel geri yüklenemedi:', e));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [kayitliTeklifler, selectedPlatform, donem?.baslangic, donem?.bitis]);
+
   const handleFileUpload = (e) => {
     const file = e.target.files[0];
     if (!file) return;
     if (!selectedPlatform) { toast.error('Lütfen önce platform seçin'); return; }
     const reader = new FileReader();
-    reader.onload = (event) => {
+    reader.onload = async (event) => {
       try {
         const workbook = XLSX.read(event.target.result, { type: 'binary' });
         // "Teklifler" sayfasını bul; yoksa "Fiyat Gir" başlığı olan sayfayı dene
@@ -318,6 +400,16 @@ export default function HBAdvantageOffers() {
           setDateRangeValue({ from: new Date(dosyaAraligi.baslangic + 'T00:00:00'), to: new Date(dosyaAraligi.bitis + 'T00:00:00') });
         }
         toast.success(`${parsed.length} teklif yüklendi${dosyaAraligi ? ` · ${gunSaat(dosyaAraligi.baslangic)} – ${gunSaat(dosyaAraligi.bitis)}` : ''}`);
+        // Dosya depoya, liste doneme yazilir (geri yukleme ve cikti icin).
+        const d = dosyaAraligi && !tarihDokunuldu.current ? dosyaAraligi : donem || dosyaAraligi;
+        if (d) {
+          let excelUrl = null;
+          try { excelUrl = (await db.integrations.Core.UploadFile({ file })).file_url; }
+          catch (yh) { console.error('Excel depoya yüklenemedi:', yh); }
+          const kayitlik = parsed.map((it) => ({ ...it, excel_file_url: excelUrl }));
+          setUploadedData(kayitlik);
+          await donemeYaz(kayitlik, d);
+        }
       } catch (error) {
         toast.error('Excel dosyası okunamadı: ' + error.message);
       }
@@ -493,6 +585,8 @@ export default function HBAdvantageOffers() {
     if (written === 0) { toast.error('Seçili teklif yok'); return; }
     XLSX.writeFile(workbook, 'hepsiburada-avantajli-teklifler.xlsx', { bookSST: true });
     toast.success(`${written} teklif için fiyat yazıldı, Excel indirildi`);
+    // Excel indirilince secimler de KAYDEDILIR (tum sayfalarda ayni kural).
+    handleSaveSelections();
   };
 
   const allCategories = [...new Set(uploadedData.map((it) => getMatchedProduct(it)?.category_name || it.category).filter(Boolean))].sort();
@@ -587,7 +681,8 @@ export default function HBAdvantageOffers() {
               {uploadedData.length > 0 && (
                 <>
                   <Button onClick={handleSmartAutoSelect} className="bg-primary hover:bg-black dark:hover:bg-white/90 text-primary-foreground gap-2"><Sparkles className="h-4 w-4" />Akıllı Otomatik Seç</Button>
-                  <Button variant="outline" onClick={() => { setUploadedData([]); setOriginalExcelData(null); toast.success('Liste temizlendi'); }} className="text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:bg-rose-950/30"><Trash2 className="mr-2 h-4 w-4" />Temizle</Button>
+                  <Button variant="outline" onClick={handleClear} className="text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:bg-rose-950/30"><Trash2 className="mr-2 h-4 w-4" />Temizle</Button>
+                  <Button variant="outline" onClick={() => handleSaveSelections()} disabled={kaydediliyor}>{kaydediliyor ? 'Kaydediliyor…' : `Seçimleri Kaydet (${selectedCount})`}</Button>
                   <Button variant="outline" onClick={() => setUploadedData(uploadedData.map((i) => ({ ...i, selected_tier: 'none', selected_price: 0 })))}>Seçimleri Kaldır</Button>
                   <Button variant="outline" onClick={handleExport}><Download className="mr-2 h-4 w-4" />Excel İndir ({selectedCount})</Button>
                 </>

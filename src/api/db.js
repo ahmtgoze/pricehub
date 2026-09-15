@@ -21,6 +21,9 @@ const TABLE_MAP = {
   PlusProductCommissionTariff: 'plus_product_commission_tariffs',
   // HB Sepet Kampanyalari: platform + tarih araligi bazli secim kayitlari
   HBBasketCampaign: 'hb_basket_campaigns',
+  // HB Avantajli Teklifler / Kendi Kampanyan: 15 Eyl 2026'dan itibaren kayit tutar
+  HBAdvantageOffer: 'hb_advantage_offers',
+  HBOwnCampaign: 'hb_own_campaigns',
   TrendyolPriceRange: 'trendyol_price_ranges',
   Announcement: 'announcements',
   AnnouncementRead: 'announcement_reads',

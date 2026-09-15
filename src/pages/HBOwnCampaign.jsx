@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { db } from '@/api/db';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Filter, AlertCircle, Info, Megaphone, Download, Sparkles } from 'lucide-react';
 import { calculatePriceBreakdown, findDesiShippingRate } from '@/components/PriceCalculationEngine';
 import { Input } from '@/components/ui/input';
@@ -37,6 +37,8 @@ const CAMPAIGN_TYPES = [
 
 export default function HBOwnCampaign() {
   const [userEmail, setUserEmail] = useState(null);
+  const queryClient = useQueryClient();
+  const OwnEntity = db.entities.HBOwnCampaign;
   const [selectedPlatform, setSelectedPlatform] = useState('');
   const [campaignType, setCampaignType] = useState('cart_percent');
   const [discountPercent, setDiscountPercent] = useState('');
@@ -87,6 +89,56 @@ export default function HBOwnCampaign() {
   const hbPlatform = hbPlatforms.find((p) => p.name === selectedPlatform) || hbPlatforms[0];
 
   // HB SKU'lari pazaryeri kayitlarinda; sablona bu deger yaziliyor.
+  // KAYIT (15 Eyl 2026, kullanici): form + secili urunler platform basina tek
+  // kayitta tutulur; SKU Listesi Indir kaydeder, sayfa acilinca geri gelir.
+  const { data: kayitliKampanyalar = [] } = useQuery({ queryKey: ['hbOwnCampaigns', userEmail], queryFn: () => OwnEntity.filter({ created_by: userEmail }), enabled: !!userEmail });
+  const geriYuklendi = React.useRef(false);
+  React.useEffect(() => {
+    if (geriYuklendi.current || !selectedPlatform || kayitliKampanyalar.length === 0) return;
+    const k = kayitliKampanyalar.filter((r) => r.platform_account === selectedPlatform)
+      .sort((a, b) => String(b.updated_date || b.created_at || '').localeCompare(String(a.updated_date || a.created_at || '')))[0];
+    if (!k) return;
+    geriYuklendi.current = true;
+    setCampaignType(k.campaign_type || 'cart_percent');
+    setDiscountPercent(k.discount_percent != null ? String(k.discount_percent) : '');
+    setDiscountTl(k.discount_tl != null ? String(k.discount_tl) : '');
+    setAltLimit(k.alt_limit != null ? String(k.alt_limit) : '0');
+    setTavan(k.tavan != null ? String(k.tavan) : '');
+    setKacinciUrun(k.kacinci_urun != null ? String(k.kacinci_urun) : '2');
+    setBuyX(k.buy_x != null ? String(k.buy_x) : '3');
+    setPayY(k.pay_y != null ? String(k.pay_y) : '2');
+    setCommissionDiscount(k.commission_discount != null ? String(k.commission_discount) : '');
+    setKampanyaAdi(k.campaign_name || '');
+    setBaslangicTarihi(k.baslangic_tarihi || '');
+    setBitisTarihi(k.bitis_tarihi || '');
+    setButce(k.butce != null ? String(k.butce) : '');
+    setMaksSiparis(k.maks_siparis != null ? String(k.maks_siparis) : '');
+    setIndirimKoduIstiyor(!!k.indirim_kodu_istiyor);
+    setIndirimKodu(k.indirim_kodu || '');
+    setSecililer(new Set(Array.isArray(k.secili_urun_idleri) ? k.secili_urun_idleri : []));
+    toast.info('Son kaydedilen kampanya geri yüklendi');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [kayitliKampanyalar, selectedPlatform]);
+
+  const sayi = (v) => (v === '' || v == null ? null : Number(v));
+  const kampanyayiKaydet = async () => {
+    if (!selectedPlatform) { toast.error('Platform seçin'); return; }
+    const veri = {
+      platform_account: selectedPlatform, campaign_name: kampanyaAdi || null, campaign_type: campaignType,
+      discount_percent: sayi(discountPercent), discount_tl: sayi(discountTl), alt_limit: sayi(altLimit), tavan: sayi(tavan),
+      kacinci_urun: sayi(kacinciUrun), buy_x: sayi(buyX), pay_y: sayi(payY), commission_discount: sayi(commissionDiscount),
+      baslangic_tarihi: baslangicTarihi || null, bitis_tarihi: bitisTarihi || null, butce: sayi(butce), maks_siparis: sayi(maksSiparis),
+      indirim_kodu_istiyor: !!indirimKoduIstiyor, indirim_kodu: indirimKodu || null,
+      secili_urun_idleri: [...secililer], updated_date: new Date().toISOString(),
+    };
+    try {
+      const mevcut = kayitliKampanyalar.find((r) => r.platform_account === selectedPlatform);
+      if (mevcut) await OwnEntity.update(mevcut.id, veri); else await OwnEntity.create(veri);
+      queryClient.invalidateQueries({ queryKey: ['hbOwnCampaigns'] });
+      toast.success(`Kampanya kaydedildi (${secililer.size} ürün)`);
+    } catch (hata) { toast.error('Kayıt hatası: ' + (hata?.message || hata)); }
+  };
+
   const { data: marketplaceProducts = [] } = useQuery({
     queryKey: ['marketplaceProducts', userEmail],
     queryFn: () => db.entities.MarketplaceProduct.filter({ created_by: userEmail }),
@@ -264,6 +316,8 @@ export default function HBOwnCampaign() {
     XLSX.writeFile(kitap, 'hepsiburada-kampanya-skulari.xlsx');
 
     toast.success(`${yazilan} SKU indirildi` + (atlanan > 0 ? ` · ${atlanan} ürün atlandı (SKU yok)` : ''));
+    // Indirilince form ve secimler KAYDEDILIR (tum sayfalarda ayni kural).
+    kampanyayiKaydet();
   };
 
 
@@ -448,6 +502,7 @@ export default function HBOwnCampaign() {
               <Button onClick={karlilariSec} className="bg-primary hover:bg-black dark:hover:bg-white/90 text-primary-foreground gap-2">
                 <Sparkles className="h-4 w-4" />Kâr Edenleri Seç
               </Button>
+              <Button variant="outline" onClick={kampanyayiKaydet}>Kaydet ({secililer.size})</Button>
               <Button variant="outline" onClick={skuListesiIndir} disabled={secililer.size === 0}>
                 <Download className="mr-2 h-4 w-4" />SKU Listesi İndir ({secililer.size})
               </Button>
