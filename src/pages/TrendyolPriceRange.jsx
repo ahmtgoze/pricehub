@@ -27,6 +27,8 @@ import { unzipSync, zipSync } from 'fflate';
 import { hucreleriYaz, baslikHaritasi, paylasilanMetinler, sayfaXmlYolu, sutunDegerleri } from '@/lib/xlsxYerindeYaz';
 import { kademeFiyati, tarifeUstSiniri, sinirAsanlar } from '@/lib/trendyolTarifeKurali';
 import { yazilmaliMi, gonderimleriIsle, gonderilenFiyat } from '@/lib/trendyolGonderim';
+import { useZincirKaynaklari } from '@/hooks/useZincirKaynaklari';
+import { zincirKur, KAYNAK, bugunMetni as zincirBugun } from '@/lib/zincirHesabi';
 import { pencereKomisyonlariniAl,
          komisyonHaritasi, pencereUygula, pencereAdlari, pencereDegistirilebilir, tekSatirSecimi, tekDosyaOzeti,
          pencereyeGec, acikSecimiSakla, seciliPencereler, secimOzeti, gercekPencereler } from '@/lib/trendyolPencereSecimi';
@@ -41,6 +43,7 @@ const MarketplaceProduct = db.entities.MarketplaceProduct;
 export default function TrendyolPriceRange() {
   const [userEmail, setUserEmail] = useState(null);
   const [selectedPlatform, setSelectedPlatform] = useState('');
+  const { kaynaklar: zincirKaynaklari } = useZincirKaynaklari(userEmail);
   const [dateRangeValue, setDateRangeValue] = useState({ from: undefined, to: undefined });
   const [uploadedData, setUploadedData] = useState([]);
   const [originalExcelData, setOriginalExcelData] = useState(null);
@@ -628,7 +631,7 @@ export default function TrendyolPriceRange() {
       const kademeNo = Number(String(bulkColumn).replace('range_', ''));
       price = kademeninFiyati(item, kademeNo) || 0;
 
-      const { profit, profitRate } = calculateProfit(price, commissionRate, item);
+      const { profit, profitRate } = kotuKar(item, price, commissionRate, calculateProfit(price, commissionRate, item));
       if (araliktaMi(profitRate, profit)) return { ...item, selected_range: bulkColumn, selected_price: price, secim_penceresi: secilenPencere || null };
       if (item.selected_range === bulkColumn) return { ...item, selected_range: 'none', selected_price: 0 };
       return item;
@@ -637,6 +640,31 @@ export default function TrendyolPriceRange() {
     setUploadedData(updated);
     toast.success('Toplu seçim yapıldı');
   };
+
+  // ZINCIR (src/lib/zincirHesabi.js): bu sayfanin adayi, urunun diger
+  // sayfalardaki KAYITLI secimleriyle birlestirilir -> en dusuk satis fiyati
+  // uzerine sepet kampanyasi ve Plus %5 inince saticiya kalan. Hedef kontrolu,
+  // Akilli Sec ve Toplu Sec bu KOTU duruma gore (kullanici, 15 Eylul 2026:
+  // "hepsine girecegim ama cakismalar hedef karin altina dusurmesin").
+  const zincirliKar = (item, fiyat, komisyon) => {
+    const f = Number(fiyat) || 0;
+    if (f <= 0) return null;
+    const z = zincirKur({ urun: item, kaynaklar: zincirKaynaklari, bugun: zincirBugun(), platform: selectedPlatform, aday: { kaynak: KAYNAK.TARIFE, fiyat: f } });
+    if (!z || Math.abs(z.saticiNet - f) < 0.005) return null;
+    const c = calculateProfit(z.saticiNet, z.komisyon ?? komisyon, item);
+    return { z, profit: c.profit || 0, profitRate: c.profitRate || 0 };
+  };
+  const kotuKar = (item, fiyat, komisyon, calc) => {
+    const zk = zincirliKar(item, fiyat, komisyon);
+    if (!zk) return { profit: calc.profit || 0, profitRate: calc.profitRate || 0, zk: null };
+    return { profit: Math.min(calc.profit || 0, zk.profit), profitRate: Math.min(calc.profitRate || 0, zk.profitRate), zk };
+  };
+  const ZincirSatiri = ({ zk }) => zk ? (
+    <div className={`text-[10px] leading-tight mt-0.5 ${zk.profit > 0 ? 'text-amber-700 dark:text-amber-400' : 'text-red-600'}`}
+      title={`Taban: ${zk.z.taban.kaynak} ₺${zk.z.taban.fiyat.toFixed(2)}${zk.z.genel ? ` · ${zk.z.genel.ad}` : ''}${zk.z.plus ? ` · Plus %${zk.z.plus.oran}` : ''}`}>
+      Diğer promosyonlarla: müşteri ₺{zk.z.musteriFiyat.toFixed(2)} · {zk.profit > 0 ? '+' : ''}₺{zk.profit.toFixed(2)} (%{zk.profitRate.toFixed(1)})
+    </div>
+  ) : null;
 
   const handleSmartAutoSelect = () => {
     const platform = uniquePlatforms.find(p => p.name === selectedPlatform);
@@ -743,8 +771,7 @@ export default function TrendyolPriceRange() {
         if (!range.price || range.price <= 0) continue;
 
         const calc = calculateProfit(range.price, range.commissionRate, item);
-        const profit = calc.profit || 0;
-        const profitRate = calc.profitRate || 0;
+        const { profit, profitRate } = kotuKar(item, range.price, range.commissionRate, calc);
 
         // Minimum kâr tutarı altındaki aralıkları ele
         if (minAmount != null && profit < minAmount) continue;
@@ -1416,6 +1443,7 @@ export default function TrendyolPriceRange() {
                                const ustSinir = tarifeUstSiniri(item);
 
                                const { profit, profitRate, baremUsed } = calculateProfit(priceToUse, commission, item);
+                               const zk = zincirliKar(item, priceToUse, commission);
                                const isProfitable = profit > 0;
                                const isSelected = item.selected_range === `range_${rangeNum}`;
 
@@ -1444,6 +1472,7 @@ export default function TrendyolPriceRange() {
                                           <Info className="h-3 w-3" />
                                         </Button>
                                       </div>
+                                      <ZincirSatiri zk={zk} />
                                       <Button size="sm" variant={isSelected ? 'default' : 'outline'} onClick={() => handlePriceSelect(uploadedData.indexOf(item), `range_${rangeNum}`, priceToUse)} className="w-full mt-2 h-7 text-xs">
                                         {isSelected ? 'Seçili' : 'Seç'}
                                       </Button>

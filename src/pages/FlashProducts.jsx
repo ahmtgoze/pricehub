@@ -26,10 +26,13 @@ import { hucreleriYaz, baslikHaritasi, paylasilanMetinler, sayfaXmlYolu, sutunDe
 import BaremBadge from '@/components/ui/BaremBadge';
 import { baremSec, baremTavanFiyatlari, baremTarifesiSec } from '@/lib/baremKurali';
 import { gecerliMaliyet } from '@/lib/gecerliMaliyet';
+import { useZincirKaynaklari } from '@/hooks/useZincirKaynaklari';
+import { zincirKur, KAYNAK, bugunMetni as zincirBugun } from '@/lib/zincirHesabi';
 
 export default function FlashProducts() {
   const [userEmail, setUserEmail] = useState(null);
   const [selectedPlatform, setSelectedPlatform] = useState('');
+  const { kaynaklar: zincirKaynaklari } = useZincirKaynaklari(userEmail);
   const [dateRangeValue, setDateRangeValue] = useState({ from: undefined, to: undefined });
   // Takvim bir kez acildiktan sonra otomatik "en son kayit" yuklemesi
   // yapilmaz. Aralik secerken ilk gun tiklaninca aralik yarim kalir
@@ -738,6 +741,31 @@ export default function FlashProducts() {
 
   // ✅ Akıllı Otomatik Seç — indirimli komisyon hedeflerine göre, 3 Saat → 24 Saat
   // Manuel seçilmiş ürünlere dokunmaz
+  // ZINCIR (src/lib/zincirHesabi.js): bu sayfanin adayi, urunun diger
+  // sayfalardaki KAYITLI secimleriyle birlestirilir -> en dusuk satis fiyati
+  // uzerine sepet kampanyasi ve Plus %5 inince saticiya kalan. Hedef kontrolu,
+  // Akilli Sec ve Toplu Sec bu KOTU duruma gore (kullanici, 15 Eylul 2026:
+  // "hepsine girecegim ama cakismalar hedef karin altina dusurmesin").
+  const zincirliKar = (item, fiyat, komisyon) => {
+    const f = Number(fiyat) || 0;
+    if (f <= 0) return null;
+    const z = zincirKur({ urun: item, kaynaklar: zincirKaynaklari, bugun: zincirBugun(), platform: selectedPlatform, aday: { kaynak: KAYNAK.FLAS, fiyat: f } });
+    if (!z || Math.abs(z.saticiNet - f) < 0.005) return null;
+    const c = calculateProfit(z.saticiNet, z.komisyon ?? komisyon, item);
+    return { z, profit: c.profit || 0, profitRate: c.profitRate || 0 };
+  };
+  const kotuKar = (item, fiyat, komisyon, calc) => {
+    const zk = zincirliKar(item, fiyat, komisyon);
+    if (!zk) return { profit: calc.profit || 0, profitRate: calc.profitRate || 0, zk: null };
+    return { profit: Math.min(calc.profit || 0, zk.profit), profitRate: Math.min(calc.profitRate || 0, zk.profitRate), zk };
+  };
+  const ZincirSatiri = ({ zk }) => zk ? (
+    <div className={`text-[10px] leading-tight mt-0.5 ${zk.profit > 0 ? 'text-amber-700 dark:text-amber-400' : 'text-red-600'}`}
+      title={`Taban: ${zk.z.taban.kaynak} ₺${zk.z.taban.fiyat.toFixed(2)}${zk.z.genel ? ` · ${zk.z.genel.ad}` : ''}${zk.z.plus ? ` · Plus %${zk.z.plus.oran}` : ''}`}>
+      Diğer promosyonlarla: müşteri ₺{zk.z.musteriFiyat.toFixed(2)} · {zk.profit > 0 ? '+' : ''}₺{zk.profit.toFixed(2)} (%{zk.profitRate.toFixed(1)})
+    </div>
+  ) : null;
+
   const handleSmartAutoSelect = async () => {
     // Platform direkt name ile eşleştir
     const uniquePlats = platforms.filter((p, idx, arr) => arr.findIndex(x => x.id === p.id) === idx);
@@ -798,16 +826,17 @@ export default function FlashProducts() {
         if (commissionRate === null) continue;
         const calc = calculateProfit(range.price, commissionRate, item);
         if (!calc.breakdown) continue;
+        const kotu = kotuKar(item, range.price, commissionRate, calc);
 
         // İndirimli minimum kâr tutarı altındaki aralıkları ele
-        if (minAmount != null && calc.profit < minAmount) continue;
+        if (minAmount != null && kotu.profit < minAmount) continue;
 
         // Tanımlı olan TÜM hedefler sağlanmalı (sıkı kontrol):
         // - indirimli hedef kâr oranı varsa, kâr oranı >= hedef OLMALI
         // - indirimli hedef kâr tutarı varsa, kâr tutarı >= hedef OLMALI
         let meetsTarget = true;
-        if (targetRate != null && calc.profitRate < targetRate) meetsTarget = false;
-        if (targetAmount != null && calc.profit < targetAmount) meetsTarget = false;
+        if (targetRate != null && kotu.profitRate < targetRate) meetsTarget = false;
+        if (targetAmount != null && kotu.profit < targetAmount) meetsTarget = false;
 
         if (meetsTarget) {
           selectedCount++;
@@ -874,7 +903,7 @@ export default function FlashProducts() {
       }
 
       let commissionRate = getCommissionRate(item, price);
-      const { profit, profitRate } = calculateProfit(price, commissionRate, item);
+      const { profit, profitRate } = kotuKar(item, price, commissionRate, calculateProfit(price, commissionRate, item));
 
       if (araliktaMi(profitRate, profit) && commissionRate !== null) {
         return { ...item, selected_type: bulkColumn, selected_price: price };
@@ -1580,6 +1609,7 @@ export default function FlashProducts() {
                                     <>
                                       {(() => {
                                         const { profit, profitRate, baremUsed } = calculateProfit(item.price_24h, commissionRate24h, item);
+                                        const zk24 = zincirliKar(item, item.price_24h, commissionRate24h);
                                         const isProfitable = profit > 0;
                                         return (
                                           <>
@@ -1587,6 +1617,7 @@ export default function FlashProducts() {
                                             <span className="text-xs text-muted-foreground">Kom: %{commissionRate24h}</span>
                                             <BaremBadge barem={baremUsed} />
                                           </div>
+                                          <ZincirSatiri zk={zk24} />
                                             <div className="flex items-center justify-between mt-1">
                                               <div className={`text-xs font-semibold ${isProfitable ? 'text-green-600' : 'text-red-600'}`}>
                                                 {isProfitable ? '+' : ''}₺{profit.toFixed(2)} (%{profitRate.toFixed(1)})
@@ -1668,9 +1699,11 @@ export default function FlashProducts() {
                                       </div>
                                       {(() => {
                                         const { profit, profitRate } = calculateProfit(item.price_3h, commissionRate3h, item);
+                                        const zk3 = zincirliKar(item, item.price_3h, commissionRate3h);
                                         const isProfitable = profit > 0;
                                         return (
                                           <>
+                                            <ZincirSatiri zk={zk3} />
                                             <div className="flex items-center justify-between mt-1">
                                               <div className={`text-xs font-semibold ${isProfitable ? 'text-green-600' : 'text-red-600'}`}>
                                                 {isProfitable ? '+' : ''}₺{profit.toFixed(2)} (%{profitRate.toFixed(1)})

@@ -26,10 +26,13 @@ import { tarifeKomisyonu, aktifPencereOzeti } from '@/lib/tarifeKaydiSecimi';
 import BaremBadge from '@/components/ui/BaremBadge';
 import { baremSec, baremTavanFiyatlari, baremTarifesiSec } from '@/lib/baremKurali';
 import { gecerliMaliyet } from '@/lib/gecerliMaliyet';
+import { useZincirKaynaklari } from '@/hooks/useZincirKaynaklari';
+import { zincirKur, KAYNAK, bugunMetni as zincirBugun } from '@/lib/zincirHesabi';
 
 export default function AdvantageProductTag() {
   const [userEmail, setUserEmail] = useState(null);
   const [selectedPlatform, setSelectedPlatform] = useState('');
+  const { kaynaklar: zincirKaynaklari } = useZincirKaynaklari(userEmail);
   const [dateRangeValue, setDateRangeValue] = useState({ from: undefined, to: undefined });
   const [uploadedData, setUploadedData] = useState([]);
   const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0 });
@@ -472,6 +475,31 @@ export default function AdvantageProductTag() {
   };
 
   // ✅ Süper Avantaj → Çok Avantaj → Avantaj sırasıyla
+  // ZINCIR (src/lib/zincirHesabi.js): bu sayfanin adayi, urunun diger
+  // sayfalardaki KAYITLI secimleriyle birlestirilir -> en dusuk satis fiyati
+  // uzerine sepet kampanyasi ve Plus %5 inince saticiya kalan. Hedef kontrolu,
+  // Akilli Sec ve Toplu Sec bu KOTU duruma gore (kullanici, 15 Eylul 2026:
+  // "hepsine girecegim ama cakismalar hedef karin altina dusurmesin").
+  const zincirliKar = (item, fiyat, komisyon) => {
+    const f = Number(fiyat) || 0;
+    if (f <= 0) return null;
+    const z = zincirKur({ urun: item, kaynaklar: zincirKaynaklari, bugun: zincirBugun(), platform: selectedPlatform, aday: { kaynak: KAYNAK.AVANTAJLI, fiyat: f } });
+    if (!z || Math.abs(z.saticiNet - f) < 0.005) return null;
+    const c = calculateProfit(z.saticiNet, z.komisyon ?? komisyon, item);
+    return { z, profit: c.profit || 0, profitRate: c.profitRate || 0 };
+  };
+  const kotuKar = (item, fiyat, komisyon, calc) => {
+    const zk = zincirliKar(item, fiyat, komisyon);
+    if (!zk) return { profit: calc.profit || 0, profitRate: calc.profitRate || 0, zk: null };
+    return { profit: Math.min(calc.profit || 0, zk.profit), profitRate: Math.min(calc.profitRate || 0, zk.profitRate), zk };
+  };
+  const ZincirSatiri = ({ zk }) => zk ? (
+    <div className={`text-[10px] leading-tight mt-0.5 ${zk.profit > 0 ? 'text-amber-700 dark:text-amber-400' : 'text-red-600'}`}
+      title={`Taban: ${zk.z.taban.kaynak} ₺${zk.z.taban.fiyat.toFixed(2)}${zk.z.genel ? ` · ${zk.z.genel.ad}` : ''}${zk.z.plus ? ` · Plus %${zk.z.plus.oran}` : ''}`}>
+      Diğer promosyonlarla: müşteri ₺{zk.z.musteriFiyat.toFixed(2)} · {zk.profit > 0 ? '+' : ''}₺{zk.profit.toFixed(2)} (%{zk.profitRate.toFixed(1)})
+    </div>
+  ) : null;
+
   const handleSmartAutoSelect = () => {
     const platformObj = uniquePlatforms.find(p => p.name === selectedPlatform);
     if (!platformObj) { toast.error('Platform bulunamadı'); return; }
@@ -528,8 +556,7 @@ export default function AdvantageProductTag() {
         if (!range.commission || range.commission <= 0) continue;
 
         const calc = calculateProfit(range.price, range.commission, item);
-        const profit = calc.profit || 0;
-        const profitRate = calc.profitRate || 0;
+        const { profit, profitRate } = kotuKar(item, range.price, range.commission, calc);
 
         // İndirimli minimum kâr tutarı altındaki aralıkları ele
         if (minAmount != null && profit < minAmount) continue;
@@ -624,7 +651,7 @@ export default function AdvantageProductTag() {
         return { ...item, selected_range: 'manual', selected_price: oneri.price, manual_price: oneri.price,
           manual_profit: oneri.profit, manual_profit_rate: oneri.profitRate, manual_commission: oneri.komisyon };
       }
-      const { profit, profitRate } = calculateProfit(price, commissionRate, item);
+      const { profit, profitRate } = kotuKar(item, price, commissionRate, calculateProfit(price, commissionRate, item));
       if (araliktaMi(profitRate, profit)) { secilen++; return { ...item, selected_range: bulkColumn, selected_price: price }; }
       if (item.selected_range === bulkColumn) return { ...item, selected_range: 'none', selected_price: 0 };
       return item;
@@ -905,6 +932,7 @@ export default function AdvantageProductTag() {
 
     const dynamicCommission = getDynamicCommissionForPrice(item, maxPrice);
     const { profit, profitRate, baremUsed } = calculateProfit(maxPrice, dynamicCommission, item);
+    const zk = zincirliKar(item, maxPrice, dynamicCommission);
     const isProfitable = profit > 0;
     const isSelected = item.selected_range === rangeType;
 
@@ -926,6 +954,7 @@ export default function AdvantageProductTag() {
           <span className="text-xs text-muted-foreground">Kom: %{dynamicCommission}</span>
           <BaremBadge barem={baremUsed} />
         </div>
+        <ZincirSatiri zk={zk} />
         <div className="flex items-center justify-between mt-1">
           <div className={`text-xs font-semibold ${isProfitable ? 'text-green-600' : 'text-red-600'}`}>
             {isProfitable ? '+' : ''}₺{profit.toFixed(2)} (%{profitRate.toFixed(1)})
