@@ -558,6 +558,21 @@ export default function AdvantageProductTag() {
         }
       }
 
+      // Hicbir aralik hedefi tutmadi. Barem onerisi varsa (herhangi bir
+      // araligin biraz alti barem tavanina girip kar oranini artiriyorsa)
+      // en karlisi secilir — kullanici karari (15 Eylul 2026): "oneri
+      // cikiyorsa daha karli oldugu icin cikiyordur, once o secilmeli".
+      const baremAdaylari = ranges
+        .filter((r) => r.price > 0 && r.commission > 0)
+        .map((r) => baremOnerisiHesapla(item, r.price))
+        .filter(Boolean)
+        .sort((a, b) => b.profitRate - a.profitRate);
+      if (baremAdaylari[0]) {
+        const o = baremAdaylari[0];
+        selectedCount++; baremliSecim++;
+        return { ...item, selected_range: 'manual', selected_price: o.price, manual_price: o.price,
+          manual_profit: o.profit, manual_profit_rate: o.profitRate, manual_commission: o.komisyon };
+      }
       skippedTargetNotMet++;
       return { ...item, selected_range: 'none', selected_price: 0 };
     });

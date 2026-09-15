@@ -746,7 +746,7 @@ export default function Campaigns() {
       if (item.selected_type === 'campaign') {
         const mevcutFiyat = item.campaign_price || item.max_price;
         const oneri = baremOnerisiHesapla(item, mevcutFiyat);
-        if (oneri && !isBelowFloor(item, oneri.fiyat)) { baremeCekilen++; return { ...item, campaign_price: oneri.fiyat }; }
+        if (oneri) { baremeCekilen++; return { ...item, campaign_price: oneri.fiyat }; }
         return item;
       }
       const matched = getMatchedProduct(item);
@@ -756,10 +756,13 @@ export default function Campaigns() {
       let price = item.max_price || item.campaign_price;
       if (!price || price <= 0) return item;
       // Barem onerisi: max fiyat desi tarifesine dusuyor ama biraz asagisi
-      // barem tavanina giriyorsa ve kar orani artiyorsa o fiyat kullanilir
-      // (Barem Onerisi sutunuyla ayni hesap).
+      // barem tavanina giriyorsa ve kar orani artiyorsa o fiyat secilir
+      // (Barem Onerisi sutunuyla ayni hesap). Kullanici karari (15 Eylul
+      // 2026): "oneri cikiyorsa daha karli oldugu icin cikiyordur, ONCE o
+      // secilmeli" — hedef kar orani tutmasa bile secilir; hedef yalnizca
+      // onerisiz urunlerde max fiyat icin bakilir.
       const oneri = baremOnerisiHesapla(item, price);
-      if (oneri && !isBelowFloor(item, oneri.fiyat)) { price = oneri.fiyat; baremliSecim++; }
+      if (oneri) { baremliSecim++; selectedCount++; return { ...item, selected_type: 'campaign', campaign_price: oneri.fiyat }; }
       if (isBelowFloor(item, price)) { skipBelow++; return item; }
       selectedCount++;
       return { ...item, selected_type: 'campaign', campaign_price: price };

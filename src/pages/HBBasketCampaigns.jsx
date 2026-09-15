@@ -536,19 +536,17 @@ export default function HBBasketCampaigns() {
       let fiyat = item.max_price || item.current_price || 0;
       if (fiyat <= 0) { sayac.fiyatsiz++; return item; }
 
+      // Barem onerisi varsa ONCE o secilir, hedefe bakilmaz (kullanici
+      // karari 15 Eylul 2026: "oneri cikiyorsa daha karli oldugu icin
+      // cikiyordur"). Hedef yalnizca onerisiz urunlerde kontrol edilir.
+      const ilkOneri = baremOnerisiHesapla(item, fiyat);
+      if (ilkOneri) { sayac.secilen++; sayac.baremli++; return { ...item, campaign_price: ilkOneri.fiyat, selected: true }; }
+
       const hedefler = hedefleriCoz(komisyonBul(commissions, hbPlatforms, urun));
       if (!hedefVarMi(hedefler)) { sayac.hedefsiz++; return { ...item, campaign_price: fiyat }; }
 
       // Sayfadaki ek alt sinirlar
       const ekUygunMu = (kar, oran) => (ekOran <= 0 || oran >= ekOran) && (ekTutar <= 0 || kar >= ekTutar);
-
-      // Barem onerisi: max fiyat desi tarifesine dusuyor ama biraz asagisi
-      // barem tavanina giriyor ve kar orani artiyorsa o fiyat kullanilir
-      // (Barem Onerisi sutunuyla ayni hesap).
-      const oneri = baremOnerisiHesapla(item, fiyat);
-      if (oneri && hedefTutuyorMu(oneri.profit, oneri.profitRate, hedefler).uygun && ekUygunMu(oneri.profit, oneri.profitRate)) {
-        fiyat = oneri.fiyat; sayac.baremli++;
-      }
 
       const { profit, profitRate } = kampanyaKari(fiyat, item);
       const { uygun } = hedefTutuyorMu(profit, profitRate, hedefler);
