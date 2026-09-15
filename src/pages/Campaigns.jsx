@@ -979,6 +979,11 @@ export default function Campaigns() {
     const fileName = `kampanya-${slug(getTypeLabel(managingCampaign.campaign_type))}-${written}urun.xlsx`;
     XLSX.writeFile(yeniKitap, fileName, { bookSST: true });
     toast.success(`${written} ürün için Excel indirildi (yalnızca seçili satırlar)`);
+    // Excel indirilince secimler de KAYDEDILIR. Kullanici ciktiyi alip
+    // Kaydet'e basmiyordu; Plus ekranindaki "Kampanya ustune" hesabi ve
+    // kampanya bitis bildirimleri kayitli secime baktigi icin bos kaliyordu
+    // (15 Eylul 2026: dokuz kampanyada kayitli secim 0).
+    handleSave();
   };
 
   const filteredData = uploadedData.filter(item => {
