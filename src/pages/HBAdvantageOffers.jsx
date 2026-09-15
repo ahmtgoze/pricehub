@@ -567,7 +567,7 @@ export default function HBAdvantageOffers() {
                         dateRangeValue.to
                           ? <>{format(dateRangeValue.from, 'd MMM yyyy', { locale: tr })} - {format(dateRangeValue.to, 'd MMM yyyy', { locale: tr })}</>
                           : format(dateRangeValue.from, 'd MMM yyyy', { locale: tr })
-                      ) : <span>Dosyadan gelir; değiştirmek için seçin</span>}
+                      ) : <span>Tarih seçin</span>}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start">
@@ -577,7 +577,6 @@ export default function HBAdvantageOffers() {
                       classNames={{ day_today: 'bg-primary font-bold text-primary-foreground' }} />
                   </PopoverContent>
                 </Popover>
-                <p className="text-[11px] text-muted-foreground">Tekliflerin Başlangıç/Bitiş tarihi dosyadan okunur. Aralığın dışındaki teklif (sonraki hafta) seçilemez.</p>
               </div>
             </div>
             <div className="flex flex-wrap gap-3">
