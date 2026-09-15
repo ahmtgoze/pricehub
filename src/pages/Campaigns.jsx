@@ -578,7 +578,9 @@ export default function Campaigns() {
     let enIyi = null;
     for (const g of genelKayitlar) {
       const indirim = musteriIndirimi(taban.fiyat, g.genel);
-      if (!enIyi || indirim > enIyi.indirim) enIyi = { ...g, indirim };
+      // Esit indirimde karsilamasi DUSUK olan (saticinin payi yuksek = en kotu durum)
+      const dahaKotu = enIyi && indirim === enIyi.indirim && (Number(g.genel.karsilama) || 0) < (Number(enIyi.genel.karsilama) || 0);
+      if (!enIyi || indirim > enIyi.indirim || dahaKotu) enIyi = { ...g, indirim };
     }
     const zincir = plusZincirliFiyat(taban.fiyat, enIyi ? enIyi.genel : null, aktifKampanya);
     if (!zincir) return null;
@@ -1062,7 +1064,11 @@ export default function Campaigns() {
   };
 
   const filteredData = uploadedData.filter(item => {
-    if (searchTerm && !item.product_name?.toLowerCase().includes(searchTerm.toLowerCase())) return false;
+    if (searchTerm) {
+      const q = searchTerm.toLowerCase();
+      const alanlar = [item.product_name, item.barcode, item.stock_code, item.product_code].map((x) => String(x || '').toLowerCase());
+      if (!alanlar.some((x) => x.includes(q))) return false;
+    }
     if (filterCategory) { const mp = getMatchedProduct(item); if ((mp?.category_name || item.category) !== filterCategory) return false; }
     return true;
   });
