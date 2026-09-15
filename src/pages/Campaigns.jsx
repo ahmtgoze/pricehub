@@ -836,46 +836,36 @@ export default function Campaigns() {
   };
 
   const handleSmartAutoSelect = () => {
-    let selectedCount = 0, skipNoProduct = 0, skipNoCommission = 0, skipBelow = 0, baremliSecim = 0;
-    let baremeCekilen = 0;
-    const updated = uploadedData.map(item => {
-      // Zaten secili urun: secimi korunur ama barem onerisi varsa (fiyati
-      // biraz dusurmek kar ORANINI artiriyorsa) o fiyata cekilir. Onceden
-      // secili urunlere hic dokunulmuyordu; kayittan gelen ya da daha once
-      // max fiyattan secilmis urunlerde oneri hic uygulanmiyordu
-      // (kullanici, 15 Eylul 2026: "barem onerilerini secmesi gerekmiyor muydu").
-      if (item.selected_type === 'campaign') {
-        const mevcutFiyat = item.campaign_price || item.max_price;
-        const oneri = baremOnerisiHesapla(item, mevcutFiyat);
-        if (oneri) { baremeCekilen++; return { ...item, campaign_price: oneri.fiyat }; }
-        return item;
-      }
+    // HER ZAMAN BASTAN (kullanici, 15 Eylul 2026): secili urun de yeniden
+    // degerlendirilir; zincirli kar tabanini tutmuyorsa secimi kalkar.
+    // Onceden secili urune dokunulmuyordu; eski (zincirsiz) secimler kaliyordu.
+    let selectedCount = 0, skipNoProduct = 0, skipNoCommission = 0, skipBelow = 0, baremliSecim = 0, kaldirilan = 0;
+    const updated = uploadedData.map((eski) => {
+      const item = eski.selected_type === 'campaign' ? secimiKaldir(eski) : eski;
+      const onceSecili = eski.selected_type === 'campaign';
+      const birak = () => { if (onceSecili) kaldirilan++; return item; };
       const matched = getMatchedProduct(item);
-      if (!matched) { skipNoProduct++; return item; }
+      if (!matched) { skipNoProduct++; return birak(); }
       const commRec = getCommissionRecord(item);
-      if (!commRec) { skipNoCommission++; return item; }
+      if (!commRec) { skipNoCommission++; return birak(); }
       let price = varsayilanFiyat(item);
-      if (!price || price <= 0) return item;
-      // Barem onerisi: max fiyat desi tarifesine dusuyor ama biraz asagisi
-      // barem tavanina giriyorsa ve kar orani artiyorsa o fiyat secilir
-      // (Barem Onerisi sutunuyla ayni hesap). Kullanici karari (15 Eylul
-      // 2026): "oneri cikiyorsa daha karli oldugu icin cikiyordur, ONCE o
-      // secilmeli" — hedef kar orani tutmasa bile secilir; hedef yalnizca
-      // onerisiz urunlerde max fiyat icin bakilir.
+      if (!price || price <= 0) return birak();
+      // Barem onerisi ONCE (kullanici karari): oneri varsa hedefe bakilmadan
+      // o fiyattan secilir.
       const oneri = baremOnerisiHesapla(item, price);
       if (oneri) { baremliSecim++; selectedCount++; return { ...item, selected_type: 'campaign', campaign_price: oneri.fiyat }; }
-      if (isBelowFloor(item, price)) { skipBelow++; return item; }
+      if (isBelowFloor(item, price)) { skipBelow++; return birak(); }
       selectedCount++;
       return { ...item, selected_type: 'campaign', campaign_price: price };
     });
     setUploadedData(updated);
     const parts = [];
-    if (selectedCount > 0) parts.push(`✅ ${selectedCount} ürün seçildi (max fiyattan${baremliSecim > 0 ? `, ${baremliSecim}'i barem önerisiyle` : ''})`);
-    if (baremeCekilen > 0) parts.push(`📦 ${baremeCekilen} seçili ürün barem önerisine çekildi`);
+    if (selectedCount > 0) parts.push(`✅ ${selectedCount} ürün seçildi${baremliSecim > 0 ? ` (${baremliSecim}'i barem önerisiyle)` : ''}`);
+    if (kaldirilan > 0) parts.push(`↩️ ${kaldirilan} seçili ürün bırakıldı (diğer promosyonlarla hedef tutmuyor)`);
     if (skipNoProduct > 0) parts.push(`⚠️ ${skipNoProduct} sistem ürünüyle eşleşmedi`);
     if (skipNoCommission > 0) parts.push(`⚠️ ${skipNoCommission} komisyon/kâr tabanı yok`);
     if (skipBelow > 0) parts.push(`🔴 ${skipBelow} kâr tabanının altında`);
-    if (selectedCount === 0 && baremeCekilen === 0) toast.warning(parts.join(' • ') || 'Uygun ürün bulunamadı');
+    if (selectedCount === 0) toast.warning(parts.join(' • ') || 'Uygun ürün bulunamadı');
     else toast.success(parts.join(' • '));
   };
 
