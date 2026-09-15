@@ -22,11 +22,7 @@ import { baremSec, baremTavanFiyatlari, baremTarifesiSec } from '@/lib/baremKura
 import { gecerliMaliyet } from '@/lib/gecerliMaliyet';
 import { sayiyaCevirVeya } from '@/lib/turkceSayi';
 import { tarifeKomisyonu, aktifPencereOzeti } from '@/lib/tarifeKaydiSecimi';
-import {
-  INDIRIM_TURLERI, KAMPANYA_GRUPLARI,
-  kampanyaFiyati, kampanyaFiyatiTersi, musteriFiyati, musteriIndirimi,
-  kampanyaMetni, kaydiKampanyayaCevir, dosyaAdindanKampanya,
-} from '@/lib/trendyolKampanyaIndirimi';
+import { INDIRIM_TURLERI, KAMPANYA_GRUPLARI, kampanyaFiyati, kampanyaFiyatiTersi, musteriFiyati, musteriIndirimi, kampanyaMetni, kaydiKampanyayaCevir, dosyaAdindanKampanya, plusZincirliFiyat } from '@/lib/trendyolKampanyaIndirimi';
 
 const Campaign = db.entities.Campaign;
 // DIKKAT: 5 Eyl 2026'ya kadar bu entity TABLE_MAP'te yoktu; try/catch icindeki
@@ -506,12 +502,42 @@ export default function Campaigns() {
    */
   // Acik kampanyanin fiyat modeli (tur, oran, esik, karsilama, fiyat kurali)
   const aktifKampanya = managingCampaign ? kaydiKampanyayaCevir(managingCampaign) : null;
+  const plusKampanyasiMi = managingCampaign?.campaign_type === 'trendyol_plus';
+
+  // PLUS KAMPANYASI GENEL KAMPANYANIN USTUNE INER (kullanici teyidi 15 Eylul
+  // 2026, Trendyol ekrani). Urun bugun suren bir Genel kampanyada secili ve
+  // kayitliysa, o kampanyanin musteri indirimi once dusulur, Plus %5 kalan
+  // fiyata iner. Ayni siradaki birden fazla Genel kampanyadan EN YUKSEK
+  // indirim gecerli (Satici Bilgi Merkezi). Donus: { kampanya, kayit, genel, zincir }
+  const bugunMetni = (() => { const d = new Date(); const p = (n) => String(n).padStart(2, '0'); return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`; })();
+  const genelKampanyaEtkisi = (item) => {
+    if (!plusKampanyasiMi || !aktifKampanya) return null;
+    const surenler = campaigns.filter((c) =>
+      c.campaign_type !== 'trendyol_plus' && c.is_active !== false &&
+      String(c.start_date || '').slice(0, 10) <= bugunMetni && String(c.end_date || '').slice(0, 10) >= bugunMetni
+    );
+    if (surenler.length === 0) return null;
+    let enIyi = null;
+    for (const c of surenler) {
+      const kayit = savedCampaignProducts.find((cp) =>
+        cp.campaign_id === c.id && cp.selected_type === 'campaign' && Number(cp.campaign_price) > 0 &&
+        ((item.barcode && String(cp.barcode) === String(item.barcode)) || (item.stock_code && String(cp.stock_code) === String(item.stock_code)))
+      );
+      if (!kayit) continue;
+      const genel = kaydiKampanyayaCevir(c);
+      const zincir = plusZincirliFiyat(kayit.campaign_price, genel, aktifKampanya);
+      if (!zincir) continue;
+      if (!enIyi || zincir.genelIndirim > enIyi.zincir.genelIndirim) enIyi = { kampanya: c, kayit, genel, zincir };
+    }
+    return enIyi;
+  };
   const etkinFiyatIcinKampanyaFiyati = (hedefEtkin) =>
     (aktifKampanya ? kampanyaFiyatiTersi(hedefEtkin, aktifKampanya) : 0);
 
-  const calculateProfit = (campaignPrice, item, kampanya = aktifKampanya) => {
+  const calculateProfit = (campaignPrice, item, kampanya = aktifKampanya, zincir = null) => {
     try {
-      const effPrice = kampanya ? kampanyaFiyati(campaignPrice, kampanya) : 0;
+      // zincir: Plus'ta Genel kampanya ustune hesap (bkz. genelKampanyaEtkisi)
+      const effPrice = zincir?.saticiNet ?? (kampanya ? kampanyaFiyati(campaignPrice, kampanya) : 0);
       if (!effPrice || effPrice <= 0) return { profit: 0, profitRate: 0, breakdown: null };
       const matchedProduct = getMatchedProduct(item);
       if (!matchedProduct) return { profit: 0, profitRate: 0, breakdown: null };
@@ -527,7 +553,7 @@ export default function Campaigns() {
       // fiyata gore bulunur. Karsilama yoksa ikisi aynidir.
       const komisyonaEsasFiyat = effPrice;
       const commissionRate = getProductCommissionRate(item, komisyonaEsasFiyat);
-      const musteriFiyat = musteriFiyati(campaignPrice, kampanya);
+      const musteriFiyat = zincir?.musteriFiyat ?? musteriFiyati(campaignPrice, kampanya);
 
       const platformShippingRates = shippingRates.filter(r =>
         r.is_active !== false && (r.platform_id === platform.id || r.platform_type === platform.platform_type)
@@ -615,7 +641,14 @@ export default function Campaigns() {
     const tRate = toNum(commRec.discounted_target_profit_rate);
     const tAmt = toNum(commRec.discounted_target_profit_amount);
     const mAmt = toNum(commRec.discounted_minimum_profit_amount);
-    const { profit, profitRate } = calculateProfit(campaignPrice, item);
+    let { profit, profitRate } = calculateProfit(campaignPrice, item);
+    // Plus'ta Genel kampanya ustune hesap daha dusukse karar ona gore
+    // (kullanici, 15 Eylul 2026: "karar kampanya surerken dusuk olana gore").
+    const etki = genelKampanyaEtkisi(item);
+    if (etki) {
+      const z = calculateProfit(campaignPrice, item, aktifKampanya, etki.zincir);
+      if (z.breakdown && z.profit < profit) { profit = z.profit; profitRate = z.profitRate; }
+    }
     if (mAmt != null && mAmt > 0 && profit < mAmt) return true;
     if (tRate != null && tRate > 0 && profitRate < tRate) return true;
     if (tAmt != null && tAmt > 0 && profit < tAmt) return true;
@@ -1184,6 +1217,21 @@ export default function Campaigns() {
                                       </div>
                                       <Button size="sm" variant="ghost" className="h-5 w-5 p-0" onClick={() => openDetailModal(item)}><Info className="h-3 w-3" /></Button>
                                     </div>
+                                    {(() => {
+                                      // Plus: urun suren bir Genel kampanyada seciliyse Plus %5 onun
+                                      // ustune iner; gercek (dusuk) kar ayrica gosterilir.
+                                      const etki = genelKampanyaEtkisi(item);
+                                      if (!etki) return null;
+                                      const z = calculateProfit(item.campaign_price, item, aktifKampanya, etki.zincir);
+                                      if (!z.breakdown) return null;
+                                      return (
+                                        <div className="mt-1 rounded-md border border-amber-200 dark:border-amber-900/50 bg-amber-50 dark:bg-amber-950/30 px-2 py-1 text-[10px] leading-tight">
+                                          <div className="font-medium text-amber-800 dark:text-amber-300">Kampanya üstüne: {kampanyaMetni(etki.genel)}</div>
+                                          <div className="text-muted-foreground">müşteri öder ₺{etki.zincir.musteriFiyat.toFixed(2)} · satıcıya ₺{etki.zincir.saticiNet.toFixed(2)}</div>
+                                          <div className={`font-semibold ${z.profit > 0 ? 'text-green-700' : 'text-red-600'}`}>{z.profit > 0 ? '+' : ''}₺{z.profit.toFixed(2)} (%{z.profitRate.toFixed(1)})</div>
+                                        </div>
+                                      );
+                                    })()}
                                     <Button size="sm" variant={isSelected ? 'default' : 'outline'} onClick={() => handleSelect(realIndex)} className="w-full mt-2 h-7 text-xs">
                                       {isSelected ? 'Seçili' : 'Seç'}
                                     </Button>

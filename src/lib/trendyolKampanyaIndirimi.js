@@ -142,6 +142,38 @@ export function kampanyaFiyati(fiyat, kampanya) {
 }
 
 /**
+ * PLUS KAMPANYASI GENEL KAMPANYANIN USTUNE INER (Satici Bilgi Merkezi,
+ * "Indirimlerin Uygulanma Sirasi": Genel kampanya sira 2, Plus'a ozel
+ * sira 2.5). Kullanici teyidi 15 Eylul 2026 (Trendyol ekrani: liste
+ * 1.875,49, musterinin gordugu 1.637,02; Plus %5 ikincisine iner).
+ *
+ * @param genelFiyat  Genel kampanyaya yazilan fiyat (onaylaninca liste fiyati olur)
+ * @param genel       kaydiKampanyayaCevir(genel kampanya)  — karsilama dahil
+ * @param plus        kaydiKampanyayaCevir(plus kampanyasi) — net_percent
+ * @returns null | { musteriFiyat, saticiNet, genelIndirim, plusIndirim, saticiPayi }
+ *   musteriFiyat  Plus musterisinin odedigi
+ *   saticiNet     saticiya kalan (komisyona esas fiyat): liste − saticinin
+ *                 karsiladigi Genel payi − Plus indiriminin satici payi
+ */
+export function plusZincirliFiyat(genelFiyat, genel, plus) {
+  const f = sayi(genelFiyat);
+  if (f === null || f <= 0) return null;
+  const pay = (k) => Math.min(1, Math.max(0, (sayi(k?.karsilama) ?? 0) / 100));
+  const genelIndirim = musteriIndirimi(f, genel);
+  const genelSaticiPayi = kurusa(genelIndirim * (1 - pay(genel)));
+  const araFiyat = kurusa(Math.max(0, f - genelIndirim));
+  const plusIndirim = musteriIndirimi(araFiyat, plus);
+  const plusSaticiPayi = kurusa(plusIndirim * (1 - pay(plus)));
+  return {
+    musteriFiyat: kurusa(Math.max(0, araFiyat - plusIndirim)),
+    saticiNet: kurusa(Math.max(0, f - genelSaticiPayi - plusSaticiPayi)),
+    genelIndirim,
+    plusIndirim,
+    saticiPayi: kurusa(genelSaticiPayi + plusSaticiPayi),
+  };
+}
+
+/**
  * kampanyaFiyati'nin tersi: hedeflenen SATICI fiyatini veren kampanya
  * fiyati. Barem onerisi (etkin fiyati barem esigine cekmek) icin gerekli.
  */

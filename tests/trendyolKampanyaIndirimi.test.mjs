@@ -1,4 +1,4 @@
-import {
+import { plusZincirliFiyat,
   musteriIndirimi, musteriFiyati, kampanyaFiyati, kampanyaFiyatiTersi, sepetPayi,
   dosyaAdindanKampanya, kampanyaMetni, kaydiKampanyayaCevir,
   INDIRIM_TURLERI, KAMPANYA_GRUPLARI,
@@ -162,6 +162,25 @@ console.log('\n=== SABIT LISTELER ===');
   esit('5 indirim turu', INDIRIM_TURLERI.map((t) => t.value), ['net_percent', 'cart_percent', 'cart_tl', 'buy_x_pay_y', 'qty_percent']);
   esit('uc grup: genel, plus, mikro ihracat', KAMPANYA_GRUPLARI.map((g) => g.value), ['all_countries', 'trendyol_plus', 'mikro_ihracat']);
   esit('okul donemi ayri grup degil', KAMPANYA_GRUPLARI.some((g) => g.value === 'ozel_donem'), false);
+}
+
+
+console.log('\n=== PLUS ZINCIRLI FIYAT (Genel kampanya ustune Plus %5) ===');
+{
+  const genel = { tur: 'cart_tl', tutar: 100, esik: 1000, karsilama: 35, oran: 0 };
+  const plus = { tur: 'net_percent', oran: 5, karsilama: 0, tutar: 0 };
+  // CZV-1825-1000: Genel'e 1840,86 yazildi; sepet tam esikte urun esigin ustunde -> 100 TL indirim
+  const z = plusZincirliFiyat(1840.86, genel, plus);
+  esit('genel indirim 100', z.genelIndirim, 100);
+  esit('plus indirim %5 x 1740,86', z.plusIndirim, 87.04);
+  esit('musteri oder', z.musteriFiyat, 1653.82);
+  esit('saticiya kalan: 1840,86 - 65 (100 x %65) - 87,04', z.saticiNet, 1688.82);
+  esit('satici payi toplam', z.saticiPayi, 152.04);
+  esit('genel yoksa yalniz plus', plusZincirliFiyat(400, null, plus), { musteriFiyat: 380, saticiNet: 380, genelIndirim: 0, plusIndirim: 20, saticiPayi: 20 });
+  esit('fiyat yok -> null', plusZincirliFiyat(0, genel, plus), null);
+  // 400 TL, 2000'e 150 %30 karsilamali: musteri 370, satici 379; Plus %5 -> 351,50 / 360,50
+  const z2 = plusZincirliFiyat(400, { tur: 'cart_tl', tutar: 150, esik: 2000, karsilama: 30, oran: 0 }, plus);
+  esit('ornek 400 TL', [z2.musteriFiyat, z2.saticiNet], [351.5, 360.5]);
 }
 
 console.log(`\nGECEN: ${gecen}   KALAN: ${kalan}`);
