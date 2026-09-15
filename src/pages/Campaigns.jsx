@@ -988,8 +988,11 @@ export default function Campaigns() {
     });
   };
 
-  const handleSave = async () => {
-    const selectedItems = uploadedData.filter(item => item.selected_type === 'campaign');
+  // veri: Plus otomatik yenilemesi guncel listeyi dogrudan verir (state
+  // henuz yazilmamis olabilir). 15 Eylul: bu parametre bir geri almada
+  // kaybolmustu; otomatik secim kaydedilmiyor, 'en az bir urun secin' cikiyordu.
+  const handleSave = async (veri = uploadedData) => {
+    const selectedItems = veri.filter(item => item.selected_type === 'campaign');
     if (selectedItems.length === 0) { toast.error('Lütfen en az bir ürün seçin'); return; }
     const cols = ['campaign_id','platform_account','barcode','product_name','product_code','category','brand','color','size','stock_code','current_stock','current_sale_price','max_price','campaign_price','commission_tariff','listing_id','selected_type','calculated_commission','calculated_profit','calculated_profit_rate','matched_product_id'];
     const clean = (item) => {
@@ -1002,13 +1005,13 @@ export default function Campaigns() {
       return o;
     };
     try {
-      const all = uploadedData.filter(i => i.id);
+      const all = veri.filter(i => i.id);
       for (let i = 0; i < all.length; i += 30) {
         const batch = all.slice(i, i + 30);
         await Promise.all(batch.map(item => CampaignProduct.update(item.id, clean(item))));
         if (i + 30 < all.length) await new Promise(r => setTimeout(r, 150));
       }
-      const news = uploadedData.filter(i => !i.id && i.selected_type === 'campaign');
+      const news = veri.filter(i => !i.id && i.selected_type === 'campaign');
       if (news.length > 0) await CampaignProduct.bulkCreate(news.map(clean));
       toast.success(`${selectedItems.length} ürün kaydedildi`);
       queryClient.invalidateQueries({ queryKey: ['campaignProducts'] });
@@ -1258,7 +1261,7 @@ export default function Campaigns() {
                     <Button variant="outline" onClick={handleDeleteExcel} className="text-red-600 dark:text-red-400 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/30">
                       <Trash2 className="mr-2 h-4 w-4" />Excel'i Sil
                     </Button>
-                    <Button variant="outline" onClick={handleSave}>
+                    <Button variant="outline" onClick={() => handleSave()}>
                       <Check className="mr-2 h-4 w-4" />Seçimleri Kaydet ({selectedCount})
                     </Button>
                     <Button variant="outline" onClick={secimleriKaldirVeKaydet}>
