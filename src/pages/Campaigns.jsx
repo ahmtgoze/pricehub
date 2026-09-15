@@ -387,6 +387,43 @@ export default function Campaigns() {
    * musterinin gordugu indirim, Trendyol'un karsiladigi kisim, saticinin
    * payi ve kalan (satici net) — kar bu son rakamdan hesaplanir.
    */
+  /**
+   * Plus karti "?" aciklamasi: fiyat nereden geldi, adim adim (kullanici,
+   * 15 Eylul 2026: "musteri oder'i baz al, nasil hesaplandi'da fiyatin
+   * nereden geldigini basitce anlat: avantajli, komisyon tarifesi,
+   * kampanyalar…"). Sonra "i" dugmesi kar modalini acar.
+   */
+  const plusAciklamasi = (item, etki) => {
+    const tl = (n) => `₺${Number(n || 0).toFixed(2)}`;
+    const satirlar = [];
+    const adaylar = [...(etki.adaylar || [])].sort((a, b) => a.fiyat - b.fiyat);
+    satirlar.push(`Bu ürünün bugün geçerli fiyatları: ${adaylar.map((a) => `${a.kaynak} ${tl(a.fiyat)}`).join(' · ')}. En düşüğü taban alınır: ${etki.taban.kaynak} ${tl(etki.taban.fiyat)}.`);
+    if (etki.plusTarife) {
+      satirlar.push(`Plus Komisyon Tarifesi'nde Plus'a özel fiyat seçili (${tl(etki.plusTarife.fiyat)}). Trendyol kuralı: Plus'a özel fiyat varsa Plus %5 uygulanmaz; Plus müşterisi bu fiyatı öder.`);
+      satirlar.push(`Sana kalan ${tl(etki.zincir.saticiNet)}; komisyon tarifenin teklifi${etki.plusTarife.komisyon ? ` (%${etki.plusTarife.komisyon})` : ''}. Kâr için sağdaki "i" düğmesi.`);
+      return satirlar;
+    }
+    const k = etki.genel;
+    if (k) {
+      const kars = Math.min(1, Math.max(0, (Number(k.karsilama) || 0) / 100));
+      const trendyol = Math.round(etki.zincir.genelIndirim * kars * 100) / 100;
+      const satici = Math.round((etki.zincir.genelIndirim - trendyol) * 100) / 100;
+      const esik = Number(k.esik) || 0;
+      const nasil = k.tur === 'cart_tl'
+        ? (esik > 0 && etki.taban.fiyat < esik
+            ? `ürün eşiğin (${tl(esik)}) altında, indirim fiyat oranında dağılır: ${tl(k.tutar)} × ${tl(etki.taban.fiyat)} / ${tl(esik)}`
+            : `ürün tek başına eşiği geçiyor, indirimin tamamı bu üründe`)
+        : `%${k.oran}`;
+      satirlar.push(`Sepette en yüksek indirimi veren kampanya: ${kampanyaMetni(k)} → ${nasil} = ${tl(etki.zincir.genelIndirim)}. Trendyol %${Number(k.karsilama) || 0} karşılar (${tl(trendyol)}), senin payın ${tl(satici)}.`);
+      satirlar.push(`Müşterinin sepette gördüğü fiyat: ${tl(etki.taban.fiyat)} − ${tl(etki.zincir.genelIndirim)} = ${tl(etki.taban.fiyat - etki.zincir.genelIndirim)}.`);
+    } else {
+      satirlar.push('Bugün süren bir sepet kampanyasında seçili değil; sepet indirimi yok.');
+    }
+    satirlar.push(`Plus %${Number(aktifKampanya?.oran) || 0}, sipariş anında bu tutara iner: ${tl(etki.zincir.plusIndirim)}, tamamı senden → Plus müşterisi öder ${tl(etki.zincir.musteriFiyat)}.`);
+    satirlar.push(`Sana kalan: ${tl(etki.taban.fiyat)} − ${tl(etki.zincir.saticiPayi)} = ${tl(etki.zincir.saticiNet)}. Komisyon ve tarife kademesi bu tutardan; kâr için sağdaki "i" düğmesi.`);
+    return satirlar;
+  };
+
   const indirimAciklamasi = (girilen) => {
     const f = Number(girilen) || 0;
     if (!aktifKampanya || f <= 0) return null;
@@ -602,11 +639,11 @@ export default function Campaigns() {
     }
     if (plusTarife && plusTarife.fiyat < zincir.musteriFiyat) {
       return {
-        taban, kampanya: null, genel: null, plusTarife,
+        taban, adaylar, kampanya: null, genel: null, plusTarife,
         zincir: { musteriFiyat: plusTarife.fiyat, saticiNet: plusTarife.fiyat, genelIndirim: 0, plusIndirim: 0, saticiPayi: 0, komisyon: plusTarife.komisyon ?? undefined },
       };
     }
-    return { taban, kampanya: enIyi?.kampanya || null, genel: enIyi?.genel || null, zincir };
+    return { taban, adaylar, kampanya: enIyi?.kampanya || null, genel: enIyi?.genel || null, zincir };
   };
   const etkinFiyatIcinKampanyaFiyati = (hedefEtkin) =>
     (aktifKampanya ? kampanyaFiyatiTersi(hedefEtkin, aktifKampanya) : 0);
@@ -1355,9 +1392,9 @@ export default function Campaigns() {
                                           </PopoverTrigger>
                                           <PopoverContent align="end" className="w-80 text-xs space-y-2">
                                             <div className="font-semibold text-foreground">İndirim uygulanmış fiyat nasıl bulundu?</div>
-                                            <div className="text-muted-foreground">Girilen fiyat: ₺{Number(item.campaign_price || 0).toFixed(2)}</div>
+                                            <div className="text-muted-foreground">{etki ? `Plus'a girilen (liste) fiyat: ₺${Number(item.campaign_price || 0).toFixed(2)}` : `Girilen fiyat: ₺${Number(item.campaign_price || 0).toFixed(2)}`}</div>
                                             <ol className="list-decimal pl-4 space-y-1 text-foreground">
-                                              {(indirimAciklamasi(item.campaign_price) || []).map((satir, i) => <li key={i}>{satir}</li>)}
+                                              {(etki ? plusAciklamasi(item, etki) : (indirimAciklamasi(item.campaign_price) || [])).map((satir, i) => <li key={i}>{satir}</li>)}
                                             </ol>
                                           </PopoverContent>
                                         </Popover>
@@ -1365,8 +1402,8 @@ export default function Campaigns() {
                                     )}
                                     <div className="text-xs text-muted-foreground text-center">
                                       <div className="font-bold text-sm text-foreground">₺{Number(calc.effPrice || 0).toFixed(2)}</div>
-                                      {Number(calc.musteriFiyat) > 0 && Math.abs(Number(calc.musteriFiyat) - Number(calc.effPrice)) > 0.005 && (
-                                        <div className="text-[10px]">müşteri öder ₺{Number(calc.musteriFiyat).toFixed(2)}</div>
+                                      {Number(calc.musteriFiyat) > 0 && (etki || Math.abs(Number(calc.musteriFiyat) - Number(calc.effPrice)) > 0.005) && (
+                                        <div className="text-[10px]">müşteri öder ₺{Number(calc.musteriFiyat).toFixed(2)}{etki ? ` · taban: ${etki.taban.kaynak}` : ''}</div>
                                       )}
                                     </div>
                                     <div className="flex items-center justify-between gap-1">
@@ -1379,12 +1416,6 @@ export default function Campaigns() {
                                       </div>
                                       <Button size="sm" variant="ghost" className="h-5 w-5 p-0" onClick={() => openDetailModal(item)}><Info className="h-3 w-3" /></Button>
                                     </div>
-                                    {etki && zincirli?.breakdown && (
-                                      <div className="mt-1 rounded-md border border-amber-200 dark:border-amber-900/50 bg-amber-50 dark:bg-amber-950/30 px-2 py-1 text-[10px] leading-tight">
-                                        <div className="font-medium text-amber-800 dark:text-amber-300">{etki.plusTarife ? `Plus Tarifesi fiyatı geçerli ₺${etki.plusTarife.fiyat.toFixed(2)} · Plus %5 uygulanmaz${etki.plusTarife.komisyon ? ` · Kom %${etki.plusTarife.komisyon}` : ''}` : `Taban: ${etki.taban.kaynak} ₺${etki.taban.fiyat.toFixed(2)}${etki.genel ? ` · ${kampanyaMetni(etki.genel)}` : ''}`}</div>
-                                        <div className="text-muted-foreground">Sadece Plus %5 olsaydı: ₺{Number(sadePlus.effPrice || 0).toFixed(2)} · {sadePlus.profit > 0 ? '+' : ''}₺{sadePlus.profit.toFixed(2)} (%{sadePlus.profitRate.toFixed(1)})</div>
-                                      </div>
-                                    )}
                                     <Button size="sm" variant={isSelected ? 'default' : 'outline'} onClick={() => handleSelect(realIndex)} className="w-full mt-2 h-7 text-xs">
                                       {isSelected ? 'Seçili' : 'Seç'}
                                     </Button>
