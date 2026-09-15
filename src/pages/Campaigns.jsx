@@ -832,23 +832,11 @@ export default function Campaigns() {
       const matched = getMatchedProduct(item);
       if (!matched) { skipNoProduct++; return birak(); }
       const commRec = getCommissionRecord(item);
-<<<<<<< HEAD
       if (!commRec) { skipNoCommission++; return birak(); }
       let price = varsayilanFiyat(item);
       if (!price || price <= 0) return birak();
       // Barem onerisi ONCE (kullanici karari): oneri varsa hedefe bakilmadan
       // o fiyattan secilir.
-=======
-      if (!commRec) { skipNoCommission++; return item; }
-      let price = item.max_price || item.campaign_price;
-      if (!price || price <= 0) return item;
-      // Barem onerisi: max fiyat desi tarifesine dusuyor ama biraz asagisi
-      // barem tavanina giriyorsa ve kar orani artiyorsa o fiyat secilir
-      // (Barem Onerisi sutunuyla ayni hesap). Kullanici karari (15 Eylul
-      // 2026): "oneri cikiyorsa daha karli oldugu icin cikiyordur, ONCE o
-      // secilmeli" — hedef kar orani tutmasa bile secilir; hedef yalnizca
-      // onerisiz urunlerde max fiyat icin bakilir.
->>>>>>> parent of 620971b (Kampanya/Plus varsayilan girilen fiyat = diger sayfalardaki en dusuk secili fiyat (maks. yerine); yazilan fiyat satis fiyati oluyor)
       const oneri = baremOnerisiHesapla(item, price);
       if (oneri) { baremliSecim++; selectedCount++; return { ...item, selected_type: 'campaign', campaign_price: oneri.fiyat }; }
       if (isBelowFloor(item, price)) { skipBelow++; return birak(); }
