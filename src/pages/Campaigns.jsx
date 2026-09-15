@@ -1233,7 +1233,14 @@ export default function Campaigns() {
                           const realIndex = uploadedData.indexOf(item);
                           const matched = getMatchedProduct(item);
                           const systemPrice = getSystemPrice(item);
-                          const calc = calculateProfit(item.campaign_price, item);
+                          // Plus: urun baska promosyon/kampanyada seciliyse ANA rakamlar
+                          // zincirli (en dip fiyat) hesaptan gelir; "sadece Plus %5" hali
+                          // kucuk bilgi satiri olur (kullanici, 15 Eylul 2026: "gercek
+                          // karlilik bizim hesapladigimizdan hesaplanmali").
+                          const sadePlus = calculateProfit(item.campaign_price, item);
+                          const etki = genelKampanyaEtkisi(item);
+                          const zincirli = etki ? calculateProfit(item.campaign_price, item, aktifKampanya, etki.zincir) : null;
+                          const calc = zincirli?.breakdown ? zincirli : sadePlus;
                           const below = item.campaign_price > 0 ? isBelowFloor(item, item.campaign_price) : false;
                           const overMax = item.max_price > 0 && parseFloat(item.campaign_price) > item.max_price;
                           const isSelected = item.selected_type === 'campaign';
@@ -1303,21 +1310,12 @@ export default function Campaigns() {
                                       </div>
                                       <Button size="sm" variant="ghost" className="h-5 w-5 p-0" onClick={() => openDetailModal(item)}><Info className="h-3 w-3" /></Button>
                                     </div>
-                                    {(() => {
-                                      // Plus: urun suren bir Genel kampanyada seciliyse Plus %5 onun
-                                      // ustune iner; gercek (dusuk) kar ayrica gosterilir.
-                                      const etki = genelKampanyaEtkisi(item);
-                                      if (!etki) return null;
-                                      const z = calculateProfit(item.campaign_price, item, aktifKampanya, etki.zincir);
-                                      if (!z.breakdown) return null;
-                                      return (
-                                        <div className="mt-1 rounded-md border border-amber-200 dark:border-amber-900/50 bg-amber-50 dark:bg-amber-950/30 px-2 py-1 text-[10px] leading-tight">
-                                          <div className="font-medium text-amber-800 dark:text-amber-300">{etki.plusTarife ? `Plus Tarifesi fiyatı geçerli ₺${etki.plusTarife.fiyat.toFixed(2)} · Plus %5 uygulanmaz${etki.plusTarife.komisyon ? ` · Kom %${etki.plusTarife.komisyon}` : ''}` : `Taban: ${etki.taban.kaynak} ₺${etki.taban.fiyat.toFixed(2)}${etki.genel ? ` · ${kampanyaMetni(etki.genel)}` : ''}`}</div>
-                                          <div className="text-muted-foreground">müşteri öder ₺{etki.zincir.musteriFiyat.toFixed(2)} · satıcıya ₺{etki.zincir.saticiNet.toFixed(2)}</div>
-                                          <div className={`font-semibold ${z.profit > 0 ? 'text-green-700' : 'text-red-600'}`}>{z.profit > 0 ? '+' : ''}₺{z.profit.toFixed(2)} (%{z.profitRate.toFixed(1)})</div>
-                                        </div>
-                                      );
-                                    })()}
+                                    {etki && zincirli?.breakdown && (
+                                      <div className="mt-1 rounded-md border border-amber-200 dark:border-amber-900/50 bg-amber-50 dark:bg-amber-950/30 px-2 py-1 text-[10px] leading-tight">
+                                        <div className="font-medium text-amber-800 dark:text-amber-300">{etki.plusTarife ? `Plus Tarifesi fiyatı geçerli ₺${etki.plusTarife.fiyat.toFixed(2)} · Plus %5 uygulanmaz${etki.plusTarife.komisyon ? ` · Kom %${etki.plusTarife.komisyon}` : ''}` : `Taban: ${etki.taban.kaynak} ₺${etki.taban.fiyat.toFixed(2)}${etki.genel ? ` · ${kampanyaMetni(etki.genel)}` : ''}`}</div>
+                                        <div className="text-muted-foreground">Sadece Plus %5 olsaydı: ₺{Number(sadePlus.effPrice || 0).toFixed(2)} · {sadePlus.profit > 0 ? '+' : ''}₺{sadePlus.profit.toFixed(2)} (%{sadePlus.profitRate.toFixed(1)})</div>
+                                      </div>
+                                    )}
                                     <Button size="sm" variant={isSelected ? 'default' : 'outline'} onClick={() => handleSelect(realIndex)} className="w-full mt-2 h-7 text-xs">
                                       {isSelected ? 'Seçili' : 'Seç'}
                                     </Button>
