@@ -396,7 +396,11 @@ export default function Campaigns() {
   const plusAciklamasi = (item, etki) => {
     const tl = (n) => `₺${Number(n || 0).toFixed(2)}`;
     const satirlar = [];
-    const adaylar = [...(etki.adaylar || [])].sort((a, b) => a.fiyat - b.fiyat);
+    // Ayni kaynaktan birden fazla satir (flas 24s/3s, iki tarife kaydi…) tek
+    // satirda, en dusuk fiyatiyla gosterilir.
+    const kaynakMin = new Map();
+    for (const a of etki.adaylar || []) { if (!kaynakMin.has(a.kaynak) || a.fiyat < kaynakMin.get(a.kaynak)) kaynakMin.set(a.kaynak, a.fiyat); }
+    const adaylar = [...kaynakMin].map(([kaynak, fiyat]) => ({ kaynak, fiyat })).sort((a, b) => a.fiyat - b.fiyat);
     satirlar.push(`Bu ürünün bugün geçerli fiyatları: ${adaylar.map((a) => `${a.kaynak} ${tl(a.fiyat)}`).join(' · ')}. En düşüğü taban alınır: ${etki.taban.kaynak} ${tl(etki.taban.fiyat)}.`);
     if (etki.plusTarife) {
       satirlar.push(`Plus Komisyon Tarifesi'nde Plus'a özel fiyat seçili (${tl(etki.plusTarife.fiyat)}). Trendyol kuralı: Plus'a özel fiyat varsa Plus %5 uygulanmaz; Plus müşterisi bu fiyatı öder.`);
