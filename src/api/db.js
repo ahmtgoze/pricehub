@@ -226,7 +226,13 @@ const functions = {
 const integrations = {
   Core: {
     async UploadFile({ file }) {
-      const fileName = `${Date.now()}_${file.name}`;
+      // Depo anahtari ASCII olmali: Turkce harfli dosya adi ("Avantajlı_Teklifler…")
+      // "Invalid key" hatasi veriyordu (15 Eyl 2026, HB Avantajli Teklifler).
+      const temizAd = String(file.name || 'dosya.xlsx')
+        .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+        .replace(/ı/g, 'i').replace(/İ/g, 'I')
+        .replace(/[^A-Za-z0-9._-]+/g, '_');
+      const fileName = `${Date.now()}_${temizAd}`;
       const { data, error } = await supabase.storage.from('excel-files').upload(fileName, file, { upsert: true });
       if (error) throw new Error(`[db.storage.upload] ${error.message}`);
       // Kova artık private (sahibe özel RLS). Herkese açık URL yerine uzun ömürlü imzalı URL
