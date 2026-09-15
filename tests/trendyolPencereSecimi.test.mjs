@@ -1,6 +1,6 @@
 import { komisyonHaritasi, pencereKomisyonlariniAl, pencereUygula, pencereAdlari, kademeKarsilastir, pencereDegistirilebilir,
          secimiOku, secimVarMi, seciliPencereler, acikSecimiSakla, secimiEkranaAl, pencereyeGec, secimOzeti,
-         pencereGunu, birlesikPencere, birlesikPencereEkle, tekSatirSecimi, tekDosyaOzeti }
+         pencereGunu, birlesikPencere, birlesikPencereEkle, tekSatirSecimi, tekDosyaOzeti, gercekPencereler }
   from '../src/lib/trendyolPencereSecimi.js';
 import { pencereleriBul, tarifeSecimDegeri } from '../src/lib/trendyolTarifePenceresi.js';
 
@@ -256,6 +256,39 @@ console.log('\n=== TEK DOSYA: tekDosyaOzeti ===');
   esit('ozet', tekDosyaOzeti(urunler, P), { toplam: 3, catisanlar: ['D'], '3 Gün': 1, '4 Gün': 1, '7 Gün': 1 });
   esit('bos liste', tekDosyaOzeti([], P), { toplam: 0, catisanlar: [] });
   esit('null', tekDosyaOzeti(null, P), { toplam: 0, catisanlar: [] });
+}
+
+
+console.log('\n=== TEK PENCERELI DOSYA (15 Eylul 2026): "7 Gün" gercek pencere ===');
+{
+  // 298954-15-09-2026-09-27-12.xlsx dosyasinin GERCEK basligi ve ilk satiri.
+  const TEK = {
+    'BARKOD': '8681511336912',
+    '1.Fiyat Alt Limit': 316.42, '2.Fiyat Üst Limiti': 316.41, '2.Fiyat Alt Limit': 287.5,
+    '3.Fiyat Üst Limiti': 287.49, '3.Fiyat Alt Limit': 264.62, '4.Fiyat Üst Limiti': 264.61,
+    'Tarih aralığı (7 Gün)': '15 Eylül 08.00-22 Eylül 07.59',
+    '1.KOMİSYON': 20, '2.KOMİSYON': 14, '3.KOMİSYON': 11.2, '4.KOMİSYON': 8.6,
+    'KOMİSYONA ESAS FİYAT': 563.99, 'Hesaplanan Komisyon (7 Gün)': 0, 'Tarife Seçimi': null,
+  };
+  const P = pencereleriBul(TEK);
+  esit('tek pencere bulunur', P.map((p) => p.ad), ['7 Gün']);
+  esit('tarih araligi', P[0].tarihAraligi, '15 Eylül 08.00-22 Eylül 07.59');
+  esit('komisyonlar', komisyonHaritasi(TEK, P), { '7 Gün': [20, 14, 11.2, 8.6] });
+  esit('birlesik pencere uretilmez (tek)', birlesikPencere(P), null);
+
+  esit('gercek: tek 7 Gün KALIR', gercekPencereler(['7 Gün']), ['7 Gün']);
+  esit('gercek: 3+4 yanindaki 7 atilir', gercekPencereler(['3 Gün', '4 Gün', '7 Gün']), ['3 Gün', '4 Gün']);
+  esit('gercek: 3+4 oldugu gibi', gercekPencereler(['3 Gün', '4 Gün']), ['3 Gün', '4 Gün']);
+  esit('gercek: bos', gercekPencereler([]), []);
+  esit('gercek: 2+5 yaninda 7 de atilir', gercekPencereler(['2 Gün', '5 Gün', '7 Gün']), ['2 Gün', '5 Gün']);
+  esit('gercek: toplam tutmayan kalir', gercekPencereler(['3 Gün', '4 Gün', '8 Gün']), ['3 Gün', '4 Gün', '8 Gün']);
+
+  const u = (secimler) => ({ barcode: 'X', pencere_komisyonlari: { '7 Gün': [20, 14, 11.2, 8.6] }, secimler });
+  const D = gercekPencereler(pencereAdlari(u({})));
+  esit('tek pencereli dosyada secim yazilir', tekSatirSecimi(u({ '7 Gün': { kademe: 'range_2', fiyat: 316.41 } }), D),
+    { pencere: '7 Gün', fiyat: 316.41, catisma: null });
+  esit('ozet toplami 1', tekDosyaOzeti([u({ '7 Gün': { kademe: 'range_2', fiyat: 316.41 } })], D).toplam, 1);
+  esit('Tarife Seçimi degeri', tarifeSecimDegeri('7 Gün'), '7 Günlük Fiyat');
 }
 
 console.log(`\nGECEN: ${gecen}   KALAN: ${kalan}`);

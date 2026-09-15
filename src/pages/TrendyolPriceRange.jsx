@@ -29,7 +29,7 @@ import { kademeFiyati, tarifeUstSiniri, sinirAsanlar } from '@/lib/trendyolTarif
 import { yazilmaliMi, gonderimleriIsle, gonderilenFiyat } from '@/lib/trendyolGonderim';
 import { pencereKomisyonlariniAl,
          komisyonHaritasi, pencereUygula, pencereAdlari, pencereDegistirilebilir, tekSatirSecimi, tekDosyaOzeti,
-         pencereyeGec, acikSecimiSakla, seciliPencereler, secimOzeti } from '@/lib/trendyolPencereSecimi';
+         pencereyeGec, acikSecimiSakla, seciliPencereler, secimOzeti, gercekPencereler } from '@/lib/trendyolPencereSecimi';
 
 const TrendyolPriceRangeEntity = db.entities.TrendyolPriceRange;
 const Product = db.entities.Product;
@@ -823,10 +823,11 @@ export default function TrendyolPriceRange() {
     // hesaplar). Fiyatlar farkliysa satir bos kalir ve kullaniciya soylenir.
     // Acik tarifenin secimi henuz kutusuna yazilmamis olabilir; once katlanir.
     const veri = uploadedData.map((u) => acikSecimiSakla(u, secilenPencere));
-    // Dosyanin gercek pencereleri (3 Gün, 4 Gün). Haritadaki birlesik
-    // "7 Gün" anahtari secilebilir bir pencere DEGIL; disarida tutulur.
-    const dosyaPencereleri = [...new Set(veri.flatMap((u) => pencereAdlari(u)))]
-      .filter((ad) => !/^\s*7\s*g/i.test(String(ad)));
+    // Dosyanin gercek pencereleri. Iki pencereli dosyada (3 Gün, 4 Gün)
+    // birlesik "7 Gün" secilebilir bir pencere DEGIL, disarida tutulur;
+    // TEK pencereli dosyada (15 Eylul 2026'dan itibaren "7 Gün") ise
+    // dosyanin kendi penceresidir, kalir (gercekPencereler).
+    const dosyaPencereleri = gercekPencereler([...new Set(veri.flatMap((u) => pencereAdlari(u)))]);
     const ozet = tekDosyaOzeti(veri, dosyaPencereleri);
     if (ozet.catisanlar.length > 0) {
       toast.error(

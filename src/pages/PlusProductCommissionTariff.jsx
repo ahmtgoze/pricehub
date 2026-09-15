@@ -15,7 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { toast } from 'sonner';
 import * as XLSX from 'xlsx';
 import { plusPencereleriBul, plusPencereHaritasi, plusPencereUygula } from '@/lib/plusTarifePenceresi';
-import { pencereyeGec, acikSecimiSakla, secimOzeti, tekSatirSecimi, tekDosyaOzeti } from '@/lib/trendyolPencereSecimi';
+import { pencereyeGec, acikSecimiSakla, secimOzeti, tekSatirSecimi, tekDosyaOzeti, gercekPencereler } from '@/lib/trendyolPencereSecimi';
 import { kayitlariTeklestir } from '@/lib/kayitTeklestirme';
 import { sayiyaCevirVeya } from '@/lib/turkceSayi';
 import PriceDetailModal from '@/components/modals/PriceDetailModal';
@@ -658,8 +658,9 @@ export default function PlusProductCommissionTariff() {
     // Fiyatlar farkliysa satir bos kalir ve kullaniciya soylenir.
     // Acik tarifenin secimi henuz kutusuna yazilmamis olabilir; once katlanir.
     const veri = uploadedData.map((u) => acikSecimiSakla(u, secilenPencere, 'selected_type'));
-    const dosyaPencereleri = [...new Set(veri.flatMap((u) => Object.keys(u.plus_pencereleri || {})))]
-      .filter((ad) => !/^\s*7\s*g/i.test(String(ad)));
+    // Tek pencereli dosyada "7 Gün" dosyanin kendi penceresidir (bkz.
+    // gercekPencereler); yalnizca 3+4 yaninda duran "7 Gün" atilir.
+    const dosyaPencereleri = gercekPencereler([...new Set(veri.flatMap((u) => Object.keys(u.plus_pencereleri || {})))]);
     const ozet = tekDosyaOzeti(veri, dosyaPencereleri);
     if (ozet.catisanlar.length > 0) {
       toast.error(

@@ -821,6 +821,15 @@ ayrı dosya ve "Excel İndir" açılır menüsü kaldırıldı. Trendyol'un dosy
 | ikisi de, aynı fiyat | fiyat + `7 Günlük Fiyat` (Plus: dosyanın `7 Gün Tarih Aralığı` hücresi) |
 | ikisi de, farklı fiyat | **çatışma**: satır boş kalır, kullanıcıya barkodlarla söylenir |
 
+> **Tek pencereli dosya (15 Eyl 2026 haftası):** Trendyol o hafta dosyayı
+> yalnızca `Tarih aralığı (7 Gün)` + `Hesaplanan Komisyon (7 Gün)` ile,
+> açılır listede yalnız "7 Günlük Fiyat" / "Trendyol Satış Fiyatı" olacak
+> şekilde yayınladı (15 Eylül 08:00 – 22 Eylül 07:59). Sayfa tek pencere
+> gösterir; bu doğru, 3/4 günlük seçim o hafta yoktur. Çıktı kodu "7 Gün"
+> adını her zaman birleşik pencere sanıp atıyordu → "Seçili ürün yok".
+> Düzeltme: `gercekPencereler` yalnızca 3+4'ün yanındaki 7'yi atar, tek
+> başına 7 dosyanın kendi penceresidir (Ürün ve Plus tarifesi sayfaları).
+
 Plus'ta 7 Gün seçildiğinde her iki `Hesaplanan Komisyon (N Gün)` sütunu da
 o pencerenin teklifiyle dolar. Gönderim defteri (aynı fiyatı ikinci kez
 göndermeme) pencere bazlıdır; 7 Gün için 3 ve 4'e de bakılır.

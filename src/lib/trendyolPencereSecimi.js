@@ -265,6 +265,34 @@ export function birlesikPencereEkle(harita, pencereler) {
   return { ...harita, [b.ad]: enYuksek };
 }
 
+/**
+ * Dosyanin GERCEK pencereleri: birlesik (toplam) pencere disarida.
+ *
+ * 15 Eylul 2026 haftasinda Trendyol dosyayi TEK pencereyle yayinladi:
+ * yalnizca "Tarih aralığı (7 Gün)" ve "Hesaplanan Komisyon (7 Gün)";
+ * acilir listede de yalnizca "7 Günlük Fiyat". Sayfalar "7 Gün" adini
+ * her zaman birlesik pencere sanip atiyordu; tek pencereli dosyada
+ * hicbir pencere kalmiyor, "Seçili ürün yok" cikiyordu.
+ *
+ * Kural: bir pencere, gun sayisi DIGERLERININ TOPLAMINA esitse ve en az
+ * iki baska pencere varsa birlesiktir (3+4=7) ve atilir. Tek basina olan
+ * "7 Gün" dosyanin kendi penceresidir, kalir.
+ *
+ * @param adlar pencere adlari, orn. ['3 Gün','4 Gün','7 Gün'] | ['7 Gün']
+ * @returns gercek pencere adlari (sira korunur)
+ */
+export function gercekPencereler(adlar) {
+  const liste = Array.isArray(adlar) ? adlar.filter(Boolean) : [];
+  if (liste.length < 3) return liste;
+  return liste.filter((ad) => {
+    const gun = pencereGunu(ad);
+    if (gun === null) return true;
+    const digerleri = liste.filter((x) => x !== ad).map(pencereGunu);
+    if (digerleri.some((g) => g === null)) return true;
+    return digerleri.reduce((a, b) => a + b, 0) !== gun;
+  });
+}
+
 /* ------------------------------------------------------------------ *
  * TEK DOSYA (kullanici karari, 3 Eylul 2026)
  *
