@@ -651,7 +651,17 @@ export default function TrendyolPriceRange() {
     if (f <= 0) return null;
     const z = zincirKur({ urun: item, kaynaklar: zincirKaynaklari, bugun: zincirBugun(), platform: selectedPlatform, aday: { kaynak: KAYNAK.TARIFE, fiyat: f } });
     if (!z || Math.abs(z.saticiNet - f) < 0.005) return null;
-    const c = calculateProfit(z.saticiNet, z.komisyon ?? komisyon, item);
+    // Komisyon, saticiya kalan tutarin dustugu KADEMEDEN (esas fiyat kurali)
+    const kademeKomisyonu = (fiyat) => {
+      const n = (v) => Number(v) || 0;
+      const k = (i) => (n(item[`commission_${i}`]) > 0 ? n(item[`commission_${i}`]) : null);
+      if (n(item.price_range_1_min) > 0 && fiyat >= n(item.price_range_1_min)) return k(1);
+      if (n(item.price_range_2_min) > 0 && fiyat >= n(item.price_range_2_min)) return k(2);
+      if (n(item.price_range_3_min) > 0 && fiyat >= n(item.price_range_3_min)) return k(3);
+      if (n(item.price_range_4_max) > 0 && fiyat <= n(item.price_range_4_max)) return k(4);
+      return null;
+    };
+    const c = calculateProfit(z.saticiNet, z.komisyon ?? kademeKomisyonu(z.saticiNet) ?? komisyon, item);
     return { z, profit: c.profit || 0, profitRate: c.profitRate || 0 };
   };
   const kotuKar = (item, fiyat, komisyon, calc) => {

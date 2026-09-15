@@ -751,7 +751,7 @@ export default function FlashProducts() {
     if (f <= 0) return null;
     const z = zincirKur({ urun: item, kaynaklar: zincirKaynaklari, bugun: zincirBugun(), platform: selectedPlatform, aday: { kaynak: KAYNAK.FLAS, fiyat: f } });
     if (!z || Math.abs(z.saticiNet - f) < 0.005) return null;
-    const c = calculateProfit(z.saticiNet, z.komisyon ?? komisyon, item);
+    const c = calculateProfit(z.saticiNet, z.komisyon ?? (getCommissionRate(item, z.saticiNet) ?? komisyon), item);
     return { z, profit: c.profit || 0, profitRate: c.profitRate || 0 };
   };
   const kotuKar = (item, fiyat, komisyon, calc) => {
