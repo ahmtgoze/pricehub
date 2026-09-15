@@ -835,10 +835,11 @@ export default function Campaigns() {
       if (!commRec) { skipNoCommission++; return birak(); }
       let price = varsayilanFiyat(item);
       if (!price || price <= 0) return birak();
-      // Barem onerisi ONCE (kullanici karari): oneri varsa hedefe bakilmadan
-      // o fiyattan secilir.
+      // Barem onerisi once denenir ama o da INDIRIMLI HEDEFI (minimum tutar,
+      // oran, tutar; zincirli) tutmali (kullanici, 15 Eylul aksami: "barem de
+      // hedeften dusuk olmamali"). Tutmuyorsa normal fiyat denenir.
       const oneri = baremOnerisiHesapla(item, price);
-      if (oneri) { baremliSecim++; selectedCount++; return { ...item, selected_type: 'campaign', campaign_price: oneri.fiyat }; }
+      if (oneri && !isBelowFloor(item, oneri.fiyat)) { baremliSecim++; selectedCount++; return { ...item, selected_type: 'campaign', campaign_price: oneri.fiyat }; }
       if (isBelowFloor(item, price)) { skipBelow++; return birak(); }
       selectedCount++;
       return { ...item, selected_type: 'campaign', campaign_price: price };

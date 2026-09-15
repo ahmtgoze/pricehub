@@ -525,8 +525,10 @@ export default function HBBasketCampaigns() {
       // artiriyorsa) secili urun de o fiyata cekilir (Kampanyalar ile ayni,
       // kullanici 15 Eylul 2026).
       if (item.selected) {
+        const urunS = getMatchedProduct(item);
+        const hedefS = urunS ? hedefleriCoz(komisyonBul(commissions, hbPlatforms, urunS)) : null;
         const oneri = baremOnerisiHesapla(item, item.campaign_price || item.max_price || item.current_price || 0);
-        if (oneri) { sayac.baremeCekilen++; return { ...item, campaign_price: oneri.fiyat }; }
+        if (oneri && hedefS && hedefTutuyorMu(oneri.profit, oneri.profitRate, hedefS).uygun) { sayac.baremeCekilen++; return { ...item, campaign_price: oneri.fiyat }; }
         sayac.zatenSecili++; return item;
       }
 
@@ -539,14 +541,18 @@ export default function HBBasketCampaigns() {
       // Barem onerisi varsa ONCE o secilir, hedefe bakilmaz (kullanici
       // karari 15 Eylul 2026: "oneri cikiyorsa daha karli oldugu icin
       // cikiyordur"). Hedef yalnizca onerisiz urunlerde kontrol edilir.
-      const ilkOneri = baremOnerisiHesapla(item, fiyat);
-      if (ilkOneri) { sayac.secilen++; sayac.baremli++; return { ...item, campaign_price: ilkOneri.fiyat, selected: true }; }
-
       const hedefler = hedefleriCoz(komisyonBul(commissions, hbPlatforms, urun));
       if (!hedefVarMi(hedefler)) { sayac.hedefsiz++; return { ...item, campaign_price: fiyat }; }
 
       // Sayfadaki ek alt sinirlar
       const ekUygunMu = (kar, oran) => (ekOran <= 0 || oran >= ekOran) && (ekTutar <= 0 || kar >= ekTutar);
+
+      // Barem onerisi once denenir; o da hedefi (ve ek alt sinirlari) tutmali
+      // (kullanici, 15 Eylul aksami: "barem de hedeften dusuk olmamali").
+      const oneri = baremOnerisiHesapla(item, fiyat);
+      if (oneri && hedefTutuyorMu(oneri.profit, oneri.profitRate, hedefler).uygun && ekUygunMu(oneri.profit, oneri.profitRate)) {
+        fiyat = oneri.fiyat; sayac.baremli++;
+      }
 
       const { profit, profitRate } = kampanyaKari(fiyat, item);
       const { uygun } = hedefTutuyorMu(profit, profitRate, hedefler);
