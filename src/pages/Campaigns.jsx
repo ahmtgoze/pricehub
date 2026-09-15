@@ -951,8 +951,8 @@ export default function Campaigns() {
     });
   };
 
-  const handleSave = async () => {
-    const selectedItems = uploadedData.filter(item => item.selected_type === 'campaign');
+  const handleSave = async (veri = uploadedData) => {
+    const selectedItems = veri.filter(item => item.selected_type === 'campaign');
     if (selectedItems.length === 0) { toast.error('Lütfen en az bir ürün seçin'); return; }
     const cols = ['campaign_id','platform_account','barcode','product_name','product_code','category','brand','color','size','stock_code','current_stock','current_sale_price','max_price','campaign_price','commission_tariff','listing_id','selected_type','calculated_commission','calculated_profit','calculated_profit_rate','matched_product_id'];
     const clean = (item) => {
@@ -965,17 +965,54 @@ export default function Campaigns() {
       return o;
     };
     try {
-      const all = uploadedData.filter(i => i.id);
+      const all = veri.filter(i => i.id);
       for (let i = 0; i < all.length; i += 30) {
         const batch = all.slice(i, i + 30);
         await Promise.all(batch.map(item => CampaignProduct.update(item.id, clean(item))));
         if (i + 30 < all.length) await new Promise(r => setTimeout(r, 150));
       }
-      const news = uploadedData.filter(i => !i.id && i.selected_type === 'campaign');
+      const news = veri.filter(i => !i.id && i.selected_type === 'campaign');
       if (news.length > 0) await CampaignProduct.bulkCreate(news.map(clean));
       toast.success(`${selectedItems.length} ürün kaydedildi`);
       queryClient.invalidateQueries({ queryKey: ['campaignProducts'] });
     } catch (error) { toast.error('Kayıt hatası: ' + error.message); }
+  };
+
+  // PLUS DURUMU (kullanici, 15 Eylul 2026): "her Sali fiyatlarim, kampanyalarim,
+  // promosyon katilimlarim degisebilir; bu sayfalarda guncelleme yapinca Plus
+  // ek kampanyasindaki fiyatlar da otomatik guncellenmeli". Plus ekrani
+  // hesabi kayitli secimlerden CANLI yapar; burada her urun icin "liste
+  // fiyatindan Plus'ta kalmali mi" (kar tabani, zincirli hesapla) bulunur:
+  //   secili + tabanin altinda -> Plus'tan CIKAR (Trendyol'da elle,
+  //                                "Daha Önce Eklediklerim"; Excel cikaramaz)
+  //   secili degil + uygun      -> EKLE (secip Excel Indir)
+  const plusDurum = React.useMemo(() => {
+    if (!plusKampanyasiMi || uploadedData.length === 0) return null;
+    const cikar = [], ekle = []; let uygunSecili = 0, eslesmeyen = 0;
+    for (const item of uploadedData) {
+      if (!getMatchedProduct(item)) { eslesmeyen++; continue; }
+      const fiyat = varsayilanFiyat(item);
+      const uygun = fiyat > 0 && !isBelowFloor(item, fiyat);
+      const secili = item.selected_type === 'campaign';
+      if (secili && !uygun) cikar.push(item);
+      else if (!secili && uygun) ekle.push(item);
+      else if (secili && uygun) uygunSecili++;
+    }
+    return { cikar, ekle, uygunSecili, eslesmeyen };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [plusKampanyasiMi, uploadedData, savedCampaignProducts, priceRanges, advantageTags, flashProducts, plusTariffs, campaigns, commissions]);
+
+  const plusSecimleriYenile = async () => {
+    const guncel = uploadedData.map((item) => {
+      if (!getMatchedProduct(item)) return item;
+      const fiyat = varsayilanFiyat(item);
+      const uygun = fiyat > 0 && !isBelowFloor(item, fiyat);
+      return uygun ? { ...item, selected_type: 'campaign', campaign_price: fiyat } : secimiKaldir(item);
+    });
+    setUploadedData(guncel);
+    const secili = guncel.filter((i) => i.selected_type === 'campaign').length;
+    toast.success(`Plus seçimleri yenilendi: ${secili} ürün uygun${plusDurum?.cikar.length ? `, ${plusDurum.cikar.length} ürün çıkarıldı` : ''}${plusDurum?.ekle.length ? `, ${plusDurum.ekle.length} ürün eklendi` : ''}`);
+    await handleSave(guncel);
   };
 
   const handleDeleteExcel = async () => {
@@ -1170,6 +1207,36 @@ export default function Campaigns() {
 
           {uploadedData.length > 0 && (
             <>
+              {plusDurum && (
+                <Card className={`mb-6 ${plusDurum.cikar.length > 0 ? 'border-amber-300 dark:border-amber-900/60' : ''}`}>
+                  <CardHeader><CardTitle>Plus Durumu — bugünkü seçimlere göre</CardTitle></CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="text-sm text-muted-foreground">
+                      Diğer sayfalardaki seçimler (tarife, avantajlı, flaş, kampanyalar) değiştikçe burası kendiliğinden yeniden hesaplanır.
+                      Liste fiyatından Plus'ta kalması uygun olan ürünler seçili tutulur; kâr tabanının altına düşenler çıkarılır.
+                    </div>
+                    <div className="flex flex-wrap gap-2 text-sm">
+                      <Badge variant="secondary">Uygun ve seçili: {plusDurum.uygunSecili}</Badge>
+                      <Badge variant={plusDurum.cikar.length > 0 ? 'destructive' : 'secondary'}>Plus'tan çıkarılacak: {plusDurum.cikar.length}</Badge>
+                      <Badge variant={plusDurum.ekle.length > 0 ? 'default' : 'secondary'}>Eklenecek: {plusDurum.ekle.length}</Badge>
+                      {plusDurum.eslesmeyen > 0 && <Badge variant="outline">Eşleşmeyen: {plusDurum.eslesmeyen}</Badge>}
+                    </div>
+                    {plusDurum.cikar.length > 0 && (
+                      <div className="rounded-md border border-amber-200 dark:border-amber-900/50 bg-amber-50 dark:bg-amber-950/30 p-3 text-xs">
+                        <div className="font-medium text-amber-800 dark:text-amber-300 mb-1">Trendyol'da Plus kampanyasından çıkarın ("Daha Önce Eklediklerim"); Excel çıkaramaz:</div>
+                        <ul className="list-disc pl-4 space-y-0.5">
+                          {plusDurum.cikar.slice(0, 15).map((i) => <li key={i.id || i.barcode}>{i.product_name} <span className="text-muted-foreground">({i.barcode})</span></li>)}
+                          {plusDurum.cikar.length > 15 && <li>… ve {plusDurum.cikar.length - 15} ürün daha</li>}
+                        </ul>
+                      </div>
+                    )}
+                    <div className="flex flex-wrap gap-3">
+                      <Button onClick={plusSecimleriYenile} className="bg-primary hover:bg-black dark:hover:bg-white/90"><Sparkles className="mr-2 h-4 w-4" />Plus seçimlerini yenile ve kaydet</Button>
+                      <span className="text-xs text-muted-foreground self-center">Sonra Excel İndir ile eklenecekleri Trendyol'a yükleyin.</span>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
               <Card className="mb-6">
                 <CardHeader><CardTitle className="flex items-center gap-2"><Filter className="h-5 w-5" />Filtreler</CardTitle></CardHeader>
                 <CardContent>
