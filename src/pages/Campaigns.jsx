@@ -171,6 +171,11 @@ export default function Campaigns() {
     queryFn: () => db.entities.FlashProduct.filter({ created_by: userEmail }),
     enabled: !!userEmail,
   });
+  const { data: plusTariffs = [] } = useQuery({
+    queryKey: ['plusProductCommissionTariffs', userEmail],
+    queryFn: () => db.entities.PlusProductCommissionTariff.filter({ created_by: userEmail }),
+    enabled: !!userEmail,
+  });
   // Ürün Komisyon Tarifesi (normal kampanyalar için komisyon kaynağı)
   const { data: priceRanges = [] } = useQuery({
     queryKey: ['trendyolPriceRanges', userEmail],
@@ -577,6 +582,28 @@ export default function Campaigns() {
     }
     const zincir = plusZincirliFiyat(taban.fiyat, enIyi ? enIyi.genel : null, aktifKampanya);
     if (!zincir) return null;
+    // PLUS KOMISYON TARIFESI: Plus'a ozel fiyat secildiyse Plus musterisi o
+    // fiyati gorur ve Plus %5 UYGULANMAZ (Satici Bilgi Merkezi, uygulanma
+    // sirasi). En dip fiyat kurali (kullanici 15 Eylul 2026): zincirin
+    // sonucu ile Plus tarife fiyatinin DUSUGU alinir; tarife kazanirsa
+    // komisyon da tarifenin teklif orani.
+    let plusTarife = null;
+    for (const r of plusTariffs) {
+      if (!ayniUrun(r) || !trendyolMu(r) || !surer(r)) continue;
+      const fiyatlar = [];
+      if (r.selected_type && r.selected_type !== 'none') fiyatlar.push(Number(r.selected_type === 'manual' ? r.manual_price : r.selected_price) || 0);
+      for (const sec of Object.values(r.secimler || {})) { if (sec && sec.kademe && sec.kademe !== 'none') fiyatlar.push(Number(sec.fiyat) || Number(sec.manuel) || 0); }
+      const f = Math.min(...fiyatlar.filter((x) => x > 0));
+      if (!Number.isFinite(f) || f <= 0) continue;
+      const komisyon = parseFloat(r.plus_commission_offer) || parseFloat(r.calculated_commission) || parseFloat(r.current_commission) || null;
+      if (!plusTarife || f < plusTarife.fiyat) plusTarife = { fiyat: f, komisyon };
+    }
+    if (plusTarife && plusTarife.fiyat < zincir.musteriFiyat) {
+      return {
+        taban, kampanya: null, genel: null, plusTarife,
+        zincir: { musteriFiyat: plusTarife.fiyat, saticiNet: plusTarife.fiyat, genelIndirim: 0, plusIndirim: 0, saticiPayi: 0, komisyon: plusTarife.komisyon ?? undefined },
+      };
+    }
     return { taban, kampanya: enIyi?.kampanya || null, genel: enIyi?.genel || null, zincir };
   };
   const etkinFiyatIcinKampanyaFiyati = (hedefEtkin) =>
@@ -600,7 +627,7 @@ export default function Campaigns() {
       // fiyati), musterinin odedigi fiyat DEGIL. Tarife kademesi de bu
       // fiyata gore bulunur. Karsilama yoksa ikisi aynidir.
       const komisyonaEsasFiyat = effPrice;
-      const commissionRate = getProductCommissionRate(item, komisyonaEsasFiyat);
+      const commissionRate = zincir?.komisyon ?? getProductCommissionRate(item, komisyonaEsasFiyat);
       const musteriFiyat = zincir?.musteriFiyat ?? musteriFiyati(campaignPrice, kampanya);
 
       const platformShippingRates = shippingRates.filter(r =>
@@ -1279,7 +1306,7 @@ export default function Campaigns() {
                                       if (!z.breakdown) return null;
                                       return (
                                         <div className="mt-1 rounded-md border border-amber-200 dark:border-amber-900/50 bg-amber-50 dark:bg-amber-950/30 px-2 py-1 text-[10px] leading-tight">
-                                          <div className="font-medium text-amber-800 dark:text-amber-300">Taban: {etki.taban.kaynak} ₺{etki.taban.fiyat.toFixed(2)}{etki.genel ? ` · ${kampanyaMetni(etki.genel)}` : ''}</div>
+                                          <div className="font-medium text-amber-800 dark:text-amber-300">{etki.plusTarife ? `Plus Tarifesi fiyatı geçerli ₺${etki.plusTarife.fiyat.toFixed(2)} · Plus %5 uygulanmaz${etki.plusTarife.komisyon ? ` · Kom %${etki.plusTarife.komisyon}` : ''}` : `Taban: ${etki.taban.kaynak} ₺${etki.taban.fiyat.toFixed(2)}${etki.genel ? ` · ${kampanyaMetni(etki.genel)}` : ''}`}</div>
                                           <div className="text-muted-foreground">müşteri öder ₺{etki.zincir.musteriFiyat.toFixed(2)} · satıcıya ₺{etki.zincir.saticiNet.toFixed(2)}</div>
                                           <div className={`font-semibold ${z.profit > 0 ? 'text-green-700' : 'text-red-600'}`}>{z.profit > 0 ? '+' : ''}₺{z.profit.toFixed(2)} (%{z.profitRate.toFixed(1)})</div>
                                         </div>
