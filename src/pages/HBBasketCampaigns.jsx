@@ -515,13 +515,20 @@ export default function HBBasketCampaigns() {
   // girmek anlamli degil, ustelik komisyon KDV'si ve sepet indirimi
   // duzeltildikten sonra marjlar iyice daraldi.
   const handleSmartAutoSelect = () => {
-    const sayac = { secilen: 0, eslesmeyen: 0, hedefsiz: 0, tutmayan: 0, zatenSecili: 0, fiyatsiz: 0, baremli: 0 };
+    const sayac = { secilen: 0, eslesmeyen: 0, hedefsiz: 0, tutmayan: 0, zatenSecili: 0, fiyatsiz: 0, baremli: 0, baremeCekilen: 0 };
     const ekOran = parseFloat(minKarOrani) || 0;
     const ekTutar = parseFloat(minKarTutari) || 0;
 
     const guncel = uploadedData.map((item) => {
       // Elle yapilmis secim korunur; "Secimleri Kaldir" ile sifirlanabilir.
-      if (item.selected) { sayac.zatenSecili++; return item; }
+      // Ama barem onerisi varsa (fiyati biraz dusurmek kar oranini
+      // artiriyorsa) secili urun de o fiyata cekilir (Kampanyalar ile ayni,
+      // kullanici 15 Eylul 2026).
+      if (item.selected) {
+        const oneri = baremOnerisiHesapla(item, item.campaign_price || item.max_price || item.current_price || 0);
+        if (oneri) { sayac.baremeCekilen++; return { ...item, campaign_price: oneri.fiyat }; }
+        sayac.zatenSecili++; return item;
+      }
 
       const urun = getMatchedProduct(item);
       if (!urun) { sayac.eslesmeyen++; return item; }
@@ -556,13 +563,14 @@ export default function HBBasketCampaigns() {
 
     const parcalar = [];
     if (sayac.secilen > 0) parcalar.push(`✅ ${sayac.secilen} ürün seçildi${sayac.baremli > 0 ? ` (${sayac.baremli}'i barem önerisiyle)` : ''}`);
+    if (sayac.baremeCekilen > 0) parcalar.push(`📦 ${sayac.baremeCekilen} seçili ürün barem önerisine çekildi`);
     if (sayac.zatenSecili > 0) parcalar.push(`${sayac.zatenSecili} zaten seçili`);
     if (sayac.tutmayan > 0) parcalar.push(`${sayac.tutmayan} hedef kârı tutmadı`);
     if (sayac.hedefsiz > 0) parcalar.push(`⚠️ ${sayac.hedefsiz} üründe indirimli hedef tanımlı değil`);
     if (sayac.eslesmeyen > 0) parcalar.push(`⚠️ ${sayac.eslesmeyen} ürün eşleşmedi`);
     if (sayac.fiyatsiz > 0) parcalar.push(`⚠️ ${sayac.fiyatsiz} üründe fiyat yok`);
 
-    if (sayac.secilen === 0) toast.warning(parcalar.join(' • ') || 'Hedefi tutan ürün bulunamadı');
+    if (sayac.secilen === 0 && sayac.baremeCekilen === 0) toast.warning(parcalar.join(' • ') || 'Hedefi tutan ürün bulunamadı');
     else toast.success(parcalar.join(' • '));
   };
 

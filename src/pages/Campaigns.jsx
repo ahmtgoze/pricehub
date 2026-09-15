@@ -736,8 +736,19 @@ export default function Campaigns() {
 
   const handleSmartAutoSelect = () => {
     let selectedCount = 0, skipNoProduct = 0, skipNoCommission = 0, skipBelow = 0, baremliSecim = 0;
+    let baremeCekilen = 0;
     const updated = uploadedData.map(item => {
-      if (item.selected_type === 'campaign') return item;
+      // Zaten secili urun: secimi korunur ama barem onerisi varsa (fiyati
+      // biraz dusurmek kar ORANINI artiriyorsa) o fiyata cekilir. Onceden
+      // secili urunlere hic dokunulmuyordu; kayittan gelen ya da daha once
+      // max fiyattan secilmis urunlerde oneri hic uygulanmiyordu
+      // (kullanici, 15 Eylul 2026: "barem onerilerini secmesi gerekmiyor muydu").
+      if (item.selected_type === 'campaign') {
+        const mevcutFiyat = item.campaign_price || item.max_price;
+        const oneri = baremOnerisiHesapla(item, mevcutFiyat);
+        if (oneri && !isBelowFloor(item, oneri.fiyat)) { baremeCekilen++; return { ...item, campaign_price: oneri.fiyat }; }
+        return item;
+      }
       const matched = getMatchedProduct(item);
       if (!matched) { skipNoProduct++; return item; }
       const commRec = getCommissionRecord(item);
@@ -756,10 +767,11 @@ export default function Campaigns() {
     setUploadedData(updated);
     const parts = [];
     if (selectedCount > 0) parts.push(`✅ ${selectedCount} ürün seçildi (max fiyattan${baremliSecim > 0 ? `, ${baremliSecim}'i barem önerisiyle` : ''})`);
+    if (baremeCekilen > 0) parts.push(`📦 ${baremeCekilen} seçili ürün barem önerisine çekildi`);
     if (skipNoProduct > 0) parts.push(`⚠️ ${skipNoProduct} sistem ürünüyle eşleşmedi`);
     if (skipNoCommission > 0) parts.push(`⚠️ ${skipNoCommission} komisyon/kâr tabanı yok`);
     if (skipBelow > 0) parts.push(`🔴 ${skipBelow} kâr tabanının altında`);
-    if (selectedCount === 0) toast.warning(parts.join(' • ') || 'Uygun ürün bulunamadı');
+    if (selectedCount === 0 && baremeCekilen === 0) toast.warning(parts.join(' • ') || 'Uygun ürün bulunamadı');
     else toast.success(parts.join(' • '));
   };
 
