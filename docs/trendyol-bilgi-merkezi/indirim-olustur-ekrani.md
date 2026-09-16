@@ -40,3 +40,5 @@ Trendyol'un hazır teklifi, tek tuş: Kupon türü (Üründen Kazan), kapsam (T�
 
 ## Zincir kuralı
 Kupon sıra 6 (Plus'tan sonra, en son). Satıcı payı = kupon tutarı × (1 − karşılama). Ürün başına: sepet alt limitinin üstünde, kupon tutarı sepetteki ürünlere fiyat oranında dağılır (sepet indirimiyle aynı model, tam eşik varsayımı). Yüzde kuponda tavan (maks. kupon tutarı) uygulanır.
+
+**Alt limit seçenekleri kupon tutarına bağlı** (16 Eyl 2026 teyidi): küçük tutarda 0–500₺; 50₺'de 200–750₺; 500₺'de 1.000–2.500₺. Kendi İndirimlerim sayfasında tutar ve alt limit serbest girilir (Trendyol kendi sınırını koyuyor); hesap için tutar, alt limit, karşılama yeter.
