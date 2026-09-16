@@ -12,6 +12,7 @@ const Login = lazy(() => import('./pages/Login'));
 const Landing = lazy(() => import('./pages/Landing'));
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 const Campaigns = lazy(() => import('./pages/Campaigns'));
+const OwnDiscounts = lazy(() => import('./pages/OwnDiscounts'));
 const PlusProductCommissionTariff = lazy(() => import('./pages/PlusProductCommissionTariff'));
 
 /** Sayfa parcasi indirilirken gosterilir; auth beklerken kullanilanla ayni. */
@@ -71,6 +72,11 @@ const AuthenticatedApp = () => {
       <Route path="/campaigns" element={
         <LayoutWrapper currentPageName="Campaigns">
           <Campaigns />
+        </LayoutWrapper>
+      } />
+      <Route path="/OwnDiscounts" element={
+        <LayoutWrapper currentPageName="OwnDiscounts">
+          <OwnDiscounts />
         </LayoutWrapper>
       } />
       <Route path="/PlusProductCommissionTariff" element={

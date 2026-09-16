@@ -176,6 +176,11 @@ export default function Campaigns() {
     queryFn: () => db.entities.PlusProductCommissionTariff.filter({ created_by: userEmail }),
     enabled: !!userEmail,
   });
+  const { data: ownDiscounts = [], isFetched: ownDiscountsHazir } = useQuery({
+    queryKey: ['trendyolOwnDiscounts', userEmail],
+    queryFn: () => db.entities.TrendyolOwnDiscount.filter({ created_by: userEmail }),
+    enabled: !!userEmail,
+  });
   // Ürün Komisyon Tarifesi (normal kampanyalar için komisyon kaynağı)
   const { data: priceRanges = [], isFetched: priceRangesHazir } = useQuery({
     queryKey: ['trendyolPriceRanges', userEmail],
@@ -407,6 +412,7 @@ export default function Campaigns() {
       satirlar.push(`Sana kalan ${tl(etki.zincir.saticiNet)}; komisyon tarifenin teklifi${etki.plusTarife.komisyon ? ` (%${etki.plusTarife.komisyon})` : ''}. Kâr için sağdaki "i" düğmesi.`);
       return satirlar;
     }
+    if (etki.net) satirlar.push(`Kendi net indirimin (${etki.net.ad}) satış fiyatından hemen düşer: ${tl(etki.net.indirim)}, tamamı senden → ${tl(etki.taban.fiyat - etki.net.indirim)}.`);
     const k = etki.genel;
     if (k) {
       const kars = Math.min(1, Math.max(0, (Number(k.karsilama) || 0) / 100));
@@ -425,6 +431,8 @@ export default function Campaigns() {
     }
     if (etki.plus) satirlar.push(`Plus %${Number(etki.plus.oran) || 0}, sipariş anında bu tutara iner: ${tl(etki.zincir.plusIndirim)}, tamamı senden → Plus müşterisi öder ${tl(etki.zincir.musteriFiyat)}.`);
     else satirlar.push(`Ürün Plus ek indirim kampanyasında seçili değil; Plus indirimi yok. Müşteri öder ${tl(etki.zincir.musteriFiyat)}.`);
+    if (etki.kod) satirlar.push(`İndirim kodu (${etki.kod.ad}) sepette girilirse: ${tl(etki.kod.indirim)}, tamamı senden.`);
+    if (etki.kupon) satirlar.push(`Kupon (${etki.kupon.ad}): ürüne düşen ${tl(etki.kupon.indirim)}; Trendyol %${etki.kupon.karsilama} karşılar, senin payın ${tl(etki.kupon.saticiPayi)} → müşteri öder ${tl(etki.zincir.musteriFiyat)}.`);
     satirlar.push(`Sana kalan: ${tl(etki.taban.fiyat)} − ${tl(etki.zincir.saticiPayi)} = ${tl(etki.zincir.saticiNet)}. Komisyon ve tarife kademesi bu tutardan; kâr için sağdaki "i" düğmesi.`);
     return satirlar;
   };
@@ -570,7 +578,7 @@ export default function Campaigns() {
   // (kullanici, 15 Eylul 2026: "hepsine girecegim ama cakismalar hedef
   // karin altina dusurmesin").
   const bugunMetni = bugunMetniUret();
-  const zincirKaynaklari = { priceRanges, advantageTags, flashProducts, plusTariffs, campaigns, campaignProducts: savedCampaignProducts };
+  const zincirKaynaklari = { priceRanges, advantageTags, flashProducts, plusTariffs, campaigns, campaignProducts: savedCampaignProducts, ownDiscounts };
   const genelKampanyaEtkisi = (item, fiyat = item?.campaign_price) => {
     if (!aktifKampanya || !managingCampaign) return null;
     const f = Number(fiyat) || 0;
@@ -991,13 +999,13 @@ export default function Campaigns() {
   React.useEffect(() => {
     if (!managingCampaign) { plusYenilenenKampanya.current = null; return; }
     if (!plusKampanyasiMi || uploadedData.length === 0) return;
-    const hazir = [priceRangesHazir, advantageTagsHazir, flashProductsHazir, plusTariffsHazir, savedCampaignProductsHazir, commissionsHazir, campaignsHazir, platformsHazir, productsHazir, shippingRatesHazir, packagesHazir, settingsHazir, marketplaceProductsHazir, productPricesHazir].every(Boolean);
+    const hazir = [priceRangesHazir, advantageTagsHazir, flashProductsHazir, plusTariffsHazir, ownDiscountsHazir, savedCampaignProductsHazir, commissionsHazir, campaignsHazir, platformsHazir, productsHazir, shippingRatesHazir, packagesHazir, settingsHazir, marketplaceProductsHazir, productPricesHazir].every(Boolean);
     if (!hazir) return;
     if (plusYenilenenKampanya.current === managingCampaign.id) return;
     plusYenilenenKampanya.current = managingCampaign.id;
     plusSecimleriYenile();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [managingCampaign?.id, plusKampanyasiMi, uploadedData.length, priceRangesHazir, advantageTagsHazir, flashProductsHazir, plusTariffsHazir, savedCampaignProductsHazir, commissionsHazir, campaignsHazir, platformsHazir, productsHazir, shippingRatesHazir, packagesHazir, settingsHazir, marketplaceProductsHazir, productPricesHazir]);
+  }, [managingCampaign?.id, plusKampanyasiMi, uploadedData.length, priceRangesHazir, advantageTagsHazir, flashProductsHazir, plusTariffsHazir, ownDiscountsHazir, savedCampaignProductsHazir, commissionsHazir, campaignsHazir, platformsHazir, productsHazir, shippingRatesHazir, packagesHazir, settingsHazir, marketplaceProductsHazir, productPricesHazir]);
 
   const handleDeleteExcel = async () => {
     const ids = new Set();

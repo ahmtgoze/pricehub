@@ -93,6 +93,7 @@ const NAV_GROUPS = [
       { name: 'Plus Tarifesi', page: 'PlusProductCommissionTariff', icon: BadgePercent, trendyolOnly: true },
       { name: 'Avantajlı Ürün Etiketi', page: 'AdvantageProductTag', icon: Sparkles, trendyolOnly: true },
       { name: 'Flaş Ürünler', page: 'FlashProducts', icon: Zap, trendyolOnly: true },
+      { name: 'Kendi İndirimlerim', page: 'OwnDiscounts', icon: BadgePercent, trendyolOnly: true },
     ],
     hepsiburada: [
       { name: 'Avantajlı Teklifler', page: 'HBAdvantageOffers', icon: Sparkles, hepsiburadaOnly: true },

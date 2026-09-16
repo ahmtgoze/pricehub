@@ -1,4 +1,4 @@
-import { zincirKur, sira0Adaylari, plusDurumu, bugunMetni, KAYNAK } from '../src/lib/zincirHesabi.js';
+import { zincirKur, sira0Adaylari, plusDurumu, bugunMetni, KAYNAK, kendiIndirimTutari } from '../src/lib/zincirHesabi.js';
 let gecen = 0, kalan = 0;
 const esit = (ad, olan, beklenen) => {
   const ok = JSON.stringify(olan) === JSON.stringify(beklenen);
@@ -87,5 +87,53 @@ console.log('\n=== PLUS TARIFESI KAZANIR ===');
   const z = zincirKur({ urun, kaynaklar: K4, bugun: BUGUN, platform: 'Trendyol', aday: { kaynak: KAYNAK.PLUS_GIRILEN, fiyat: 346.49 }, plus: { oran: 5, karsilama: 0 } });
   esit('240 < 254,31 -> tarife gecerli, %5 yok, komisyon 7,4', [z.musteriFiyat, z.saticiNet, z.komisyon, z.plusIndirim], [240, 240, 7.4, 0]);
 }
+
+console.log('\n=== KENDI INDIRIMLERIM ===');
+{
+  const D = (ek) => ({ id: 'd', aktif: true, start_date: '2026-09-01', end_date: '2026-09-30', hedef_kitle: 'all', kapsam_turu: 'all', karsilama: 0, alt_limit: 0, ...ek });
+  esit('tutar: kendiIndirimTutari %10', kendiIndirimTutari(D({ indirim_tipi: 'percent', oran: 10 }), 297.43), 29.74);
+  esit('tutar: 30 TL, alt limit 300, urun 297 -> oranli', kendiIndirimTutari(D({ indirim_tipi: 'tl', tutar: 30, alt_limit: 300 }), 297.43), 29.74);
+  esit('tutar: %10 kupon tavan 20 TL', kendiIndirimTutari(D({ indirim_tipi: 'percent', oran: 10, maks_tutar: 20 }), 297.43), 20);
+  esit('tutar: 3 al 2 ode', kendiIndirimTutari(D({ indirim_tipi: 'xalyode', al_x: 3, ode_y: 2 }), 300), 100);
+
+  // KCZ4555 + kupon 50 TL alt limit 500 %50 karsilamali (Plus musterisi)
+  const K5 = { ...K, ownDiscounts: [D({ tur: 'kupon', indirim_tipi: 'tl', tutar: 50, alt_limit: 500, karsilama: 50 })] };
+  const z = zincirKur({ urun, kaynaklar: K5, bugun: BUGUN, platform: 'Trendyol', aday: { kaynak: KAYNAK.PLUS_GIRILEN, fiyat: 346.49 }, plus: { oran: 5, karsilama: 0 } });
+  // 254.31 kalan; kupon 50 x 254.31/500 = 25.43; satici payi 12.72
+  esit('kupon urune dusen', z.kupon.indirim, 25.43);
+  esit('kupon satici payi %50', z.kupon.saticiPayi, 12.72);
+  esit('musteri oder 254,31 - 25,43', z.musteriFiyat, 228.88);
+  esit('saticiya 266,21 - 12,72', z.saticiNet, 253.49);
+
+  // net %10 + kampanya: net once duser, kampanya kalan uzerinden
+  const K6 = { ...K, ownDiscounts: [D({ tur: 'net', indirim_tipi: 'percent', oran: 10 })] };
+  const z6 = zincirKur({ urun, kaynaklar: K6, bugun: BUGUN, platform: 'Trendyol', aday: { kaynak: KAYNAK.TARIFE, fiyat: 297.43 } });
+  esit('net 29,74 duser', z6.net.indirim, 29.74);
+  // 267.69 uzerinden 1000e100: 100 x 267.69/1000 = 26.77; plus %5 on 240.92 = 12.05 -> 228.87
+  esit('kampanya kalan uzerinden', z6.genelIndirim, 26.77);
+  esit('musteri', z6.musteriFiyat, 228.87);
+  // satici: 297.43 - 29.74 - 26.77x0.6(16.06) - 12.05 = 239.58
+  esit('satici', z6.saticiNet, 239.58);
+
+  // kosullu %15 (tutar, alt limit 200) sepet kampanyasindan yuksek -> o gecer
+  const K7 = { ...K, ownDiscounts: [D({ tur: 'kosullu_tutar', indirim_tipi: 'percent', oran: 15, alt_limit: 200 })] };
+  const z7 = zincirKur({ urun, kaynaklar: K7, bugun: BUGUN, platform: 'Trendyol', aday: { kaynak: KAYNAK.TARIFE, fiyat: 297.43 } });
+  esit('kosullu %15 = 44,61 kazanir', [z7.genelIndirim, z7.genel.kendi], [44.61, true]);
+
+  // kapsam: baska kategori -> uygulanmaz
+  const K8 = { ...K, ownDiscounts: [D({ tur: 'net', indirim_tipi: 'percent', oran: 10, kapsam_turu: 'kategori', kapsam_kategoriler: ['Etiket'] })] };
+  esit('kapsam disi net yok', zincirKur({ urun: { ...urun, category: 'Cepsiz Kargo Poşeti' }, kaynaklar: K8, bugun: BUGUN, platform: 'Trendyol', aday: { kaynak: KAYNAK.TARIFE, fiyat: 297.43 } }).net, null);
+  // kapsam: urun listesi
+  const K9 = { ...K, ownDiscounts: [D({ tur: 'indirim_kodu', indirim_tipi: 'tl', tutar: 20, kapsam_turu: 'urunler', kapsam_urunler: ['KCZ4555'] })] };
+  esit('kod urune uygulanir', zincirKur({ urun, kaynaklar: K9, bugun: BUGUN, platform: 'Trendyol', aday: { kaynak: KAYNAK.TARIFE, fiyat: 297.43 } }).kod?.indirim, 20);
+  // plus'a ozel %8 kendi indirimi: Plus %5 ile yarisir, 8 gecer
+  const K10 = { ...K, ownDiscounts: [D({ tur: 'net', indirim_tipi: 'percent', oran: 8, hedef_kitle: 'plus' })] };
+  const z10 = zincirKur({ urun, kaynaklar: K10, bugun: BUGUN, platform: 'Trendyol', aday: { kaynak: KAYNAK.PLUS_GIRILEN, fiyat: 346.49 }, plus: { oran: 5, karsilama: 0 } });
+  esit("plus'a ozel %8 > %5", z10.plus.oran, 8);
+  // suresi bitmis -> yok
+  const K11 = { ...K, ownDiscounts: [D({ tur: 'net', indirim_tipi: 'percent', oran: 10, end_date: '2026-09-10' })] };
+  esit('bitmis indirim yok', zincirKur({ urun, kaynaklar: K11, bugun: BUGUN, platform: 'Trendyol', aday: { kaynak: KAYNAK.TARIFE, fiyat: 297.43 } }).net, null);
+}
+
 esit('bugunMetni bicimi', /^\d{4}-\d{2}-\d{2}$/.test(bugunMetni()), true);
 console.log(`\nGECEN: ${gecen}   KALAN: ${kalan}`); if (kalan) process.exit(1);

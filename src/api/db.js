@@ -24,6 +24,8 @@ const TABLE_MAP = {
   // HB Avantajli Teklifler / Kendi Kampanyan: 15 Eyl 2026'dan itibaren kayit tutar
   HBAdvantageOffer: 'hb_advantage_offers',
   HBOwnCampaign: 'hb_own_campaigns',
+  // Trendyol Kendi Indirimlerim (net/kosullu/kod/kupon; zincire girer) — 16 Eyl 2026
+  TrendyolOwnDiscount: 'trendyol_own_discounts',
   TrendyolPriceRange: 'trendyol_price_ranges',
   Announcement: 'announcements',
   AnnouncementRead: 'announcement_reads',

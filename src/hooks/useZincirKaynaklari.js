@@ -18,7 +18,8 @@ export function useZincirKaynaklari(userEmail) {
   const plusTariffs = sorgu('plusProductCommissionTariffs', 'PlusProductCommissionTariff');
   const campaigns = sorgu('campaigns', 'Campaign');
   const campaignProducts = sorgu('campaignProducts', 'CampaignProduct');
-  const hepsi = [priceRanges, advantageTags, flashProducts, plusTariffs, campaigns, campaignProducts];
+  const ownDiscounts = sorgu('trendyolOwnDiscounts', 'TrendyolOwnDiscount');
+  const hepsi = [priceRanges, advantageTags, flashProducts, plusTariffs, campaigns, campaignProducts, ownDiscounts];
   return {
     kaynaklar: {
       priceRanges: priceRanges.data || [],
@@ -27,6 +28,7 @@ export function useZincirKaynaklari(userEmail) {
       plusTariffs: plusTariffs.data || [],
       campaigns: campaigns.data || [],
       campaignProducts: campaignProducts.data || [],
+      ownDiscounts: ownDiscounts.data || [],
     },
     hazir: hepsi.every((q) => q.isFetched),
   };

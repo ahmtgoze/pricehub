@@ -115,6 +115,79 @@ export function plusDurumu(urun, kaynaklar, { bugun } = {}) {
   return null;
 }
 
+/* ------------------------------------------------------------------ *
+ * KENDI INDIRIMLERIM (Trendyol "Indirim Olustur" + "Kuponlar", 16 Eylul 2026)
+ *   net            sira 1  — satis fiyatindan hemen; tamami saticidan
+ *   kosullu_*      sira 2  — sepet kampanyalariyla YARISIR (en yuksek tek indirim)
+ *   hedef_kitle=plus       — sira 2.5, Plus %5 ile yarisir (yuksek olan)
+ *   indirim_kodu   sira 5  — Plus'tan sonra; tamami saticidan
+ *   kupon          sira 6  — en son; satici payi = tutar x (1 - karsilama)
+ * Sepet basina olanlar (TL) urune sepet payiyla dagilir (tam esik varsayimi).
+ * ------------------------------------------------------------------ */
+const kucukTr = (x) => String(x ?? '').toLocaleLowerCase('tr').trim();
+const kurus = (n) => Math.round(n * 100) / 100;
+
+function kapsamdaMi(urun, d) {
+  const tur = d?.kapsam_turu || 'all';
+  if (tur === 'all') return true;
+  if (tur === 'urunler') {
+    const l = (Array.isArray(d.kapsam_urunler) ? d.kapsam_urunler : []).map(String);
+    return l.includes(String(urun?.barcode ?? '')) || l.includes(String(urun?.stock_code || urun?.seller_stock_code || ''));
+  }
+  if (tur === 'kategori') {
+    const l = (Array.isArray(d.kapsam_kategoriler) ? d.kapsam_kategoriler : []).map(kucukTr);
+    const k = [urun?.category, urun?.category_name, urun?.kategori].filter(Boolean).map(kucukTr);
+    return k.some((x) => l.includes(x));
+  }
+  return true;
+}
+
+/** Urun icin bugun gecerli kendi indirimleri (kapsam ve tarih suzgecli). */
+export function kendiIndirimleri(urun, kaynaklar, { bugun, platform } = {}) {
+  return (kaynaklar?.ownDiscounts || []).filter((d) =>
+    d && d.aktif !== false && surer(d, bugun) && platformUyar(d, platform) && (d.hedef_kitle || 'all') !== 'mikro' && kapsamdaMi(urun, d)
+  );
+}
+
+/**
+ * Bir kendi indiriminin URUNE dusen musteri indirimi (fiyat uzerinden).
+ * TL indirim sepet basinadir: fiyat alt limitin altindaysa fiyat/altLimit
+ * oraninda dagilir (sepet kampanyasiyla ayni model). Yuzde kuponda tavan
+ * (maks_tutar) da ayni oranla dagilir.
+ */
+export function kendiIndirimTutari(d, fiyat) {
+  const f = sayi(fiyat);
+  if (f <= 0 || !d) return 0;
+  const alt = sayi(d.alt_limit);
+  const pay = alt > 0 && f < alt ? f / alt : 1;
+  const tip = d.indirim_tipi || 'percent';
+  if (tip === 'percent') {
+    let ind = f * sayi(d.oran) / 100;
+    if (sayi(d.maks_tutar) > 0) ind = Math.min(ind, sayi(d.maks_tutar) * pay);
+    return kurus(Math.max(0, ind));
+  }
+  if (tip === 'tl') return kurus(Math.min(f, sayi(d.tutar) * pay));
+  if (tip === 'xalyode') {
+    const x = sayi(d.al_x), y = sayi(d.ode_y);
+    if (x > 0 && y > 0 && y < x) return kurus(f * (x - y) / x);
+  }
+  return 0;
+}
+
+/** Kosullu kendi indirimini sepet kampanyasi nesnesine cevirir (musteriIndirimi ile ayni kurallar). */
+function kosulluyuKampanyayaCevir(d) {
+  const tip = d.indirim_tipi || 'percent';
+  if (tip === 'xalyode') return { tur: 'buy_x_pay_y', alX: sayi(d.al_x), odeY: sayi(d.ode_y), oran: 0, tutar: 0, esik: 0, karsilama: 0 };
+  if (tip === 'tl') return { tur: 'cart_tl', tutar: sayi(d.tutar), esik: sayi(d.alt_limit), oran: 0, karsilama: 0 };
+  return { tur: d.tur === 'kosullu_tutar' ? 'cart_percent' : 'qty_percent', oran: sayi(d.oran), tutar: 0, esik: 0, karsilama: 0 };
+}
+const kendiAdi = (d) => {
+  const tip = d.indirim_tipi || 'percent';
+  const miktar = tip === 'tl' ? `${sayi(d.tutar)} TL` : tip === 'xalyode' ? `${sayi(d.al_x)} Al ${sayi(d.ode_y)} Öde` : `%${sayi(d.oran)}`;
+  const on = { net: 'Net indirim', kosullu_tutar: 'Koşullu (tutar)', kosullu_adet: 'Koşullu (adet)', kosullu_xurun: 'Koşullu (X. ürün)', indirim_kodu: 'İndirim kodu', kupon: 'Kupon' }[d.tur] || d.tur;
+  return `${on} ${miktar}${sayi(d.alt_limit) > 0 ? ` (alt limit ${sayi(d.alt_limit)} TL)` : ''}${d.ad ? ` · ${d.ad}` : ''}`;
+};
+
 /** Plus Komisyon Tarifesi'nde secili Plus'a ozel fiyat -> { fiyat, komisyon } | null */
 export function plusTarifeFiyati(urun, kaynaklar, { bugun, platform } = {}) {
   const k = kaynaklar || {};
@@ -150,31 +223,75 @@ export function zincirKur({ urun, kaynaklar, bugun = bugunMetni(), platform = nu
   if (adaylar.length === 0) return null;
   const taban = adaylar.reduce((a, b) => (b.fiyat < a.fiyat ? b : a));
 
+  const plusBilgi = plus === undefined ? plusDurumu(urun, kaynaklar, { bugun }) : plus;
+  const plusMusterisi = !!plusBilgi;
+  // Kendi indirimleri: Plus'a ozel olanlar yalniz Plus musterisinde
+  const kendiler = kendiIndirimleri(urun, kaynaklar, { bugun, platform })
+    .filter((d) => (d.hedef_kitle || 'all') !== 'plus' || plusMusterisi);
+  const kendiOlan = (t) => kendiler.filter((d) => d.tur === t && (d.hedef_kitle || 'all') === 'all');
+
+  // SIRA 1 — net indirim (ayni sirada en yuksegi)
+  let net = null;
+  for (const d of kendiOlan('net')) {
+    const ind = kendiIndirimTutari(d, taban.fiyat);
+    if (ind > 0 && (!net || ind > net.indirim)) net = { d, ad: kendiAdi(d), indirim: ind };
+  }
+  const sira1Fiyat = kurus(Math.max(0, taban.fiyat - (net ? net.indirim : 0)));
+
+  // SIRA 2 — sepet kampanyalari + kosullu kendi indirimleri: en yuksek tek indirim
   const geneller = genelKampanyalar(urun, kaynaklar, { bugun, haricKampanyaId: ekGenel?.kampanyaId || null });
   if (ekGenel?.genel) geneller.push({ kampanya: { id: ekGenel.kampanyaId }, genel: ekGenel.genel, ad: ekGenel.ad, fiyat: sayi(ekGenel.fiyat) });
+  for (const d of kendiler.filter((x) => (x.tur || '').startsWith('kosullu') && (x.hedef_kitle || 'all') === 'all')) {
+    geneller.push({ kampanya: { id: d.id, kendi: true }, genel: kosulluyuKampanyayaCevir(d), ad: kendiAdi(d), fiyat: 0, kendi: true });
+  }
   let enIyi = null;
   for (const g of geneller) {
-    const indirim = musteriIndirimi(taban.fiyat, g.genel);
+    const indirim = musteriIndirimi(sira1Fiyat, g.genel);
     const dahaKotu = enIyi && indirim === enIyi.indirim && sayi(g.genel.karsilama) < sayi(enIyi.genel.karsilama);
     if (indirim > 0 && (!enIyi || indirim > enIyi.indirim || dahaKotu)) enIyi = { ...g, indirim };
   }
 
-  const plusBilgi = plus === undefined ? plusDurumu(urun, kaynaklar, { bugun }) : plus;
-  const plusKampanya = plusBilgi ? { tur: 'net_percent', oran: plusBilgi.oran, karsilama: plusBilgi.karsilama || 0, tutar: 0 } : null;
-  const z = plusZincirliFiyat(taban.fiyat, enIyi ? enIyi.genel : null, plusKampanya);
+  // SIRA 2.5 — Plus %5 ile Plus'a ozel kendi indirimi (yuzde) yarisir
+  let plusOran = plusBilgi ? sayi(plusBilgi.oran) : 0;
+  for (const d of kendiler.filter((x) => (x.hedef_kitle || 'all') === 'plus' && (x.indirim_tipi || 'percent') === 'percent')) {
+    plusOran = Math.max(plusOran, sayi(d.oran));
+  }
+  const plusKampanya = plusMusterisi ? { tur: 'net_percent', oran: plusOran, karsilama: sayi(plusBilgi.karsilama), tutar: 0 } : null;
+  const z = plusZincirliFiyat(sira1Fiyat, enIyi ? enIyi.genel : null, plusKampanya);
   if (!z) return null;
 
-  const sonuc = {
-    taban, adaylar, genel: enIyi, plus: plusBilgi, plusTarife: null,
-    genelIndirim: z.genelIndirim, plusIndirim: z.plusIndirim, saticiPayi: z.saticiPayi,
-    musteriFiyat: z.musteriFiyat, saticiNet: z.saticiNet, komisyon: null,
+  let sonuc = {
+    taban, adaylar, net, genel: enIyi, plus: plusBilgi ? { ...plusBilgi, oran: plusOran } : null, plusTarife: null,
+    genelIndirim: z.genelIndirim, plusIndirim: z.plusIndirim, saticiPayi: kurus(z.saticiPayi + (net ? net.indirim : 0)),
+    musteriFiyat: z.musteriFiyat, saticiNet: z.saticiNet, komisyon: null, kod: null, kupon: null,
   };
-  if (plusBilgi) {
+  if (plusMusterisi) {
     const pt = plusTarifeFiyati(urun, kaynaklar, { bugun, platform });
     if (pt && pt.fiyat < z.musteriFiyat) {
-      return { ...sonuc, plusTarife: pt, genelIndirim: 0, plusIndirim: 0, saticiPayi: 0, musteriFiyat: pt.fiyat, saticiNet: pt.fiyat, komisyon: pt.komisyon };
+      sonuc = { ...sonuc, plusTarife: pt, net: null, genel: null, genelIndirim: 0, plusIndirim: 0, saticiPayi: 0, musteriFiyat: pt.fiyat, saticiNet: pt.fiyat, komisyon: pt.komisyon };
     }
   }
+
+  // SIRA 5 — indirim kodu (tamami satici), SIRA 6 — kupon (karsilama payi dusulur)
+  let kalan = sonuc.musteriFiyat;
+  let kod = null;
+  for (const d of kendiOlan('indirim_kodu')) {
+    const ind = kendiIndirimTutari(d, kalan);
+    if (ind > 0 && (!kod || ind > kod.indirim)) kod = { d, ad: kendiAdi(d), indirim: ind };
+  }
+  if (kod) { kalan = kurus(kalan - kod.indirim); sonuc.saticiNet = kurus(sonuc.saticiNet - kod.indirim); sonuc.saticiPayi = kurus(sonuc.saticiPayi + kod.indirim); }
+  let kupon = null;
+  for (const d of kendiler.filter((x) => x.tur === 'kupon' && ((x.hedef_kitle || 'all') === 'all' || plusMusterisi))) {
+    const ind = kendiIndirimTutari(d, kalan);
+    if (ind > 0 && (!kupon || ind > kupon.indirim)) {
+      const kars = Math.min(1, Math.max(0, sayi(d.karsilama) / 100));
+      kupon = { d, ad: kendiAdi(d), indirim: ind, karsilama: sayi(d.karsilama), saticiPayi: kurus(ind * (1 - kars)) };
+    }
+  }
+  if (kupon) { kalan = kurus(kalan - kupon.indirim); sonuc.saticiNet = kurus(sonuc.saticiNet - kupon.saticiPayi); sonuc.saticiPayi = kurus(sonuc.saticiPayi + kupon.saticiPayi); }
+  sonuc.musteriFiyat = kurus(Math.max(0, kalan));
+  sonuc.saticiNet = kurus(Math.max(0, sonuc.saticiNet));
+  sonuc.kod = kod; sonuc.kupon = kupon;
   return sonuc;
 }
 
