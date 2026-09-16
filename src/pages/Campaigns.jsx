@@ -408,9 +408,7 @@ export default function Campaigns() {
     const adaylar = [...kaynakMin].map(([kaynak, fiyat]) => ({ kaynak, fiyat })).sort((a, b) => a.fiyat - b.fiyat);
     satirlar.push(`Bu ürünün bugün geçerli fiyatları: ${adaylar.map((a) => `${a.kaynak} ${tl(a.fiyat)}`).join(' · ')}. En düşüğü taban alınır: ${etki.taban.kaynak} ${tl(etki.taban.fiyat)}.`);
     if (etki.plusTarife) {
-      satirlar.push(`Plus Komisyon Tarifesi'nde Plus'a özel fiyat seçili (${tl(etki.plusTarife.fiyat)}). Trendyol kuralı: Plus'a özel fiyat varsa Plus %5 uygulanmaz; Plus müşterisi bu fiyatı öder.`);
-      satirlar.push(`Sana kalan ${tl(etki.zincir.saticiNet)}; komisyon tarifenin teklifi${etki.plusTarife.komisyon ? ` (%${etki.plusTarife.komisyon})` : ''}. Kâr için sağdaki "i" düğmesi.`);
-      return satirlar;
+      satirlar.push(`Plus Komisyon Tarifesi'nde Plus'a özel fiyat seçili (${tl(etki.plusTarife.fiyat)}): Plus müşterisi için satış fiyatı bu olur, sepet kampanyaları ve kuponlar bunun üstüne uygulanır (sepet teyidi 16 Eyl 2026). Trendyol kuralı: Plus'a özel fiyat varsa Plus %5 uygulanmaz. Komisyon tarifenin teklifi${etki.plusTarife.komisyon ? ` (%${etki.plusTarife.komisyon})` : ''}.`);
     }
     if (etki.net) satirlar.push(`Kendi net indirimin (${etki.net.ad}) satış fiyatından hemen düşer: ${tl(etki.net.indirim)}, tamamı senden → ${tl(etki.taban.fiyat - etki.net.indirim)}.`);
     const k = etki.genel;
@@ -429,7 +427,8 @@ export default function Campaigns() {
     } else {
       satirlar.push('Bugün süren bir sepet kampanyasında seçili değil; sepet indirimi yok.');
     }
-    if (etki.plus) satirlar.push(`Plus %${Number(etki.plus.oran) || 0}, sipariş anında bu tutara iner: ${tl(etki.zincir.plusIndirim)}, tamamı senden → Plus müşterisi öder ${tl(etki.zincir.musteriFiyat)}.`);
+    if (etki.plusTarife) satirlar.push(`Plus'a özel fiyat olduğu için Plus %5 uygulanmaz → Plus müşterisi öder ${tl(etki.zincir.musteriFiyat)}.`);
+    else if (etki.plus) satirlar.push(`Plus %${Number(etki.plus.oran) || 0}, sipariş anında bu tutara iner: ${tl(etki.zincir.plusIndirim)}, tamamı senden → Plus müşterisi öder ${tl(etki.zincir.musteriFiyat)}.`);
     else satirlar.push(`Ürün Plus ek indirim kampanyasında seçili değil; Plus indirimi yok. Müşteri öder ${tl(etki.zincir.musteriFiyat)}.`);
     if (etki.kod) satirlar.push(`İndirim kodu (${etki.kod.ad}) sepette girilirse: ${tl(etki.kod.indirim)}, tamamı senden.`);
     if (etki.kupon) satirlar.push(`Kupon (${etki.kupon.ad}): ürüne düşen ${tl(etki.kupon.indirim)}; Trendyol %${etki.kupon.karsilama} karşılar, senin payın ${tl(etki.kupon.saticiPayi)} → müşteri öder ${tl(etki.zincir.musteriFiyat)}.`);

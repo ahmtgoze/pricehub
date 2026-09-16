@@ -15,7 +15,7 @@ const K = {
     { barcode: 'KCZ4555', platform_account: 'Trendyol', start_date: '2026-09-15', end_date: '2026-09-22', selected_type: 'flash_24h', selected_price: 309.22 },
     { barcode: 'KCZ4555', platform_account: 'Trendyol', start_date: '2026-09-15', end_date: '2026-09-22', selected_type: 'none', selected_price: 0 },
   ],
-  plusTariffs: [{ barcode: 'KCZ4555', platform_account: 'Trendyol', start_date: '2026-09-15', end_date: '2026-09-22', selected_type: 'plus', selected_price: 283.83, plus_commission_offer: 7.4 }],
+  plusTariffs: [{ barcode: 'KCZ4555', platform_account: 'Trendyol', start_date: '2026-09-15', end_date: '2026-09-22', selected_type: 'plus', selected_price: 299, plus_commission_offer: 7.4 }],
   campaigns: [
     { id: 'c300', campaign_type: 'all_countries', start_date: '2026-09-15', end_date: '2026-09-22', discount_kind: 'cart_tl', discount_amount: 30, threshold_amount: 300, trendyol_coverage_rate: 55 },
     { id: 'c500', campaign_type: 'all_countries', start_date: '2026-09-15', end_date: '2026-09-22', discount_kind: 'cart_tl', discount_amount: 50, threshold_amount: 500, trendyol_coverage_rate: 55 },
@@ -48,7 +48,7 @@ console.log('\n=== KCZ4555 — PLUS SAYFASI (Plus girilen 346,49) ===');
   esit('en yuksek indirim 29,74; esitlikte dusuk karsilama (1000e100 %40)', [z.genelIndirim, z.genel.kampanya.id], [29.74, 'c1000']);
   esit('musteri oder 254,31', z.musteriFiyat, 254.31);
   esit('saticiya 266,21', z.saticiNet, 266.21);
-  esit('plus tarifesi 283,83 > 254,31 -> devreye girmez', z.plusTarife, null);
+  esit('plus tarifesi 299 > taban 297,43 -> devreye girmez', z.plusTarife, null);
 }
 
 console.log('\n=== KCZ4555 — TARIFE SAYFASI (aday 4. kademe 297,43; Plus kayittan) ===');
@@ -85,7 +85,21 @@ console.log('\n=== PLUS TARIFESI KAZANIR ===');
 {
   const K4 = { ...K, plusTariffs: [{ ...K.plusTariffs[0], selected_price: 240 }] };
   const z = zincirKur({ urun, kaynaklar: K4, bugun: BUGUN, platform: 'Trendyol', aday: { kaynak: KAYNAK.PLUS_GIRILEN, fiyat: 346.49 }, plus: { oran: 5, karsilama: 0 } });
-  esit('240 < 254,31 -> tarife gecerli, %5 yok, komisyon 7,4', [z.musteriFiyat, z.saticiNet, z.komisyon, z.plusIndirim], [240, 240, 7.4, 0]);
+  esit('240 taban olur; 1000e100 ustune biner (24); %5 yok; komisyon 7,4', [z.taban.kaynak, z.musteriFiyat, z.saticiNet, z.komisyon, z.plusIndirim], [KAYNAK.PLUS_TARIFE, 216, 225.6, 7.4, 0]);
+}
+
+console.log('\n=== GERCEK PLUS SEPETI (16 Eyl 2026: 297,43 -> Plus tarifesi 283,83 -> 500e50) ===');
+{
+  // Plus uyeli hesap, KCZ4555 x 2: Fiyat Indirimi 98,12 (346,49 -> 297,43), Plus'a Ozel Fiyat 27,20
+  // (297,43 -> 283,83), 500 TL'ye 50 -> 50, kuponlar. Urun Plus %5 kampanyasinda DEGIL.
+  const K5 = { ...K, plusTariffs: [{ ...K.plusTariffs[0], selected_price: 283.83 }], campaigns: [K.campaigns[1]], campaignProducts: [{ campaign_id: 'c500', barcode: 'KCZ4555', selected_type: 'campaign', campaign_price: 346.49 }] };
+  const z = zincirKur({ urun, kaynaklar: K5, bugun: BUGUN, platform: 'Trendyol', aday: { kaynak: KAYNAK.TARIFE, fiyat: 297.43 }, plus: { oran: 5, karsilama: 0 } });
+  esit('taban Plus tarifesi 283,83', [z.taban.kaynak, z.taban.fiyat], [KAYNAK.PLUS_TARIFE, 283.83]);
+  esit('Plus %5 uygulanmaz', z.plusIndirim, 0);
+  esit('500e50 ustune biner: en kotu 28,38 (gercek 2 adette 25)', z.genelIndirim, 28.38);
+  esit('musteri oder 255,45 (gercek 2 adette 258,83)', z.musteriFiyat, 255.45);
+  esit('satici payi %45 = 12,77; saticiya 271,06', [z.saticiPayi, z.saticiNet], [12.77, 271.06]);
+  esit('komisyon Plus tarifesinin teklifi', z.komisyon, 7.4);
 }
 
 console.log('\n=== KENDI INDIRIMLERIM ===');

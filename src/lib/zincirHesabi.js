@@ -29,6 +29,7 @@ export const KAYNAK = {
   AVANTAJLI: 'Avantajlı Etiket',
   FLAS: 'Flaş',
   PLUS_GIRILEN: 'Plus girilen',
+  PLUS_TARIFE: 'Plus tarifesi',
 };
 
 const p2 = (n) => String(n).padStart(2, '0');
@@ -223,10 +224,20 @@ export function zincirKur({ urun, kaynaklar, bugun = bugunMetni(), platform = nu
   if (aday && sayi(aday.fiyat) > 0) adaylar.push({ kaynak: aday.kaynak, fiyat: sayi(aday.fiyat) });
   if (ekGenel && sayi(ekGenel.fiyat) > 0) adaylar.push({ kaynak: ekGenel.ad, fiyat: sayi(ekGenel.fiyat) });
   if (adaylar.length === 0) return null;
-  const taban = adaylar.reduce((a, b) => (b.fiyat < a.fiyat ? b : a));
+  let taban = adaylar.reduce((a, b) => (b.fiyat < a.fiyat ? b : a));
 
   const plusBilgi = plus === undefined ? plusDurumu(urun, kaynaklar, { bugun }) : plus;
   const plusMusterisi = !!plusBilgi;
+  // Plus Komisyon Tarifesi'ndeki Plus'a ozel fiyat, Plus musterisi icin SATIS
+  // FIYATI olur (sira 0): sepet kampanyalari ve kuponlar bunun ustune biner.
+  // Gercek sepet (16 Eyl 2026, Plus uyeli hesap, KCZ4555 x 2): 346,49 ->
+  // "Fiyat Indirimi" 297,43 -> "Plus'a Ozel Fiyat" 283,83 -> 500'e 50 -> kuponlar.
+  // Trendyol kurali: Plus'a ozel fiyata Plus %5 promosyonu uygulanmaz.
+  let plusTarife = null;
+  if (plusMusterisi) {
+    const pt = plusTarifeFiyati(urun, kaynaklar, { bugun, platform });
+    if (pt && pt.fiyat < taban.fiyat) { plusTarife = pt; taban = { kaynak: KAYNAK.PLUS_TARIFE, fiyat: pt.fiyat }; }
+  }
   // Kendi indirimleri: Plus'a ozel olanlar yalniz Plus musterisinde
   const kendiler = kendiIndirimleri(urun, kaynaklar, { bugun, platform })
     .filter((d) => (d.hedef_kitle || 'all') !== 'plus' || plusMusterisi);
@@ -254,25 +265,21 @@ export function zincirKur({ urun, kaynaklar, bugun = bugunMetni(), platform = nu
   }
 
   // SIRA 2.5 — Plus %5 ile Plus'a ozel kendi indirimi (yuzde) yarisir
-  let plusOran = plusBilgi ? sayi(plusBilgi.oran) : 0;
+  // Plus tarifesi taban olduysa Trendyol'un Plus %5'i uygulanmaz; kendi
+  // Plus'a ozel yuzde indirimi yine de sayilir (en kotu durum).
+  let plusOran = plusBilgi && !plusTarife ? sayi(plusBilgi.oran) : 0;
   for (const d of kendiler.filter((x) => (x.hedef_kitle || 'all') === 'plus' && (x.indirim_tipi || 'percent') === 'percent')) {
     plusOran = Math.max(plusOran, sayi(d.oran));
   }
-  const plusKampanya = plusMusterisi ? { tur: 'net_percent', oran: plusOran, karsilama: sayi(plusBilgi.karsilama), tutar: 0 } : null;
+  const plusKampanya = plusMusterisi && plusOran > 0 ? { tur: 'net_percent', oran: plusOran, karsilama: sayi(plusBilgi.karsilama), tutar: 0 } : null;
   const z = plusZincirliFiyat(sira1Fiyat, enIyi ? enIyi.genel : null, plusKampanya);
   if (!z) return null;
 
-  let sonuc = {
-    taban, adaylar, net, genel: enIyi, plus: plusBilgi ? { ...plusBilgi, oran: plusOran } : null, plusTarife: null,
+  const sonuc = {
+    taban, adaylar, net, genel: enIyi, plus: plusBilgi ? { ...plusBilgi, oran: plusOran } : null, plusTarife,
     genelIndirim: z.genelIndirim, plusIndirim: z.plusIndirim, saticiPayi: kurus(z.saticiPayi + (net ? net.indirim : 0)),
-    musteriFiyat: z.musteriFiyat, saticiNet: z.saticiNet, komisyon: null, kod: null, kupon: null,
+    musteriFiyat: z.musteriFiyat, saticiNet: z.saticiNet, komisyon: plusTarife ? plusTarife.komisyon : null, kod: null, kupon: null,
   };
-  if (plusMusterisi) {
-    const pt = plusTarifeFiyati(urun, kaynaklar, { bugun, platform });
-    if (pt && pt.fiyat < z.musteriFiyat) {
-      sonuc = { ...sonuc, plusTarife: pt, net: null, genel: null, genelIndirim: 0, plusIndirim: 0, saticiPayi: 0, musteriFiyat: pt.fiyat, saticiNet: pt.fiyat, komisyon: pt.komisyon };
-    }
-  }
 
   // SIRA 5 — indirim kodu (tamami satici), SIRA 6 — kupon (karsilama payi dusulur)
   let kalan = sonuc.musteriFiyat;
