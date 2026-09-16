@@ -26,12 +26,12 @@ import { bugunMetni } from '@/lib/zincirHesabi';
 const Entity = db.entities.TrendyolOwnDiscount;
 
 const TURLER = [
-  { value: 'net', label: 'Net İndirim (sıra 1)' },
-  { value: 'kosullu_tutar', label: 'Koşullu — Tutar üzerinden (sıra 2)' },
-  { value: 'kosullu_adet', label: 'Koşullu — Ürün adedi üzerinden (sıra 2)' },
-  { value: 'kosullu_xurun', label: 'Koşullu — X. ürüne (sıra 2)' },
-  { value: 'indirim_kodu', label: 'İndirim Kodu (sıra 5)' },
-  { value: 'kupon', label: 'Kupon (sıra 6)' },
+  { value: 'net', label: 'Net İndirim' },
+  { value: 'kosullu_tutar', label: 'Koşullu — Tutar üzerinden' },
+  { value: 'kosullu_adet', label: 'Koşullu — Ürün adedi üzerinden' },
+  { value: 'kosullu_xurun', label: 'Koşullu — X. ürüne' },
+  { value: 'indirim_kodu', label: 'İndirim Kodu' },
+  { value: 'kupon', label: 'Kupon' },
 ];
 const HEDEFLER = [
   { value: 'all', label: 'Tüm ülkeler (herkes)' },
@@ -142,7 +142,7 @@ export default function OwnDiscounts() {
         <Card className="mb-6">
           <CardContent className="pt-6 text-sm text-muted-foreground space-y-1">
             <div className="flex items-start gap-2"><Info className="h-4 w-4 mt-0.5 shrink-0" />
-              <div>Sıra: <strong>Net indirim</strong> satış fiyatından hemen düşer → <strong>Koşullu indirim</strong> sepet kampanyalarıyla yarışır, en yükseği geçer → <strong>Plus'a özel</strong> Plus %5 ile yarışır → <strong>İndirim kodu</strong> → <strong>Kupon</strong> en sonda; kuponda Trendyol karşılama payı senden çıkmaz. TL olanlar sepet başınadır, ürüne fiyat oranında dağılır.</div>
+              <div>Trendyol'da tanımladığın indirimi ve kuponu buraya da yaz. Sistem bunları diğer promosyonlarla birlikte hesaplar; kuponda Trendyol'un karşıladığı pay senden çıkmaz.</div>
             </div>
           </CardContent>
         </Card>
