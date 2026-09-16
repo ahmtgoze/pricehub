@@ -39,10 +39,20 @@ const HEDEFLER = [
   { value: 'mikro', label: 'Mikro İhracat (hesaba girmez)' },
 ];
 const KUPON_TURLERI = [
-  { value: 'urunden', label: 'Üründen Kazan' },
-  { value: 'hedef_kitle', label: 'Hedef Kitle' },
-  { value: 'takipci', label: 'Takipçi Kazan' },
-  { value: 'yorum', label: 'Yorum Yap Kazan' },
+  { value: 'urunden', label: 'Üründen Kazan', aciklama: 'Ürün sayfasını ziyaret eden müşteri kuponu ürün sayfasından kazanır.' },
+  { value: 'hedef_kitle', label: 'Hedef Kitle', aciklama: 'Seçilen kriterlere göre oluşan müşteri kitlesine kupon tanımlanır.' },
+  { value: 'takipci', label: 'Takipçi Kazan', aciklama: 'Mağazanı takip eden müşteri kupon kazanır.' },
+  { value: 'yorum', label: 'Yorum Yap Kazan', aciklama: 'Ürününe yorum yapan müşteri kupon kazanır.' },
+];
+const INDIRIM_TURLERI = [
+  { value: 'net', label: 'Net İndirim', aciklama: 'Sepet tutarına direkt uygulanır; alt limit yok.' },
+  { value: 'kosullu', label: 'Koşullu İndirim', aciklama: 'Belirlenen koşul üzeri alışverişlere uygulanır (tutar, adet, X. ürün).' },
+  { value: 'indirim_kodu', label: 'İndirim Kodu', aciklama: 'Sepette kodu giren müşteriye uygulanır.' },
+];
+const KOSUL_TIPLERI = [
+  { value: 'tutar', label: 'Tutar üzerinden', aciklama: 'Sepet tutarı minimum tutarı geçince uygulanır.' },
+  { value: 'adet', label: 'Ürün adedi üzerinden', aciklama: 'Sepette belirlenen adet ve üzeri ürün olunca uygulanır (X al Y öde de burada).' },
+  { value: 'xurun', label: 'X. ürüne', aciklama: 'Belirlenen adette ürün eklenince sepetteki en ucuz ürüne uygulanır.' },
 ];
 const KAPSAMLAR = [
   { value: 'all', label: 'Tüm ürünler' },
@@ -50,7 +60,7 @@ const KAPSAMLAR = [
   { value: 'urunler', label: 'Belirli ürünler (barkod / stok kodu)' },
 ];
 const bos = () => ({
-  ad: '', tur: 'kupon', kupon_turu: 'urunden', hedef_kitle: 'all', kapsam_turu: 'all', kapsam_kategoriler: [], kapsam_urunler_metin: '',
+  ad: '', kategori: 'kupon', tur: 'kupon', kupon_turu: 'urunden', kosul_tipi: 'tutar', hedef_kitle: 'all', kapsam_turu: 'all', kapsam_kategoriler: [], kapsam_urunler_metin: '',
   indirim_tipi: 'tl', oran: '', tutar: '', alt_limit: '', adet: '', al_x: '3', ode_y: '2', maks_tutar: '', karsilama: '0',
   kupon_adedi: '', siparis_limiti: '', start_date: bugunMetni(), end_date: '', aktif: true, not_metni: '',
 });
@@ -63,6 +73,7 @@ export default function OwnDiscounts() {
   const [form, setForm] = useState(bos());
   const [editingId, setEditingId] = useState(null);
   const [showForm, setShowForm] = useState(false);
+  const [adim, setAdim] = useState(1);
 
   React.useEffect(() => { db.auth.me().then((u) => setUserEmail(u.email)).catch(() => {}); }, []);
   const { data: platforms = [] } = useQuery({ queryKey: ['platforms', userEmail], queryFn: () => db.entities.Platform.filter({ created_by: userEmail }), enabled: !!userEmail });
@@ -80,19 +91,17 @@ export default function OwnDiscounts() {
     .sort((a, b) => String(b.start_date || '').localeCompare(String(a.start_date || '')));
 
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
-  const kosullu = form.tur.startsWith('kosullu');
-  const yuzdeMi = form.indirim_tipi === 'percent';
 
-  const openNew = () => { setForm(bos()); setEditingId(null); setShowForm(true); };
+  const openNew = () => { setForm(bos()); setEditingId(null); setAdim(1); setShowForm(true); };
   const openEdit = (r) => {
     setForm({
-      ...bos(), ...r, kupon_turu: r.kupon_turu || 'urunden',
+      ...bos(), ...r, kupon_turu: r.kupon_turu || 'urunden', kategori: r.tur === 'kupon' ? 'kupon' : 'indirim', kosul_tipi: (r.tur || '').startsWith('kosullu_') ? r.tur.slice(8) : 'tutar',
       oran: r.oran ?? '', tutar: r.tutar ?? '', alt_limit: r.alt_limit ?? '', adet: r.adet ?? '', al_x: r.al_x ?? '3', ode_y: r.ode_y ?? '2',
       maks_tutar: r.maks_tutar ?? '', karsilama: r.karsilama ?? '0', kupon_adedi: r.kupon_adedi ?? '', siparis_limiti: r.siparis_limiti ?? '',
       kapsam_kategoriler: Array.isArray(r.kapsam_kategoriler) ? r.kapsam_kategoriler : [],
       kapsam_urunler_metin: (Array.isArray(r.kapsam_urunler) ? r.kapsam_urunler : []).join('\n'),
     });
-    setEditingId(r.id); setShowForm(true);
+    setEditingId(r.id); setAdim(3); setShowForm(true);
   };
 
   const kaydet = async () => {
@@ -155,90 +164,145 @@ export default function OwnDiscounts() {
 
         {showForm && (
           <Card className="mb-6">
-            <CardHeader><CardTitle>{editingId ? 'İndirimi Düzenle' : 'Yeni İndirim / Kupon'}</CardTitle></CardHeader>
+            <CardHeader>
+              <CardTitle>{editingId ? 'İndirimi Düzenle' : 'Yeni İndirim / Kupon'}</CardTitle>
+              <div className="flex gap-2 mt-2 text-xs">
+                {[1, 2, 3].map((n) => (
+                  <span key={n} className={`px-2 py-1 rounded-full ${adim === n ? 'bg-primary text-primary-foreground' : 'bg-secondary text-muted-foreground'}`}>
+                    {n}. {n === 1 ? 'Kupon mu, indirim mi?' : n === 2 ? 'Tür' : 'Detaylar'}
+                  </span>
+                ))}
+              </div>
+            </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="space-y-2"><Label>Tür *</Label>
-                  <Select value={form.tur} onValueChange={(v) => { set('tur', v); if (v === 'kupon' || v === 'indirim_kodu' || v === 'kosullu_tutar') set('indirim_tipi', form.indirim_tipi === 'xalyode' ? 'tl' : form.indirim_tipi); }}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>{TURLER.map((t) => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}</SelectContent>
-                  </Select>
+              {adim === 1 && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {[['kupon', 'Kupon', "Trendyol → Promosyon & Fiyat → Kuponlar. Müşteri kuponu kazanır, sepette kullanır. Trendyol destekli kuponda karşılama oranı vardır."],
+                    ['indirim', 'İndirim', "Trendyol → Promosyon & Fiyat → İndirimler. Net indirim, koşullu indirim ya da indirim kodu."]].map(([k, b, a]) => (
+                    <button key={k} type="button" onClick={() => { set('kategori', k); set('tur', k === 'kupon' ? 'kupon' : 'net'); setAdim(2); }}
+                      className={`text-left rounded-xl border p-4 hover:bg-secondary ${form.kategori === k ? 'border-primary bg-secondary' : 'border-border'}`}>
+                      <div className="font-semibold">{b}</div><div className="text-xs text-muted-foreground mt-1">{a}</div>
+                    </button>
+                  ))}
                 </div>
-                {form.tur === 'kupon' && (
-                  <div className="space-y-2"><Label>Kupon türü</Label>
-                    <Select value={form.kupon_turu} onValueChange={(v) => set('kupon_turu', v)}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent>{KUPON_TURLERI.map((t) => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}</SelectContent>
-                    </Select>
+              )}
+
+              {adim === 2 && form.kategori === 'kupon' && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {KUPON_TURLERI.map((t) => (
+                    <button key={t.value} type="button" onClick={() => { set('kupon_turu', t.value); set('tur', 'kupon'); setAdim(3); }}
+                      className={`text-left rounded-xl border p-4 hover:bg-secondary ${form.kupon_turu === t.value ? 'border-primary bg-secondary' : 'border-border'}`}>
+                      <div className="font-semibold">{t.label}</div><div className="text-xs text-muted-foreground mt-1">{t.aciklama}</div>
+                    </button>
+                  ))}
+                </div>
+              )}
+              {adim === 2 && form.kategori === 'indirim' && (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {INDIRIM_TURLERI.map((t) => (
+                      <button key={t.value} type="button" onClick={() => { set('tur', t.value === 'kosullu' ? `kosullu_${form.kosul_tipi}` : t.value); if (t.value !== 'kosullu') setAdim(3); }}
+                        className={`text-left rounded-xl border p-4 hover:bg-secondary ${(t.value === 'kosullu' ? form.tur.startsWith('kosullu') : form.tur === t.value) ? 'border-primary bg-secondary' : 'border-border'}`}>
+                        <div className="font-semibold">{t.label}</div><div className="text-xs text-muted-foreground mt-1">{t.aciklama}</div>
+                      </button>
+                    ))}
                   </div>
-                )}
-                <div className="space-y-2"><Label>Hedef kitle</Label>
-                  <Select value={form.hedef_kitle} onValueChange={(v) => set('hedef_kitle', v)}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>{HEDEFLER.map((t) => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}</SelectContent>
-                  </Select>
+                  {form.tur.startsWith('kosullu') && (
+                    <div className="space-y-2">
+                      <Label>Koşul tipi</Label>
+                      <div className="flex flex-wrap gap-2">
+                        {KOSUL_TIPLERI.map((k) => (
+                          <Button key={k.value} type="button" variant={form.kosul_tipi === k.value ? 'default' : 'outline'} size="sm"
+                            onClick={() => { set('kosul_tipi', k.value); set('tur', `kosullu_${k.value}`); if (k.value !== 'adet' && form.indirim_tipi === 'xalyode') set('indirim_tipi', 'percent'); }}>{k.label}</Button>
+                        ))}
+                      </div>
+                      <div className="text-xs text-muted-foreground">{KOSUL_TIPLERI.find((k) => k.value === form.kosul_tipi)?.aciklama}</div>
+                      <Button type="button" onClick={() => setAdim(3)} className="bg-primary hover:bg-black dark:hover:bg-white/90 mt-2">Devam et</Button>
+                    </div>
+                  )}
                 </div>
-                <div className="space-y-2"><Label>Ad (isteğe bağlı)</Label><Input value={form.ad} onChange={(e) => set('ad', e.target.value)} placeholder="ör. Eylül kuponu" /></div>
-              </div>
+              )}
 
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div className="space-y-2"><Label>İndirim tipi</Label>
-                  <Select value={form.indirim_tipi} onValueChange={(v) => set('indirim_tipi', v)}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="percent">%X indirim</SelectItem>
-                      <SelectItem value="tl">X TL indirim</SelectItem>
-                      {(form.tur === 'kosullu_adet') && <SelectItem value="xalyode">X Al Y Öde</SelectItem>}
-                    </SelectContent>
-                  </Select>
-                </div>
-                {form.indirim_tipi === 'percent' && <div className="space-y-2"><Label>İndirim yüzdesi *</Label><Input type="number" step="0.1" value={form.oran} onChange={(e) => set('oran', e.target.value)} placeholder="ör. 10" /></div>}
-                {form.indirim_tipi === 'tl' && <div className="space-y-2"><Label>İndirim tutarı (TL) *</Label><Input type="number" step="0.01" value={form.tutar} onChange={(e) => set('tutar', e.target.value)} placeholder="ör. 50" /></div>}
-                {form.indirim_tipi === 'xalyode' && (<>
-                  <div className="space-y-2"><Label>X al</Label><Input type="number" value={form.al_x} onChange={(e) => set('al_x', e.target.value)} /></div>
-                  <div className="space-y-2"><Label>Y öde</Label><Input type="number" value={form.ode_y} onChange={(e) => set('ode_y', e.target.value)} /></div>
-                </>)}
-                {form.tur !== 'net' && form.indirim_tipi !== 'xalyode' && <div className="space-y-2"><Label>Alışveriş alt limiti (TL)</Label><Input type="number" step="0.01" value={form.alt_limit} onChange={(e) => set('alt_limit', e.target.value)} placeholder="0 = yok" /></div>}
-                {form.tur === 'kosullu_adet' && <div className="space-y-2"><Label>Ürün adedi (ve üzeri)</Label><Input type="number" value={form.adet} onChange={(e) => set('adet', e.target.value)} placeholder="ör. 2" /></div>}
-                {form.tur === 'kosullu_xurun' && <div className="space-y-2"><Label>Kaçıncı ürün</Label><Input type="number" value={form.adet} onChange={(e) => set('adet', e.target.value)} placeholder="ör. 2" /></div>}
-                {form.tur === 'kupon' && yuzdeMi && <div className="space-y-2"><Label>Maks. kupon tutarı (TL)</Label><Input type="number" step="0.01" value={form.maks_tutar} onChange={(e) => set('maks_tutar', e.target.value)} placeholder="tavan" /></div>}
-                {form.tur === 'kupon' && <div className="space-y-2"><Label>Trendyol karşılama (%)</Label><Input type="number" step="1" value={form.karsilama} onChange={(e) => set('karsilama', e.target.value)} placeholder="0 = tamamı senden" /></div>}
-                {form.tur === 'kupon' && <div className="space-y-2"><Label>Kupon adedi</Label><Input type="number" value={form.kupon_adedi} onChange={(e) => set('kupon_adedi', e.target.value)} /></div>}
-                {form.tur !== 'kupon' && <div className="space-y-2"><Label>Sipariş adedi limiti</Label><Input type="number" value={form.siparis_limiti} onChange={(e) => set('siparis_limiti', e.target.value)} placeholder="boş = sınırsız" /></div>}
-              </div>
+              {adim === 3 && (
+                <div className="space-y-4">
+                  <div className="text-sm text-muted-foreground">
+                    {form.kategori === 'kupon' ? `Kupon · ${KUPON_TURLERI.find((k) => k.value === form.kupon_turu)?.label}` : TURLER.find((t) => t.value === form.tur)?.label}
+                    {' '}<button type="button" className="underline" onClick={() => setAdim(2)}>değiştir</button>
+                  </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="space-y-2"><Label>Kapsam</Label>
-                  <Select value={form.kapsam_turu} onValueChange={(v) => set('kapsam_turu', v)}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>{KAPSAMLAR.map((t) => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}</SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2"><Label>Başlangıç *</Label><Input type="date" value={form.start_date} onChange={(e) => set('start_date', e.target.value)} /></div>
-                <div className="space-y-2"><Label>Bitiş *</Label><Input type="date" value={form.end_date} onChange={(e) => set('end_date', e.target.value)} /></div>
-              </div>
-              {form.kapsam_turu === 'kategori' && (
-                <div className="space-y-2"><Label>Kategoriler</Label>
-                  <div className="flex flex-wrap gap-2">
-                    {categories.map((c) => {
-                      const secili = form.kapsam_kategoriler.includes(c.name);
-                      return <Button key={c.id} type="button" size="sm" variant={secili ? 'default' : 'outline'} className="h-7 text-xs"
-                        onClick={() => set('kapsam_kategoriler', secili ? form.kapsam_kategoriler.filter((x) => x !== c.name) : [...form.kapsam_kategoriler, c.name])}>{c.name}</Button>;
-                    })}
-                    {categories.length === 0 && <span className="text-xs text-muted-foreground">Kategori tanımlı değil (Kategoriler sayfası).</span>}
+                  <div className="space-y-2"><Label>{form.kategori === 'kupon' ? 'Kupon kapsamı' : 'İndirim uygulanacak ürünler'}</Label>
+                    <div className="flex flex-wrap gap-2">
+                      {KAPSAMLAR.map((k) => <Button key={k.value} type="button" size="sm" variant={form.kapsam_turu === k.value ? 'default' : 'outline'} onClick={() => set('kapsam_turu', k.value)}>{k.label}</Button>)}
+                    </div>
+                  </div>
+                  {form.kapsam_turu === 'kategori' && (
+                    <div className="space-y-2"><Label>Kategoriler</Label>
+                      <div className="flex flex-wrap gap-2">
+                        {categories.map((c) => {
+                          const secili = form.kapsam_kategoriler.includes(c.name);
+                          return <Button key={c.id} type="button" size="sm" variant={secili ? 'default' : 'outline'} className="h-7 text-xs"
+                            onClick={() => set('kapsam_kategoriler', secili ? form.kapsam_kategoriler.filter((x) => x !== c.name) : [...form.kapsam_kategoriler, c.name])}>{c.name}</Button>;
+                        })}
+                        {categories.length === 0 && <span className="text-xs text-muted-foreground">Kategori tanımlı değil (Kategoriler sayfası).</span>}
+                      </div>
+                    </div>
+                  )}
+                  {form.kapsam_turu === 'urunler' && (
+                    <div className="space-y-2"><Label>Ürünler (barkod ya da stok kodu; satır başına bir)</Label>
+                      <textarea className="w-full min-h-[90px] rounded-xl border border-border bg-background p-2 text-sm font-mono" value={form.kapsam_urunler_metin} onChange={(e) => set('kapsam_urunler_metin', e.target.value)} placeholder={'KCZ4555\n8681511355425'} />
+                    </div>
+                  )}
+
+                  <div className="space-y-2"><Label>{form.kategori === 'kupon' ? 'Kupon indirim türü' : 'İndirim tipi'}</Label>
+                    <div className="flex flex-wrap gap-2">
+                      <Button type="button" size="sm" variant={form.indirim_tipi === 'tl' ? 'default' : 'outline'} onClick={() => set('indirim_tipi', 'tl')}>{form.kategori === 'kupon' ? 'Tutar (₺) indirimi' : 'X TL indirim'}</Button>
+                      <Button type="button" size="sm" variant={form.indirim_tipi === 'percent' ? 'default' : 'outline'} onClick={() => set('indirim_tipi', 'percent')}>{form.kategori === 'kupon' ? 'Yüzde indirimi' : '%X indirim'}</Button>
+                      {form.tur === 'kosullu_adet' && <Button type="button" size="sm" variant={form.indirim_tipi === 'xalyode' ? 'default' : 'outline'} onClick={() => set('indirim_tipi', 'xalyode')}>X Al Y Öde</Button>}
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    {form.indirim_tipi === 'percent' && <div className="space-y-2"><Label>{form.kategori === 'kupon' ? 'Kupon yüzde indirimi *' : 'İndirim yüzdesi *'}</Label><Input type="number" step="0.1" value={form.oran} onChange={(e) => set('oran', e.target.value)} placeholder="ör. 10" /></div>}
+                    {form.indirim_tipi === 'tl' && <div className="space-y-2"><Label>{form.kategori === 'kupon' ? 'Kupon tutarı (₺) *' : 'İndirim tutarı (₺) *'}</Label><Input type="number" step="0.01" value={form.tutar} onChange={(e) => set('tutar', e.target.value)} placeholder="ör. 50" /></div>}
+                    {form.indirim_tipi === 'xalyode' && (<>
+                      <div className="space-y-2"><Label>X al</Label><Input type="number" value={form.al_x} onChange={(e) => set('al_x', e.target.value)} /></div>
+                      <div className="space-y-2"><Label>Y öde</Label><Input type="number" value={form.ode_y} onChange={(e) => set('ode_y', e.target.value)} /></div>
+                    </>)}
+                    {form.tur === 'kupon' && form.indirim_tipi === 'percent' && <div className="space-y-2"><Label>Maks. kupon tutarı (₺)</Label><Input type="number" step="0.01" value={form.maks_tutar} onChange={(e) => set('maks_tutar', e.target.value)} placeholder="tavan" /></div>}
+                    {form.tur !== 'net' && form.indirim_tipi !== 'xalyode' && <div className="space-y-2"><Label>{form.kategori === 'kupon' ? 'Alışveriş alt limiti (₺)' : 'Minimum sepet tutarı (₺)'}</Label><Input type="number" step="0.01" value={form.alt_limit} onChange={(e) => set('alt_limit', e.target.value)} placeholder="0 = yok" /></div>}
+                    {form.tur === 'kosullu_adet' && <div className="space-y-2"><Label>Ürün adedi (ve üzeri)</Label><Input type="number" value={form.adet} onChange={(e) => set('adet', e.target.value)} placeholder="ör. 2" /></div>}
+                    {form.tur === 'kosullu_xurun' && <div className="space-y-2"><Label>Sepette olması gereken ürün adedi</Label><Input type="number" value={form.adet} onChange={(e) => set('adet', e.target.value)} placeholder="ör. 2" /></div>}
+                    {form.tur === 'kupon' && <div className="space-y-2"><Label>Trendyol'un karşıladığı oran (%)</Label><Input type="number" step="1" value={form.karsilama} onChange={(e) => set('karsilama', e.target.value)} placeholder="0 = tamamı senden" /></div>}
+                    {form.tur === 'kupon' && <div className="space-y-2"><Label>Kupon adedi</Label><Input type="number" value={form.kupon_adedi} onChange={(e) => set('kupon_adedi', e.target.value)} /></div>}
+                    {form.tur === 'indirim_kodu' && <div className="space-y-2"><Label>Kod kullanım adedi</Label><Input type="number" value={form.kupon_adedi} onChange={(e) => set('kupon_adedi', e.target.value)} /></div>}
+                    {form.tur !== 'kupon' && form.tur !== 'indirim_kodu' && <div className="space-y-2"><Label>Sipariş adedi limiti</Label><Input type="number" value={form.siparis_limiti} onChange={(e) => set('siparis_limiti', e.target.value)} placeholder="boş = sınırsız" /></div>}
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div className="space-y-2"><Label>Hedef kitle</Label>
+                      <Select value={form.hedef_kitle} onValueChange={(v) => set('hedef_kitle', v)}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>{HEDEFLER.map((t) => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}</SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2"><Label>Başlangıç *</Label><Input type="date" value={form.start_date} onChange={(e) => set('start_date', e.target.value)} /></div>
+                    <div className="space-y-2"><Label>Bitiş *</Label><Input type="date" value={form.end_date} onChange={(e) => set('end_date', e.target.value)} /></div>
+                    <div className="space-y-2"><Label>Ad (isteğe bağlı)</Label><Input value={form.ad} onChange={(e) => set('ad', e.target.value)} placeholder="ör. Eylül kuponu" /></div>
+                  </div>
+                  <div className="space-y-2"><Label>Not</Label><Input value={form.not_metni} onChange={(e) => set('not_metni', e.target.value)} placeholder="ör. Trendyol destekli kupon" /></div>
+                  <div className="flex gap-3">
+                    <Button variant="outline" onClick={() => setAdim(2)}>Geri</Button>
+                    <Button onClick={kaydet} className="bg-primary hover:bg-black dark:hover:bg-white/90">{editingId ? 'Güncelle' : 'Kaydet'}</Button>
+                    <Button variant="ghost" onClick={() => { setShowForm(false); setEditingId(null); }}>Vazgeç</Button>
                   </div>
                 </div>
               )}
-              {form.kapsam_turu === 'urunler' && (
-                <div className="space-y-2"><Label>Ürünler (barkod ya da stok kodu; satır başına bir)</Label>
-                  <textarea className="w-full min-h-[90px] rounded-xl border border-border bg-background p-2 text-sm font-mono" value={form.kapsam_urunler_metin} onChange={(e) => set('kapsam_urunler_metin', e.target.value)} placeholder={'KCZ4555\n8681511355425'} />
+              {adim < 3 && (
+                <div className="flex gap-3 pt-2">
+                  {adim === 2 && <Button variant="outline" onClick={() => setAdim(1)}>Geri</Button>}
+                  <Button variant="ghost" onClick={() => { setShowForm(false); setEditingId(null); }}>Vazgeç</Button>
                 </div>
               )}
-              <div className="space-y-2"><Label>Not</Label><Input value={form.not_metni} onChange={(e) => set('not_metni', e.target.value)} placeholder="ör. Trendyol destekli kupon, 20 adet" /></div>
-              <div className="flex gap-3">
-                <Button onClick={kaydet} className="bg-primary hover:bg-black dark:hover:bg-white/90">{editingId ? 'Güncelle' : 'Kaydet'}</Button>
-                <Button variant="outline" onClick={() => { setShowForm(false); setEditingId(null); }}>Vazgeç</Button>
-              </div>
             </CardContent>
           </Card>
         )}
