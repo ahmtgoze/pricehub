@@ -38,13 +38,19 @@ const HEDEFLER = [
   { value: 'plus', label: "Trendyol Plus'a özel" },
   { value: 'mikro', label: 'Mikro İhracat (hesaba girmez)' },
 ];
+const KUPON_TURLERI = [
+  { value: 'urunden', label: 'Üründen Kazan' },
+  { value: 'hedef_kitle', label: 'Hedef Kitle' },
+  { value: 'takipci', label: 'Takipçi Kazan' },
+  { value: 'yorum', label: 'Yorum Yap Kazan' },
+];
 const KAPSAMLAR = [
   { value: 'all', label: 'Tüm ürünler' },
   { value: 'kategori', label: 'Kategori' },
   { value: 'urunler', label: 'Belirli ürünler (barkod / stok kodu)' },
 ];
 const bos = () => ({
-  ad: '', tur: 'kupon', hedef_kitle: 'all', kapsam_turu: 'all', kapsam_kategoriler: [], kapsam_urunler_metin: '',
+  ad: '', tur: 'kupon', kupon_turu: 'urunden', hedef_kitle: 'all', kapsam_turu: 'all', kapsam_kategoriler: [], kapsam_urunler_metin: '',
   indirim_tipi: 'tl', oran: '', tutar: '', alt_limit: '', adet: '', al_x: '3', ode_y: '2', maks_tutar: '', karsilama: '0',
   kupon_adedi: '', siparis_limiti: '', start_date: bugunMetni(), end_date: '', aktif: true, not_metni: '',
 });
@@ -80,7 +86,7 @@ export default function OwnDiscounts() {
   const openNew = () => { setForm(bos()); setEditingId(null); setShowForm(true); };
   const openEdit = (r) => {
     setForm({
-      ...bos(), ...r,
+      ...bos(), ...r, kupon_turu: r.kupon_turu || 'urunden',
       oran: r.oran ?? '', tutar: r.tutar ?? '', alt_limit: r.alt_limit ?? '', adet: r.adet ?? '', al_x: r.al_x ?? '3', ode_y: r.ode_y ?? '2',
       maks_tutar: r.maks_tutar ?? '', karsilama: r.karsilama ?? '0', kupon_adedi: r.kupon_adedi ?? '', siparis_limiti: r.siparis_limiti ?? '',
       kapsam_kategoriler: Array.isArray(r.kapsam_kategoriler) ? r.kapsam_kategoriler : [],
@@ -95,7 +101,7 @@ export default function OwnDiscounts() {
     if (form.indirim_tipi === 'percent' && !(sayi(form.oran) > 0)) { toast.error('İndirim yüzdesi girin'); return; }
     if (form.indirim_tipi === 'tl' && !(sayi(form.tutar) > 0)) { toast.error('İndirim tutarı girin'); return; }
     const veri = {
-      platform_account: selectedPlatform, ad: form.ad || null, tur: form.tur, hedef_kitle: form.hedef_kitle, kapsam_turu: form.kapsam_turu,
+      platform_account: selectedPlatform, ad: form.ad || null, tur: form.tur, kupon_turu: form.tur === 'kupon' ? form.kupon_turu : null, hedef_kitle: form.hedef_kitle, kapsam_turu: form.kapsam_turu,
       kapsam_kategoriler: form.kapsam_turu === 'kategori' ? form.kapsam_kategoriler : [],
       kapsam_urunler: form.kapsam_turu === 'urunler' ? form.kapsam_urunler_metin.split(/[\n,;]+/).map((x) => x.trim()).filter(Boolean) : [],
       indirim_tipi: form.indirim_tipi, oran: sayi(form.oran), tutar: sayi(form.tutar), alt_limit: sayi(form.alt_limit) || 0,
@@ -158,6 +164,14 @@ export default function OwnDiscounts() {
                     <SelectContent>{TURLER.map((t) => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}</SelectContent>
                   </Select>
                 </div>
+                {form.tur === 'kupon' && (
+                  <div className="space-y-2"><Label>Kupon türü</Label>
+                    <Select value={form.kupon_turu} onValueChange={(v) => set('kupon_turu', v)}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>{KUPON_TURLERI.map((t) => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}</SelectContent>
+                    </Select>
+                  </div>
+                )}
                 <div className="space-y-2"><Label>Hedef kitle</Label>
                   <Select value={form.hedef_kitle} onValueChange={(v) => set('hedef_kitle', v)}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
@@ -245,7 +259,7 @@ export default function OwnDiscounts() {
                       const suruyor = surer(r) && r.aktif !== false;
                       return (
                         <tr key={r.id} className="border-b hover:bg-secondary">
-                          <td className="p-3"><div className="font-medium">{TURLER.find((t) => t.value === r.tur)?.label || r.tur}</div>{r.ad && <div className="text-xs text-muted-foreground">{r.ad}</div>}</td>
+                          <td className="p-3"><div className="font-medium">{TURLER.find((t) => t.value === r.tur)?.label || r.tur}{r.tur === 'kupon' && r.kupon_turu ? ` · ${KUPON_TURLERI.find((k) => k.value === r.kupon_turu)?.label || r.kupon_turu}` : ''}</div>{r.ad && <div className="text-xs text-muted-foreground">{r.ad}</div>}</td>
                           <td className="p-3">{indirimMetni(r)}{r.tur === 'kupon' && Number(r.karsilama) > 0 && <div className="text-xs text-emerald-600">%{r.karsilama} Trendyol karşılamalı</div>}</td>
                           <td className="p-3">{HEDEFLER.find((h) => h.value === r.hedef_kitle)?.label || 'Tüm ülkeler'}</td>
                           <td className="p-3 text-xs">{kapsamMetni(r)}</td>
