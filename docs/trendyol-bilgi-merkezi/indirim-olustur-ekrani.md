@@ -21,3 +21,22 @@ Kullanıcının Chrome'undan okundu. Sistemde karşılığı: **Kendi İndirimle
 | İndirim Kodu | %X veya X TRY | yüzde/tutar, Minimum Sepet Tutarı, Kod Kullanım Adedi, kod adı (özel/hazır), mağazada göster | 5 |
 
 Not: Plus müşterilerine özel hedef kitle seçilirse sıra 2.5'e girer (Plus'a özel kampanya gibi).
+
+# Trendyol "Kuponlar" ekranı (partner.trendyol.com/promotions/coupons, 16 Eyl 2026)
+
+## Liste
+Sekmeler: Üründen Kazan · Hedef Kitle · Takipçi Kazan · Yorum Yap Kazan.
+Sütunlar: Başlangıç–Bitiş · Kupon Bütçesi · Tutar / Alt Limit (ya da "İndirim %10, Maks. Kupon Tutarı 50₺, Alt limit 500₺") · Kapsam · Kazanılan/Toplam · Kullanılan/Toplam · Durum.
+**Karşılama burada:** bazı satırlarda "%50 Trendyol Karşılamalı", "%10 Trendyol Karşılamalı" rozeti (Trendyol destekli kuponlar). Kullanıcının geçmişi: 30₺/300₺ %50 karşılamalı (1.620₺ bütçe), 20₺/200₺ %50, 30₺/450₺ %10, 15₺/325₺, 50₺/750₺ (50.000₺ bütçe), %10 maks 50₺ / 500₺ …
+
+## "Trendyol Destekli Kupon Oluştur" (Trendyol Karşılamalı Kupon)
+Trendyol'un hazır teklifi, tek tuş: Kupon türü (Üründen Kazan), kapsam (Tüm Ürünler), Kupon Tutarı 50₺, Alışveriş Alt Limiti 500₺, Kupon Adedi 20, **Trendyol'un Karşıladığı Oran %50**, tarihler. Not: "1000₺ bütçenin 500₺'si Trendyol, 500₺'si satıcı".
+
+## "Kupon Oluştur" sihirbazı (4 adım)
+1. **Kupon Bilgileri:** Kupon tipi (Kupon Oluştur / Mikro İhracata Özel / Plus'a Özel); Kupon türü (Üründen Kazan / Takipçi Kazan / Yorum Yap Kazan / Hedef Kitle); başlangıç–bitiş tarihi (saatli).
+2. **Kupon Kapsamı:** Tüm ürünlerime · Kategori ve/veya Marka · Belirli ürünlerime.
+3. **Kupon Detayları:** İndirim türü Tutar(₺) / Yüzde. Tutar: sabit seçenekler 20…500₺; Alışveriş alt limiti 0, 200, 300, 400, 425, 430, 450 … 750₺; Trendyol önerisi (50₺ / 430₺). Yüzde: "Kupon Yüzde İndirimi" (+ listede görülen Maks. Kupon Tutarı). Kupon adedi.
+4. Onay. Bütçe = tutar × adet (satıcı payı karşılama düşülmüş).
+
+## Zincir kuralı
+Kupon sıra 6 (Plus'tan sonra, en son). Satıcı payı = kupon tutarı × (1 − karşılama). Ürün başına: sepet alt limitinin üstünde, kupon tutarı sepetteki ürünlere fiyat oranında dağılır (sepet indirimiyle aynı model, tam eşik varsayımı). Yüzde kuponda tavan (maks. kupon tutarı) uygulanır.
