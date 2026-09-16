@@ -522,13 +522,18 @@ export default function PlusProductCommissionTariff() {
     const trendyolPlatformIds = trendyolPlatforms.map(p => String(p.id));
     const trendyolPlatformNames = trendyolPlatforms.map(p => p.name.toLowerCase().trim());
 
-    const updated = uploadedData.map(item => {
-      if (item.selected_type !== 'none' || (item.manual_price && item.manual_price > 0)) { skippedAlreadySelected++; return item; }
+    let birakilan = 0;
+    const updated = uploadedData.map(eski => {
+      // Elle girilen fiyat korunur; diger secimler HER ZAMAN BASTAN (16 Eylul 2026).
+      if (eski.manual_price && eski.manual_price > 0) { skippedAlreadySelected++; return eski; }
+      const onceSecili = eski.selected_type !== 'none';
+      const item = onceSecili ? { ...eski, selected_type: 'none', selected_price: 0 } : eski;
+      const birak = () => { if (onceSecili) birakilan++; return item; };
       const matchedProduct = getMatchedProduct(item);
-      if (!matchedProduct) { skippedNoProduct++; return item; }
+      if (!matchedProduct) { skippedNoProduct++; return birak(); }
 
       const price = plusFiyati(item);
-      if (!price || price <= 0) { skippedNoOffer++; return item; }
+      if (!price || price <= 0) { skippedNoOffer++; return birak(); }
 
       const commission = commissions.find(c =>
         c.is_active !== false &&
@@ -536,7 +541,7 @@ export default function PlusProductCommissionTariff() {
         ((matchedProduct.category_id && String(c.category_id) === String(matchedProduct.category_id)) ||
          (matchedProduct.category_name && (c.category_name || '').toLowerCase().trim() === (matchedProduct.category_name || '').toLowerCase().trim()))
       );
-      if (!commission) { skippedNoMatch++; return item; }
+      if (!commission) { skippedNoMatch++; return birak(); }
 
       const toNum = (v) => (v != null && v !== '') ? Number(v) : null;
       const rawRate = toNum(commission.discounted_target_profit_rate);
@@ -546,27 +551,28 @@ export default function PlusProductCommissionTariff() {
       const targetAmount = (rawAmount != null && rawAmount > 0) ? rawAmount : null;
       const minAmount = (rawMin != null && rawMin > 0) ? rawMin : null;
 
-      if (targetRate == null && targetAmount == null) { skippedNoCommission++; return item; }
+      if (targetRate == null && targetAmount == null) { skippedNoCommission++; return birak(); }
 
       const calc = calculateProfit(price, item.plus_commission_offer || 0, item);
       const profit = calc.profit || 0;
       const profitRate = calc.profitRate || 0;
 
-      if (minAmount != null && profit < minAmount) { skippedTargetNotMet++; return item; }
+      if (minAmount != null && profit < minAmount) { skippedTargetNotMet++; return birak(); }
       let meetsTarget = true;
       if (targetRate != null && profitRate < targetRate) meetsTarget = false;
       if (targetAmount != null && profit < targetAmount) meetsTarget = false;
 
       if (meetsTarget) { selectedCount++; return { ...item, selected_type: 'plus', selected_price: price }; }
       skippedTargetNotMet++;
-      return item;
+      return birak();
     });
 
     setUploadedData(updated);
 
     const parts = [];
     if (selectedCount > 0) parts.push(`✅ ${selectedCount} ürün seçildi`);
-    if (skippedAlreadySelected > 0) parts.push(`${skippedAlreadySelected} zaten seçili/manuel`);
+    if (birakilan > 0) parts.push(`↩️ ${birakilan} seçili ürün bırakıldı (hedef tutmuyor)`);
+    if (skippedAlreadySelected > 0) parts.push(`${skippedAlreadySelected} manuel fiyat korundu`);
     if (skippedNoProduct > 0) parts.push(`⚠️ ${skippedNoProduct} sistem ürünüyle eşleşmedi`);
     if (skippedNoOffer > 0) parts.push(`⚠️ ${skippedNoOffer} Plus teklifi yok`);
     if (skippedNoMatch > 0) parts.push(`⚠️ ${skippedNoMatch} komisyon kaydı bulunamadı`);

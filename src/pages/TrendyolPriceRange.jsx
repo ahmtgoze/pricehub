@@ -690,15 +690,17 @@ export default function TrendyolPriceRange() {
     const trendyolPlatformIds = trendyolPlatforms.map(p => String(p.id));
     const trendyolPlatformNames = trendyolPlatforms.map(p => p.name.toLowerCase().trim());
 
-    const updated = uploadedData.map(item => {
-      // Manuel fiyat girilmiş veya herhangi bir seçim yapılmışsa dokunma
-      if (item.selected_range !== 'none' || (item.manual_price && item.manual_price > 0)) {
-        skippedAlreadySelected++;
-        return item;
-      }
+    let birakilan = 0;
+    const updated = uploadedData.map(eski => {
+      // Elle girilen fiyat korunur; diger seciler HER ZAMAN BASTAN degerlendirilir
+      // (kullanici, 16 Eylul 2026: zincir kurali eski secimi de duzeltmeli).
+      if (eski.manual_price && eski.manual_price > 0) { skippedAlreadySelected++; return eski; }
+      const onceSecili = eski.selected_range !== 'none';
+      const item = onceSecili ? { ...eski, selected_range: 'none', selected_price: 0, secim_penceresi: null } : eski;
+      const birak = () => { if (onceSecili) birakilan++; return item; };
 
       const matchedProduct = getMatchedProduct(item);
-      if (!matchedProduct) { skippedNoProduct++; return item; }
+      if (!matchedProduct) { skippedNoProduct++; return birak(); }
 
       const commission = commissions.find(c =>
         c.is_active !== false &&
@@ -736,7 +738,7 @@ export default function TrendyolPriceRange() {
               }))
           });
         }
-        return item;
+        return birak();
       }
 
       const toNum = (v) => (v != null && v !== '') ? Number(v) : null;
@@ -754,7 +756,7 @@ export default function TrendyolPriceRange() {
       const hasDiscountedTarget = targetRate != null || targetAmount != null;
       if (!hasDiscountedTarget) {
         skippedNoCommission++;
-        return item;
+        return birak();
       }
 
       // Sistem fiyatından gelen komisyonu kullan
@@ -800,9 +802,9 @@ export default function TrendyolPriceRange() {
         }
       }
 
-      // Hiçbir aralık hedefi karşılamadı — seçme, olduğu gibi bırak
+      // Hiçbir aralık hedefi karşılamadı — seçilmez (onceki secim varsa kalkar)
       skippedTargetNotMet++;
-      return item;
+      return birak();
     });
 
     setUploadedData(updated);
@@ -811,9 +813,8 @@ export default function TrendyolPriceRange() {
     if (selectedCount > 0) parts.push(`✅ ${selectedCount} ürün seçildi`);
     // Hangi tarifede secili oldugu yazilir: tarifeler bagimsiz oldugu icin
     // "zaten secili" yalnizca ACIK tarifeyi anlatir.
-    if (skippedAlreadySelected > 0) {
-      parts.push(`${skippedAlreadySelected} zaten ${secilenPencere ? `"${secilenPencere}" tarifesinde ` : ''}seçili/manuel`);
-    }
+    if (birakilan > 0) parts.push(`↩️ ${birakilan} seçili ürün bırakıldı (hedef tutmuyor)`);
+    if (skippedAlreadySelected > 0) parts.push(`${skippedAlreadySelected} manuel fiyat korundu`);
     if (skippedNoProduct > 0) parts.push(`⚠️ ${skippedNoProduct} sistem ürünüyle eşleşmedi`);
     if (skippedNoMatch > 0) parts.push(`⚠️ ${skippedNoMatch} komisyon kaydı bulunamadı`);
     if (skippedNoCommission > 0) parts.push(`⚠️ ${skippedNoCommission} indirimli hedef kâr tanımlı değil`);
