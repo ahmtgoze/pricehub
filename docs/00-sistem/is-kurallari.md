@@ -713,15 +713,18 @@ Kaynak: Trendyol Partner → Promosyonlar → Katılabileceğim Kampanyalar
 |---|---|---|
 | Net %15 İndirim | `net_percent` | fiyat × %15 |
 | Sepette %40 İndirim | `cart_percent` | fiyat × %40 |
-| 500 TL'ye 100 TL İndirim | `cart_tl` | fiyat ≥ 500 ise 100 TL; değilse fiyat × 100/500 (sepet tam eşikte, oransal dağılım) |
+| 500 TL'ye 100 TL İndirim | `cart_tl` | her durumda fiyat × 100/500 (indirim eşiğin her katında tekrar uygulanır; ürün başına en kötü pay) |
 | 3 Al 2 Öde | `buy_x_pay_y` | fiyat × (3−2)/3 |
 | 2 Adet ve Üzeri %15 İndirim | `qty_percent` | fiyat × %15 (tüm adetler) |
 
 > `cart_tl`: Trendyol sepet indirimini siparişteki kampanya ürünlerine
-> **tutarları oranında dağıtır** (kullanıcı, 3 Eyl 2026). En kötü durum sepetin
-> tam eşikte olmasıdır: indirim oranı = tutar/eşik. Örn. 2000 TL'ye 150 TL →
-> %7,5; 826,99 TL'lik ürün için 62,02 TL. Sepet eşiği aştıkça gerçek indirim
-> bundan küçüktür; kâr en kötü duruma göre gösterilir.
+> **tutarları oranında dağıtır** (kullanıcı, 3 Eyl 2026) ve indirimi **eşiğin
+> her katında yeniden uygular** (gerçek sepet, 16 Eyl 2026: 500'e 50 → 4 adette
+> 100 TL, 9 adette 250 TL; 300'e 30 → 3 adette 60 TL; en yüksek TOPLAMI veren
+> kampanya geçer). Adet arttıkça ürün başına indirim tutar/eşik oranına
+> yaklaşır; bu üst sınır her fiyatta (eşiğin üstünde de) kullanılır. Örn. 2000
+> TL'ye 150 TL → %7,5; 826,99 TL'lik ürün için 62,02 TL. Gerçek indirim bu
+> sınırın altında kalır (9 adette %9,3); kâr en kötü duruma göre gösterilir.
 
 ### Ortak alanlar
 - **Trendyol Karşılamalı (%)** — indirimin bu payı Trendyol'dan çıkar.
@@ -862,7 +865,7 @@ Chrome'dan okundu.)
 | Plus tarifesi yalnızca Plus müşterilerin siparişlerinde; Plus'a özel fiyata Plus promosyonu uygulanmaz | plus-komisyon-tarifeleri, indirimlerin-uygulanma-sirasi | bilgi |
 | Plus tarifeleri her **Salı 08:00** yayınlanır (kullanıcı: Ürün tarifesi de) | plus-komisyon-tarifeleri | Salı 08:00 bildirimi |
 | Plus fiyatı TSF'den ve tarife fiyatından yüksek girilemez | plus-komisyon-tarifeleri | uyumlu (min tavan) |
-| Sepet indirimi ürünlere fiyat oranında dağıtılır (700/300 → 140/60); kısmi iadede o ürünün payı iade | indirim | uyumlu (`sepetPayi`) |
+| Sepet indirimi ürünlere fiyat oranında dağıtılır (700/300 → 140/60); kısmi iadede o ürünün payı iade. Eşiğin her katında tekrar uygulanır (16 Eyl 2026 sepet teyidi) | indirim | uyumlu (`sepetPayi` = fiyat/eşik, kat sınırı yok) |
 | **Bir ürün aynı anda birden fazla Genel kampanyada olabilir** (kullanıcı teyidi, 5 Eyl 2026: aynı ürün 1000 TL ve 2000 TL kampanyalarında birlikte "Onaylandı"). Önceki "ikinciye eklenince ilkinden düşer" gözlemi yanlıştı; çakışma uyarısı/taşıma düğmeleri kaldırıldı | — | bilgi |
 | **Kampanya Excel çıktısı Trendyol'da kabul edildi** (5 Eyl 2026): Excel İndir dosyası Trendyol "Excel'den Toplu Ürün Ekle" ile yüklendi, seçili satırlar onaylandı (105/146, 83/146). Fiyatı boş bırakılan (seçilmeyen) satırlar Trendyol'da "hatalı" sayılır, zararı yok | in-place yazma + bookSST | teyitli |
 | **Kampanyaya Katıl** (5 Eyl 2026): tek akış — formun ilk alanı Trendyol "Ürün Ekle" Excel'i; dosyanın içinde kampanya bilgisi yoktur, **dosya adından** okunur (`2000-tl-uzeri-150-tl-indirim-30-trendyol-karsilamali-…` → sepet 2000 / 150 ₺ / %30 karşılama; `trendyol-plus-…-ek-5-indirim` → Plus, net %5; `mikro-ihracat` → Mikro İhracat). Tarih dosya adında yok, kullanıcı girer; Oluştur'a basınca ürünler yüklenir | `dosyaAdindanKampanya`, `bekleyenDosya` | karar |
@@ -1100,4 +1103,4 @@ zaten eşittir.
 | **Tarife ve Plus Tarifesi Akıllı Seç her zaman baştan** (16 Eyl 2026): seçili ürün yeniden değerlendirilir, hedef (zincirli) tutmuyorsa seçimi kalkar ("N seçili ürün bırakıldı"); elle girilen fiyat korunur. Avantajlı ve Flaş zaten böyleydi; Kampanyalar dün yapıldı | `handleSmartAutoSelect` | karar |
 | **Kendi İndirimlerim (planlanıyor, 16 Eyl 2026)**: Trendyol İndirim Oluştur ekranı incelendi (docs/trendyol-bilgi-merkezi/indirim-olustur-ekrani.md). Sayfa: tür (Net / Koşullu tutar-adet-X. ürün / Birlikte Al / İndirim Kodu), hedef kitle, kapsam, tutar/oran, alt limit, tarih, sipariş limiti; kayıt tutar. Zincire girişi: Net → sıra 1 (taban − net), Koşullu → sıra 2 (sepet kampanyalarıyla yarışır, en yükseği), Plus'a özel → 2.5, Birlikte Al → 3 (ödül ürün ayrı), İndirim Kodu → 5 (Plus'tan sonra). Karşılama oranı: Trendyol Ortak önerilerinde görünmedi; kullanıcı 'bazen karşılıyor' dedi, yeri teyit edilecek | — | plan |
 | **Kendi İndirimlerim sayfası** (16 Eyl 2026): Trendyol'da tanımlanan net/koşullu indirim, indirim kodu ve kupon burada kaydedilir (`trendyol_own_discounts`; tür, hedef kitle all/plus/mikro, kapsam tüm/kategori/ürünler, %/TL/X al Y öde, alt limit, tavan, karşılama, tarih, aktif). Zincire girişi (`zincirHesabi`): net → sıra 1 tabandan; koşullu → sıra 2, sepet kampanyalarıyla yarışır (en yüksek tek indirim); Plus'a özel yüzde → 2.5, Plus %5 ile yarışır; indirim kodu → 5; kupon → 6, satıcı payı = tutar × (1 − karşılama). TL indirimler sepet başına: alt limitin altındaki fiyat oranla dağılır; yüzde kuponda tavan da oranla. Mikro İhracat hedefli olanlar hesaba girmez. "?" açıklamasında net/kod/kupon satırları | `kendiIndirimleri`, `kendiIndirimTutari`, `OwnDiscounts.jsx` (37 test) | karar |
-| **Zincir sepette TEYİT EDİLDİ** (16 Eyl 2026, Trendyol sepet ekranı, KCZ4555 × 2): ara toplam 692,98 (2 × liste 346,49) → "Fiyat İndirimi" 98,12 (tarife/avantajlı fiyatı 297,43) → "500 TL'ye 50 TL İndirim" −50 → toplam 544,86. Kampanya indirimi tarife fiyatının üstüne iner; aynı sıradaki 300'e 30 ayrıca uygulanmadı (en yükseği geçer). Tek üründe (297,43 < 300) hiçbir sepet kampanyası tetiklenmedi; sistem tam eşik varsayımıyla en kötü durumu gösterir | zincirHesabi | teyit |
+| **Zincir sepette TEYİT EDİLDİ** (16 Eyl 2026, Trendyol sepet ekranı, KCZ4555 × 2): ara toplam 692,98 (2 × liste 346,49) → "Fiyat İndirimi" 98,12 (tarife/avantajlı fiyatı 297,43) → "500 TL'ye 50 TL İndirim" −50 → toplam 544,86. Kampanya indirimi tarife fiyatının üstüne iner; aynı sıradaki 300'e 30 ayrıca uygulanmadı (en yükseği geçer). Tek üründe (297,43 < 300) hiçbir sepet kampanyası tetiklenmedi. **Kat kuralı** (aynı gün, 3/4/9 adet): 3 adet 892,29 → "300 TL'ye 30" **2 kez** = 60 (500'e 50'nin tek 50'sini geçti); 4 adet 1.189,72 → 500'e 50 **2 kez** = 100; 9 adet 2.676,87 → **5 kez** = 250. Kullanıcı: "her kampanyada ve her kendi indirimimde var bu özellik" → `sepetPayi` ve `kendiIndirimTutari` artık eşik/alt limit üstünde de fiyat/eşik oranını kullanır (üst sınır; 9 adette gerçek %9,3 < %10) | zincirHesabi, trendyolKampanyaIndirimi | teyit |

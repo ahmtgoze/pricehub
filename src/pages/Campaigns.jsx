@@ -420,9 +420,9 @@ export default function Campaigns() {
       const satici = Math.round((etki.zincir.genelIndirim - trendyol) * 100) / 100;
       const esik = Number(k.esik) || 0;
       const nasil = k.tur === 'cart_tl'
-        ? (esik > 0 && etki.taban.fiyat < esik
-            ? `ürün eşiğin (${tl(esik)}) altında, indirim fiyat oranında dağılır: ${tl(k.tutar)} × ${tl(etki.taban.fiyat)} / ${tl(esik)}`
-            : `ürün tek başına eşiği geçiyor, indirimin tamamı bu üründe`)
+        ? (esik > 0
+            ? `indirim sepet eşiğinin (${tl(esik)}) her katında tekrar uygulanır, ürüne düşen en kötü pay: ${tl(k.tutar)} × ${tl(etki.taban.fiyat)} / ${tl(esik)}`
+            : `ürün başına ${tl(k.tutar)}`)
         : `%${k.oran}`;
       satirlar.push(`Sepette en yüksek indirimi veren kampanya: ${kampanyaMetni(k)} → ${nasil} = ${tl(etki.zincir.genelIndirim)}. Trendyol %${Number(k.karsilama) || 0} karşılar (${tl(trendyol)}), senin payın ${tl(satici)}.`);
       satirlar.push(`Müşterinin sepette gördüğü fiyat: ${tl(etki.taban.fiyat)} − ${tl(etki.zincir.genelIndirim)} = ${tl(etki.taban.fiyat - etki.zincir.genelIndirim)}.`);
@@ -451,10 +451,10 @@ export default function Campaigns() {
     const satirlar = [];
     if (k.tur === 'cart_tl') {
       const esik = Number(k.esik) || 0;
-      if (esik > 0 && f < esik) {
-        satirlar.push(`Sepet eşiği ${tl(esik)}, ürün eşiğin altında: müşteri eşiğe birden fazla ürünle ulaşır. İndirim ürünlere fiyat oranında dağılır → bu ürünün payı ${tl(k.tutar)} × ${tl(f)} / ${tl(esik)} = ${tl(musteri)} (${oran(musteri)}).`);
+      if (esik > 0) {
+        satirlar.push(`Sepet eşiği ${tl(esik)}: Trendyol indirimi eşiğin her katında yeniden uygular (sepet 2 × eşikse 2 × ${tl(k.tutar)}). Adet arttıkça ürün başına indirim ${tl(k.tutar)} / ${tl(esik)} oranına yaklaşır → bu ürünün en kötü payı ${tl(k.tutar)} × ${tl(f)} / ${tl(esik)} = ${tl(musteri)} (${oran(musteri)}).`);
       } else {
-        satirlar.push(`Ürün tek başına eşiği ${esik > 0 ? tl(esik) + "'yi " : ''}geçiyor: indirimin tamamı bu üründe → ${tl(musteri)} (${oran(musteri)}).`);
+        satirlar.push(`Eşik yok: ürün başına ${tl(musteri)} (${oran(musteri)}).`);
       }
     } else if (k.tur === 'buy_x_pay_y') {
       satirlar.push(`${k.alX} Al ${k.odeY} Öde: ${k.alX} adette ${k.alX - k.odeY} adet bedava → adet başına ${tl(musteri)} (${oran(musteri)}).`);
@@ -1495,7 +1495,7 @@ export default function Campaigns() {
                         <Input type="number" placeholder="100" value={formData.discount_amount} onChange={alan('discount_amount')} />
                       </div>
                     </div>
-                    <p className="text-xs text-muted-foreground -mt-2">Ürün eşiğin altındaysa müşteri eşiğe ulaşmak için birden fazla alır; indirim adetlere bölünerek hesaplanır.</p>
+                    <p className="text-xs text-muted-foreground -mt-2">İndirim sepet eşiğinin her katında tekrar uygulanır; ürün başına en kötü pay tutar × fiyat / eşik olarak hesaplanır.</p>
                   </>
                 )}
 

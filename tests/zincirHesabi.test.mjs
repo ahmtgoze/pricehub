@@ -93,6 +93,7 @@ console.log('\n=== KENDI INDIRIMLERIM ===');
   const D = (ek) => ({ id: 'd', aktif: true, start_date: '2026-09-01', end_date: '2026-09-30', hedef_kitle: 'all', kapsam_turu: 'all', karsilama: 0, alt_limit: 0, ...ek });
   esit('tutar: kendiIndirimTutari %10', kendiIndirimTutari(D({ indirim_tipi: 'percent', oran: 10 }), 297.43), 29.74);
   esit('tutar: 30 TL, alt limit 300, urun 297 -> oranli', kendiIndirimTutari(D({ indirim_tipi: 'tl', tutar: 30, alt_limit: 300 }), 297.43), 29.74);
+  esit('tutar: 30 TL, alt limit 300, urun 900 -> 3 kat', kendiIndirimTutari(D({ indirim_tipi: 'tl', tutar: 30, alt_limit: 300 }), 900), 90);
   esit('tutar: %10 kupon tavan 20 TL', kendiIndirimTutari(D({ indirim_tipi: 'percent', oran: 10, maks_tutar: 20 }), 297.43), 20);
   esit('tutar: 3 al 2 ode', kendiIndirimTutari(D({ indirim_tipi: 'xalyode', al_x: 3, ode_y: 2 }), 300), 100);
 

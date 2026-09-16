@@ -151,15 +151,16 @@ export function kendiIndirimleri(urun, kaynaklar, { bugun, platform } = {}) {
 
 /**
  * Bir kendi indiriminin URUNE dusen musteri indirimi (fiyat uzerinden).
- * TL indirim sepet basinadir: fiyat alt limitin altindaysa fiyat/altLimit
- * oraninda dagilir (sepet kampanyasiyla ayni model). Yuzde kuponda tavan
- * (maks_tutar) da ayni oranla dagilir.
+ * TL indirim sepet basinadir ve alt limitin her katinda yeniden uygulanir
+ * (kullanici, 16 Eyl 2026: "her kampanyada ve her kendi indirimimde var bu
+ * ozellik"); urune dusen en kotu pay fiyat/altLimit x tutar (sepet
+ * kampanyasiyla ayni model). Yuzde kuponda tavan (maks_tutar) da ayni oranla.
  */
 export function kendiIndirimTutari(d, fiyat) {
   const f = sayi(fiyat);
   if (f <= 0 || !d) return 0;
   const alt = sayi(d.alt_limit);
-  const pay = alt > 0 && f < alt ? f / alt : 1;
+  const pay = alt > 0 ? f / alt : 1;
   const tip = d.indirim_tipi || 'percent';
   if (tip === 'percent') {
     let ind = f * sayi(d.oran) / 100;

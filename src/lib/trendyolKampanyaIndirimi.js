@@ -72,14 +72,19 @@ export const KAMPANYA_GRUPLARI = [
 const yuzdeliMi = (tur) => tur === 'net_percent' || tur === 'cart_percent' || tur === 'qty_percent';
 
 /**
- * Sepet indiriminden urune dusen pay (0-1), cart_tl.
- * Esik yoksa veya fiyat esigi tek basina geciyorsa 1 (tamami).
+ * Sepet indiriminden urune dusen pay (kat sayisi), cart_tl.
+ * Trendyol sepet indirimini esigin HER KATINDA yeniden uygular (gercek sepet,
+ * 16 Eyl 2026: 500'e 50 kampanyasi 4 adette 100 TL, 9 adette 250 TL;
+ * 300'e 30 kampanyasi 3 adette 60 TL). Adet arttikca urun basina indirim
+ * tutar x fiyat/esik'e yaklasir; en kotu durum (ust sinir) budur. Esigin
+ * uzerindeki urunde de ayni oran gecerlidir (900 TL urun, 300'e 30 -> 90 TL).
+ * Esik yoksa 1 (tamami, urun basina).
  */
 export function sepetPayi(fiyat, esik) {
   const f = sayi(fiyat) ?? 0;
   const e = sayi(esik) ?? 0;
   if (f <= 0) return 0;
-  if (e <= 0 || f >= e) return 1;
+  if (e <= 0) return 1;
   return f / e;
 }
 
@@ -201,9 +206,8 @@ export function kampanyaFiyatiTersi(hedefEtkin, kampanya) {
     const esik = sayi(kampanya.esik) ?? 0;
     if (tutar <= 0) return kurusa(h);
     const saticiPayi = tutar * (1 - k);
-    // Esigi gecen fiyat: L = h + pay. Gecmeyen: L - L x pay/esik = h
-    const ustte = h + saticiPayi;
-    if (esik <= 0 || ustte >= esik) return kurusa(ustte);
+    // Esik yok: L = h + pay. Esikli (her katta tekrar): L - L x pay/esik = h
+    if (esik <= 0) return kurusa(h + saticiPayi);
     const kat = 1 - saticiPayi / esik;
     return kat > 0 ? kurusa(h / kat) : 0;
   }

@@ -37,25 +37,27 @@ console.log('\n=== SEPETTE % INDIRIM ===');
 console.log('\n=== X TL\'YE Y TL INDIRIM ===');
 {
   const k = { tur: 'cart_tl', esik: 500, tutar: 100 };
-  esit('esigi tek basina gecen urun: tamami iner', musteriIndirimi(600, k), 100);
+  esit('esigi gecen urun: kat orani surer (600 x 100/500)', musteriIndirimi(600, k), 120);
   esit('tam esik', musteriIndirimi(500, k), 100);
   // Sepet tam esikte: indirim orani 100/500 = %20, urune fiyatinin %20'si
   esit('esigin altinda: oransal (%20)', musteriIndirimi(300, k), 60);
   esit('120 TL urun -> 24 TL', musteriIndirimi(120, k), 24);
   esit('pay: 120/500', sepetPayi(120, 500), 0.24);
   esit('pay: esik yok -> tamami', sepetPayi(120, 0), 1);
-  esit('pay: esigi gecen -> tamami', sepetPayi(600, 500), 1);
+  esit('pay: esigi gecen -> kat orani', sepetPayi(600, 500), 1.2);
+  // Gercek sepet 16 Eyl 2026: 500'e 50, 9 adet 297,43 -> 250 TL (5 kat); ust sinir 9 x 29,74
+  esit('kat: ust sinir gercek indirimin ustunde', musteriIndirimi(297.43, { tur: 'cart_tl', esik: 500, tutar: 50 }) * 9 >= 250, true);
   // Kullanicinin dosyasi: 2000 TL'ye 150 TL, %30 karsilamali, 826,99 TL poset
   esit('2000/150: 826,99 TL urun musteri indirimi', musteriIndirimi(826.99, { tur: 'cart_tl', esik: 2000, tutar: 150 }), 62.02);
   esit('2000/150 %30 karsilamali satici fiyati', kampanyaFiyati(826.99, { tur: 'cart_tl', esik: 2000, tutar: 150, karsilama: 30 }), 783.58);
-  esit('satici fiyati %30 karsilamali', kampanyaFiyati(600, { ...k, karsilama: 30 }), 530);
+  esit('satici fiyati %30 karsilamali (600 x 100/500 = 120, %70 satici = 84)', kampanyaFiyati(600, { ...k, karsilama: 30 }), 516);
   esit('esiksiz duz TL indirim (eski davranis)', kampanyaFiyati(200, { tur: 'cart_tl', esik: 0, tutar: 50 }), 150);
   esit('indirim fiyati asamaz', musteriIndirimi(30, { tur: 'cart_tl', esik: 0, tutar: 50 }), 30);
-  esit('tersi (tek adet)', kampanyaFiyatiTersi(500, k), 600);
+  esit('tersi (500 kalan, %20 kat orani -> 625)', kampanyaFiyatiTersi(500, k), 625);
   esit('tersi (esigin altinda)', kampanyaFiyatiTersi(240, k), 300);
   esit('tersi gidis-donus', kampanyaFiyatiTersi(kampanyaFiyati(300, k), k), 300);
   esit('tersi gidis-donus (esik ustu)', kampanyaFiyatiTersi(kampanyaFiyati(900, k), k), 900);
-  esit('tersi karsilamali', kampanyaFiyatiTersi(530, { ...k, karsilama: 30 }), 600);
+  esit('tersi karsilamali', kampanyaFiyatiTersi(516, { ...k, karsilama: 30 }), 600);
   esit('tutar 0 -> degismez', kampanyaFiyati(600, { tur: 'cart_tl', esik: 500, tutar: 0 }), 600);
 }
 
@@ -169,13 +171,13 @@ console.log('\n=== PLUS ZINCIRLI FIYAT (Genel kampanya ustune Plus %5) ===');
 {
   const genel = { tur: 'cart_tl', tutar: 100, esik: 1000, karsilama: 35, oran: 0 };
   const plus = { tur: 'net_percent', oran: 5, karsilama: 0, tutar: 0 };
-  // CZV-1825-1000: Genel'e 1840,86 yazildi; sepet tam esikte urun esigin ustunde -> 100 TL indirim
+  // CZV-1825-1000: Genel'e 1840,86 yazildi; indirim esigin her katinda tekrar -> 100 x 1840,86/1000 = 184,09
   const z = plusZincirliFiyat(1840.86, genel, plus);
-  esit('genel indirim 100', z.genelIndirim, 100);
-  esit('plus indirim %5 x 1740,86', z.plusIndirim, 87.04);
-  esit('musteri oder', z.musteriFiyat, 1653.82);
-  esit('saticiya kalan: 1840,86 - 65 (100 x %65) - 87,04', z.saticiNet, 1688.82);
-  esit('satici payi toplam', z.saticiPayi, 152.04);
+  esit('genel indirim 184,09 (kat orani)', z.genelIndirim, 184.09);
+  esit('plus indirim %5 x 1656,77', z.plusIndirim, 82.84);
+  esit('musteri oder', z.musteriFiyat, 1573.93);
+  esit('saticiya kalan: 1840,86 - 119,66 (184,09 x %65) - 82,84', z.saticiNet, 1638.36);
+  esit('satici payi toplam', z.saticiPayi, 202.5);
   esit('genel yoksa yalniz plus', plusZincirliFiyat(400, null, plus), { musteriFiyat: 380, saticiNet: 380, genelIndirim: 0, plusIndirim: 20, saticiPayi: 20 });
   esit('fiyat yok -> null', plusZincirliFiyat(0, genel, plus), null);
   // 400 TL, 2000'e 150 %30 karsilamali: musteri 370, satici 379; Plus %5 -> 351,50 / 360,50
