@@ -151,19 +151,17 @@ export function kendiIndirimleri(urun, kaynaklar, { bugun, platform } = {}) {
 
 /**
  * Bir kendi indiriminin URUNE dusen musteri indirimi (fiyat uzerinden).
- * TL indirim sepet basinadir. Kendi indirimlerinde (net/kosullu/kod) alt
- * limitin her katinda yeniden uygulanir (kullanici, 16 Eyl 2026: "kuponda yok,
- * kendi indirimim ve kampanyalarda var; 1000 TL 50, 2000 TL 100 gibi gidiyor");
- * urune dusen en kotu pay fiyat/altLimit x tutar. KUPON tek seferdir: fiyat
- * alt limitin altindaysa oranla dagilir, ustundeyse tamami. Yuzde kuponda
- * tavan (maks_tutar) da ayni payla.
+ * TL indirim sepet basinadir; kosullu indirim ve kodda her urun adedi icin
+ * en fazla bir kez, sepet alt limiti karsiladikca uygulanir (kupon tek sefer).
+ * Urun basina ust sinir her ikisinde ayni: fiyat alt limitin altindaysa
+ * fiyat/altLimit orani, ustundeyse tamami (sepet kampanyasiyla ayni model).
+ * Yuzde kuponda tavan (maks_tutar) da ayni oranla dagilir.
  */
 export function kendiIndirimTutari(d, fiyat) {
   const f = sayi(fiyat);
   if (f <= 0 || !d) return 0;
   const alt = sayi(d.alt_limit);
-  const katli = d.tur !== 'kupon';
-  const pay = alt > 0 && (katli || f < alt) ? f / alt : 1;
+  const pay = alt > 0 && f < alt ? f / alt : 1;
   const tip = d.indirim_tipi || 'percent';
   if (tip === 'percent') {
     let ind = f * sayi(d.oran) / 100;
