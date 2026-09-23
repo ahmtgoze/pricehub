@@ -153,6 +153,7 @@ async function sayfaTest(b, url, beklenen) {
 /* ── Ana akış ────────────────────────────────────────────────────────── */
 const wsUrl = await hedefBul();
 const b = await Baglanti.ac(wsUrl);
+b.chrome = chrome;                         // duzgunKapat Chrome'un cikisini bekler
 await b.gonder('Runtime.enable');
 await b.gonder('Page.enable');
 await b.gonder('Log.enable');

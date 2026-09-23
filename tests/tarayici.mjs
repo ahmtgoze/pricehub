@@ -191,11 +191,15 @@ export class Baglanti {
    * oturum acmak bu yuzden ise yaramiyordu. Browser.close duzgun kapanis
    * yapar, veriler kalici olur.
    */
+  // Chrome KENDI kapanana kadar beklenir: once 1,5 sn bekleyip cikiliyordu,
+  // cikista chrome.kill() yazimi yarida kesiyor, Local Storage "checksum
+  // mismatch" ile bozuluyor ve giris kayboluyordu (23 Eyl 2026).
   async duzgunKapat() {
-    try {
-      await this.gonder('Browser.close');
-      await bekle(1500);
-    } catch { /* zaten kapanmis olabilir */ }
+    const kapandi = this.chrome && this.chrome.exitCode === null
+      ? new Promise((r) => { this.chrome.once('exit', r); setTimeout(r, 15000); })
+      : bekle(1500);
+    try { await this.gonder('Browser.close'); } catch { /* zaten kapanmis olabilir */ }
+    await kapandi;
     this.kapat();
   }
 }
