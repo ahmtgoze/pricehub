@@ -118,7 +118,9 @@ const hataMetni = (o) => {
 };
 
 // Gurultuyu ele: uygulamanin kendi hatasi olmayanlar
-const YOKSAY = [/favicon/i, /net::ERR_/i, /Failed to load resource/i, /ResizeObserver/i];
+// "Bad uncompressed size": SheetJS, Trendyol Flas Excel'indeki zip veri
+// tanimlayicisini okurken basar; dosya eksiksiz okunur (zararsiz).
+const YOKSAY = [/favicon/i, /net::ERR_/i, /Failed to load resource/i, /ResizeObserver/i, /Bad uncompressed size/];
 
 async function sayfaTest(b, url, beklenen) {
   b.olaylar.length = 0;
