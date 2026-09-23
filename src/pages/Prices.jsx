@@ -1229,14 +1229,7 @@ export default function Prices() {
                   <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
                     {visiblePlatformList.map(platform => {
                       const price = product.prices[platform.id];
-                      if (!price) {
-                        return (
-                          <div key={platform.id} className="rounded-[14px] bg-secondary px-4 py-3">
-                            <p className="text-xs font-medium text-muted-foreground">{platform.name}</p>
-                            <p className="mt-1 text-[13px] text-muted-foreground/70">Fiyat hesaplanmamış</p>
-                          </div>
-                        );
-                      }
+                      if (!price) return null;   // satilmayan platform gosterilmez
                       const commission = commissions.find(c => c.category_id === product.category_id && c.platform_id === platform.id && c.is_active !== false);
                       const { amount: profitAmount, rate: profitRate } = getDisplayProfit(price, product, commission);
                       return (
