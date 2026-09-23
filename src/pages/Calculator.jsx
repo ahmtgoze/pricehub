@@ -247,7 +247,6 @@ export default function Calculator() {
       printing_cost: pozitif(printingCost),
       extra_cost: pozitif(extraCost),
       multi_package: isMultiPackage,
-      special_shipping: false,
       packages: isMultiPackage ? JSON.stringify(packages.map(p => ({ desi: parseFloat(p.desi) || 0, package_id: p.package_id }))) : null,
       category_id: 'temp'
     };

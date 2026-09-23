@@ -4,6 +4,8 @@
  * Hiçbir UI sayfasında hesaplama kodu olmayacak.
  */
 
+import { desiTarifesiBul as findDesiShippingRate, ciftKargo, ciftKargoKurallari, paketler } from '../lib/kargoHesabi.js';
+
 // KDV dahil fiyattan KDV hariç fiyatı hesapla
 /**
  * Sayiya cevirir; bos/gecersiz ise null.
@@ -30,27 +32,7 @@ export const calculateVat = (priceWithVat, vatRate) => {
   return priceWithVat - priceExclVat;
 };
 
-/**
- * Desi bazlı kargo ücretini bul (same_day_delivery alanına bakılmaz)
- */
-export const findDesiShippingRate = (shippingRates, desi) => {
-  const desiRates = shippingRates
-    .filter(r => r.rate_type === 'desi' && r.is_active !== false && r.desi != null)
-    .sort((a, b) => a.desi - b.desi);
-  
-  // Ürünün desisine eşit veya daha büyük olan en küçük desi tarifesini bul
-  for (const rate of desiRates) {
-    if (desi <= rate.desi) {
-      return rate;
-    }
-  }
-  
-  // Urunun desisi tanimli en yuksek tarifenin de ustundeyse TARIFE YOKTUR.
-  // Eskiden burada en yuksek tarifeye dusuluyordu; bu, gercek kargo bedeli
-  // daha yuksek oldugu icin kari OLDUGUNDAN IYI gosteriyordu. Artik null
-  // donuyor ve urun fiyatlanmiyor, kullaniciya uyari veriliyor.
-  return null;
-};
+export { findDesiShippingRate };
 
 /** Kargo tarifesi eksikligini anlatan hata (fiyatlama durdurulur). */
 export const KARGO_TARIFESI_YOK = 'KARGO_TARIFESI_YOK';
@@ -365,9 +347,9 @@ export const calculateProductPrice = ({
   const commissionVatRate = commission?.commission_vat_rate ?? 20;
   const productVatRate = product.vat_rate ?? 20;
 
-  // ÇİFT KARGO: ürün "double_shipping" işaretliyse tüm kargo bedelleri 2 ile çarpılır
-  // (üretim→depo + depo→müşteri = iki kargo)
-  const shippingMultiplier = product.double_shipping ? 2 : 1;
+  // Çift Kargo: yol fiyatı Ayarlar'daki desi aralığına göre 2×+sabit / 3× / 2× (lib/kargoHesabi)
+  const kurallar = ciftKargoKurallari(settings);
+  const kargo = (yol, desi) => ciftKargo(product, yol, desi, kurallar).tutar;
   
   if (targetProfitRate == null && targetProfitAmount == null) {
     throw new Error('Hedef kâr oranı veya tutarından en az biri belirtilmelidir');
@@ -423,7 +405,7 @@ export const calculateProductPrice = ({
   const isActuallyMultiPackage = product.multi_package && actualPackageCount > 1;
   const baremMaxDesi = platform.barem_max_desi ?? 5;
   const isWebsite = platform.platform_type === 'website';
-  const canUseBarem = !isWebsite && platform.use_barem && !product.special_shipping && !isActuallyMultiPackage && totalDesi <= baremMaxDesi;
+  const canUseBarem = !isWebsite && platform.use_barem && !isActuallyMultiPackage && totalDesi <= baremMaxDesi;
   const effectiveSameDayDelivery = isWebsite ? false : isSameDayDelivery;
   
   let result = null;
@@ -438,7 +420,7 @@ export const calculateProductPrice = ({
   };
 
   if (hasOverrideShipping) {
-    const ovShippingCost = overrideShippingCost * shippingMultiplier;
+    const ovShippingCost = kargo(overrideShippingCost, totalDesi);
     const overrideResult = findSalePriceForTargetProfit({
       productCost: product.cost,
       productVatRate,
@@ -462,7 +444,7 @@ export const calculateProductPrice = ({
     const barem1Rate = findBaremShippingRate(platformShippingRates, 'barem1', effectiveSameDayDelivery);
     if (barem1Rate) {
       tarifeyiNotEt(barem1Rate);
-      const barem1Cost = barem1Rate.price * shippingMultiplier;
+      const barem1Cost = kargo(barem1Rate.price, totalDesi);
       const barem1Result = findSalePriceForTargetProfit({
         productCost: product.cost,
         productVatRate,
@@ -493,7 +475,7 @@ export const calculateProductPrice = ({
     const barem2Rate = findBaremShippingRate(platformShippingRates, 'barem2', effectiveSameDayDelivery);
     if (barem2Rate) {
       tarifeyiNotEt(barem2Rate);
-      const barem2Cost = barem2Rate.price * shippingMultiplier;
+      const barem2Cost = kargo(barem2Rate.price, totalDesi);
       const barem2Result = findSalePriceForTargetProfit({
         productCost: product.cost,
         productVatRate,
@@ -548,44 +530,27 @@ export const calculateProductPrice = ({
       }
 
       if (productPackages.length > 0) {
-        if (product.special_shipping) {
-          const returnCostSetting = settings.find(s => s.setting_key === 'return_cost_per_package');
-          const returnCostPerPackage = returnCostSetting ? parseFloat(returnCostSetting.setting_value) : 180.096;
-
-          for (const pkg of productPackages) {
-            const desiRate = findDesiShippingRate(platformShippingRates, pkg.desi || 0);
-            if (!desiRate) throw new Error(KARGO_TARIFESI_YOK);
-            tarifeyiNotEt(desiRate);
-            const desiShippingCost = desiRate.price * 2;
-            shippingCost += desiShippingCost + returnCostPerPackage;
-            shippingVatRate = desiRate.vat_rate || 20;
-          }
-        } else {
-          for (const pkg of productPackages) {
-            const desiRate = findDesiShippingRate(platformShippingRates, pkg.desi || 0);
-            if (!desiRate) throw new Error(KARGO_TARIFESI_YOK);
-            tarifeyiNotEt(desiRate);
-            shippingCost += desiRate.price;
-            shippingVatRate = desiRate.vat_rate || 20;
-          }
+        for (const pkg of productPackages) {
+          const desiRate = findDesiShippingRate(platformShippingRates, pkg.desi || 0);
+          if (!desiRate) throw new Error(KARGO_TARIFESI_YOK);
+          tarifeyiNotEt(desiRate);
+          shippingCost += kargo(desiRate.price, pkg.desi || 0);
+          shippingVatRate = desiRate.vat_rate || 20;
         }
       } else {
         const desiRate = findDesiShippingRate(platformShippingRates, product.desi || 0);
         if (!desiRate) throw new Error(KARGO_TARIFESI_YOK);
         tarifeyiNotEt(desiRate);
-        shippingCost = desiRate.price;
+        shippingCost = kargo(desiRate.price, product.desi || 0);
         shippingVatRate = desiRate.vat_rate || 20;
       }
     } else {
       const desiRate = findDesiShippingRate(platformShippingRates, product.desi || 0);
       if (!desiRate) throw new Error(KARGO_TARIFESI_YOK);
       tarifeyiNotEt(desiRate);
-      shippingCost = desiRate.price;
+      shippingCost = kargo(desiRate.price, product.desi || 0);
       shippingVatRate = desiRate.vat_rate || 20;
     }
-
-    // ÇİFT KARGO: hesaplanan kargo bedelini 2 ile çarp (gerekirse)
-    shippingCost = shippingCost * shippingMultiplier;
     
     const desiResult = findSalePriceForTargetProfit({
       productCost: product.cost,
@@ -616,7 +581,7 @@ export const calculateProductPrice = ({
       
        if (isPriceInBaremRange(desiPrice, platform, 'barem1')) {
          const barem1Rate = findBaremShippingRate(platformShippingRates, 'barem1', effectiveSameDayDelivery);
-         const barem1Cost = barem1Rate ? barem1Rate.price * shippingMultiplier : null;
+         const barem1Cost = barem1Rate ? kargo(barem1Rate.price, totalDesi) : null;
          if (barem1Rate && barem1Cost < shippingCost) {
           const barem1Result = findSalePriceForTargetProfit({
             productCost: product.cost,
@@ -644,7 +609,7 @@ export const calculateProductPrice = ({
       }
       else if (isPriceInBaremRange(desiPrice, platform, 'barem2')) {
         const barem2Rate = findBaremShippingRate(platformShippingRates, 'barem2', effectiveSameDayDelivery);
-        const barem2Cost = barem2Rate ? barem2Rate.price * shippingMultiplier : null;
+        const barem2Cost = barem2Rate ? kargo(barem2Rate.price, totalDesi) : null;
         if (barem2Rate && barem2Cost < shippingCost) {
           const barem2Result = findSalePriceForTargetProfit({
             productCost: product.cost,
@@ -734,6 +699,12 @@ export const calculateProductPrice = ({
       targetProfitRate,
       shippingCost: Math.round(result.shippingCost * 100) / 100,
       doubleShipping: !!product.double_shipping,
+      ciftKargo: product.double_shipping
+        ? (paketler(product) || [{ desi: product.desi || 0 }]).map((p) => {
+            const k = ciftKargo(product, 0, p.desi || 0, kurallar);
+            return { desi: p.desi || 0, yontem: k.yontem, sabit: k.sabit ?? null, aralik: k.aralik ? [k.aralik.min, k.aralik.max] : null };
+          })
+        : null,
       baremUsed: result.baremUsed,
 
       // Bayatlama kontrolu icin: fiyat hesaplandiginda gecerli olan girdiler.
@@ -909,7 +880,6 @@ export const calculateManual = ({
   printingCost = 0,
   isMultiPackage = false,
   packages = [],
-  specialShipping = false,
   doubleShipping = false,
   settings = []
 }) => {
@@ -922,7 +892,6 @@ export const calculateManual = ({
     vat_rate: productVatRate,
     printing_cost: printingCost,
     multi_package: isMultiPackage,
-    special_shipping: specialShipping,
     double_shipping: doubleShipping,
     packages: isMultiPackage ? JSON.stringify(packages) : null
   };

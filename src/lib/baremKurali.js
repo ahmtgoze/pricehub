@@ -28,7 +28,6 @@ export function baremKullanilabilir(platform, urun, toplamDesi) {
   if (!platform || !urun) return false;
   if (platform.platform_type === 'website') return false;   // web sitesinde barem yok
   if (!platform.use_barem) return false;
-  if (urun.special_shipping) return false;
   if (urun.multi_package) return false;
 
   // Desi tavani: motor bunu kontrol ediyor, promosyon sayfalari etmiyordu

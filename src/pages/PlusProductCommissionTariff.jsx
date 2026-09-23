@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { db } from '@/api/db';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Upload, Download, Filter, Check, AlertCircle, Info, Calendar as CalendarIcon, Trash2, Sparkles } from 'lucide-react';
-import { calculatePriceBreakdown, findDesiShippingRate } from '@/components/PriceCalculationEngine';
+import { calculatePriceBreakdown } from '@/components/PriceCalculationEngine';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -20,7 +20,8 @@ import { kayitlariTeklestir } from '@/lib/kayitTeklestirme';
 import { sayiyaCevirVeya } from '@/lib/turkceSayi';
 import PriceDetailModal from '@/components/modals/PriceDetailModal';
 import BaremBadge from '@/components/ui/BaremBadge';
-import { baremSec, baremTavanFiyatlari, baremTarifesiSec } from '@/lib/baremKurali';
+import { baremTavanFiyatlari } from '@/lib/baremKurali';
+import { promosyonKargosu, ciftKargoKurallari } from '@/lib/kargoHesabi';
 import { gecerliMaliyet } from '@/lib/gecerliMaliyet';
 
 const PlusEntity = db.entities.PlusProductCommissionTariff;
@@ -354,51 +355,7 @@ export default function PlusProductCommissionTariff() {
       const printingCost = matchedProduct.printing_cost || 0;
       const extraCost = matchedProduct.extra_cost || 0;
 
-      let shippingCost = 0;
-      let shippingVatRate = 20;
-      let baremUsed = 'desi';
-      // Barem kurallari ortak modulde (src/lib/baremKurali.js): sinirlar
-      // platform kaydindan okunur, desi tavani ve use_barem kontrol edilir.
-      // Once bu sayfaya sabit yazilmisti ve HepsiBurada'da Trendyol'un
-      // bantlari uygulaniyordu.
-      const secilenBarem = baremSec(platform, matchedProduct, price, matchedProduct?.desi);
-      if (secilenBarem) {
-        const baremRate = baremTarifesiSec(platformShippingRates, secilenBarem, matchedProduct?.same_day_delivery || false);
-        if (baremRate) {
-          shippingCost = baremRate.price;
-          shippingVatRate = baremRate.vat_rate || 20;
-          baremUsed = secilenBarem;
-        }
-      }
-
-      if (shippingCost === 0) {
-        if (matchedProduct.multi_package && matchedProduct.packages) {
-          try {
-            const productPackages = typeof matchedProduct.packages === 'string' ? JSON.parse(matchedProduct.packages) : matchedProduct.packages;
-            if (matchedProduct.special_shipping) {
-              const returnCostSetting = settings.find(s => s.setting_key === 'return_cost_per_package');
-              const returnCostPerPackage = returnCostSetting ? parseFloat(returnCostSetting.setting_value) : 180.096;
-              for (const pkg of productPackages) {
-                const desiRate = findDesiShippingRate(platformShippingRates, pkg.desi || 0);
-                if (desiRate) { shippingCost += (desiRate.price * 2) + returnCostPerPackage; shippingVatRate = desiRate.vat_rate || 20; }
-              }
-            } else {
-              for (const pkg of productPackages) {
-                const desiRate = findDesiShippingRate(platformShippingRates, pkg.desi || 0);
-                if (desiRate) { shippingCost += desiRate.price; shippingVatRate = desiRate.vat_rate || 20; }
-              }
-            }
-          } catch (e) {
-            const desiRate = findDesiShippingRate(platformShippingRates, matchedProduct.desi || 0);
-            shippingCost = desiRate?.price || 0; shippingVatRate = desiRate?.vat_rate || 20;
-          }
-        } else {
-          const desiRate = findDesiShippingRate(platformShippingRates, matchedProduct.desi || 0);
-          shippingCost = desiRate?.price || 0;
-          shippingVatRate = desiRate?.vat_rate || 20;
-        }
-        baremUsed = 'desi';
-      }
+      let { shippingCost, shippingVatRate, baremUsed } = promosyonKargosu({ platform: platform, urun: matchedProduct, fiyat: price, tarifeler: platformShippingRates, kurallar: ciftKargoKurallari(settings) });
 
       const breakdown = calculatePriceBreakdown({
         salePriceInclVat: parseFloat(price),

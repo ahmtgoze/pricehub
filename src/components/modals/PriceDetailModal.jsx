@@ -5,6 +5,20 @@ import { Separator } from "@/components/ui/separator";
 import { Package, Store, Calculator } from 'lucide-react';
 import { useAuth } from '@/lib/AuthContext';
 
+
+// Çift Kargo satırının altında yolların dökümü (bkz. lib/kargoHesabi)
+const tl = (n) => `₺${n.toFixed(2)}`;
+const yontemAdi = (k) => ({ ayni: '3 × tarife', sabit: `2 × tarife + ${tl(k.sabit)}` }[k.yontem] || '2 × tarife');
+function ciftKargoMetni(ck, toplam) {
+  if (!ck?.length) return 'Depo → üretim + depo → müşteri: 2 × kargo tarifesi';
+  if (ck.length > 1) return 'Her paket kendi desisine göre: ' + ck.map((k) => `${k.desi} desi → ${yontemAdi(k)}`).join(', ');
+  const k = ck[0];
+  const yol = k.yontem === 'ayni' ? toplam / 3 : k.yontem === 'sabit' ? (toplam - k.sabit) / 2 : toplam / 2;
+  const donus = { ayni: `${tl(yol)} (tarifeyle aynı)`, sabit: `${tl(k.sabit)} (sabit tutar)` }[k.yontem];
+  return `Depo → üretim ${tl(yol)} + depo → müşteri ${tl(yol)}` + (donus ? ` + üretim → depo ${donus}` : '')
+    + (k.aralik ? ` · ${k.aralik[0]}–${k.aralik[1]} desi kuralı (Ayarlar → Hesaplama)` : '');
+}
+
 export default function PriceDetailModal({ open, onClose, product, platform, priceData: priceDataProp, calculationDetails: calculationDetailsProp, productPrices = [], commissions = [] }) {
   const { user } = useAuth();
 
@@ -142,6 +156,11 @@ export default function PriceDetailModal({ open, onClose, product, platform, pri
                     </span>
                     <span className="font-medium text-red-600 ml-2 shrink-0">-₺{Number(shippingCost).toFixed(2)}</span>
                   </div>
+                  {isDoubleShipping && (
+                    <p className="pl-3 sm:pl-6 py-1.5 text-xs text-muted-foreground border-b border-border">
+                      {ciftKargoMetni(calculationDetails.ciftKargo, Number(shippingCost))}
+                    </p>
+                  )}
 
                   {priceData.service_fee != null && (
                     <div className="flex justify-between py-2 pl-3 sm:pl-6 border-b border-border">

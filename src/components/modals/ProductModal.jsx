@@ -299,7 +299,6 @@ export default function ProductModal({
       sku: form.sku || `SKU-${Date.now()}`,
       multi_package: finalMulti,
       packages: finalMulti ? JSON.stringify(validPkgs) : null,
-      special_shipping: false,
       double_shipping: form.double_shipping === true,
       ref_product_id: form.ref_product_id || null,
       cost_addon: parseFloat(form.cost_addon) || 0,
@@ -746,7 +745,7 @@ export default function ProductModal({
               <div className="flex items-center justify-between py-2 border-t border-border">
                 <div className="space-y-0.5">
                   <Label>Çift Kargo</Label>
-                  <p className="text-xs text-muted-foreground">Açık olursa kargo ücreti 2 katı hesaplanır (üretim→depo→müşteri)</p>
+                  <p className="text-xs text-muted-foreground">Ürün baskı için üretime gidip döner. Kargo, Ayarlar → Hesaplama'daki desi aralıklarına göre hesaplanır; aralık yoksa 2 kat alınır.</p>
                 </div>
                 <Switch checked={form.double_shipping} onCheckedChange={v => upd('double_shipping', v)} />
               </div>

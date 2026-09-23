@@ -531,7 +531,6 @@ export default function Products() {
           : true,
         printing_cost: sayiyaCevirVeya(row['Baskı Maliyeti'] ?? row.printing_cost),
         extra_cost: sayiyaCevirVeya(row['Ek Maliyet'] ?? row.extra_cost),
-        special_shipping: false,
         double_shipping: parseBoolCol(row['Çift Kargo'] ?? row['Cift Kargo'] ?? row.double_shipping)
       };
 
@@ -647,7 +646,7 @@ export default function Products() {
                 desi: newDesi, category_id: newCatId, category_name: category?.name || existing.category_name,
                 vat_rate: newVat, same_day_delivery: newSameDay, is_active: newActive,
                 double_shipping: newDoubleShipping,
-                special_shipping: false, ...pkgData
+                ...pkgData
               });
               updatedCount++;
             } else {
@@ -671,7 +670,7 @@ export default function Products() {
               same_day_delivery: row.same_day_delivery === true,
               is_active: row.is_active !== false,
               double_shipping: row.double_shipping === true,
-              special_shipping: false, ...pkgData
+              ...pkgData
             });
             existingByTripleKey[key] = created;
             createdCount++;

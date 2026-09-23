@@ -3,7 +3,7 @@ import { db } from '@/api/db';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { havuzdaCalistir, tekrarDene } from '@/lib/istekHavuzu';
 import { Upload, Download, Filter, AlertCircle, Info, Trash2, Sparkles, Calendar as CalendarIcon } from 'lucide-react';
-import { calculatePriceBreakdown, findDesiShippingRate } from '@/components/PriceCalculationEngine';
+import { calculatePriceBreakdown } from '@/components/PriceCalculationEngine';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -17,7 +17,7 @@ import { tr } from 'date-fns/locale';
 import { toast } from 'sonner';
 import * as XLSX from 'xlsx';
 import PriceDetailModal from '@/components/modals/PriceDetailModal';
-import { baremSec, baremTarifesiSec } from '@/lib/baremKurali';
+import { promosyonKargosu, ciftKargoKurallari } from '@/lib/kargoHesabi';
 import { kdvDahilOran, komisyonEtiketi } from '@/lib/hbKomisyon';
 import { gecerliMaliyet } from '@/lib/gecerliMaliyet';
 import { hedefleriCoz, hedefVarMi, hedefTutuyorMu, komisyonBul } from '@/lib/hedefKarSecimi';
@@ -192,43 +192,7 @@ export default function HBAdvantageOffers() {
         packagingCost = getPackageCost(matchedProduct.package_id || matchedProduct.auto_package_id);
       }
 
-      let shippingCost = 0;
-      let shippingVatRate = 20;
-      let baremUsed = 'desi';
-      // Barem kurallari ortak modulde (src/lib/baremKurali.js): sinirlar
-      // platform kaydindan okunur, desi tavani ve use_barem kontrol edilir.
-      // Once bu sayfaya sabit yazilmisti ve HepsiBurada'da Trendyol'un
-      // bantlari uygulaniyordu.
-      const secilenBarem = baremSec(platform, matchedProduct, price, matchedProduct?.desi);
-      if (secilenBarem) {
-        const baremRate = baremTarifesiSec(platformShippingRates, secilenBarem, matchedProduct?.same_day_delivery || false);
-        if (baremRate) {
-          shippingCost = baremRate.price;
-          shippingVatRate = baremRate.vat_rate || 20;
-          baremUsed = secilenBarem;
-        }
-      }
-      if (shippingCost === 0) {
-        if (matchedProduct.multi_package && matchedProduct.packages) {
-          try {
-            const pp = typeof matchedProduct.packages === 'string' ? JSON.parse(matchedProduct.packages) : matchedProduct.packages;
-            if (matchedProduct.special_shipping) {
-              const rc = settings.find((s) => s.setting_key === 'return_cost_per_package');
-              const rcv = rc ? parseFloat(rc.setting_value) : 180.096;
-              for (const pkg of pp) { const dr = findDesiShippingRate(platformShippingRates, pkg.desi || 0); if (dr) { shippingCost += (dr.price * 2) + rcv; shippingVatRate = dr.vat_rate || 20; } }
-            } else {
-              for (const pkg of pp) { const dr = findDesiShippingRate(platformShippingRates, pkg.desi || 0); if (dr) { shippingCost += dr.price; shippingVatRate = dr.vat_rate || 20; } }
-            }
-          } catch (e) {
-            const dr = findDesiShippingRate(platformShippingRates, matchedProduct.desi || 0);
-            shippingCost = dr?.price || 0; shippingVatRate = dr?.vat_rate || 20;
-          }
-        } else {
-          const dr = findDesiShippingRate(platformShippingRates, matchedProduct.desi || 0);
-          shippingCost = dr?.price || 0; shippingVatRate = dr?.vat_rate || 20;
-        }
-        baremUsed = 'desi';
-      }
+      let { shippingCost, shippingVatRate, baremUsed } = promosyonKargosu({ platform: platform, urun: matchedProduct, fiyat: price, tarifeler: platformShippingRates, kurallar: ciftKargoKurallari(settings) });
 
       const breakdown = calculatePriceBreakdown({
         salePriceInclVat: parseFloat(price),

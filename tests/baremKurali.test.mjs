@@ -20,7 +20,6 @@ const U = { desi:5 };
 esit('1 normal urun', baremKullanilabilir(TY, U, 5), true);
 esit('2 web sitesinde barem yok', baremKullanilabilir(WEB, U, 5), false);
 esit('3 use_barem kapali', baremKullanilabilir({...TY, use_barem:false}, U, 5), false);
-esit('4 ozel kargo', baremKullanilabilir(TY, {...U, special_shipping:true}, 5), false);
 esit('5 coklu paket', baremKullanilabilir(TY, {...U, multi_package:true}, 5), false);
 esit('6 desi tavani tam sinirda gecerli', baremKullanilabilir(TY, U, 10), true);
 esit('7 desi tavani asilinca gecersiz', baremKullanilabilir(TY, U, 11), false);

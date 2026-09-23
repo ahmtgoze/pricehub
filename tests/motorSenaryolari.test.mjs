@@ -4,15 +4,16 @@
  *
  * Kapsanan olasılıklar: barem 1 / barem 2 / desi, desi tavanı aşımı,
  * platform bazlı farklı bantlar (Trendyol ≠ HepsiBurada), web sitesinde
- * barem olmaması, Bugün Kargoda, çoklu paket, özel kargo, çift kargo,
+ * barem olmaması, Bugün Kargoda, çoklu paket, çift kargo (aralıklı),
  * barem kapalı platform.
  *
- * Motor saf JS (import içermiyor), bu yüzden dosya doğrudan okunup
- * çalıştırılabiliyor.
+ * Motor saf JS (yalnız src/lib'den saf modül import eder); .jsx olduğu için
+ * metin olarak okunup göreli import'ları tam yola çevrilerek yüklenir.
  */
 import { readFileSync } from 'node:fs';
 
-const kod = readFileSync(new URL('../src/components/PriceCalculationEngine.jsx', import.meta.url), 'utf8');
+const kod = readFileSync(new URL('../src/components/PriceCalculationEngine.jsx', import.meta.url), 'utf8')
+  .replaceAll("'../lib/", `'${new URL('../src/lib/', import.meta.url).href}`);
 const motor = await import('data:text/javascript;base64,' + Buffer.from(kod).toString('base64'));
 const { calculateProductPrice, calculatePriceBreakdown } = motor;
 
@@ -157,8 +158,11 @@ console.log('\n═══ BAREM KAPALI PLATFORM ═══');
 
 console.log('\n═══ ÖZEL DURUMLAR ═══');
 {
-  const r = hesapla({ product: urun({ cost: 40, desi: 2, special_shipping: true }), platform: TRENDYOL, commission: komisyon(20, 30) });
-  esit('14 özel kargo → barem yok', r.barem_used, 'desi');
+  // Ayarlar'daki desi aralığı: 0–10 desi "tarifeyle aynı" → 3 × tarife
+  const settings = [{ setting_key: 'cift_kargo_kurallari', setting_value: '[{"min":0,"max":10,"yontem":"ayni"}]' }];
+  const tek = hesapla({ product: urun({ cost: 400, desi: 5 }), platform: TRENDYOL, commission: komisyon(20, 30) });
+  const r = hesapla({ product: urun({ cost: 400, desi: 5, double_shipping: true }), platform: TRENDYOL, commission: komisyon(20, 30), settings });
+  dogru('14 çift kargo aralığı → 3 × tarife', Math.abs(r.shipping_cost - tek.shipping_cost * 3) < 0.02, `tek: ${tek.shipping_cost}, 3x: ${r.shipping_cost}`);
 }
 {
   const r = hesapla({

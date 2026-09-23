@@ -12,6 +12,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { CIFT_KARGO_ANAHTARI, ciftKargoKurallari, kuralHatasi } from '@/lib/kargoHesabi';
 
 const SECTIONS = [
   { id: 'account', label: 'Hesap', icon: User },
@@ -274,65 +275,74 @@ function BrandSection() {
 }
 
 /* ─── Hesaplama ayarları ─── */
-
-// Ozel kargolu urunlerde paket basina eklenen iade payi. Senaryo:
-// musterinin deposundan uretime, uretimden depoya, depodan musteriye —
-// yani urun fazladan yol gidiyor. Tutar kullanicidan alinir; eskiden
-// koda gomulu 180,096 TL kullaniliyordu.
-const IADE_PAYI_ANAHTARI = 'return_cost_per_package';
-const IADE_PAYI_VARSAYILAN = 180.096;
+const YENI_ARALIK = { min: '', max: '', yontem: 'ayni', tutar: '' };
 
 function HesaplamaSection() {
   const queryClient = useQueryClient();
-  const [deger, setDeger] = useState('');
+  const [satirlar, setSatirlar] = useState([]);
 
   const { data: ayarlar = [], isLoading } = useQuery({
     queryKey: ['settings'],
     queryFn: () => db.entities.Settings.list('-created_at', 200),
   });
+  const kayit = ayarlar.find((a) => a.setting_key === CIFT_KARGO_ANAHTARI);
 
-  const kayit = ayarlar.find((a) => a.setting_key === IADE_PAYI_ANAHTARI);
+  useEffect(() => { setSatirlar(ciftKargoKurallari(ayarlar)); }, [kayit?.setting_value]);
 
-  React.useEffect(() => {
-    setDeger(kayit ? String(kayit.setting_value) : String(IADE_PAYI_VARSAYILAN));
-  }, [kayit]);
+  const sayi = (v) => (v === '' || v == null ? NaN : Number(String(v).replace(',', '.')));
+  const kurallar = satirlar.map((r) => ({ min: sayi(r.min), max: sayi(r.max), yontem: r.yontem, ...(r.yontem === 'sabit' && { tutar: sayi(r.tutar) }) }));
+  const hata = kuralHatasi(kurallar);
+  const degis = (i, k) => (e) => setSatirlar((l) => l.map((r, j) => (j === i ? { ...r, [k]: e.target.value } : r)));
 
   const kaydet = useMutation({
-    mutationFn: async () => {
-      const sayi = parseFloat(String(deger).replace(',', '.'));
-      if (!Number.isFinite(sayi) || sayi < 0) throw new Error('Geçerli bir tutar gir (0 veya üzeri).');
-      if (kayit) return db.entities.Settings.update(kayit.id, { setting_value: String(sayi) });
-      return db.entities.Settings.create({
-        setting_key: IADE_PAYI_ANAHTARI,
-        setting_value: String(sayi),
-        description: 'Özel kargolu ürünlerde paket başına iade payı (₺)',
-      });
+    mutationFn: () => {
+      const deger = JSON.stringify([...kurallar].sort((a, b) => a.min - b.min));
+      return kayit
+        ? db.entities.Settings.update(kayit.id, { setting_value: deger })
+        : db.entities.Settings.create({ setting_key: CIFT_KARGO_ANAHTARI, setting_value: deger, description: 'Çift Kargo desi aralıkları' });
     },
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['settings'] }); toast.success('Kaydedildi.'); },
-    onError: (e) => toast.error(e.message || 'Kaydedilemedi.'),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['settings'] }); toast.success('Kaydedildi. Fiyatlar sayfasında "Fiyatları Hesapla"ya bas.'); },
+    onError: () => toast.error('Kaydedilemedi.'),
   });
 
   return (
-    <Card title="Hesaplama Ayarları">
-      <div className="space-y-2 max-w-md">
-        <Label htmlFor="iade-payi">Özel kargo iade payı (paket başına, ₺)</Label>
-        <Input
-          id="iade-payi"
-          type="number"
-          min="0"
-          step="0.001"
-          value={deger}
-          onChange={(e) => setDeger(e.target.value)}
-          disabled={isLoading}
-        />
-        <p className="text-xs text-muted-foreground leading-relaxed">
-          Yalnızca <strong>özel kargo</strong> işaretli ürünlerde uygulanır. Ürün depodan üretime,
-          üretimden depoya, oradan müşteriye gittiği için paket başına bu tutar kargo maliyetine eklenir.
-          Boş bırakılırsa {IADE_PAYI_VARSAYILAN.toLocaleString('tr-TR')} ₺ kullanılır.
-        </p>
-        <Button onClick={() => kaydet.mutate()} disabled={kaydet.isPending || isLoading}>
-          {kaydet.isPending ? 'Kaydediliyor…' : 'Kaydet'}
-        </Button>
+    <Card title="Çift Kargo (üretime gidip dönen ürünler)">
+      <div className="space-y-4">
+        <div className="text-sm text-muted-foreground leading-relaxed space-y-2">
+          <p>
+            <strong>Çift Kargo</strong> işaretli ürünler (ör. kişiselleştirilebilir poşetler) önce baskı için üretime gider,
+            sonra depoya döner, oradan müşteriye gönderilir. Depodan üretime ve depodan müşteriye giden yollar kargo
+            tarifesinden (desiye göre) ödenir. <strong>Üretimden depoya dönüşün</strong> nasıl hesaplanacağını desi aralığına göre sen seçersin:
+          </p>
+          <ul className="list-disc pl-5 space-y-1">
+            <li><strong>Tarifeyle aynı:</strong> dönüş de tarife fiyatından. Tarife 100 ₺ ise 100 + 100 + 100 = <strong>300 ₺</strong>.</li>
+            <li><strong>Sabit tutar:</strong> dönüş için girdiğin tutar eklenir. Tarife 100 ₺, sabit 60 ₺ ise 100 + 100 + 60 = <strong>260 ₺</strong>.</li>
+          </ul>
+          <p>Hiçbir aralığa girmeyen Çift Kargo ürünlerinde kargo 2 kat alınır (100 + 100 = 200 ₺). Birden çok paketli üründe her paket kendi desisine göre hesaplanır. Aralıklar çakışamaz.</p>
+        </div>
+
+        {satirlar.map((r, i) => (
+          <div key={i} className="flex flex-wrap items-center gap-2">
+            <Input className="w-24" inputMode="decimal" placeholder="Min desi" value={r.min} onChange={degis(i, 'min')} />
+            <span className="text-muted-foreground">–</span>
+            <Input className="w-24" inputMode="decimal" placeholder="Maks desi" value={r.max} onChange={degis(i, 'max')} />
+            <select className="h-9 rounded-md border border-input bg-background px-2 text-sm" value={r.yontem} onChange={degis(i, 'yontem')}>
+              <option value="ayni">Tarifeyle aynı</option>
+              <option value="sabit">Sabit tutar</option>
+            </select>
+            {r.yontem === 'sabit' && <Input className="w-28" inputMode="decimal" placeholder="Tutar ₺" value={r.tutar} onChange={degis(i, 'tutar')} />}
+            <Button variant="ghost" size="sm" onClick={() => setSatirlar((l) => l.filter((_, j) => j !== i))}>Sil</Button>
+          </div>
+        ))}
+
+        {hata && satirlar.length > 0 && <p className="text-sm text-red-600">{hata}</p>}
+
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setSatirlar((l) => [...l, YENI_ARALIK])} disabled={isLoading}>+ Aralık Ekle</Button>
+          <Button onClick={() => kaydet.mutate()} disabled={kaydet.isPending || isLoading || !!hata}>
+            {kaydet.isPending ? 'Kaydediliyor…' : 'Kaydet'}
+          </Button>
+        </div>
       </div>
     </Card>
   );
