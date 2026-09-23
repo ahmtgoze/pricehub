@@ -7,7 +7,7 @@ import {
   Package, Store,
   AlertCircle, CheckCircle2, Tag, ChevronDown, ChevronUp
 } from 'lucide-react';
-import { formatTurkishPercent } from '@/utils/formatters';
+import { formatTurkishPercent, formatTurkishCurrency } from '@/utils/formatters';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -146,7 +146,8 @@ if (filteredByRange) {
         maxProfit = Math.max(...prices.map(p => p.profit_rate || 0));
       }
       const negativeProfitCount = prices.filter(p => (p.profit_rate || 0) < 0).length;
-      return { platform, prices: prices.length, avgProfit, minProfit, maxProfit, negativeProfitCount };
+      const avgProfitAmount = prices.length ? prices.reduce((s, p) => s + (p.net_profit || 0), 0) / prices.length : null;
+      return { platform, prices: prices.length, avgProfit, avgProfitAmount, minProfit, maxProfit, negativeProfitCount };
     });
   }, [activePlatforms, productPrices, products]);
 
@@ -154,6 +155,9 @@ if (filteredByRange) {
     if (!productPrices.length) return 0;
     return productPrices.reduce((s, p) => s + (p.profit_rate || 0), 0) / productPrices.length;
   }, [productPrices]);
+
+  // Zarar eden fiyati olan urunler: Fiyatlar'da kar orani en fazla -0,01
+  const zarardakileriGoster = () => navigate(`/Prices?maxRate=-0.01&label=${encodeURIComponent('Zarar eden ürünler')}`);
 
   const negativeProfitTotal = useMemo(() => productPrices.filter(p => (p.profit_rate || 0) < 0).length, [productPrices]);
 
@@ -291,8 +295,8 @@ if (filteredByRange) {
                       <span className="font-semibold tabular-nums">{productPrices.length}</span>
                     </div>
                     <div className="flex justify-between items-center text-[13.5px]">
-                      <span className="text-muted-foreground">Negatif Kârlı</span>
-                      <span className={`font-semibold tabular-nums ${negativeProfitTotal > 0 ? 'text-destructive' : 'text-foreground'}`}>
+                      <span className="text-muted-foreground">Zarar Eden</span>
+                      <span onClick={negativeProfitTotal > 0 ? zarardakileriGoster : undefined} className={`font-semibold tabular-nums ${negativeProfitTotal > 0 ? 'text-destructive cursor-pointer underline' : 'text-foreground'}`}>
                         {negativeProfitTotal}
                         {negativeProfitTotal > 0 && <AlertCircle className="inline ml-1 h-3.5 w-3.5" />}
                       </span>
@@ -369,22 +373,26 @@ if (filteredByRange) {
                         <tr className="text-left border-b border-border">
                           <th className="ph-th pb-[13px] pr-4">Platform</th>
                           <th className="ph-th pb-[13px] pr-4 text-center">Fiyat Sayısı</th>
-                          <th className="ph-th pb-[13px] pr-4 text-center">Ort. Kâr</th>
+                          <th className="ph-th pb-[13px] pr-4 text-center">Ort. Kâr %</th>
+                          <th className="ph-th pb-[13px] pr-4 text-center">Ort. Kâr ₺</th>
                           <th className="ph-th pb-[13px] pr-4 text-center">Min</th>
                           <th className="ph-th pb-[13px] pr-4 text-center">Maks</th>
-                          <th className="ph-th pb-[13px] text-center">Negatif</th>
+                          <th className="ph-th pb-[13px] text-center">Zarar Eden</th>
                         </tr>
                       </thead>
                       <tbody>
-                        {platformSummary.map(({ platform, prices, avgProfit, minProfit, maxProfit, negativeProfitCount }) => (
+                        {platformSummary.map(({ platform, prices, avgProfit, avgProfitAmount, minProfit, maxProfit, negativeProfitCount }) => (
                           <tr key={platform.id} className="border-b border-[#f2f2f4] last:border-0 hover:bg-secondary/60 transition-colors">
                             <td className="py-[11px] pr-4 font-medium">{platform.name}</td>
                             <td className="py-[11px] pr-4 text-center text-muted-foreground tabular-nums">{prices}</td>
                             <td className={`py-[11px] pr-4 text-center font-semibold tabular-nums ${profitColor(avgProfit)}`}>{avgProfit !== null ? formatTurkishPercent(avgProfit) : '—'}</td>
+                            <td className="py-[11px] pr-4 text-center tabular-nums">{avgProfitAmount !== null ? `₺${formatTurkishCurrency(avgProfitAmount)}` : '—'}</td>
                             <td className={`py-[11px] pr-4 text-center text-xs tabular-nums ${profitColor(minProfit)}`}>{minProfit !== null ? formatTurkishPercent(minProfit) : '—'}</td>
                             <td className={`py-[11px] pr-4 text-center text-xs tabular-nums ${profitColor(maxProfit)}`}>{maxProfit !== null ? formatTurkishPercent(maxProfit) : '—'}</td>
                             <td className="py-[11px] text-center">
-                              {negativeProfitCount > 0 ? <Badge variant="destructive" className="text-xs">{negativeProfitCount}</Badge> : <CheckCircle2 className="h-4 w-4 text-muted-foreground/50 mx-auto" />}
+                              {negativeProfitCount > 0
+                                ? <button onClick={zarardakileriGoster} title="Zarar eden ürünleri göster"><Badge variant="destructive" className="text-xs cursor-pointer">{negativeProfitCount}</Badge></button>
+                                : <span className="text-muted-foreground/60 tabular-nums">0</span>}
                             </td>
                           </tr>
                         ))}
