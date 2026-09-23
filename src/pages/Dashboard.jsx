@@ -7,7 +7,7 @@ import {
   Package, Store,
   AlertCircle, CheckCircle2, Tag, ChevronDown, ChevronUp
 } from 'lucide-react';
-import { formatTurkishPercent, formatTurkishCurrency } from '@/utils/formatters';
+import { formatTurkishPercent } from '@/utils/formatters';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -139,17 +139,15 @@ if (filteredByRange) {
       const prices = productPrices.filter(pp => pp.platform_id === platform.id);
       let avgProfit = null, minProfit = null, maxProfit = null;
       if (prices.length > 0) {
-        const totalProfit = prices.reduce((s, p) => s + (p.net_profit || 0), 0);
-        const totalCost = products.filter(prod => prices.some(pp => pp.product_id === prod.id)).reduce((s, prod) => s + (prod.cost || 0), 0);
-        avgProfit = totalCost > 0 ? (totalProfit / totalCost) * 100 : 0;
+        // Fiyatlarin kar oranlarinin ortalamasi (ustteki "Ort. Kar Orani" ile ayni yontem)
+        avgProfit = prices.reduce((s, p) => s + (p.profit_rate || 0), 0) / prices.length;
         minProfit = Math.min(...prices.map(p => p.profit_rate || 0));
         maxProfit = Math.max(...prices.map(p => p.profit_rate || 0));
       }
       const negativeProfitCount = prices.filter(p => (p.profit_rate || 0) < 0).length;
-      const avgProfitAmount = prices.length ? prices.reduce((s, p) => s + (p.net_profit || 0), 0) / prices.length : null;
-      return { platform, prices: prices.length, avgProfit, avgProfitAmount, minProfit, maxProfit, negativeProfitCount };
+      return { platform, prices: prices.length, avgProfit, minProfit, maxProfit, negativeProfitCount };
     });
-  }, [activePlatforms, productPrices, products]);
+  }, [activePlatforms, productPrices]);
 
   const overallAvgProfit = useMemo(() => {
     if (!productPrices.length) return 0;
@@ -373,20 +371,18 @@ if (filteredByRange) {
                         <tr className="text-left border-b border-border">
                           <th className="ph-th pb-[13px] pr-4">Platform</th>
                           <th className="ph-th pb-[13px] pr-4 text-center">Fiyat Sayısı</th>
-                          <th className="ph-th pb-[13px] pr-4 text-center">Ort. Kâr %</th>
-                          <th className="ph-th pb-[13px] pr-4 text-center">Ort. Kâr ₺</th>
+                          <th className="ph-th pb-[13px] pr-4 text-center">Ort. Kâr Oranı</th>
                           <th className="ph-th pb-[13px] pr-4 text-center">Min</th>
                           <th className="ph-th pb-[13px] pr-4 text-center">Maks</th>
                           <th className="ph-th pb-[13px] text-center">Zarar Eden</th>
                         </tr>
                       </thead>
                       <tbody>
-                        {platformSummary.map(({ platform, prices, avgProfit, avgProfitAmount, minProfit, maxProfit, negativeProfitCount }) => (
+                        {platformSummary.map(({ platform, prices, avgProfit, minProfit, maxProfit, negativeProfitCount }) => (
                           <tr key={platform.id} className="border-b border-[#f2f2f4] last:border-0 hover:bg-secondary/60 transition-colors">
                             <td className="py-[11px] pr-4 font-medium">{platform.name}</td>
                             <td className="py-[11px] pr-4 text-center text-muted-foreground tabular-nums">{prices}</td>
                             <td className={`py-[11px] pr-4 text-center font-semibold tabular-nums ${profitColor(avgProfit)}`}>{avgProfit !== null ? formatTurkishPercent(avgProfit) : '—'}</td>
-                            <td className="py-[11px] pr-4 text-center tabular-nums">{avgProfitAmount !== null ? `₺${formatTurkishCurrency(avgProfitAmount)}` : '—'}</td>
                             <td className={`py-[11px] pr-4 text-center text-xs tabular-nums ${profitColor(minProfit)}`}>{minProfit !== null ? formatTurkishPercent(minProfit) : '—'}</td>
                             <td className={`py-[11px] pr-4 text-center text-xs tabular-nums ${profitColor(maxProfit)}`}>{maxProfit !== null ? formatTurkishPercent(maxProfit) : '—'}</td>
                             <td className="py-[11px] text-center">
