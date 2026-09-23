@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Loader2, Plus, Trash2, ChevronDown, ChevronUp, Search } from "lucide-react";
 import { toast } from "sonner";
+import { gecerliMaliyet } from "@/lib/gecerliMaliyet";
 
 const norm = (t) => (t || '').toLowerCase()
   .replace(/ş/g,'s').replace(/ç/g,'c').replace(/ğ/g,'g')
@@ -125,8 +126,8 @@ export default function ProductModal({
     if (!form.ref_product_id) return null;
     const ref = products.find(p => p.id === form.ref_product_id);
     if (!ref) return null;
-    const refCost = (ref.ref_product_id && ref.base_cost > 0)
-      ? ref.base_cost : (parseFloat(ref.cost) || 0);
+    // Referansin hesaba giren maliyeti: iki referans turu de sayilir (kaskad)
+    const refCost = gecerliMaliyet(ref);
     const addon = parseFloat(form.cost_addon) || 0;
     let baz = 0;
     if (form.cost_addon_type === 'total_tl') baz = refCost + addon;
@@ -144,8 +145,8 @@ export default function ProductModal({
     if (!form.ref_product_id_size) return null;
     const ref = products.find(p => p.id === form.ref_product_id_size);
     if (!ref) return null;
-    const refCost = (ref.ref_product_id && ref.base_cost > 0)
-      ? ref.base_cost : (parseFloat(ref.cost) || 0);
+    // Referansin hesaba giren maliyeti: iki referans turu de sayilir (kaskad)
+    const refCost = gecerliMaliyet(ref);
     const addon = parseFloat(form.size_cost_addon) || 0;
     if (!refCost) return null;
     return refCost * (1 + addon / 100);

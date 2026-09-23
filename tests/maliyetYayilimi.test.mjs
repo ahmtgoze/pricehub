@@ -126,6 +126,58 @@ console.log('\n═══ REFERANS -> BAZ MALIYET ═══');
 }
 
 
+console.log('\n═══ BAZ MALIYET KASKADI ═══');
+{
+  // Gercek vaka (2026-09-23): olcu merdiveni, yalnizca OLCU referansi.
+  // 48x62 zamlandi (330 → 336). 55x62 eski stok (228) — bazi 48x62'den gelir.
+  // 60x62 ise 55x62'yi referans alir. Onceki surum 55x62'nin bazini
+  // yeniliyordu ama 60x62'ye iletmiyordu (hem ham maliyet okuyor hem tek tur).
+  const merdiven = [
+    { id: '4862', sku: 'SS-4862', cost: 336, base_cost: 330, ref_product_id_size: '4555' },
+    { id: '4555', sku: 'SS-4555', cost: 264, base_cost: 264 },
+    { id: '5562', sku: 'SS-5562', cost: 228, base_cost: 330, ref_product_id_size: '4862' },
+    { id: '6062', sku: 'SS-6062', cost: 300, base_cost: 330, ref_product_id_size: '5562', size_cost_addon: 10 },
+  ];
+  const p = bazMaliyetPlani(merdiven, ['4862']);
+  const baz = (id) => p.find((d) => d.id === id)?.yeniBaz;
+  esit('ilk halka: 55x62 = 48x62 maliyeti', baz('5562'), 336);
+  // 55x62'nin YENI bazi (336) okunur, ham maliyeti (228) degil: 336 x 1.10
+  esit('ikinci halka da yenilenir', baz('6062'), 369.6);
+  esit('her urun bir kez raporlanir', p.length, 2);
+  esit('eski baz ilk degerdir', p.find((d) => d.id === '6062').eskiBaz, 330);
+}
+{
+  // Olcu referansli urunun baz maliyeti bir sonrakine GECMELI
+  // (onceki surum yalnizca ozellik referansli urunun bazini okuyordu)
+  const u = [
+    { id: 'a', sku: 'A', cost: 100, base_cost: 0 },
+    { id: 'b', sku: 'B', cost: 80, base_cost: 0, ref_product_id_size: 'a' },
+    { id: 'c', sku: 'C', cost: 90, base_cost: 0, ref_product_id_size: 'b' },
+  ];
+  const p = bazMaliyetPlani(u, ['a']);
+  esit('b bazi a\'dan', p.find((d) => d.id === 'b')?.yeniBaz, 100);
+  esit('c bazi b\'nin BAZINDAN', p.find((d) => d.id === 'c')?.yeniBaz, 100);
+}
+{
+  // Dongu (A → B → A) sonsuza gitmez
+  const u = [
+    { id: 'a', sku: 'A', cost: 100, base_cost: 0, ref_product_id_size: 'b', size_cost_addon: 1 },
+    { id: 'b', sku: 'B', cost: 100, base_cost: 0, ref_product_id_size: 'a', size_cost_addon: 1 },
+  ];
+  const p = bazMaliyetPlani(u, ['a']);
+  esit('dongu sonlanir', p.length <= 2, true);
+}
+{
+  // Referansin eski, maliyetinden DUSUK bazi okunmaz (gecerliMaliyet kurali)
+  const u = [
+    { id: 'r', sku: 'R', cost: 78, base_cost: 66, ref_product_id_size: 'x' },
+    { id: 'x', sku: 'X', cost: 60, base_cost: 60 },
+    { id: 'd', sku: 'D', cost: 50, base_cost: 0, ref_product_id: 'r', cost_addon_type: 'total_tl', cost_addon: 0 },
+  ];
+  esit('dusuk bayat baz yerine maliyet', bazMaliyetPlani(u, ['r'])[0]?.yeniBaz, 78);
+}
+
+
 console.log('\n═══ KURUSAT KAYMASI ═══');
 {
   // Onceki surum oranla carpip her adimda yuvarliyordu; tekrarlanan

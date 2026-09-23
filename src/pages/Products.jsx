@@ -307,7 +307,9 @@ export default function Products() {
         // kapsanir.
         const degisenIdler = [productId, ...plan.map((d) => d.id)];
         const sonMaliyetler = guncelUrunler.map((p) => {
-          if (p.id === productId) return { ...p, cost: newCost };
+          // Kaydedilen urunun YENI baz maliyeti de gecerli olmali; yoksa ona
+          // bagli ust halka eski bazdan hesaplanir.
+          if (p.id === productId) return { ...p, cost: newCost, base_cost: saveData.base_cost ?? p.base_cost };
           const d = plan.find((x) => x.id === p.id);
           return d ? { ...p, cost: d.yeniMaliyet } : p;
         });

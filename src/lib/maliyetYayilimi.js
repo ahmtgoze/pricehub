@@ -20,8 +20,10 @@
  *   - Esit maliyetler esit kalir (eslestirme kurali korunur)
  *   - Birim maliyetler sabit kalir (zincir kurali korunur)
  *
- * Import icermez — duz node ile test edilebilir.
+ * Yalnizca import'suz saf modullere dayanir — duz node ile test edilebilir.
  */
+
+import { gecerliMaliyet } from './gecerliMaliyet.js';
 
 const sayi = (d) => {
   if (d === null || d === undefined || d === '') return null;
@@ -126,7 +128,7 @@ export function yayilimPlani(urunler, kokId, eskiMaliyet, yeniMaliyet) {
 
 
 /**
- * Referans urunlerin baz maliyetini yeniden hesaplar.
+ * Referans urunlerin baz maliyetini yeniden hesaplar — ZINCIR BOYUNCA.
  *
  * NICIN VAR: baz maliyet yalnizca urunun KENDISI kaydedilirken
  * hesaplaniyordu. Referans alinan urunun maliyeti degistiginde bagimli
@@ -141,37 +143,36 @@ export function yayilimPlani(urunler, kokId, eskiMaliyet, yeniMaliyet) {
  *   olcuye gore:   ref x (1 + yuzde/100)
  *   iki aday varsa YUKSEK olan, sonra urunun kendi maliyetiyle kiyas.
  *
+ * KASKAD (2026-09-23): onceki surumde iki eksik vardi —
+ *   1. Referansin baz maliyeti yalnizca OZELLIGE gore referansi varsa
+ *      okunuyordu. Olcu merdivenindeki urunlerin cogunda yalnizca olcu
+ *      referansi var; ham maliyet okunuyor, yukselen baz maliyet bir sonraki
+ *      halkaya gecmiyordu. Artik fiyat motoruyla ayni kural:
+ *      gecerliMaliyet (iki referans turu de sayilir).
+ *   2. Tek tur calisiyordu. Baz maliyeti degisen urun de "degisen" sayilip
+ *      ona bagli urunler tekrar hesaplanir; degisim durana kadar.
+ *      Ornek: 48x62 zamlaninca 55x62'nin bazi yenileniyor, ama 55x62'yi
+ *      referans alan bir ust olcu eski bazda kaliyordu.
+ *
  * @param urunler       guncel maliyetleriyle tum urunler
  * @param degisenIdler  maliyeti degisen urunlerin id'leri
- * @returns [{ id, sku, eskiBaz, yeniBaz }]
+ * @returns [{ id, sku, eskiBaz, yeniBaz }]  (her urun en fazla bir kez)
  */
 export function bazMaliyetPlani(urunler, degisenIdler) {
   const liste = urunler || [];
-  const degisen = new Set(degisenIdler || []);
+  let degisen = new Set(degisenIdler || []);
   if (degisen.size === 0) return [];
 
-  const harita = new Map(liste.map((u) => [u.id, u]));
+  // Calisma kopyasi: turlar arasinda yeni baz maliyetler buraya yazilir
+  const harita = new Map(liste.map((u) => [u.id, { ...u }]));
+  const ilkBaz = new Map(liste.map((u) => [u.id, sayi(u.base_cost) ?? 0]));
 
-  // Referans alinan urunun maliyeti: o da referansliysa BAZ maliyeti gecerli
-  const refMaliyeti = (ref) => {
-    if (!ref) return null;
-    const baz = sayi(ref.base_cost) ?? 0;
-    if (ref.ref_product_id && baz > 0) return baz;
-    return sayi(ref.cost) ?? 0;
-  };
+  // Referans alinan urunun hesaba giren maliyeti — fiyat motoruyla ayni kural
+  const refMaliyeti = (ref) => (ref ? gecerliMaliyet(ref) : null);
 
-  const sonuc = [];
-  for (const u of liste) {
+  const hesapla = (u) => {
     const ozellikRef = u.ref_product_id ? harita.get(u.ref_product_id) : null;
     const olcuRef = u.ref_product_id_size ? harita.get(u.ref_product_id_size) : null;
-    if (!ozellikRef && !olcuRef) continue;
-
-    // Yalnizca referansi DEGISEN urunler yeniden hesaplanir
-    const etkilendi =
-      (ozellikRef && degisen.has(ozellikRef.id)) ||
-      (olcuRef && degisen.has(olcuRef.id));
-    if (!etkilendi) continue;
-
     const adaylar = [];
 
     if (ozellikRef) {
@@ -190,12 +191,35 @@ export function bazMaliyetPlani(urunler, degisenIdler) {
       if (r) adaylar.push(r * (1 + yuzde / 100));
     }
 
-    if (adaylar.length === 0) continue;
-
+    if (adaylar.length === 0) return null;
     const secilen = Math.max(...adaylar);
-    const yeniBaz = Math.round(Math.max(secilen, sayi(u.cost) ?? 0) * 100) / 100;
-    const eskiBaz = sayi(u.base_cost) ?? 0;
+    return Math.round(Math.max(secilen, sayi(u.cost) ?? 0) * 100) / 100;
+  };
 
+  const TUR_SINIRI = 50;   // olcu merdiveni ~10 halka; dongulere karsi emniyet
+  for (let tur = 0; tur < TUR_SINIRI && degisen.size > 0; tur++) {
+    const buTurDegisen = new Set();
+    for (const u of harita.values()) {
+      // Yalnizca referansi DEGISEN urunler yeniden hesaplanir
+      const etkilendi =
+        (u.ref_product_id && degisen.has(u.ref_product_id)) ||
+        (u.ref_product_id_size && degisen.has(u.ref_product_id_size));
+      if (!etkilendi) continue;
+
+      const yeniBaz = hesapla(u);
+      if (yeniBaz === null) continue;
+      if (Math.abs(yeniBaz - (sayi(u.base_cost) ?? 0)) >= 0.005) {
+        u.base_cost = yeniBaz;
+        buTurDegisen.add(u.id);
+      }
+    }
+    degisen = buTurDegisen;
+  }
+
+  const sonuc = [];
+  for (const u of harita.values()) {
+    const eskiBaz = ilkBaz.get(u.id);
+    const yeniBaz = sayi(u.base_cost) ?? 0;
     if (Math.abs(yeniBaz - eskiBaz) >= 0.005) {
       sonuc.push({ id: u.id, sku: u.sku, eskiBaz, yeniBaz });
     }
