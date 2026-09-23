@@ -109,80 +109,80 @@ export default function Campaigns() {
     db.auth.me().then(user => setUserEmail(user.email)).catch(() => {});
   }, []);
 
-  const { data: campaigns = [], isFetched: campaignsHazir } = useQuery({
+  const { data: campaigns = [] } = useQuery({
     queryKey: ['campaigns', userEmail],
     queryFn: () => Campaign.filter({ created_by: userEmail }),
     enabled: !!userEmail,
   });
-  const { data: platforms = [], isFetched: platformsHazir } = useQuery({
+  const { data: platforms = [] } = useQuery({
     queryKey: ['platforms', userEmail],
     queryFn: () => Platform.filter({ created_by: userEmail }),
     enabled: !!userEmail,
   });
-  const { data: products = [], isFetched: productsHazir } = useQuery({
+  const { data: products = [] } = useQuery({
     queryKey: ['products', userEmail],
     queryFn: () => Product.filter({ created_by: userEmail }),
     enabled: !!userEmail,
   });
   // Sistem fiyati (Fiyatlar sayfasindaki kayit) — Avantajli/Tarife sayfalariyla ayni kaynak
-  const { data: productPrices = [], isFetched: productPricesHazir } = useQuery({
+  const { data: productPrices = [] } = useQuery({
     queryKey: ['productPrices', userEmail],
     queryFn: () => db.entities.ProductPrice.filter({ created_by: userEmail }),
     enabled: !!userEmail,
   });
-  const { data: commissions = [], isFetched: commissionsHazir } = useQuery({
+  const { data: commissions = [] } = useQuery({
     queryKey: ['commissions', userEmail],
     queryFn: () => Commission.filter({ created_by: userEmail }),
     enabled: !!userEmail,
   });
-  const { data: shippingRates = [], isFetched: shippingRatesHazir } = useQuery({
+  const { data: shippingRates = [] } = useQuery({
     queryKey: ['shippingRates'],
     queryFn: () => ShippingRate.list('-id', 10000),
     enabled: !!userEmail,
   });
-  const { data: packages = [], isFetched: packagesHazir } = useQuery({
+  const { data: packages = [] } = useQuery({
     queryKey: ['packages'],
     queryFn: () => db.entities.Package.list(),
     enabled: !!userEmail,
   });
-  const { data: settings = [], isFetched: settingsHazir } = useQuery({
+  const { data: settings = [] } = useQuery({
     queryKey: ['settings', userEmail],
     queryFn: () => db.entities.Settings.filter({ created_by: userEmail }),
     enabled: !!userEmail,
   });
-  const { data: marketplaceProducts = [], isFetched: marketplaceProductsHazir } = useQuery({
+  const { data: marketplaceProducts = [] } = useQuery({
     queryKey: ['marketplaceProducts', userEmail],
     queryFn: () => MarketplaceProduct.filter({ created_by: userEmail }),
     enabled: !!userEmail,
   });
-  const { data: savedCampaignProducts = [], isFetched: savedCampaignProductsHazir } = useQuery({
+  const { data: savedCampaignProducts = [] } = useQuery({
     queryKey: ['campaignProducts', userEmail],
     queryFn: () => CampaignProduct.filter({ created_by: userEmail }),
     enabled: !!userEmail,
   });
   // Plus zinciri icin diger promosyon secimleri (taban fiyat adaylari)
-  const { data: advantageTags = [], isFetched: advantageTagsHazir } = useQuery({
+  const { data: advantageTags = [] } = useQuery({
     queryKey: ['advantageProductTags', userEmail],
     queryFn: () => db.entities.AdvantageProductTag.filter({ created_by: userEmail }),
     enabled: !!userEmail,
   });
-  const { data: flashProducts = [], isFetched: flashProductsHazir } = useQuery({
+  const { data: flashProducts = [] } = useQuery({
     queryKey: ['flashProducts', userEmail],
     queryFn: () => db.entities.FlashProduct.filter({ created_by: userEmail }),
     enabled: !!userEmail,
   });
-  const { data: plusTariffs = [], isFetched: plusTariffsHazir } = useQuery({
+  const { data: plusTariffs = [] } = useQuery({
     queryKey: ['plusProductCommissionTariffs', userEmail],
     queryFn: () => db.entities.PlusProductCommissionTariff.filter({ created_by: userEmail }),
     enabled: !!userEmail,
   });
-  const { data: ownDiscounts = [], isFetched: ownDiscountsHazir } = useQuery({
+  const { data: ownDiscounts = [] } = useQuery({
     queryKey: ['trendyolOwnDiscounts', userEmail],
     queryFn: () => db.entities.TrendyolOwnDiscount.filter({ created_by: userEmail }),
     enabled: !!userEmail,
   });
   // Ürün Komisyon Tarifesi (normal kampanyalar için komisyon kaynağı)
-  const { data: priceRanges = [], isFetched: priceRangesHazir } = useQuery({
+  const { data: priceRanges = [] } = useQuery({
     queryKey: ['trendyolPriceRanges', userEmail],
     queryFn: () => db.entities.TrendyolPriceRange.filter({ created_by: userEmail }),
     enabled: !!userEmail,
@@ -955,56 +955,12 @@ export default function Campaigns() {
     } catch (error) { toast.error('Kayıt hatası: ' + error.message); }
   };
 
-  // PLUS SECIMLERI KALICI DEGIL (kullanici, 15 Eylul 2026): "promosyon
-  // sayfalarinda ya da kampanyalarda degisiklik yaptigimda ya da sureleri
-  // bittiginde Plus'ta karlilik otomatik degismeli, secimler kalkmali;
-  // yoksa olmayan bir kampanya uzerinden dip fiyat hesaplar". Plus ekrani
-  // her acilista, o gunku kayitli secimlere gore (zincirli hesap, kar
-  // tabani) secimleri yeniden yapar ve kaydeder. Liste fiyati sabit kalir.
-  const plusSecimleriYenile = async (veri = uploadedData) => {
-    let degisen = 0;
-    const guncel = veri.map((item) => {
-      if (!getMatchedProduct(item)) return item;
-      const fiyat = varsayilanFiyat(item);
-      const uygun = fiyat > 0 && !isBelowFloor(item, fiyat);
-      const secili = item.selected_type === 'campaign';
-      if (uygun === secili) return item;
-      degisen++;
-      return uygun ? { ...item, selected_type: 'campaign', campaign_price: fiyat } : secimiKaldir(item);
-    });
-    if (degisen === 0) return;
-    const secili = guncel.filter((i) => i.selected_type === 'campaign').length;
-    // Hicbir urun uygun cikmadiysa veri eksik olabilir (platform/kargo
-    // yuklenmemis); secimleri silip kaydetme.
-    if (secili === 0) return;
-    setUploadedData(guncel);
-    toast.info(`Plus seçimleri bugünkü verilere göre yenilendi: ${secili} ürün uygun, ${degisen} ürünün seçimi değişti`);
-    await handleSave(guncel);
-    // Zil bildirimi (kullanici, 15 Eylul 2026): Plus secimi her degistiginde
-    // kayit kalsin. Yalniz secim DEGISTIGINDE yazilir; her kayitta degil.
-    try {
-      const eklenen = guncel.filter((g, i) => g.selected_type === 'campaign' && veri[i]?.selected_type !== 'campaign').length;
-      const cikan = degisen - eklenen;
-      await db.entities.Bildirim.create({
-        anahtar: `plus-secim|${managingCampaign?.id || ''}|${Date.now()}`,
-        tur: 'plus_secim',
-        baslik: `Plus seçimleri yenilendi: ${secili} ürün uygun`,
-        icerik: `Tarife, avantajlı, flaş ve kampanya sayfalarındaki güncel seçimlere göre ${degisen} ürünün Plus durumu değişti (${eklenen} eklendi, ${cikan} çıktı). Excel İndir'e basın; Trendyol'da Plus kampanyasındaki ürünleri toplu çıkarıp yeni Excel'i yükleyin.`,
-      });
-      queryClient.invalidateQueries({ queryKey: ['bildirimler'] });
-    } catch (e) { console.warn('Plus bildirimi yazılamadı', e); }
-  };
-  const plusYenilenenKampanya = React.useRef(null);
-  React.useEffect(() => {
-    if (!managingCampaign) { plusYenilenenKampanya.current = null; return; }
-    if (!plusKampanyasiMi || uploadedData.length === 0) return;
-    const hazir = [priceRangesHazir, advantageTagsHazir, flashProductsHazir, plusTariffsHazir, ownDiscountsHazir, savedCampaignProductsHazir, commissionsHazir, campaignsHazir, platformsHazir, productsHazir, shippingRatesHazir, packagesHazir, settingsHazir, marketplaceProductsHazir, productPricesHazir].every(Boolean);
-    if (!hazir) return;
-    if (plusYenilenenKampanya.current === managingCampaign.id) return;
-    plusYenilenenKampanya.current = managingCampaign.id;
-    plusSecimleriYenile();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [managingCampaign?.id, plusKampanyasiMi, uploadedData.length, priceRangesHazir, advantageTagsHazir, flashProductsHazir, plusTariffsHazir, ownDiscountsHazir, savedCampaignProductsHazir, commissionsHazir, campaignsHazir, platformsHazir, productsHazir, shippingRatesHazir, packagesHazir, settingsHazir, marketplaceProductsHazir, productPricesHazir]);
+  // PLUS SECIMI YALNIZ KULLANICI ISTEYINCE (kullanici, 23 Eylul 2026):
+  // "Plus kampanyalarini yukledigimde otomatik secim yapiyor, istemiyorum;
+  // kullanici Akilli Otomatik Sec'e basarsa secsin." 15 Eylul'de eklenen
+  // acilista otomatik yenileme (plusSecimleriYenile + zil bildirimi) bu
+  // yuzden kaldirildi. Bedeli: promosyon bitince Plus secimleri kendiliginden
+  // guncellenmez; kullanici Akilli Otomatik Sec'e yeniden basmali.
 
   const handleDeleteExcel = async () => {
     const ids = new Set();

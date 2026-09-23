@@ -52,6 +52,10 @@ const NAV_GROUPS = [
     item: { name: 'Dashboard', page: 'Dashboard', icon: LayoutDashboard },
   },
   {
+    type: 'single',
+    item: { name: 'Güncelleme Raporları', page: 'UpdateReports', icon: FileText },
+  },
+  {
     type: 'group',
     id: 'tanimlar',
     label: 'Tanımlar',
@@ -76,9 +80,8 @@ const NAV_GROUPS = [
   {
     type: 'group',
     id: 'raporlar',
-    label: 'Raporlar',
+    label: 'Pazaryeri Aktarımı',
     items: [
-      { name: 'Güncelleme Raporları', page: 'UpdateReports', icon: FileText },
       { name: 'Pazaryeri Ürünleri', page: 'MarketplaceProducts', icon: Store },
       { name: 'Düzenlenen Fiyatlar', page: 'UpdatedPrices', icon: Tag },
     ],
@@ -88,12 +91,12 @@ const NAV_GROUPS = [
     id: 'promosyonlar',
     label: 'Promosyonlar',
     trendyol: [
-      { name: 'Kampanyalar', page: 'Campaigns', icon: BadgePercent },
-      { name: 'Komisyon Tarifesi', page: 'TrendyolPriceRange', icon: BadgePercent, trendyolOnly: true },
-      { name: 'Plus Tarifesi', page: 'PlusProductCommissionTariff', icon: BadgePercent, trendyolOnly: true },
+      { name: 'Plus Ürün Komisyon Tarifesi', page: 'PlusProductCommissionTariff', icon: BadgePercent, trendyolOnly: true },
+      { name: 'Ürün Komisyon Tarifesi', page: 'TrendyolPriceRange', icon: BadgePercent, trendyolOnly: true },
       { name: 'Avantajlı Ürün Etiketi', page: 'AdvantageProductTag', icon: Sparkles, trendyolOnly: true },
       { name: 'Flaş Ürünler', page: 'FlashProducts', icon: Zap, trendyolOnly: true },
-      { name: 'Kendi İndirimlerim', page: 'OwnDiscounts', icon: BadgePercent, trendyolOnly: true },
+      { name: 'Kuponlarım ve İndirimlerim', page: 'OwnDiscounts', icon: BadgePercent, trendyolOnly: true },
+      { name: 'Kampanyalar', page: 'Campaigns', icon: BadgePercent },
     ],
     hepsiburada: [
       { name: 'Avantajlı Teklifler', page: 'HBAdvantageOffers', icon: Sparkles, hepsiburadaOnly: true },

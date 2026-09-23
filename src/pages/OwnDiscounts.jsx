@@ -148,7 +148,7 @@ export default function OwnDiscounts() {
       <div className="max-w-6xl mx-auto">
         <div className="flex items-start justify-between gap-4 mb-6">
           <div>
-            <h1 className="ph-title">Kendi İndirimlerim</h1>
+            <h1 className="ph-title">Kuponlarım ve İndirimlerim</h1>
             <p className="text-muted-foreground mt-1">Trendyol'da "İndirim Oluştur" ve "Kuponlar" ile tanımladığın indirimler. Burada kaydedilir; süren olanlar tüm sayfalardaki kâr hesabına (zincire) kendiliğinden girer.</p>
           </div>
           <Button onClick={openNew} className="bg-primary hover:bg-black dark:hover:bg-white/90"><Plus className="mr-2 h-4 w-4" />Yeni İndirim / Kupon</Button>
