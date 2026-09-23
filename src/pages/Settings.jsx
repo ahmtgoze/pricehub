@@ -125,52 +125,91 @@ function AccountSection({ user }) {
 }
 
 /* ─── Güvenlik ─── */
+// Google/kodla girenlerin şifresi yok: "Şifre Oluştur". Şifresi unutulursa
+// e-postaya gelen doğrulama koduyla (reauthenticate nonce) yenisi belirlenir.
 function SecuritySection() {
-  const [currentPw, setCurrentPw] = useState('');
-  const [newPw, setNewPw] = useState('');
-  const [confirmPw, setConfirmPw] = useState('');
+  const [sifreVar, setSifreVar] = useState(null);
+  const [unuttum, setUnuttum] = useState(false);
+  const [kodGitti, setKodGitti] = useState(false);
+  const [f, setF] = useState({ mevcut: '', yeni: '', tekrar: '', kod: '' });
   const [showPw, setShowPw] = useState(false);
   const [loading, setLoading] = useState(false);
+  const upd = (k) => (e) => setF((o) => ({ ...o, [k]: e.target.value }));
 
-  const handleChange = async () => {
-    if (newPw.length < 6) { toast.error('Şifre en az 6 karakter olmalı.'); return; }
-    if (newPw !== confirmPw) { toast.error('Şifreler eşleşmiyor.'); return; }
+  useEffect(() => { supabase.rpc('sifre_var_mi').then(({ data }) => setSifreVar(!!data)); }, []);
+
+  const mod = !sifreVar ? 'olustur' : unuttum ? 'unuttum' : 'degistir';
+  const baslik = { olustur: 'Şifre Oluştur', degistir: 'Şifre Değiştir', unuttum: 'Şifre Sıfırla' }[mod];
+
+  const kodGonder = async () => {
+    setLoading(true);
+    const { error } = await supabase.auth.reauthenticate();
+    setLoading(false);
+    if (error) { toast.error('Kod gönderilemedi.'); return; }
+    setKodGitti(true);
+    toast.success('Doğrulama kodu e-postana gönderildi.');
+  };
+
+  const kaydet = async () => {
+    if (f.yeni.length < 6) { toast.error('Şifre en az 6 karakter olmalı.'); return; }
+    if (f.yeni !== f.tekrar) { toast.error('Şifreler eşleşmiyor.'); return; }
     setLoading(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      const { error: signInErr } = await supabase.auth.signInWithPassword({ email: user?.email, password: currentPw });
-      if (signInErr) { toast.error('Mevcut şifre yanlış.'); return; }
-      const { error } = await supabase.auth.updateUser({ password: newPw });
-      if (error) throw error;
-      toast.success('Şifre başarıyla güncellendi.');
-      setCurrentPw(''); setNewPw(''); setConfirmPw('');
-    } catch {
-      toast.error('Şifre güncellenemedi.');
+      if (mod === 'degistir') {
+        const { data: { user } } = await supabase.auth.getUser();
+        const { error } = await supabase.auth.signInWithPassword({ email: user?.email, password: f.mevcut });
+        if (error) { toast.error('Mevcut şifre yanlış.'); return; }
+      }
+      const { error } = await supabase.auth.updateUser(
+        mod === 'unuttum' ? { password: f.yeni, nonce: f.kod.trim() } : { password: f.yeni });
+      if (error) { toast.error(mod === 'unuttum' ? 'Kod hatalı ya da süresi dolmuş.' : 'Şifre kaydedilemedi.'); return; }
+      toast.success(mod === 'olustur' ? 'Şifren oluşturuldu.' : 'Şifre güncellendi.');
+      setF({ mevcut: '', yeni: '', tekrar: '', kod: '' });
+      setSifreVar(true); setUnuttum(false); setKodGitti(false);
     } finally {
       setLoading(false);
     }
   };
 
+  if (sifreVar === null) return null;
+  const tip = showPw ? 'text' : 'password';
+  const eksik = !f.yeni || !f.tekrar || (mod === 'degistir' && !f.mevcut) || (mod === 'unuttum' && !f.kod);
+
   return (
-    <Card title="Şifre Değiştir" icon={<Shield className="h-4 w-4 text-muted-foreground/70" />}>
+    <Card title={baslik} icon={<Shield className="h-4 w-4 text-muted-foreground/70" />}>
       <div className="space-y-5">
-        <Field label="Mevcut Şifre">
-          <div className="relative">
-            <Input type={showPw ? 'text' : 'password'} value={currentPw} onChange={e => setCurrentPw(e.target.value)} placeholder="••••••••" />
-            <button type="button" onClick={() => setShowPw(v => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground/70 hover:text-muted-foreground">
-              {showPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-            </button>
-          </div>
-        </Field>
+        {mod === 'olustur' && (
+          <p className="text-sm text-muted-foreground">Hesabına şimdiye kadar Google ya da e-posta koduyla girdin. Dilersen e-posta ve şifreyle de giriş yapabilmek için bir şifre belirle.</p>
+        )}
+        {mod === 'degistir' && (
+          <Field label="Mevcut Şifre">
+            <div className="relative">
+              <Input type={tip} value={f.mevcut} onChange={upd('mevcut')} placeholder="••••••••" />
+              <button type="button" onClick={() => setShowPw(v => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground/70 hover:text-muted-foreground">
+                {showPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
+            </div>
+            <button type="button" onClick={() => setUnuttum(true)} className="mt-2 text-xs text-muted-foreground underline hover:text-foreground">Şifremi unuttum</button>
+          </Field>
+        )}
+        {mod === 'unuttum' && (
+          <Field label="E-postana gelen doğrulama kodu">
+            <div className="flex gap-2">
+              <Input value={f.kod} onChange={upd('kod')} placeholder="123456" inputMode="numeric" disabled={!kodGitti} />
+              <Button variant="outline" onClick={kodGonder} disabled={loading}>{kodGitti ? 'Tekrar Gönder' : 'Kod Gönder'}</Button>
+            </div>
+            <button type="button" onClick={() => { setUnuttum(false); setKodGitti(false); }} className="mt-2 text-xs text-muted-foreground underline hover:text-foreground">Vazgeç</button>
+          </Field>
+        )}
         <Field label="Yeni Şifre">
-          <Input type={showPw ? 'text' : 'password'} value={newPw} onChange={e => setNewPw(e.target.value)} placeholder="En az 6 karakter" />
+          <Input type={tip} value={f.yeni} onChange={upd('yeni')} placeholder="En az 6 karakter" />
         </Field>
         <Field label="Yeni Şifre (Tekrar)">
-          <Input type={showPw ? 'text' : 'password'} value={confirmPw} onChange={e => setConfirmPw(e.target.value)} placeholder="••••••••" />
+          <Input type={tip} value={f.tekrar} onChange={upd('tekrar')} placeholder="••••••••" />
         </Field>
         <div className="pt-2">
-          <Button onClick={handleChange} disabled={loading || !currentPw || !newPw || !confirmPw} className="bg-primary hover:bg-black dark:hover:bg-white/90">
-            {loading ? 'Güncelleniyor…' : 'Şifreyi Güncelle'}
+          <Button onClick={kaydet} disabled={loading || eksik} className="bg-primary hover:bg-black dark:hover:bg-white/90">
+            {loading ? 'Kaydediliyor…' : baslik}
           </Button>
         </div>
       </div>
