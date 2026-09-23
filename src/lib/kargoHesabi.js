@@ -78,3 +78,16 @@ export function promosyonKargosu({ platform, urun, fiyat, tarifeler, kurallar })
   }
   return { shippingCost, shippingVatRate, baremUsed: 'desi' };
 }
+
+/** Fiyat detayında Çift Kargo yollarının dökümü (ck: calculation_details.ciftKargo). */
+const tl = (n) => `₺${n.toFixed(2)}`;
+const yontemAdi = (k) => (k.yontem === 'ayni' ? '3 × tarife' : k.yontem === 'sabit' ? `2 × tarife + ${tl(k.sabit)}` : '2 × tarife');
+export function ciftKargoMetni(ck, toplam) {
+  if (!ck?.length) return 'Depo → üretim + depo → müşteri: 2 × kargo tarifesi';
+  if (ck.length > 1) return 'Her paket kendi desisine göre: ' + ck.map((k) => `${k.desi} desi → ${yontemAdi(k)}`).join(', ');
+  const k = ck[0];
+  const yol = k.yontem === 'ayni' ? toplam / 3 : k.yontem === 'sabit' ? (toplam - k.sabit) / 2 : toplam / 2;
+  const donus = k.yontem === 'ayni' ? `${tl(yol)} (tarifeyle aynı)` : k.yontem === 'sabit' ? `${tl(k.sabit)} (sabit tutar)` : null;
+  return `Depo → üretim ${tl(yol)} + depo → müşteri ${tl(yol)}` + (donus ? ` + üretim → depo ${donus}` : '')
+    + (k.aralik ? ` · ${k.aralik[0]}–${k.aralik[1]} desi kuralı (Ayarlar → Hesaplama)` : '');
+}
