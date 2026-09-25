@@ -7,6 +7,8 @@ export default function Login() {
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [code, setCode] = useState('');
+  const [password, setPassword] = useState('');
+  const [sifreModu, setSifreModu] = useState(false);
   const [otpSent, setOtpSent] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
@@ -62,11 +64,30 @@ export default function Login() {
     setIsLoading(false);
   };
 
+  const handlePasswordLogin = async (e) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setError('');
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) {
+      setError('E-posta veya şifre hatalı. Şifren yoksa kodla giriş yapıp Ayarlar\'dan şifre oluşturabilirsin.');
+      setIsLoading(false);
+      return;
+    }
+    window.location.href = '/';
+  };
+
   const resetFlow = () => {
     setOtpSent(false);
     setCode('');
     setError('');
     setSuccessMsg('');
+  };
+
+  const yontemDegistir = () => {
+    resetFlow();
+    setPassword('');
+    setSifreModu((v) => !v);
   };
 
   return (
@@ -75,7 +96,7 @@ export default function Login() {
         <div className="text-center mb-8">
           <h1 className="text-2xl font-bold text-foreground">{MARKA_ADI}</h1>
           <p className="text-muted-foreground text-sm mt-1">
-            {otpSent ? 'E-postana gelen kodu gir' : 'E-posta ile giriş'}
+            {otpSent ? 'E-postana gelen kodu gir' : sifreModu ? 'E-posta ve şifre ile giriş' : 'E-posta ile giriş'}
           </p>
         </div>
 
@@ -90,7 +111,45 @@ export default function Login() {
           </div>
         )}
 
-        {!otpSent ? (
+        {sifreModu ? (
+          <form onSubmit={handlePasswordLogin} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-muted-foreground mb-1">E-posta</label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                autoFocus
+                autoComplete="username"
+                className="w-full border border-input rounded-[11px] px-[13px] h-[38px] text-[13.5px] focus:outline-none focus:ring-2 focus:ring-ring/25"
+                placeholder="ornek@email.com"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-muted-foreground mb-1">Şifre</label>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                autoComplete="current-password"
+                className="w-full border border-input rounded-[11px] px-[13px] h-[38px] text-[13.5px] focus:outline-none focus:ring-2 focus:ring-ring/25"
+                placeholder="••••••••"
+              />
+            </div>
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="w-full bg-primary text-primary-foreground rounded-[11px] h-[38px] text-[13.5px] font-medium hover:bg-black dark:hover:bg-white/90 transition-colors disabled:opacity-50"
+            >
+              {isLoading ? 'Giriş yapılıyor...' : 'Giriş Yap'}
+            </button>
+            <button type="button" onClick={yontemDegistir} className="text-sm text-muted-foreground hover:text-foreground">
+              Kodla giriş yap
+            </button>
+          </form>
+        ) : !otpSent ? (
           <form onSubmit={handleSendCode} className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-muted-foreground mb-1">E-posta</label>
@@ -110,6 +169,9 @@ export default function Login() {
               className="w-full bg-primary text-primary-foreground rounded-[11px] h-[38px] text-[13.5px] font-medium hover:bg-black dark:hover:bg-white/90 transition-colors disabled:opacity-50"
             >
               {isLoading ? 'Gönderiliyor...' : 'Giriş Kodu Gönder'}
+            </button>
+            <button type="button" onClick={yontemDegistir} className="text-sm text-muted-foreground hover:text-foreground">
+              Şifreyle giriş yap
             </button>
           </form>
         ) : (
