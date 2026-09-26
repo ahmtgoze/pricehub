@@ -3,10 +3,10 @@
 // RLS yönetici hesabına tüm hesapları açtığı için yalnız RLS'e güvenilmez (barkodlar hesaplar arasında ortak).
 const SAYFA = 5000;
 
-const PLATFORM = 'id,name,platform_type,is_system_admin,is_active,satici_no,shipping_company_name,use_barem,barem_max_desi,barem1_min,barem1_max,barem2_min,barem2_max,has_withholding,withholding_rate,has_service_fee,service_fee_type,service_fee_amount,service_fee_vat_rate,same_day_delivery_service_fee,same_day_delivery_vat_rate,has_pos_service_fee,pos_service_fee_rate,has_corporate_tax,corporate_tax_rate,has_transaction_fee,transaction_fee_amount,transaction_fee_vat_rate,use_custom_shipping_price,custom_shipping_price';
-const TARIFE = 'platform_id,platform_type,shipping_company,rate_type,same_day_delivery,desi,price,vat_rate,is_manual,is_admin_created,is_active';
+const PLATFORM = 'id,name,platform_type,is_system_admin,is_active,satici_no,shipping_company_name,use_barem,barem_max_desi,barem1_min,barem1_max,barem2_min,barem2_max,has_withholding,withholding_rate,has_service_fee,service_fee_type,service_fee_amount,service_fee_vat_rate,has_same_day_delivery,same_day_delivery_service_fee,has_corporate_tax,corporate_tax_rate,has_transaction_fee,transaction_fee_amount,transaction_fee_vat_rate';
+const TARIFE = 'platform_id,platform_type,shipping_company,rate_type,same_day_delivery,desi,price,vat_rate,is_active';
 const KOMISYON = 'platform_id,platform_name,category_id,category_name,is_active,discounted_target_profit_rate,discounted_target_profit_amount,discounted_minimum_profit_amount';
-const URUN = 'id,cost,base_cost,ref_product_id,ref_product_id_size,printing_cost,extra_cost,desi,vat_rate,category_id,category_name,same_day_delivery,special_shipping,double_shipping,multi_package,packages,package_id,auto_package_id';
+const URUN = 'id,cost,base_cost,ref_product_id,ref_product_id_size,printing_cost,extra_cost,desi,vat_rate,category_id,category_name,same_day_delivery,double_shipping,multi_package,packages,package_id,auto_package_id';
 
 async function oku(sorgu: any): Promise<any[]> {
   const { data, error } = await sorgu;

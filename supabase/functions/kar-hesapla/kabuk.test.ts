@@ -135,11 +135,12 @@ function sahteIstemci(tablolar: Record<string, any[]>) {
     }
     q.then = (coz: (v: unknown) => void) => {
       kayit.push({ tablo, sutunlar: q.sutunlar, suzgec: q.suzgec });
+      const secilen = q.sutunlar ? q.sutunlar.split(',') : null;
       const uygun = (tablolar[tablo] ?? []).filter((s: any) => q.suzgec.every(([y, k, d]: any) => {
         if (y === 'eq') return s[k] === d;
         if (y === 'in') return (d as unknown[]).includes(s[k]);
         return true;
-      }));
+      })).map((s: any) => (secilen ? Object.fromEntries(secilen.filter((k: string) => k in s).map((k: string) => [k, s[k]])) : s));
       coz({ data: uygun, error: null });
     };
     return q;
