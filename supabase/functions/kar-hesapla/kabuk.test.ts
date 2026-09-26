@@ -210,3 +210,33 @@ Deno.test('veri: belirsiz eşleşme (aynı kod iki ürüne bağlı) eşleşmemi�
   esit([...sonuc.keys()], ['mk-1'], 'belirsiz kod ve bilinmeyen kod eşleşmez; yalnız model kodu eşleşir');
   esit(sonuc.get('mk-1').eslesme, 'model_kodu', 'eşleşme türü model kodu');
 });
+
+Deno.test('veri: çakışma kaynakları yedi tabloda da created_by ile süzülür, barkodlu tablolar barkodla, başkasının kaydı gelmez', async () => {
+  const ben = 'ben@ornek.com', baska = 'baska@ornek.com';
+  const tablolar = ['trendyol_price_ranges', 'advantage_product_tags', 'flash_products', 'plus_product_commission_tariffs', 'campaigns', 'campaign_products', 'trendyol_own_discounts'];
+  const veriTablolar: Record<string, any[]> = {};
+  for (const t of tablolar) {
+    veriTablolar[t] = [
+      { created_by: ben, barcode: 'abc-1', id: `${t}-ben`, gizli_sutun: 'GİZLİ' },
+      { created_by: ben, barcode: 'BASKA-BARKOD', id: `${t}-ben-baska-barkod` },
+      { created_by: baska, barcode: 'abc-1', id: `${t}-baska` },
+    ];
+  }
+  const istemci = sahteIstemci(veriTablolar);
+  const veri: any = gercekVeri(istemci, ben);
+  const k = await veri.zincirKaynaklari(['ABC-1']);
+  // Barkodlu tablolarda yalnız benim 'abc-1' kaydım (1); barkodsuz sorgulanan kampanya ve kendi indirimlerimde benim 2 kaydım. Başkasınınki hiçbirinde yok.
+  esit([k.priceRanges.length, k.advantageTags.length, k.flashProducts.length, k.plusTariffs.length, k.campaignProducts.length], [1, 1, 1, 1, 1], 'barkodlu tablolar: yalnız benim, yalnız istenen barkod');
+  esit([k.campaigns.length, k.ownDiscounts.length], [2, 2], 'kampanyalar ve kendi indirimlerim: yalnız benim kayıtlarım');
+  dogru(!JSON.stringify(k).includes('GİZLİ'), 'listelenmeyen sütun gelmez');
+  esit(Object.keys(k).sort(), ['advantageTags', 'campaignProducts', 'campaigns', 'flashProducts', 'ownDiscounts', 'plusTariffs', 'priceRanges'], 'yedi kaynak döner');
+  for (const t of tablolar) {
+    const sorgu = istemci.kayit.filter((x) => x.tablo === t);
+    dogru(sorgu.length === 1 && sorgu[0].suzgec.some(([y, s, d]) => y === 'eq' && s === 'created_by' && d === ben), `${t}: created_by süzgeci var`);
+  }
+  for (const t of ['trendyol_price_ranges', 'advantage_product_tags', 'flash_products', 'plus_product_commission_tariffs', 'campaign_products']) {
+    const s = istemci.kayit.find((x) => x.tablo === t)!;
+    dogru(s.suzgec.some(([y, c, d]) => y === 'in' && c === 'barcode' && (d as string[]).includes('ABC-1')), `${t}: barkod süzgeci var`);
+  }
+  esit(veri.zincirKaynaklari.length, 1, 'yalnız barkod listesi alır');
+});

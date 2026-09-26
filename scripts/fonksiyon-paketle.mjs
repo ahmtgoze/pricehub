@@ -16,7 +16,7 @@ if (!cikti) { console.error('Çıktı dizini gerekli'); process.exit(1); }
 const fonksiyon = join(kok, 'supabase/functions/kar-hesapla');
 const dosyalar = [
   ...['index.ts', 'kabuk.ts', 'veri.ts'].map((a) => [join(fonksiyon, a), a]),
-  ...['karServisi.js', 'karHesabi.js', 'siparisKari.js', 'hedefKarSecimi.js', 'gecerliMaliyet.js', 'kargoHesabi.js', 'baremKurali.js'].map((a) => [join(kok, 'src/lib', a), a]),
+  ...['karServisi.js', 'karHesabi.js', 'siparisKari.js', 'cakismaKari.js', 'zincirHesabi.js', 'tarifeKaydiSecimi.js', 'trendyolKampanyaIndirimi.js', 'trendyolPencereSecimi.js', 'trendyolTarifePenceresi.js', 'hedefKarSecimi.js', 'gecerliMaliyet.js', 'kargoHesabi.js', 'baremKurali.js'].map((a) => [join(kok, 'src/lib', a), a]),
   [join(kok, 'src/components/PriceCalculationEngine.jsx'), 'PriceCalculationEngine.js'],
 ];
 

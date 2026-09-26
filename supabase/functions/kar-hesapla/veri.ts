@@ -8,6 +8,15 @@ const TARIFE = 'platform_id,platform_type,shipping_company,rate_type,same_day_de
 const KOMISYON = 'platform_id,platform_name,category_id,category_name,is_active,discounted_target_profit_rate,discounted_target_profit_amount,discounted_minimum_profit_amount';
 const URUN = 'id,cost,base_cost,ref_product_id,ref_product_id_size,printing_cost,extra_cost,desi,vat_rate,category_id,category_name,same_day_delivery,double_shipping,multi_package,packages,package_id,auto_package_id';
 
+// Çakışma (zincir) motorunun okuduğu sütunlar. Fark testi (tests/karServisiCakisma.test.mjs) bu listeleri okur.
+const ZINCIR_FIYAT_ARALIGI = 'platform_account,start_date,end_date,barcode,selected_range,selected_price,manual_price,pencere_tarihleri,secimler';
+const ZINCIR_ETIKET = 'platform_account,start_date,end_date,barcode,selected_range,selected_price,manual_price';
+const ZINCIR_FLAS = 'platform_account,start_date,end_date,barcode,selected_type,selected_price,manual_price';
+const ZINCIR_PLUS_TARIFE = 'platform_account,start_date,end_date,barcode,selected_type,selected_price,manual_price,secimler,plus_commission_offer,calculated_commission,current_commission';
+const ZINCIR_KAMPANYA = 'id,campaign_type,start_date,end_date,cart_amount,cart_condition,discount_type,discount_amount,trendyol_coverage_rate,is_active,discount_kind,threshold_amount,buy_x,pay_y,min_qty';
+const ZINCIR_KAMPANYA_URUNU = 'campaign_id,barcode,campaign_price,selected_type';
+const ZINCIR_KENDI_INDIRIM = 'platform_account,tur,ad,hedef_kitle,kapsam_turu,kapsam_kategoriler,kapsam_urunler,indirim_tipi,oran,tutar,alt_limit,al_x,ode_y,maks_tutar,karsilama,start_date,end_date,aktif';
+
 async function oku(sorgu: any): Promise<any[]> {
   const { data, error } = await sorgu;
   if (error) throw new Error(`veri_hatasi:${error.code ?? 'bilinmiyor'}`);
@@ -56,6 +65,21 @@ export function gercekVeri(client: any, email: string) {
       const barkodla = await eslesenUrunler('barkod', barkodlar);
       const kalan = barkodlar.filter((b) => !barkodla.has(b.toLowerCase()));
       return urunleriGetir([['barkod', barkodla], ['model_kodu', await eslesenUrunler('model_code', kalan)]]);
+    },
+    // PriceHub'a kayıtlı diğer promosyon seçimleri. Barkodlu tablolar yalnız istenen barkodlarla süzülür.
+    zincirKaynaklari: async (barkodlar: string[]) => {
+      const b = varyantlar(barkodlar);
+      const barkodlu = (tablo: string, alanlar: string) => benim(tablo, alanlar).in('barcode', b).range(0, SAYFA - 1);
+      const [priceRanges, advantageTags, flashProducts, plusTariffs, campaigns, campaignProducts, ownDiscounts] = await Promise.all([
+        oku(barkodlu('trendyol_price_ranges', ZINCIR_FIYAT_ARALIGI)),
+        oku(barkodlu('advantage_product_tags', ZINCIR_ETIKET)),
+        oku(barkodlu('flash_products', ZINCIR_FLAS)),
+        oku(barkodlu('plus_product_commission_tariffs', ZINCIR_PLUS_TARIFE)),
+        oku(benim('campaigns', ZINCIR_KAMPANYA).range(0, SAYFA - 1)),
+        oku(barkodlu('campaign_products', ZINCIR_KAMPANYA_URUNU)),
+        oku(benim('trendyol_own_discounts', ZINCIR_KENDI_INDIRIM).range(0, SAYFA - 1)),
+      ]);
+      return { priceRanges, advantageTags, flashProducts, plusTariffs, campaigns, campaignProducts, ownDiscounts };
     },
     urunlerModelKoduyla: async (kodlar: string[]) => urunleriGetir([['model_kodu', await eslesenUrunler('model_code', kodlar)]]),
   };

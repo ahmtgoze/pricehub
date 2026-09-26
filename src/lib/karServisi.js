@@ -15,9 +15,12 @@
  *   komisyonlar() → kullanıcının Trendyol komisyon kayıtları
  *   urunler(barkodlar) → Map(küçük harf barkod → { urun, eslesme: 'barkod'|'model_kodu' })
  *   urunlerModelKoduyla(kodlar) → Map(küçük harf model kodu → { urun, eslesme: 'model_kodu' })
+ *   zincirKaynaklari(barkodlar) → PriceHub'a kayıtlı diğer promosyon seçimleri (yalnız çakışma istenen satırlar için)
+ *   bugun() → 'yyyy-mm-dd' (isteğe bağlı; yoksa İstanbul günü)
  */
 import { fiyattaKar } from './karHesabi.js';
 import { siparisKari } from './siparisKari.js';
+import { cakismaKari, CAKISMA_KAYNAKLARI } from './cakismaKari.js';
 import { hedefleriCoz, hedefVarMi, hedefTutuyorMu, komisyonBul } from './hedefKarSecimi.js';
 
 export const SINIRLAR = { EN_FAZLA_SATIR: 200, EN_FAZLA_BAYT: 65536, EN_FAZLA_FIYAT: 10_000_000, EN_FAZLA_SIPARIS_SATIRI: 100 };
@@ -39,9 +42,21 @@ function satirTemizle(s, sira) {
   if (s.tur !== 'fiyat') return temiz;
   const kaynakTamam = s.kaynak === undefined || KAYNAKLAR.includes(s.kaynak);
   const tamam = sonlu(s.fiyat) && s.fiyat > 0 && s.fiyat <= SINIRLAR.EN_FAZLA_FIYAT
-    && sonlu(s.komisyonOrani) && s.komisyonOrani >= 0 && s.komisyonOrani <= 100 && kaynakTamam;
-  return { ...temiz, gecerli: tamam, fiyat: s.fiyat, komisyonOrani: s.komisyonOrani };
+    && sonlu(s.komisyonOrani) && s.komisyonOrani >= 0 && s.komisyonOrani <= 100 && kaynakTamam && zincirAlanlariTamam(s);
+  return { ...temiz, gecerli: tamam, fiyat: s.fiyat, komisyonOrani: s.komisyonOrani, kaynak: s.kaynak, ...(s.zincir === true ? { zincir: true, kademeler: s.kademeler } : {}) };
 }
+
+// Çakışma (zincir) isteği: `zincir: true` yalnız çakışma kaynağı olan seçeneklerde; `kademeler` [4] (null ya da {enAz, enCok, komisyon}).
+// Bozuk alan satırı geçersiz kılar (rakam yok); yanlış kademeyle yanlış komisyon seçilmesin.
+const sinir = (d) => d === null || d === undefined || (sonlu(d) && d > 0 && d <= SINIRLAR.EN_FAZLA_FIYAT);
+const kademeTamam = (t) => t === null || (!!t && typeof t === 'object' && sinir(t.enAz) && sinir(t.enCok) && (t.enAz != null || t.enCok != null)
+  && sonlu(t.komisyon) && t.komisyon >= 0 && t.komisyon <= 100);
+function zincirAlanlariTamam(s) {
+  if (s.zincir === undefined && s.kademeler === undefined) return true;
+  if (s.zincir !== true || !CAKISMA_KAYNAKLARI.includes(s.kaynak)) return false;
+  return s.kademeler === undefined || (Array.isArray(s.kademeler) && s.kademeler.length <= 4 && s.kademeler.every(kademeTamam));
+}
+const istanbulBugunu = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Istanbul' }).format(new Date());
 
 // Sipariş Kayıtları'ndaki bir siparişin ürün adı: "<başlık> <model kodu>, <beden>". Model kodu adın son kelimesi.
 export const modelKoduCikar = (ad) => String(ad).replace(/,\s*[^,\d]{1,24}$/, '').trim().split(/\s+/).at(-1) ?? '';
@@ -124,7 +139,7 @@ function satirHesapla(s, ctx) {
   const hedefler = hedefleriCoz(komisyonBul(ctx.komisyonlar, [ctx.kullanici], urun));
   const hedefAlti = hedefVarMi(hedefler) ? !hedefTutuyorMu(r.netKar, r.karOrani, hedefler).uygun : null;
 
-  return {
+  const cikti = {
     id: s.id,
     durum: 'tamam',
     netKar: yuvarla(r.netKar),
@@ -136,6 +151,43 @@ function satirHesapla(s, ctx) {
     not: `fiyat: kutudaki ${s.fiyat} ₺; komisyon: panelden %${s.komisyonOrani}; kargo: ${r.baremUsed}`
       + (eslesme.eslesme === 'model_kodu' ? '; ürün model koduyla eşleşti' : ''),
   };
+  if (s.zincir) {
+    const z = zincirSonucu(s, urun, hedefler, ctx);
+    if (z) cikti.zincir = z;
+  }
+  return cikti;
+}
+
+// Diğer promosyonlarla birlikte kâr. undefined = çakışma yok (alan eklenmez); { durum: 'hesaplanamadi' } = hesaplanamadı.
+function zincirSonucu(s, urun, hedefler, ctx) {
+  if (!ctx.zincirKaynaklari) return { durum: 'hesaplanamadi' };
+  try {
+    const c = cakismaKari({
+      kaynak: s.kaynak, barkod: s.barkod, fiyat: s.fiyat, komisyonOrani: s.komisyonOrani, kademeler: s.kademeler, urun,
+      kaynaklar: ctx.zincirKaynaklari, bugun: ctx.bugun, platformAdi: ctx.kullanici.name,
+      hesapla: (fiyat, komisyonOrani) => fiyattaKar({ urun, platform: ctx.kullanici, sablonlar: ctx.sablonlar, fiyat, komisyonOrani, tarifeler: ctx.tarifeler, ayarlar: ctx.ayarlar }),
+    });
+    if (!c) return undefined;
+    const r = c.sonuc;
+    return {
+      durum: 'tamam',
+      musteriFiyat: yuvarla(c.musteriFiyat),
+      saticiNet: yuvarla(c.saticiNet),
+      taban: { kaynak: c.taban.kaynak, fiyat: yuvarla(c.taban.fiyat) },
+      genel: c.genel,
+      plus: c.plus,
+      kod: c.kod,
+      kupon: c.kupon,
+      netKar: yuvarla(r.netKar),
+      karOrani: yuvarla(r.karOrani),
+      karMarji: yuvarla(r.karMarji),
+      komisyonOrani: c.komisyonOrani,
+      komisyonKaynagi: c.komisyonKaynagi,
+      hedefAlti: hedefVarMi(hedefler) ? !hedefTutuyorMu(r.netKar, r.karOrani, hedefler).uygun : null,
+    };
+  } catch {
+    return { durum: 'hesaplanamadi' };
+  }
 }
 
 export async function isle(istek, veri) {
@@ -149,7 +201,7 @@ export async function isle(istek, veri) {
 
   const fiyatSatirlari = istek.satirlar.filter((s) => s.gecerli && s.tur === 'fiyat');
   const siparisSatirlari = istek.satirlar.filter((s) => s.gecerli && s.tur === 'siparis');
-  let ctx = { kullanici, sablonlar: platformlar.filter((p) => p.is_system_admin), tarifeler: [], ayarlar: [], komisyonlar: [], eslesmeler: new Map(), modelUrunleri: new Map() };
+  const ctx = { kullanici, sablonlar: platformlar.filter((p) => p.is_system_admin), tarifeler: [], ayarlar: [], komisyonlar: [], eslesmeler: new Map(), modelUrunleri: new Map() };
   if (fiyatSatirlari.length || siparisSatirlari.length) {
     const barkodlar = [...new Set(fiyatSatirlari.map((s) => s.barkod))];
     const kodlar = [...new Set(siparisSatirlari.flatMap((s) => s.siparisSatirlari.map((x) => x.kod)).filter(Boolean))];
@@ -159,7 +211,17 @@ export async function isle(istek, veri) {
       kodlar.length ? veri.urunlerModelKoduyla(kodlar) : new Map(),
     ]);
     const firma = (kullanici.shipping_company_name || '').trim();
-    ctx = { ...ctx, ayarlar, komisyonlar, eslesmeler, modelUrunleri, tarifeler: firma ? tarifeler.filter((t) => t.shipping_company === firma) : tarifeler };
+    Object.assign(ctx, { ayarlar, komisyonlar, eslesmeler, modelUrunleri, tarifeler: firma ? tarifeler.filter((t) => t.shipping_company === firma) : tarifeler });
+  }
+
+  const zincirIstenen = fiyatSatirlari.filter((s) => s.zincir);
+  if (zincirIstenen.length) {
+    ctx.bugun = veri.bugun ? veri.bugun() : istanbulBugunu();
+    try {
+      ctx.zincirKaynaklari = await veri.zincirKaynaklari([...new Set(zincirIstenen.map((s) => s.barkod))]);
+    } catch {
+      ctx.zincirKaynaklari = null; // okunamadı: tek başına kâr korunur, çakışma "hesaplanamadı" döner
+    }
   }
 
   const satirlar = istek.satirlar.map((s) => {
