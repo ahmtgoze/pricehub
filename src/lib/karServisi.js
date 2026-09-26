@@ -14,11 +14,14 @@
  *   ayarlar()     → [{setting_key, setting_value}] (Çift Kargo kuralları)
  *   komisyonlar() → kullanıcının Trendyol komisyon kayıtları
  *   urunler(barkodlar) → Map(küçük harf barkod → { urun, eslesme: 'barkod'|'model_kodu' })
+ *   urunlerModelKoduyla(kodlar) → Map(küçük harf model kodu → { urun, eslesme: 'model_kodu' })
  */
 import { fiyattaKar } from './karHesabi.js';
+import { siparisKari } from './siparisKari.js';
 import { hedefleriCoz, hedefVarMi, hedefTutuyorMu, komisyonBul } from './hedefKarSecimi.js';
 
-export const SINIRLAR = { EN_FAZLA_SATIR: 200, EN_FAZLA_BAYT: 65536, EN_FAZLA_FIYAT: 10_000_000 };
+export const SINIRLAR = { EN_FAZLA_SATIR: 200, EN_FAZLA_BAYT: 65536, EN_FAZLA_FIYAT: 10_000_000, EN_FAZLA_SIPARIS_SATIRI: 100 };
+const SATIR_DURUMLARI = ['teslim', 'yeni', 'iptal', 'iade', 'diger'];
 const KAYNAKLAR = ['tarife', 'plus', 'etiket', 'flas', 'buybox'];
 
 const sonlu = (d) => typeof d === 'number' && Number.isFinite(d);
@@ -30,13 +33,35 @@ const yuvarla = (x) => Math.round(x * 100) / 100;
 function satirTemizle(s, sira) {
   const idTamam = !!s && metin(s.id, 64);
   const temiz = { id: idTamam ? s.id : `#${sira}`, gecerli: false, tur: s?.tur, barkod: s?.barkod };
-  if (!idTamam || typeof s !== 'object' || !metin(s.barkod, 128)) return temiz;
-  if (s.tur === 'siparis') return { ...temiz, gecerli: true };
+  if (!idTamam || typeof s !== 'object') return temiz;
+  if (s.tur === 'siparis') return siparisTemizle(s, temiz);
+  if (!metin(s.barkod, 128)) return temiz;
   if (s.tur !== 'fiyat') return temiz;
   const kaynakTamam = s.kaynak === undefined || KAYNAKLAR.includes(s.kaynak);
   const tamam = sonlu(s.fiyat) && s.fiyat > 0 && s.fiyat <= SINIRLAR.EN_FAZLA_FIYAT
     && sonlu(s.komisyonOrani) && s.komisyonOrani >= 0 && s.komisyonOrani <= 100 && kaynakTamam;
   return { ...temiz, gecerli: tamam, fiyat: s.fiyat, komisyonOrani: s.komisyonOrani };
+}
+
+// Sipariş Kayıtları'ndaki bir siparişin ürün adı: "<başlık> <model kodu>, <beden>". Model kodu adın son kelimesi.
+export const modelKoduCikar = (ad) => String(ad).replace(/,\s*[^,\d]{1,24}$/, '').trim().split(/\s+/).at(-1) ?? '';
+
+const tutar = (d) => sonlu(d) && d >= 0;
+function siparisTemizle(s, temiz) {
+  const sp = s.siparis;
+  if (!metin(s.siparisNo, 32) || !sp || typeof sp !== 'object' || !tutar(sp.kargoTutari) || !tutar(sp.hizmetBedeli)
+    || (sp.ceza !== undefined && !tutar(sp.ceza)) || (sp.iadeKargo !== undefined && !tutar(sp.iadeKargo))) return temiz;
+  if (!Array.isArray(s.satirlar) || s.satirlar.length === 0 || s.satirlar.length > SINIRLAR.EN_FAZLA_SIPARIS_SATIRI) return temiz;
+  const satirlar = [];
+  for (const [i, x] of s.satirlar.entries()) {
+    const kimlik = typeof x?.orderLineItemId === 'number' ? String(x.orderLineItemId) : x?.orderLineItemId;
+    const tamam = x && typeof x === 'object' && metin(kimlik, 32) && metin(x.urunAdi, 300)
+      && sonlu(x.satisTutari) && x.satisTutari > 0 && x.satisTutari <= SINIRLAR.EN_FAZLA_FIYAT
+      && (x.indirim === undefined || tutar(x.indirim)) && tutar(x.komisyonTutari) && SATIR_DURUMLARI.includes(x.durum);
+    if (!tamam) return temiz;
+    satirlar.push({ id: kimlik || `#${i}`, kod: modelKoduCikar(x.urunAdi), satis: x.satisTutari, indirim: x.indirim ?? 0, komisyonTutari: x.komisyonTutari, durum: x.durum });
+  }
+  return { ...temiz, gecerli: true, tur: 'siparis', siparis: { kargo: sp.kargoTutari, hizmet: sp.hizmetBedeli, ceza: sp.ceza ?? 0, iadeKargo: sp.iadeKargo ?? 0 }, siparisSatirlari: satirlar };
 }
 
 export function istekiDogrula(govde) {
@@ -61,9 +86,29 @@ const paketliMi = (urun) => {
   }
 };
 
+function siparisSonucu(s, ctx) {
+  const satirlar = s.siparisSatirlari.map((x) => ({ ...x, urun: ctx.modelUrunleri.get(x.kod.toLowerCase())?.urun ?? null }));
+  if (satirlar.some((x) => x.urun && paketliMi(x.urun))) return { id: s.id, durum: 'hesaplanamadi', neden: 'paket_maliyeti' };
+  const r = siparisKari({ satirlar, siparis: s.siparis, platform: ctx.kullanici, sablonlar: ctx.sablonlar, tarifeler: ctx.tarifeler, ayarlar: ctx.ayarlar });
+  const yuvarlaHepsi = (nesne) => Object.fromEntries(Object.entries(nesne).map(([k, v]) => [k, typeof v === 'number' ? yuvarla(v) : v]));
+  const cikti = { id: s.id, durum: r.durum };
+  if (r.toplam) cikti.toplam = yuvarlaHepsi(r.toplam);
+  if (r.kesintiler) cikti.kesintiler = yuvarlaHepsi(r.kesintiler);
+  if (r.satirlar) {
+    cikti.satirlar = r.satirlar.map((x) => (x.durum !== 'tamam' ? { id: x.id, durum: x.durum }
+      : { id: x.id, durum: x.durum, satis: yuvarla(x.satis), netKar: yuvarla(x.netKar), vergiOncesiKar: yuvarla(x.vergiOncesiKar), karOrani: yuvarla(x.karOrani),
+        karMarji: yuvarla(x.karMarji), kargoPayi: yuvarla(x.kargoPayi), hizmetPayi: yuvarla(x.hizmetPayi), kalemler: yuvarlaHepsi(x.kalemler) }));
+  }
+  if (r.durum === 'tamam' || r.durum === 'tahmini') {
+    cikti.not = (r.durum === 'tahmini' ? 'kargo ve hizmet bedeli henüz kesilmedi, PriceHub kurallarıyla tahmin edildi (tek paket varsayımı); ' : '')
+      + 'kargo ve hizmet bedeli sipariş toplamıdır, ürünlere satış tutarı oranında dağıtıldı';
+  }
+  return cikti;
+}
+
 function satirHesapla(s, ctx) {
   if (!s.gecerli) return { id: s.id, durum: 'veri_gecersiz' };
-  if (s.tur === 'siparis') return { id: s.id, durum: 'desteklenmiyor' };
+  if (s.tur === 'siparis') return siparisSonucu(s, ctx);
 
   const eslesme = ctx.eslesmeler.get(s.barkod.toLowerCase());
   if (!eslesme) return { id: s.id, durum: 'eslesmedi' };
@@ -102,15 +147,19 @@ export async function isle(istek, veri) {
     return { surum: 1, magaza: { durum: bagliVar ? 'uyusmuyor' : 'bagli_degil' }, satirlar: [] };
   }
 
-  const hesaplanacak = istek.satirlar.filter((s) => s.gecerli && s.tur === 'fiyat');
-  let ctx = { kullanici, sablonlar: platformlar.filter((p) => p.is_system_admin), tarifeler: [], ayarlar: [], komisyonlar: [], eslesmeler: new Map() };
-  if (hesaplanacak.length) {
-    const barkodlar = [...new Set(hesaplanacak.map((s) => s.barkod))];
-    const [tarifeler, ayarlar, komisyonlar, eslesmeler] = await Promise.all([
-      veri.tarifeler(), veri.ayarlar(), veri.komisyonlar(), veri.urunler(barkodlar),
+  const fiyatSatirlari = istek.satirlar.filter((s) => s.gecerli && s.tur === 'fiyat');
+  const siparisSatirlari = istek.satirlar.filter((s) => s.gecerli && s.tur === 'siparis');
+  let ctx = { kullanici, sablonlar: platformlar.filter((p) => p.is_system_admin), tarifeler: [], ayarlar: [], komisyonlar: [], eslesmeler: new Map(), modelUrunleri: new Map() };
+  if (fiyatSatirlari.length || siparisSatirlari.length) {
+    const barkodlar = [...new Set(fiyatSatirlari.map((s) => s.barkod))];
+    const kodlar = [...new Set(siparisSatirlari.flatMap((s) => s.siparisSatirlari.map((x) => x.kod)).filter(Boolean))];
+    const [tarifeler, ayarlar, komisyonlar, eslesmeler, modelUrunleri] = await Promise.all([
+      veri.tarifeler(), veri.ayarlar(), veri.komisyonlar(),
+      barkodlar.length ? veri.urunler(barkodlar) : new Map(),
+      kodlar.length ? veri.urunlerModelKoduyla(kodlar) : new Map(),
     ]);
     const firma = (kullanici.shipping_company_name || '').trim();
-    ctx = { ...ctx, ayarlar, komisyonlar, eslesmeler, tarifeler: firma ? tarifeler.filter((t) => t.shipping_company === firma) : tarifeler };
+    ctx = { ...ctx, ayarlar, komisyonlar, eslesmeler, modelUrunleri, tarifeler: firma ? tarifeler.filter((t) => t.shipping_company === firma) : tarifeler };
   }
 
   const satirlar = istek.satirlar.map((s) => {

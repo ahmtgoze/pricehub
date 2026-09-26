@@ -108,6 +108,18 @@ Deno.test('kabuk: veri hatası 500, hata gövdeyi ve veriyi yansıtmaz', async (
   dogru(!metin.includes('GİZLİ') && !metin.includes('300'), 'kayıtta barkod, fiyat ya da hata ayrıntısı yok');
 });
 
+Deno.test('kabuk: sipariş satırı sunucu kabuğundan geçer (model kodu eşleşmesi, dağıtım)', async () => {
+  const sl = (id: number, satis: number, kom: number) => ({ orderLineItemId: id, urunAdi: `Başlık ${id} 100 Adet KOD-A, one size`, satisTutari: satis, komisyonTutari: kom, durum: 'teslim' });
+  const govde = { ...GOVDE, satirlar: [{ id: 'o1', tur: 'siparis', siparisNo: '11640000001', siparis: { kargoTutari: 98.34, hizmetBedeli: 13.19 }, satirlar: [sl(1, 300, 60), sl(2, 300, 60), sl(3, 100, 20)] }] };
+  const veri = sahteVeri({ urunlerModelKoduyla: async (k: string[]) => new Map(k.map((x) => [x.toLowerCase(), { urun: URUN, eslesme: 'model_kodu' }])) });
+  const r = await handler(istekYap(govde), bag({ veriKur: () => veri }));
+  esit(r.status, 200, 'durum');
+  const o = (await r.json()).satirlar[0];
+  esit([o.durum, o.satirlar.length, o.kesintiler.kargo, o.kesintiler.hizmet], ['tamam', 3, 98.34, 13.19], 'sipariş özeti');
+  dogru(Math.abs(o.satirlar.reduce((a: number, x: any) => a + x.vergiOncesiKar, 0) - o.toplam.vergiOncesiKar) <= 0.02, 'satır kârları toplamı sipariş kârına eşit');
+  dogru(Math.abs(o.satirlar.reduce((a: number, x: any) => a + x.kargoPayi, 0) - 98.34) <= 0.02, 'kargo payları toplamı sipariş kargosu');
+});
+
 Deno.test('kabuk: yanıt istekteki fazlalığı yansıtmaz', async () => {
   const r = await handler(istekYap({ ...GOVDE, musteriAdi: 'GİZLİ-AD', satirlar: [{ ...GOVDE.satirlar[0], adres: 'GİZLİ-ADRES' }] }), bag());
   dogru(r.status === 200 && !(await r.text()).includes('GİZLİ'), 'yanıtta müşteri alanları yok');
@@ -161,6 +173,25 @@ Deno.test('veri: kullanıcı tabloları created_by ile süzülür, şablon ve si
   const kendiPlatform = istemci.kayit.filter((x) => x.tablo === 'platforms');
   dogru(kendiPlatform.some((k) => k.suzgec.some(([y, s, d]) => y === 'eq' && s === 'created_by' && d === ben)), 'platform sorgusu created_by ile');
   dogru(kendiPlatform.some((k) => k.suzgec.some(([y, s, d]) => y === 'eq' && s === 'is_system_admin' && d === true) && !k.suzgec.some(([, s]) => s === 'created_by')), 'şablon sorgusu yalnız is_system_admin ile');
+});
+
+Deno.test('veri: model koduyla arama yalnız benim ürünlerimi, tek kod tek ürünse döndürür', async () => {
+  const ben = 'ben@ornek.com', baska = 'baska@ornek.com';
+  const istemci = sahteIstemci({
+    marketplace_products: [
+      { created_by: ben, platform_account: 'Trendyol', barkod: 'b1', model_code: 'KOD-A', matched_product_id: 'u-ben' },
+      { created_by: baska, platform_account: 'Trendyol', barkod: 'b1', model_code: 'KOD-A', matched_product_id: 'u-baska' },
+      { created_by: ben, platform_account: 'Trendyol', barkod: 'b2', model_code: 'KOD-B', matched_product_id: 'u1' },
+      { created_by: ben, platform_account: 'Trendyol', barkod: 'b3', model_code: 'KOD-B', matched_product_id: 'u2' },
+    ],
+    products: [{ id: 'u-ben', created_by: ben, cost: 10 }, { id: 'u-baska', created_by: baska, cost: 99 }, { id: 'u1', created_by: ben }, { id: 'u2', created_by: ben }],
+  });
+  const veri: any = gercekVeri(istemci, ben);
+  const sonuc = await veri.urunlerModelKoduyla(['kod-a', 'KOD-B', 'YOK']);
+  esit([...sonuc.keys()], ['kod-a'], 'yalnız tekil eşleşme; iki ürüne bağlı KOD-B ve bilinmeyen YOK eşleşmez');
+  esit([sonuc.get('kod-a').urun.cost, sonuc.get('kod-a').eslesme], [10, 'model_kodu'], 'benim ürünüm, model_kodu türü');
+  const modelSorgulari = istemci.kayit.filter((k) => k.tablo === 'marketplace_products');
+  dogru(modelSorgulari.every((k) => k.suzgec.some(([y, s, d]) => y === 'eq' && s === 'created_by' && d === ben)), 'model kodu sorgusunda created_by süzgeci var');
 });
 
 Deno.test('veri: belirsiz eşleşme (aynı kod iki ürüne bağlı) eşleşmemiş sayılır, model koduna düşülür', async () => {

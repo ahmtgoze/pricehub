@@ -32,6 +32,15 @@ export function gercekVeri(client: any, email: string) {
     return new Map([...gruplar].filter(([, kimlikler]) => kimlikler.size === 1).map(([k, kimlikler]) => [k, [...kimlikler][0]]));
   }
 
+  async function urunleriGetir(gruplar: [string, Map<string, string>][]) {
+    const kimlikler = [...new Set(gruplar.flatMap(([, harita]) => [...harita.values()]))];
+    if (!kimlikler.length) return new Map();
+    const urunler = new Map((await oku(benim('products', URUN).in('id', kimlikler))).map((u) => [String(u.id), u]));
+    const sonuc = new Map<string, { urun: any; eslesme: string }>();
+    for (const [eslesme, harita] of gruplar) for (const [kod, id] of harita) if (urunler.has(id)) sonuc.set(kod, { urun: urunler.get(id), eslesme });
+    return sonuc;
+  }
+
   return {
     platformlar: async () => {
       const [kendi, sablon] = await Promise.all([
@@ -46,14 +55,8 @@ export function gercekVeri(client: any, email: string) {
     urunler: async (barkodlar: string[]) => {
       const barkodla = await eslesenUrunler('barkod', barkodlar);
       const kalan = barkodlar.filter((b) => !barkodla.has(b.toLowerCase()));
-      const modelle = await eslesenUrunler('model_code', kalan);
-      const kimlikler = [...new Set([...barkodla.values(), ...modelle.values()])];
-      if (!kimlikler.length) return new Map();
-      const urunler = new Map((await oku(benim('products', URUN).in('id', kimlikler))).map((u) => [String(u.id), u]));
-      const sonuc = new Map<string, { urun: any; eslesme: string }>();
-      for (const [kod, id] of barkodla) if (urunler.has(id)) sonuc.set(kod, { urun: urunler.get(id), eslesme: 'barkod' });
-      for (const [kod, id] of modelle) if (urunler.has(id)) sonuc.set(kod, { urun: urunler.get(id), eslesme: 'model_kodu' });
-      return sonuc;
+      return urunleriGetir([['barkod', barkodla], ['model_kodu', await eslesenUrunler('model_code', kalan)]]);
     },
+    urunlerModelKoduyla: async (kodlar: string[]) => urunleriGetir([['model_kodu', await eslesenUrunler('model_code', kodlar)]]),
   };
 }

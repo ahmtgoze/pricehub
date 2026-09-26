@@ -13,8 +13,9 @@ const dataUrl = (kod) => 'data:text/javascript;base64,' + Buffer.from(kod).toStr
 
 const motorUrl = dataUrl(oku('../src/components/PriceCalculationEngine.jsx').replaceAll("'../lib/", `'${lib}`));
 const karHesabiUrl = dataUrl(oku('../src/lib/karHesabi.js').replace("'../components/PriceCalculationEngine.jsx'", `'${motorUrl}'`).replaceAll("'./", `'${lib}`));
-const { isle, istekiDogrula, SINIRLAR } = await import(dataUrl(
-  oku('../src/lib/karServisi.js').replace("'./karHesabi.js'", `'${karHesabiUrl}'`).replaceAll("'./", `'${lib}`),
+const siparisKariUrl = dataUrl(oku('../src/lib/siparisKari.js').replace("'../components/PriceCalculationEngine.jsx'", `'${motorUrl}'`).replace("'./karHesabi.js'", `'${karHesabiUrl}'`).replaceAll("'./", `'${lib}`));
+const { isle, istekiDogrula, SINIRLAR, modelKoduCikar } = await import(dataUrl(
+  oku('../src/lib/karServisi.js').replace("'./karHesabi.js'", `'${karHesabiUrl}'`).replace("'./siparisKari.js'", `'${siparisKariUrl}'`).replaceAll("'./", `'${lib}`),
 ));
 const { fiyattaKar } = await import(karHesabiUrl);
 
@@ -43,8 +44,8 @@ const TARIFELER = [
 const urun = (o = {}) => ({ id: 'u1', category_id: 'k1', cost: 100, desi: 2, vat_rate: 20, printing_cost: 0, extra_cost: 0, same_day_delivery: false, ...o });
 const KOMISYON = (o = {}) => ({ platform_id: 'p-ty', platform_name: 'Trendyol', category_id: 'k1', is_active: true, ...o });
 
-function veriKur({ platformlar = [KULLANICI, SABLON], urunler = {}, komisyonlar = [], tarifeler = TARIFELER, ayarlar = [] } = {}) {
-  const cagri = { platformlar: 0, tarifeler: 0, ayarlar: 0, komisyonlar: 0, urunler: 0 };
+function veriKur({ platformlar = [KULLANICI, SABLON], urunler = {}, modelUrunleri = {}, komisyonlar = [], tarifeler = TARIFELER, ayarlar = [] } = {}) {
+  const cagri = { platformlar: 0, tarifeler: 0, ayarlar: 0, komisyonlar: 0, urunler: 0, modelKoduyla: 0 };
   return {
     cagri,
     platformlar: async () => (cagri.platformlar++, platformlar),
@@ -52,6 +53,7 @@ function veriKur({ platformlar = [KULLANICI, SABLON], urunler = {}, komisyonlar 
     ayarlar: async () => (cagri.ayarlar++, ayarlar),
     komisyonlar: async () => (cagri.komisyonlar++, komisyonlar),
     urunler: async (b) => (cagri.urunler++, new Map(b.map((x) => x.toLowerCase()).filter((x) => urunler[x]).map((x) => [x, urunler[x]]))),
+    urunlerModelKoduyla: async (k) => (cagri.modelKoduyla++, new Map(k.map((x) => x.toLowerCase()).filter((x) => modelUrunleri[x]).map((x) => [x, { urun: modelUrunleri[x], eslesme: 'model_kodu' }]))),
   };
 }
 const istek = (satirlar, saticiNo = 900001) => ({ surum: 1, platform: 'trendyol', saticiNo, satirlar });
@@ -149,7 +151,7 @@ console.log('\n═══ EKSİK VERİ VE HATA: rakam çıkmamalı ═══');
   esit('36 bir satırın patlaması diğerini bozmaz', [r.satirlar[0].durum, r.satirlar[1]], ['tamam', { id: 's2', durum: 'hesaplanamadi' }]);
 
   const ok = await isle(dogrula(istek([satir({ id: 's1', fiyat: 0 }), satir({ id: 's2', tur: 'siparis' })])).istek, veriKur());
-  esit('37 geçersiz ve sipariş satırları', ok.satirlar, [{ id: 's1', durum: 'veri_gecersiz' }, { id: 's2', durum: 'desteklenmiyor' }]);
+  esit('37 geçersiz fiyat satırı ve eksik alanlı sipariş satırı', ok.satirlar, [{ id: 's1', durum: 'veri_gecersiz' }, { id: 's2', durum: 'veri_gecersiz' }]);
 }
 
 console.log('\n═══ KARGO FİRMASI VE VERİ SIZINTISI ═══');
@@ -165,6 +167,59 @@ console.log('\n═══ KARGO FİRMASI VE VERİ SIZINTISI ═══');
   dogru('40 yanıtta tarife tablosu yok', !metin.includes('shipping') && !metin.includes('rate_type') && !metin.includes('same_day'));
   dogru('40b maliyet yalnızca istenen satırın dökümünde (sözleşme)', metin.split('123456').length === 2 && r.satirlar[0].kalemler.maliyet === 123456);
   esit('41 satır alanları izin listesinde', Object.keys(r.satirlar[0]).sort(), ['durum', 'hedefAlti', 'id', 'kalemler', 'karMarji', 'karOrani', 'netKar', 'not', 'vergiOncesiKar']);
+}
+
+
+console.log('\n═══ SİPARİŞ KAYITLARI SATIRLARI ═══');
+{
+  esit('42 model kodu: ", one size" sonekiyle', modelKoduCikar('Cepli Renkli Kargo Poşeti - 30x37 Cm - Lila/Pembe - 100 Adet CPLP-3037-100, one size'), 'CPLP-3037-100');
+  esit('43 model kodu: sonek yok', modelKoduCikar('Etiket Plastik Kargo Poşeti Cepsiz 45x55x5 Cm 1pk 50 Adet KCZ4555'), 'KCZ4555');
+  esit('44 model kodu: başlıkta virgül olsa da doğru kelime', modelKoduCikar('Kargo Poşeti, Gri 100 Adet CZG-1, Tek Ebat'), 'CZG-1');
+  esit('45 model kodu: başlıkta virgül + sonek yok (rakamlı kuyruk korunur)', modelKoduCikar('Kargo Poşeti, Gri 100 Adet CZG-1'), 'CZG-1');
+
+  const sl = (id, ad, satis, kom, o = {}) => ({ orderLineItemId: id, urunAdi: ad, satisTutari: satis, komisyonTutari: kom, durum: 'teslim', ...o });
+  const sip = (o = {}) => ({ id: 'o1', tur: 'siparis', siparisNo: '11640000001', siparis: { kargoTutari: 98.34, hizmetBedeli: 13.19 },
+    satirlar: [sl(1, 'Başlık A 100 Adet KOD-A, one size', 300, 60), sl(2, 'Başlık A 100 Adet KOD-A, one size', 300, 60), sl(3, 'Başlık B 50 Adet KOD-B, one size', 100, 20)], ...o });
+  const modelUrunleri = { 'kod-a': urun({ cost: 100 }), 'kod-b': urun({ cost: 30 }) };
+  const dene = async (siparisler, ek = {}) => { const veri = veriKur({ modelUrunleri, ...ek }); const d = dogrula(istek(siparisler)); return { r: await isle(d.istek, veri), veri, d }; };
+
+  const { r, veri } = await dene([sip()]);
+  const o = r.satirlar[0];
+  esit('46 sipariş hesaplandı', [r.magaza.durum, o.durum], ['eslesti', 'tamam']);
+  dogru('47 toplam ve kesintiler döner', o.toplam.netKar > 0 && o.kesintiler.kargo === 98.34 && o.kesintiler.hizmet === 13.19);
+  dogru('48 üç satır (biri iki adet) ayrı sonuç', o.satirlar.length === 3 && o.satirlar.every((x) => x.durum === 'tamam'));
+  dogru('49 satır kâr toplamı ≈ sipariş vergi öncesi kâr (yuvarlama payı)', Math.abs(o.satirlar.reduce((a, x) => a + x.vergiOncesiKar, 0) - o.toplam.vergiOncesiKar) <= 0.02);
+  dogru('50 tek istekte tek veri çekimi', veri.cagri.modelKoduyla === 1 && veri.cagri.tarifeler === 1, JSON.stringify(veri.cagri));
+  dogru('51 not: dağıtım açıklaması', o.not.includes('sipariş toplamıdır'));
+
+  const eslesmedi = (await dene([sip({ satirlar: [sl(1, 'X KOD-A, one size', 300, 60), sl(2, 'Y BILINMEYEN-KOD, one size', 100, 20)] })])).r.satirlar[0];
+  esit('52 eşleşmeyen model kodu: sipariş toplamı yok, satırlar işaretli', [eslesmedi.durum, eslesmedi.toplam, eslesmedi.satirlar.map((x) => x.durum)], ['eslesmedi', undefined, ['tamam', 'eslesmedi']]);
+  const iptal = (await dene([sip({ satirlar: [sl(1, 'X KOD-A, one size', 300, 60), sl(2, 'X KOD-A, one size', 300, 60, { durum: 'iptal' })] })])).r.satirlar[0];
+  esit('53 iptal içeren sipariş: rakam yok', [iptal.durum, iptal.toplam, iptal.satirlar], ['iade_iptal', undefined, undefined]);
+  const yeni = (await dene([sip({ siparis: { kargoTutari: 0, hizmetBedeli: 0 }, satirlar: [sl(1, 'X KOD-A, one size', 300, 60, { durum: 'yeni' })] })])).r.satirlar[0];
+  esit('54 yeni sipariş: tahmini', yeni.durum, 'tahmini');
+  dogru('55 tahmini notu tek paket varsayımını söyler', yeni.not.includes('tahmin') && yeni.not.includes('tek paket'));
+  const cezali = (await dene([sip({ siparis: { kargoTutari: 98.34, hizmetBedeli: 13.19, ceza: 20, iadeKargo: 5 } })])).r.satirlar[0];
+  dogru('56 ceza ve iade kargo döner ve kârdan düşer', cezali.toplam.digerKesinti === 25 && Math.abs((o.toplam.netKar - cezali.toplam.netKar) - 25) <= 0.02);
+  const paketli = (await dene([sip()], { modelUrunleri: { ...modelUrunleri, 'kod-b': urun({ cost: 30, package_id: 'pk1' }) } })).r.satirlar[0];
+  esit('57 paketli ürün içeren sipariş → hesaplanamadı', paketli, { id: 'o1', durum: 'hesaplanamadi', neden: 'paket_maliyeti' });
+
+  const gecersiz = [['siparis yok', { siparis: undefined }], ['negatif kargo', { siparis: { kargoTutari: -1, hizmetBedeli: 1 } }], ['kargo metin', { siparis: { kargoTutari: '9', hizmetBedeli: 1 } }],
+    ['hizmet yok', { siparis: { kargoTutari: 9 } }], ['negatif ceza', { siparis: { kargoTutari: 9, hizmetBedeli: 1, ceza: -1 } }], ['siparisNo yok', { siparisNo: undefined }],
+    ['satır yok', { satirlar: [] }], [`satır ${SINIRLAR.EN_FAZLA_SIPARIS_SATIRI + 1}`, { satirlar: Array.from({ length: SINIRLAR.EN_FAZLA_SIPARIS_SATIRI + 1 }, (_, i) => sl(i, 'A KOD-A, one size', 10, 1)) }],
+    ['satır ürün adı yok', { satirlar: [sl(1, undefined, 10, 1)] }], ['satır satış 0', { satirlar: [sl(1, 'A KOD-A, one size', 0, 1)] }],
+    ['satır durum bilinmiyor', { satirlar: [sl(1, 'A KOD-A, one size', 10, 1, { durum: 'baska' })] }], ['satır komisyon negatif', { satirlar: [sl(1, 'A KOD-A, one size', 10, -1)] }],
+    ['satır kimliği yok', { satirlar: [sl(undefined, 'A KOD-A, one size', 10, 1)] }]];
+  for (const [ad, ek] of gecersiz) {
+    const sonuc = (await dene([sip(ek)])).r.satirlar[0];
+    esit(`58 ${ad} → veri_gecersiz`, sonuc, { id: 'o1', durum: 'veri_gecersiz' });
+  }
+  const kisisel = (await dene([sip({ satirlar: [sl(1, 'GİZLİ-BAŞLIK KOD-A, one size', 300, 60, { musteriAdi: 'GİZLİ-AD', adres: 'GİZLİ-ADRES' })], musteriAdi: 'GİZLİ-AD2' })])).r;
+  dogru('59 yanıtta ürün adı ve müşteri alanı yok', !JSON.stringify(kisisel).includes('GİZLİ'));
+  const karisik = (await dene([satir({ id: 'f1', barkod: 'abc-1' }), sip()], { urunler: { 'abc-1': { urun: urun(), eslesme: 'barkod' } } })).r;
+  esit('60 fiyat ve sipariş satırları aynı istekte', karisik.satirlar.map((x) => x.durum), ['tamam', 'tamam']);
+  const uyusmuyor = await dene([sip()], { platformlar: [{ ...KULLANICI, satici_no: 111 }, SABLON] });
+  dogru('61 mağaza uyuşmazlığında sipariş verisi de okunmaz', uyusmuyor.r.satirlar.length === 0 && uyusmuyor.veri.cagri.modelKoduyla === 0 && uyusmuyor.veri.cagri.urunler === 0);
 }
 
 console.log(`\nGECEN: ${gecen}   KALAN: ${kalan}`);
