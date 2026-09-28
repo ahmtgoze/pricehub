@@ -70,9 +70,11 @@ export function siparisKari({ satirlar, siparis, platform, sablonlar = [], tarif
     return {
       id: s.id, durum: 'tamam', satis: netSatis[i], netKar: d.netProfit, vergiOncesiKar: d.netProfitBeforeTax,
       karOrani: d.profitRate, karMarji: (d.netProfit / netSatis[i]) * 100, kargoPayi, hizmetPayi,
+      // bkz. karHesabi.js aynı notu: kalem listesi net kâra ulaşabilsin diye motorun döndürdüğü TÜM giden kalemler.
       kalemler: {
-        satisKdvHaric: d.salePriceExclVat, maliyet: d.productCost, komisyon: d.commissionAmount, kargo: d.shippingCost,
-        hizmetBedeli: d.serviceFee, stopaj: d.withholdingAmount, netKdv: d.netVat, kurumlarVergisi: d.corporateTaxAmount,
+        satisKdvHaric: d.salePriceExclVat, maliyet: d.productCost, baskiMaliyeti: d.printingCost, ekMaliyet: d.extraCost,
+        paketlemeMaliyeti: d.packagingCost, komisyon: d.commissionAmount, kargo: d.shippingCost, hizmetBedeli: d.serviceFee,
+        posHizmetBedeli: d.posServiceFee, stopaj: d.withholdingAmount, netKdv: d.netVat, kurumlarVergisi: d.corporateTaxAmount,
       },
     };
   });
