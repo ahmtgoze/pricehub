@@ -141,10 +141,34 @@ console.log('\n=== KENDI INDIRIMLERIM ===');
   // kapsam: urun listesi
   const K9 = { ...K, ownDiscounts: [D({ tur: 'indirim_kodu', indirim_tipi: 'tl', tutar: 20, kapsam_turu: 'urunler', kapsam_urunler: ['KCZ4555'] })] };
   esit('kod urune uygulanir', zincirKur({ urun, kaynaklar: K9, bugun: BUGUN, platform: 'Trendyol', aday: { kaynak: KAYNAK.TARIFE, fiyat: 297.43 } }).kod?.indirim, 20);
-  // plus'a ozel %8 kendi indirimi: Plus %5 ile yarisir, 8 gecer
+  // plus'a ozel %8 kendi indirimi: Plus %5 ile yarisir, 8 gecer; YUZDE oldugu icin 'net' alaninda TEKRAR
+  // SAYILMAMALI (sira 2.5'te tek basina degerlendiriliyor) — cifte sayim regresyon kontrolu.
   const K10 = { ...K, ownDiscounts: [D({ tur: 'net', indirim_tipi: 'percent', oran: 8, hedef_kitle: 'plus' })] };
   const z10 = zincirKur({ urun, kaynaklar: K10, bugun: BUGUN, platform: 'Trendyol', aday: { kaynak: KAYNAK.PLUS_GIRILEN, fiyat: 346.49 }, plus: { oran: 5, karsilama: 0 } });
   esit("plus'a ozel %8 > %5", z10.plus.oran, 8);
+  esit("yuzdelik plus indirimi 'net' olarak tekrar sayilmaz", z10.net, null);
+
+  // plus'a ozel TL "Net İndirim": Plus musterisinde SIRA 1'de duser, normal musteride hic uygulanmaz
+  // (1 Eki 2026 duzeltmesi: eskiden kendiOlan hepsini 'all' sanip bunu sessizce eliyordu).
+  const K12 = { ...K, ownDiscounts: [D({ tur: 'net', indirim_tipi: 'tl', tutar: 20, hedef_kitle: 'plus' })] };
+  const z12plus = zincirKur({ urun, kaynaklar: K12, bugun: BUGUN, platform: 'Trendyol', aday: { kaynak: KAYNAK.PLUS_GIRILEN, fiyat: 346.49 }, plus: { oran: 5, karsilama: 0 } });
+  esit("plus'a ozel TL net indirim Plus musterisinde duser", z12plus.net?.indirim, 20);
+  const z12normal = zincirKur({ urun, kaynaklar: K12, bugun: BUGUN, platform: 'Trendyol', aday: { kaynak: KAYNAK.TARIFE, fiyat: 297.43 }, plus: null });
+  esit("plus'a ozel TL net indirim normal musteride yok", z12normal.net, null);
+
+  // plus'a ozel "İndirim Kodu": Plus musterisinde SIRA 5'te duser, normal musteride hic uygulanmaz
+  const K13 = { ...K, ownDiscounts: [D({ tur: 'indirim_kodu', indirim_tipi: 'tl', tutar: 15, hedef_kitle: 'plus' })] };
+  const z13plus = zincirKur({ urun, kaynaklar: K13, bugun: BUGUN, platform: 'Trendyol', aday: { kaynak: KAYNAK.PLUS_GIRILEN, fiyat: 346.49 }, plus: { oran: 5, karsilama: 0 } });
+  esit("plus'a ozel kod Plus musterisinde duser", z13plus.kod?.indirim, 15);
+  const z13normal = zincirKur({ urun, kaynaklar: K13, bugun: BUGUN, platform: 'Trendyol', aday: { kaynak: KAYNAK.TARIFE, fiyat: 297.43 }, plus: null });
+  esit("plus'a ozel kod normal musteride yok", z13normal.kod, null);
+
+  // plus'a ozel "Koşullu İndirim" (TL): Plus musterisinde sepet kampanyasi gibi SIRA 2'de yarisir
+  const K14 = { ...K, ownDiscounts: [D({ tur: 'kosullu_tutar', indirim_tipi: 'tl', tutar: 80, alt_limit: 200, hedef_kitle: 'plus' })] };
+  const z14plus = zincirKur({ urun, kaynaklar: K14, bugun: BUGUN, platform: 'Trendyol', aday: { kaynak: KAYNAK.PLUS_GIRILEN, fiyat: 346.49 }, plus: { oran: 5, karsilama: 0 } });
+  esit("plus'a ozel kosullu TL Plus musterisinde kazanir (80 > 1000e100'un 346,49'a dusen payi)", [z14plus.genelIndirim, z14plus.genel.kendi], [80, true]);
+  const z14normal = zincirKur({ urun, kaynaklar: K14, bugun: BUGUN, platform: 'Trendyol', aday: { kaynak: KAYNAK.TARIFE, fiyat: 297.43 }, plus: null });
+  esit("plus'a ozel kosullu TL normal musteride devrede degil (sepet kampanyasi kazanir)", z14normal.genel?.kendi, undefined);
   // suresi bitmis -> yok
   const K11 = { ...K, ownDiscounts: [D({ tur: 'net', indirim_tipi: 'percent', oran: 10, end_date: '2026-09-10' })] };
   esit('bitmis indirim yok', zincirKur({ urun, kaynaklar: K11, bugun: BUGUN, platform: 'Trendyol', aday: { kaynak: KAYNAK.TARIFE, fiyat: 297.43 } }).net, null);

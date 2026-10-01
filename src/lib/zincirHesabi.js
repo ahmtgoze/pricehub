@@ -241,7 +241,14 @@ export function zincirKur({ urun, kaynaklar, bugun = bugunMetni(), platform = nu
   // Kendi indirimleri: Plus'a ozel olanlar yalniz Plus musterisinde
   const kendiler = kendiIndirimleri(urun, kaynaklar, { bugun, platform })
     .filter((d) => (d.hedef_kitle || 'all') !== 'plus' || plusMusterisi);
-  const kendiOlan = (t) => kendiler.filter((d) => d.tur === t && (d.hedef_kitle || 'all') === 'all');
+  // Plus'a ozel YUZDE indirimler asagida SIRA 2.5'te (Trendyol'un Plus %X'iyle yarisir, yuksek olan kazanir)
+  // AYRICA degerlendiriliyor; burada (sira 1/2/5) tekrar sayilmasin diye haric tutuluyor. Plus'a ozel TL/adet
+  // indirimler ("Net İndirim", "İndirim Kodu", "Koşullu İndirim" TL/adet tipinde) ise normal akisa, 'all'
+  // hedefli olanlarla AYNI sirada girer — eskiden kendiOlan hepsini 'all' sanip Plus'a ozel olanlari (yuzde
+  // olmayanlar dahil) SESSIZCE eliyordu, formda secilebiliyor ama hicbir hesaba katilmiyordu (1 Eki 2026,
+  // kullanici: "üç türü de düzelt").
+  const plusYuzdeMi = (d) => (d.hedef_kitle || 'all') === 'plus' && (d.indirim_tipi || 'percent') === 'percent';
+  const kendiOlan = (t) => kendiler.filter((d) => d.tur === t && !plusYuzdeMi(d));
 
   // SIRA 1 — net indirim (ayni sirada en yuksegi)
   let net = null;
@@ -254,7 +261,7 @@ export function zincirKur({ urun, kaynaklar, bugun = bugunMetni(), platform = nu
   // SIRA 2 — sepet kampanyalari + kosullu kendi indirimleri: en yuksek tek indirim
   const geneller = genelKampanyalar(urun, kaynaklar, { bugun, haricKampanyaId: ekGenel?.kampanyaId || null });
   if (ekGenel?.genel) geneller.push({ kampanya: { id: ekGenel.kampanyaId }, genel: ekGenel.genel, ad: ekGenel.ad, fiyat: sayi(ekGenel.fiyat) });
-  for (const d of kendiler.filter((x) => (x.tur || '').startsWith('kosullu') && (x.hedef_kitle || 'all') === 'all')) {
+  for (const d of kendiler.filter((x) => (x.tur || '').startsWith('kosullu') && !plusYuzdeMi(x))) {
     geneller.push({ kampanya: { id: d.id, kendi: true }, genel: kosulluyuKampanyayaCevir(d), ad: kendiAdi(d), fiyat: 0, kendi: true });
   }
   let enIyi = null;
