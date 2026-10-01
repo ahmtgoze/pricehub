@@ -1240,7 +1240,7 @@ export default function Campaigns() {
                                   <div className={`border rounded-lg p-2 ${isSelected ? 'border-primary bg-secondary' : 'border-border'}`}>
                                     {aktifKampanya && (
                                       <div className="flex items-start justify-between gap-1 mb-1">
-                                        <div className="text-xs font-semibold text-muted-foreground">{kampanyaMetni(aktifKampanya)}{aktifKampanya.karsilama > 0 ? ` · %${aktifKampanya.karsilama} Trendyol` : ''}</div>
+                                        <div className="text-[10px] text-muted-foreground">Gerçek Satış Tutarım</div>
                                         <Popover>
                                           <PopoverTrigger asChild>
                                             <button type="button" className="text-muted-foreground hover:text-foreground shrink-0" title="Bu fiyat nasıl bulundu?"><HelpCircle className="h-3.5 w-3.5" /></button>
@@ -1262,7 +1262,7 @@ export default function Campaigns() {
                                     <div className="text-xs text-muted-foreground text-center">
                                       <div className="font-bold text-sm text-foreground">₺{Number(calc.effPrice || 0).toFixed(2)}</div>
                                       {Number(calc.musteriFiyat) > 0 && (etki || Math.abs(Number(calc.musteriFiyat) - Number(calc.effPrice)) > 0.005) && (
-                                        <div className="text-[10px]">müşteri öder ₺{Number(calc.musteriFiyat).toFixed(2)}{etki ? ` · taban: ${etki.taban.kaynak}` : ''}</div>
+                                        <div className="text-[10px]"><span className="text-muted-foreground/70">Müşteri Fiyatı (Ödediği): </span>₺{Number(calc.musteriFiyat).toFixed(2)}</div>
                                       )}
                                     </div>
                                     <div className="flex items-center justify-between gap-1">
