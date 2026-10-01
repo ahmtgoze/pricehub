@@ -45,6 +45,7 @@ const SYSTEM_FIELDS = [
   'has_pos_service_fee', 'pos_service_fee_rate', 'use_barem', 'barem_max_desi',
   'barem1_min', 'barem1_max', 'barem2_min', 'barem2_max',
   'has_corporate_tax', 'corporate_tax_rate',
+  'has_micro_export', 'micro_export_service_fee_rate',
 ];
 
 export default function Platforms() {
@@ -95,6 +96,8 @@ export default function Platforms() {
           barem1_max: admin.barem1_max,
           barem2_min: admin.barem2_min,
           barem2_max: admin.barem2_max,
+          has_micro_export: admin.has_micro_export,
+          micro_export_service_fee_rate: admin.micro_export_service_fee_rate,
         };
       });
       const seen = new Map();

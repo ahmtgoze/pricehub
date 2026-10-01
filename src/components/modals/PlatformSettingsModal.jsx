@@ -100,6 +100,8 @@ export default function PlatformSettingsModal({
     barem1_max: '',
     barem2_min: '',
     barem2_max: '',
+    has_micro_export: false,
+    micro_export_service_fee_rate: 0,
     integration_supplier_id: '',
     integration_api_key: '',
     integration_api_secret: '',
@@ -138,6 +140,8 @@ export default function PlatformSettingsModal({
       barem1_max: platform.barem1_max ?? '',
       barem2_min: platform.barem2_min ?? '',
       barem2_max: platform.barem2_max ?? '',
+      has_micro_export: platform.has_micro_export === true,
+      micro_export_service_fee_rate: platform.micro_export_service_fee_rate ?? 0,
       integration_supplier_id: platform.integration_supplier_id || '',
       integration_api_key: platform.integration_api_key || '',
       integration_api_secret: platform.integration_api_secret || '',
@@ -217,6 +221,8 @@ export default function PlatformSettingsModal({
         barem1_max: parseFloat(formData.barem1_max) || 0,
         barem2_min: parseFloat(formData.barem2_min) || 0,
         barem2_max: parseFloat(formData.barem2_max) || 0,
+        has_micro_export: formData.has_micro_export,
+        micro_export_service_fee_rate: parseFloat(formData.micro_export_service_fee_rate) || 0,
       });
     }
 
@@ -602,6 +608,36 @@ export default function PlatformSettingsModal({
                       </div>
                     )}
                   </div>
+
+                  {/* Mikro İhracat — sadece Trendyol'a özgü, Platform Hizmet Bedeli'nin yerine gecerli */}
+                  {platform?.platform_type === 'trendyol' && (
+                    <div className="space-y-3 pt-3 border-t border-border">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <Label>Mikro İhracat {isAdmin ? 'Var mı?' : ''}</Label>
+                          <p className="text-xs text-muted-foreground/70 mt-0.5">Yurt dışına Trendyol üzerinden satılan siparişler için geçerli</p>
+                        </div>
+                        {isAdmin ? (
+                          <Switch checked={formData.has_micro_export} onCheckedChange={(checked) => setFormData({ ...formData, has_micro_export: checked })} />
+                        ) : (
+                          <span className={`text-sm font-medium px-2 py-0.5 rounded-full ${formData.has_micro_export ? 'bg-green-100 text-green-700' : 'bg-secondary text-muted-foreground'}`}>
+                            {formData.has_micro_export ? 'Aktif' : 'Pasif'}
+                          </span>
+                        )}
+                      </div>
+                      {formData.has_micro_export && (
+                        <div className="space-y-2 ml-2">
+                          <Label className="text-sm">Uluslararası Hizmet Bedeli Oranı (%)</Label>
+                          {isAdmin ? (
+                            <Input type="number" step="0.01" min="0" value={formData.micro_export_service_fee_rate} onChange={(e) => setFormData({ ...formData, micro_export_service_fee_rate: e.target.value })} placeholder="0" />
+                          ) : (
+                            <div className="px-3 py-2 rounded-lg text-sm font-medium bg-secondary border border-border">%{formData.micro_export_service_fee_rate}</div>
+                          )}
+                          <p className="text-xs text-muted-foreground/70">Trendyol'un satıcı sözleşmesine göre değişir; Platform Hizmet Bedeli muafiyeti yerine bu oran uygulanır. Komisyon ve kargo (yurt içi bacağı) yurt içi satışla aynı kalır.</p>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               </>
             )}
