@@ -48,11 +48,15 @@ const YUZDELI = (tur) => tur === 'net_percent' || tur === 'cart_percent' || tur 
  *   trendyol-plus-...-ek-5-indirim     -> "Kampanyalı Satış Fiyatı"
  *   2000-tl-uzeri-150-tl-indirim-...   -> "İndirim Uygulanmadan Önceki Fiyat"
  *   okula-donus-...-1000-tl-uzeri-...  -> "İndirim Uygulanmadan Önceki Fiyat"
- * Ikisi de ayni sey: bizim girdigimiz fiyat; Trendyol indirimi ustune uygular.
+ *   300-tl-uzeri-30-tl-indirim-45-...  -> "Kampanya İndirimi Öncesi Fiyat" (1 Eki 2026: Trendyol yeni başlık
+ *                                         eklemiş, Excel'de ayrıca "Müşterinin Gördüğü Güncel Fiyat" ve
+ *                                         "Güncel Uygulanan Promosyonlar" sütunları da var — okunmuyor, fiyat
+ *                                         sütunu dışındaki bu yeni alanlar bizim için şimdilik bilgi amaçlı)
+ * Hepsi ayni sey: bizim girdigimiz fiyat; Trendyol indirimi ustune uygular.
  */
 // DIKKAT: "İndirim".toLowerCase() Turkce noktali İ'yi "i̇" (i + birlesik nokta)
-// yapar ve "indirim" ile ESLESMEZ; bu yuzden anahtar bas harfsiz yazildi.
-const FIYAT_SUTUNU_ANAHTARLARI = ['kampanyalı satış', 'kampanyalı fiyat', 'ndirim uygulanmadan'];
+// yapar ve "indirim" ile ESLESMEZ; bu yuzden anahtarlar bas harfsiz yazildi.
+const FIYAT_SUTUNU_ANAHTARLARI = ['kampanyalı satış', 'kampanyalı fiyat', 'ndirim uygulanmadan', 'ndirimi öncesi'];
 
 const emptyForm = {
   campaign_type: '',
