@@ -88,12 +88,15 @@ export function sira0Adaylari(urun, kaynaklar, { bugun, platform, haric = [] } =
   return adaylar;
 }
 
-/** Urunun secili+kayitli oldugu, bugun suren Genel (Plus disi) kampanyalar. */
+/** Urunun secili+kayitli oldugu, bugun suren Genel (Plus disi, Turkiye) kampanyalar. */
 export function genelKampanyalar(urun, kaynaklar, { bugun, haricKampanyaId = null } = {}) {
   const k = kaynaklar || {};
   const sonuc = [];
   for (const c of k.campaigns || []) {
-    if (!c || c.campaign_type === 'trendyol_plus' || c.is_active === false || !surer(c, bugun)) continue;
+    // Mikro Ihracat kampanyalari ayri bolge/musteri kitlesi icin; Turkiye
+    // zincirine hic girmemeli (kendi yonetim ekraninda ekGenel ile ayrica
+    // eklenir, bu tarama o ekrani etkilemez — bkz. haricKampanyaId).
+    if (!c || c.campaign_type === 'trendyol_plus' || c.campaign_type === 'mikro_ihracat' || c.is_active === false || !surer(c, bugun)) continue;
     if (haricKampanyaId && c.id === haricKampanyaId) continue;
     const kayit = (k.campaignProducts || []).find((cp) => cp.campaign_id === c.id && cp.selected_type === 'campaign' && sayi(cp.campaign_price) > 0 && ayniUrun(urun, cp));
     if (!kayit) continue;

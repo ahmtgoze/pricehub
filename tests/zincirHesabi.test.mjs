@@ -1,4 +1,4 @@
-import { zincirKur, sira0Adaylari, plusDurumu, bugunMetni, KAYNAK, kendiIndirimTutari } from '../src/lib/zincirHesabi.js';
+import { zincirKur, sira0Adaylari, genelKampanyalar, plusDurumu, bugunMetni, KAYNAK, kendiIndirimTutari } from '../src/lib/zincirHesabi.js';
 let gecen = 0, kalan = 0;
 const esit = (ad, olan, beklenen) => {
   const ok = JSON.stringify(olan) === JSON.stringify(beklenen);
@@ -172,6 +172,27 @@ console.log('\n=== KENDI INDIRIMLERIM ===');
   // suresi bitmis -> yok
   const K11 = { ...K, ownDiscounts: [D({ tur: 'net', indirim_tipi: 'percent', oran: 10, end_date: '2026-09-10' })] };
   esit('bitmis indirim yok', zincirKur({ urun, kaynaklar: K11, bugun: BUGUN, platform: 'Trendyol', aday: { kaynak: KAYNAK.TARIFE, fiyat: 297.43 } }).net, null);
+}
+
+console.log('\n=== MIKRO IHRACAT KAMPANYASI TURKIYE ZINCIRINE SIZMAZ ===');
+{
+  // Ayni urun icin, buyuk indirimli bir mikro_ihracat kampanyasi kayitli olsa
+  // bile Turkiye zinciri (sira0 adaylari + sepet kampanyalari) bunu gormemeli
+  // (1 Eki 2026: mikro_ihracat kampanya turu dropdown'da zaten secilebiliyordu,
+  // ama genelKampanyalar bunu disarida birakmiyordu — gercek bir kayit
+  // olusturulsa Turkiye fiyatina karisabilirdi).
+  const mikroKampanya = { id: 'mikro1', campaign_type: 'mikro_ihracat', start_date: '2026-09-15', end_date: '2026-09-22', discount_kind: 'cart_tl', discount_amount: 999, threshold_amount: 2, trendyol_coverage_rate: 0 };
+  const Kmikro = {
+    ...K,
+    campaigns: [...K.campaigns, mikroKampanya],
+    campaignProducts: [...K.campaignProducts, { campaign_id: 'mikro1', barcode: 'KCZ4555', selected_type: 'campaign', campaign_price: 346.49 }],
+  };
+  esit('mikro kampanya genelKampanyalar taramasinda yok', genelKampanyalar(urun, Kmikro, { bugun: BUGUN }).some((g) => g.kampanya.id === 'mikro1'), false);
+  esit('mikro kampanya sira0 aday sayisini degistirmiyor', sira0Adaylari(urun, Kmikro, { bugun: BUGUN, platform: 'Trendyol' }).length, sira0Adaylari(urun, K, { bugun: BUGUN, platform: 'Trendyol' }).length);
+  const aday = { kaynak: KAYNAK.TARIFE, fiyat: 297.43 };
+  const zBaseline = zincirKur({ urun, kaynaklar: K, bugun: BUGUN, platform: 'Trendyol', aday });
+  const zMikro = zincirKur({ urun, kaynaklar: Kmikro, bugun: BUGUN, platform: 'Trendyol', aday });
+  esit('mikro kampanya Turkiye sepet indirimini degistirmiyor', zMikro.genelIndirim, zBaseline.genelIndirim);
 }
 
 esit('bugunMetni bicimi', /^\d{4}-\d{2}-\d{2}$/.test(bugunMetni()), true);

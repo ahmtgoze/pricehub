@@ -60,13 +60,15 @@ export const INDIRIM_TURLERI = [
 /**
  * Kampanya gruplari — kullanici karari: UC cesit var.
  * "Okul Ihtiyaclari" gibi donemsel basliklar ayri grup DEGIL, genel kampanya.
- * Mikro Ihracat'in ulke/komisyon/kargo modeli henuz yapilmadi; grup olarak
- * secilebilir, hesap simdilik genel kampanya gibi.
+ * Mikro Ihracat kendi ekraninda normal kampanya gibi hesaplanir (ayni
+ * Net/Kosullu matematigi, Trendyol kaynagi: "Mikro Ihracat'ta Indirimlerin
+ * Uygulanma Sirasi"), ama Turkiye zincirine HIC girmez (bkz. zincirHesabi.js
+ * genelKampanyalar) — sadece kayit/takip icindir (1 Eki 2026).
  */
 export const KAMPANYA_GRUPLARI = [
   { value: 'all_countries', label: 'Genel Kampanyalar' },
   { value: 'trendyol_plus', label: 'Trendyol Plus (Ek İndirim)' },
-  { value: 'mikro_ihracat', label: 'Mikro İhracat' },
+  { value: 'mikro_ihracat', label: 'Mikro İhracat (Türkiye fiyatına girmez)' },
 ];
 
 const yuzdeliMi = (tur) => tur === 'net_percent' || tur === 'cart_percent' || tur === 'qty_percent';
