@@ -403,42 +403,42 @@ export default function Campaigns() {
    * nereden geldigini basitce anlat: avantajli, komisyon tarifesi,
    * kampanyalar…"). Sonra "i" dugmesi kar modalini acar.
    */
+  // Trendyol'un kendi "Nasıl hesaplanır?" ekranı gibi: adım adım satırlar
+  // (ad + tutar), cümle değil (kullanıcı, 1 Eki 2026: "bizimki biraz karışık,
+  // bununki gibi gösterelim"). Matematik AYNI, yalnız gösterim sadeleşti.
   const plusAciklamasi = (item, etki) => {
     const tl = (n) => `₺${Number(n || 0).toFixed(2)}`;
-    const satirlar = [];
-    // Ayni kaynaktan birden fazla satir (flas 24s/3s, iki tarife kaydi…) tek
-    // satirda, en dusuk fiyatiyla gosterilir.
-    const kaynakMin = new Map();
-    for (const a of etki.adaylar || []) { if (!kaynakMin.has(a.kaynak) || a.fiyat < kaynakMin.get(a.kaynak)) kaynakMin.set(a.kaynak, a.fiyat); }
-    const adaylar = [...kaynakMin].map(([kaynak, fiyat]) => ({ kaynak, fiyat })).sort((a, b) => a.fiyat - b.fiyat);
-    satirlar.push(`Bu ürünün bugün geçerli fiyatları: ${adaylar.map((a) => `${a.kaynak} ${tl(a.fiyat)}`).join(' · ')}. En düşüğü taban alınır: ${etki.taban.kaynak} ${tl(etki.taban.fiyat)}.`);
+    const adimlar = [{ ad: `Taban Fiyat (${etki.taban.kaynak})`, deger: tl(etki.taban.fiyat), vurgu: true }];
     if (etki.plusTarife) {
-      satirlar.push(`Plus Komisyon Tarifesi'nde Plus'a özel fiyat seçili (${tl(etki.plusTarife.fiyat)}): Plus müşterisi için satış fiyatı bu olur, sepet kampanyaları ve kuponlar bunun üstüne uygulanır (sepet teyidi 16 Eyl 2026). Trendyol kuralı: Plus'a özel fiyat varsa Plus %5 uygulanmaz. Komisyon tarifenin teklifi${etki.plusTarife.komisyon ? ` (%${etki.plusTarife.komisyon})` : ''}.`);
+      adimlar.push({ ad: "Plus'a Özel Fiyat (Plus Tarifesi)", deger: tl(etki.plusTarife.fiyat), not: "Bu fiyat varsa Plus %5 uygulanmaz" });
     }
-    if (etki.net) satirlar.push(`Kendi net indirimin (${etki.net.ad}) satış fiyatından hemen düşer: ${tl(etki.net.indirim)}, tamamı senden → ${tl(etki.taban.fiyat - etki.net.indirim)}.`);
+    if (etki.net) adimlar.push({ ad: `Kendi İndirimin (${etki.net.ad})`, deger: `-${tl(etki.net.indirim)}` });
     const k = etki.genel;
     if (k) {
       const kars = Math.min(1, Math.max(0, (Number(k.karsilama) || 0) / 100));
       const trendyol = Math.round(etki.zincir.genelIndirim * kars * 100) / 100;
       const satici = Math.round((etki.zincir.genelIndirim - trendyol) * 100) / 100;
-      const esik = Number(k.esik) || 0;
-      const nasil = k.tur === 'cart_tl'
-        ? (esik > 0 && etki.taban.fiyat < esik
-            ? `ürün eşiğin (${tl(esik)}) altında, indirim fiyat oranında dağılır: ${tl(k.tutar)} × ${tl(etki.taban.fiyat)} / ${tl(esik)}`
-            : `ürün eşiği geçiyor, her adette bir kez ${tl(k.tutar)}`)
-        : `%${k.oran}`;
-      satirlar.push(`Sepette en yüksek indirimi veren kampanya: ${kampanyaMetni(k)} → ${nasil} = ${tl(etki.zincir.genelIndirim)}. Trendyol %${Number(k.karsilama) || 0} karşılar (${tl(trendyol)}), senin payın ${tl(satici)}.`);
-      satirlar.push(`Müşterinin sepette gördüğü fiyat: ${tl(etki.taban.fiyat)} − ${tl(etki.zincir.genelIndirim)} = ${tl(etki.taban.fiyat - etki.zincir.genelIndirim)}.`);
-    } else {
-      satirlar.push('Bugün süren bir sepet kampanyasında seçili değil; sepet indirimi yok.');
+      adimlar.push({
+        ad: kampanyaMetni(k), deger: `-${tl(etki.zincir.genelIndirim)}`,
+        not: kars > 0 ? `Trendyol %${Number(k.karsilama) || 0} karşılar (${tl(trendyol)}), senin payın ${tl(satici)}` : 'Tamamı senden',
+      });
+      adimlar.push({ ad: 'Sepette Gördüğü Fiyat', deger: tl(etki.taban.fiyat - etki.zincir.genelIndirim), vurgu: true });
     }
-    if (etki.plusTarife) satirlar.push(`Plus'a özel fiyat olduğu için Plus %5 uygulanmaz → Plus müşterisi öder ${tl(etki.zincir.musteriFiyat)}.`);
-    else if (etki.plus) satirlar.push(`Plus %${Number(etki.plus.oran) || 0}, sipariş anında bu tutara iner: ${tl(etki.zincir.plusIndirim)}, tamamı senden → Plus müşterisi öder ${tl(etki.zincir.musteriFiyat)}.`);
-    else satirlar.push(`Ürün Plus ek indirim kampanyasında seçili değil; Plus indirimi yok. Müşteri öder ${tl(etki.zincir.musteriFiyat)}.`);
-    if (etki.kod) satirlar.push(`İndirim kodu (${etki.kod.ad}) sepette girilirse: ${tl(etki.kod.indirim)}, tamamı senden.`);
-    if (etki.kupon) satirlar.push(`Kupon (${etki.kupon.ad}): ürüne düşen ${tl(etki.kupon.indirim)}; Trendyol %${etki.kupon.karsilama} karşılar, senin payın ${tl(etki.kupon.saticiPayi)} → müşteri öder ${tl(etki.zincir.musteriFiyat)}.`);
-    satirlar.push(`Sana kalan: ${tl(etki.taban.fiyat)} − ${tl(etki.zincir.saticiPayi)} = ${tl(etki.zincir.saticiNet)}. Komisyon ve tarife kademesi bu tutardan; kâr için sağdaki "i" düğmesi.`);
-    return satirlar;
+    if (etki.plusTarife) {
+      adimlar.push({ ad: 'Plus %5', deger: 'Uygulanmaz', not: "Plus'a özel fiyat seçili olduğu için" });
+    } else if (etki.plus) {
+      adimlar.push({ ad: `Plus %${Number(etki.plus.oran) || 0}`, deger: `-${tl(etki.zincir.plusIndirim)}`, not: 'Tamamı senden' });
+    }
+    if (etki.kod) adimlar.push({ ad: `İndirim Kodu (${etki.kod.ad})`, deger: `-${tl(etki.kod.indirim)}`, not: 'Tamamı senden' });
+    if (etki.kupon) {
+      adimlar.push({
+        ad: `Kupon (${etki.kupon.ad})`, deger: `-${tl(etki.kupon.indirim)}`,
+        not: `Trendyol %${etki.kupon.karsilama} karşılar, senin payın ${tl(etki.kupon.saticiPayi)}`,
+      });
+    }
+    adimlar.push({ ad: 'Müşterinin Ödediği', deger: tl(etki.zincir.musteriFiyat), vurgu: true });
+    adimlar.push({ ad: 'Sana Kalan', deger: tl(etki.zincir.saticiNet), vurgu: true, sonuc: true });
+    return adimlar;
   };
 
   const indirimAciklamasi = (girilen) => {
@@ -451,30 +451,11 @@ export default function Campaigns() {
     const satici = Math.round((musteri - trendyol) * 100) / 100;
     const net = Math.round((f - satici) * 100) / 100;
     const tl = (n) => `₺${Number(n).toFixed(2)}`;
-    const oran = (n) => `%${(f > 0 ? (n / f) * 100 : 0).toFixed(1)}`;
-    const satirlar = [];
-    if (k.tur === 'cart_tl') {
-      const esik = Number(k.esik) || 0;
-      if (esik > 0 && f < esik) {
-        satirlar.push(`Sepet eşiği ${tl(esik)}, ürün eşiğin altında: müşteri eşiğe birden fazla ürünle ulaşır ve sepet eşiği her karşıladığında indirim tekrar uygulanır (her adette en fazla bir kez). Ürün başına en kötü pay ${tl(k.tutar)} × ${tl(f)} / ${tl(esik)} = ${tl(musteri)} (${oran(musteri)}).`);
-      } else {
-        satirlar.push(`Ürün tek başına eşiği ${esik > 0 ? tl(esik) + "'yi " : ''}geçiyor: her adette bir kez ${tl(k.tutar)} → ${tl(musteri)} (${oran(musteri)}).`);
-      }
-    } else if (k.tur === 'buy_x_pay_y') {
-      satirlar.push(`${k.alX} Al ${k.odeY} Öde: ${k.alX} adette ${k.alX - k.odeY} adet bedava → adet başına ${tl(musteri)} (${oran(musteri)}).`);
-    } else if (k.tur === 'qty_percent') {
-      satirlar.push(`${k.minAdet}+ adette %${k.oran} indirim → ${tl(f)} × %${k.oran} = ${tl(musteri)}.`);
-    } else {
-      satirlar.push(`Müşteri indirimi: ${tl(f)} × %${k.oran} = ${tl(musteri)}.`);
-    }
-    if (kars > 0) {
-      satirlar.push(`Trendyol karşılıyor (%${k.karsilama}): ${tl(trendyol)}. Satıcı payı: ${tl(satici)} (${oran(satici)}).`);
-    } else {
-      satirlar.push(`Trendyol karşılama yok; indirimin tamamı satıcıdan: ${tl(satici)}.`);
-    }
-    satirlar.push(`Satıcı net: ${tl(f)} − ${tl(satici)} = ${tl(net)}. Komisyon, tarife kademesi, kargo baremi ve kâr bu tutardan hesaplanır.`);
-    if (kars > 0) satirlar.push(`Müşterinin ödediği: ${tl(f)} − ${tl(musteri)} = ${tl(f - musteri)}.`);
-    return satirlar;
+    const adimlar = [{ ad: 'Girilen Fiyat', deger: tl(f), vurgu: true }];
+    adimlar.push({ ad: kampanyaMetni(k), deger: `-${tl(musteri)}`, not: kars > 0 ? `Trendyol %${k.karsilama} karşılar (${tl(trendyol)}), senin payın ${tl(satici)}` : 'Tamamı senden' });
+    adimlar.push({ ad: 'Müşterinin Ödediği', deger: tl(f - musteri), vurgu: true });
+    adimlar.push({ ad: 'Sana Kalan', deger: tl(net), vurgu: true, sonuc: true });
+    return adimlar;
   };
 
   const renderBaremOnerisi = (item, realIndex) => {
@@ -1263,12 +1244,19 @@ export default function Campaigns() {
                                           <PopoverTrigger asChild>
                                             <button type="button" className="text-muted-foreground hover:text-foreground shrink-0" title="Bu fiyat nasıl bulundu?"><HelpCircle className="h-3.5 w-3.5" /></button>
                                           </PopoverTrigger>
-                                          <PopoverContent align="end" className="w-80 text-xs space-y-2">
-                                            <div className="font-semibold text-foreground">İndirim uygulanmış fiyat nasıl bulundu?</div>
-                                            <div className="text-muted-foreground">{etki ? `Plus'a girilen (liste) fiyat: ₺${Number(item.campaign_price || 0).toFixed(2)}` : `Girilen fiyat: ₺${Number(item.campaign_price || 0).toFixed(2)}`}</div>
-                                            <ol className="list-decimal pl-4 space-y-1 text-foreground">
-                                              {(etki ? plusAciklamasi(item, etki) : (indirimAciklamasi(item.campaign_price) || [])).map((satir, i) => <li key={i}>{satir}</li>)}
-                                            </ol>
+                                          <PopoverContent align="end" className="w-80 text-xs p-3">
+                                            <div className="font-semibold text-foreground mb-2">Fiyatın Nereden Geldiği</div>
+                                            <div>
+                                              {(etki ? plusAciklamasi(item, etki) : (indirimAciklamasi(item.campaign_price) || [])).map((a, i) => (
+                                                <div key={i} className={`flex items-start justify-between gap-2 py-1.5 ${a.vurgu ? 'border-t border-border font-semibold' : 'border-t border-dashed border-border/60'} ${a.sonuc ? 'text-green-700 dark:text-green-400' : 'text-foreground'}`}>
+                                                  <div>
+                                                    <div>{a.ad}</div>
+                                                    {a.not && <div className="text-[10px] font-normal text-muted-foreground mt-0.5">{a.not}</div>}
+                                                  </div>
+                                                  <div className="shrink-0">{a.deger}</div>
+                                                </div>
+                                              ))}
+                                            </div>
                                           </PopoverContent>
                                         </Popover>
                                       </div>
