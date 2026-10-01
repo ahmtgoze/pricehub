@@ -403,16 +403,19 @@ export default function Campaigns() {
    * nereden geldigini basitce anlat: avantajli, komisyon tarifesi,
    * kampanyalar…"). Sonra "i" dugmesi kar modalini acar.
    */
-  // Trendyol'un kendi "Nasıl hesaplanır?" ekranı gibi: adım adım satırlar
-  // (ad + tutar), cümle değil (kullanıcı, 1 Eki 2026: "bizimki biraz karışık,
-  // bununki gibi gösterelim"). Matematik AYNI, yalnız gösterim sadeleşti.
+  // Trendyol'un kendi "Nasıl hesaplanır?" ekranı gibi: baslik + her uygulanan
+  // indirim tek satir (ad + tutar), en sonda Musterinin Gordugu Fiyat (kullanici,
+  // 1 Eki 2026, ekran goruntusu referans: "cok uzun, bu gorsel gibi daha temiz
+  // ve az yazi"). Ayrinti (karsilama, kim oder vs.) satirin "title" ipucunda —
+  // her zaman gorunur metin degil. "Sana kalan" buraya eklenmez: karttaki
+  // efektif fiyat (calc.effPrice) zaten ayni rakam.
   const plusAciklamasi = (item, etki) => {
     const tl = (n) => `₺${Number(n || 0).toFixed(2)}`;
     const adimlar = [{ ad: `Taban Fiyat (${etki.taban.kaynak})`, deger: tl(etki.taban.fiyat), vurgu: true }];
     if (etki.plusTarife) {
-      adimlar.push({ ad: "Plus'a Özel Fiyat (Plus Tarifesi)", deger: tl(etki.plusTarife.fiyat), not: "Bu fiyat varsa Plus %5 uygulanmaz" });
+      adimlar.push({ ad: "Plus'a Özel Fiyat", deger: tl(etki.plusTarife.fiyat), ipucu: "Plus Tarifesi'nden; bu fiyat varsa Plus %5 ayrıca uygulanmaz" });
     }
-    if (etki.net) adimlar.push({ ad: `Kendi İndirimin (${etki.net.ad})`, deger: `-${tl(etki.net.indirim)}` });
+    if (etki.net) adimlar.push({ ad: etki.net.ad, deger: `-${tl(etki.net.indirim)}`, ipucu: 'Kendi net indirimin, tamamı senden' });
     const k = etki.genel;
     if (k) {
       const kars = Math.min(1, Math.max(0, (Number(k.karsilama) || 0) / 100));
@@ -420,24 +423,18 @@ export default function Campaigns() {
       const satici = Math.round((etki.zincir.genelIndirim - trendyol) * 100) / 100;
       adimlar.push({
         ad: kampanyaMetni(k), deger: `-${tl(etki.zincir.genelIndirim)}`,
-        not: kars > 0 ? `Trendyol %${Number(k.karsilama) || 0} karşılar (${tl(trendyol)}), senin payın ${tl(satici)}` : 'Tamamı senden',
+        ipucu: kars > 0 ? `Trendyol %${Number(k.karsilama) || 0} karşılar (${tl(trendyol)}), senin payın ${tl(satici)}` : 'Tamamı senden',
       });
-      adimlar.push({ ad: 'Sepette Gördüğü Fiyat', deger: tl(etki.taban.fiyat - etki.zincir.genelIndirim), vurgu: true });
     }
-    if (etki.plusTarife) {
-      adimlar.push({ ad: 'Plus %5', deger: 'Uygulanmaz', not: "Plus'a özel fiyat seçili olduğu için" });
-    } else if (etki.plus) {
-      adimlar.push({ ad: `Plus %${Number(etki.plus.oran) || 0}`, deger: `-${tl(etki.zincir.plusIndirim)}`, not: 'Tamamı senden' });
-    }
-    if (etki.kod) adimlar.push({ ad: `İndirim Kodu (${etki.kod.ad})`, deger: `-${tl(etki.kod.indirim)}`, not: 'Tamamı senden' });
+    if (etki.plus) adimlar.push({ ad: `Plus %${Number(etki.plus.oran) || 0}`, deger: `-${tl(etki.zincir.plusIndirim)}`, ipucu: 'Tamamı senden' });
+    if (etki.kod) adimlar.push({ ad: `İndirim Kodu (${etki.kod.ad})`, deger: `-${tl(etki.kod.indirim)}`, ipucu: 'Tamamı senden' });
     if (etki.kupon) {
       adimlar.push({
         ad: `Kupon (${etki.kupon.ad})`, deger: `-${tl(etki.kupon.indirim)}`,
-        not: `Trendyol %${etki.kupon.karsilama} karşılar, senin payın ${tl(etki.kupon.saticiPayi)}`,
+        ipucu: `Trendyol %${etki.kupon.karsilama} karşılar, senin payın ${tl(etki.kupon.saticiPayi)}`,
       });
     }
-    adimlar.push({ ad: 'Müşterinin Ödediği', deger: tl(etki.zincir.musteriFiyat), vurgu: true });
-    adimlar.push({ ad: 'Sana Kalan', deger: tl(etki.zincir.saticiNet), vurgu: true, sonuc: true });
+    adimlar.push({ ad: 'Müşterinin Gördüğü Fiyat', deger: tl(etki.zincir.musteriFiyat), vurgu: true, sonuc: true });
     return adimlar;
   };
 
@@ -449,13 +446,12 @@ export default function Campaigns() {
     const kars = Math.min(1, Math.max(0, (Number(k.karsilama) || 0) / 100));
     const trendyol = Math.round(musteri * kars * 100) / 100;
     const satici = Math.round((musteri - trendyol) * 100) / 100;
-    const net = Math.round((f - satici) * 100) / 100;
     const tl = (n) => `₺${Number(n).toFixed(2)}`;
-    const adimlar = [{ ad: 'Girilen Fiyat', deger: tl(f), vurgu: true }];
-    adimlar.push({ ad: kampanyaMetni(k), deger: `-${tl(musteri)}`, not: kars > 0 ? `Trendyol %${k.karsilama} karşılar (${tl(trendyol)}), senin payın ${tl(satici)}` : 'Tamamı senden' });
-    adimlar.push({ ad: 'Müşterinin Ödediği', deger: tl(f - musteri), vurgu: true });
-    adimlar.push({ ad: 'Sana Kalan', deger: tl(net), vurgu: true, sonuc: true });
-    return adimlar;
+    return [
+      { ad: 'Girilen Fiyat', deger: tl(f), vurgu: true },
+      { ad: kampanyaMetni(k), deger: `-${tl(musteri)}`, ipucu: kars > 0 ? `Trendyol %${k.karsilama} karşılar (${tl(trendyol)}), senin payın ${tl(satici)}` : 'Tamamı senden' },
+      { ad: 'Müşterinin Gördüğü Fiyat', deger: tl(f - musteri), vurgu: true, sonuc: true },
+    ];
   };
 
   const renderBaremOnerisi = (item, realIndex) => {
@@ -1244,19 +1240,16 @@ export default function Campaigns() {
                                           <PopoverTrigger asChild>
                                             <button type="button" className="text-muted-foreground hover:text-foreground shrink-0" title="Bu fiyat nasıl bulundu?"><HelpCircle className="h-3.5 w-3.5" /></button>
                                           </PopoverTrigger>
-                                          <PopoverContent align="end" className="w-80 text-xs p-3">
-                                            <div className="font-semibold text-foreground mb-2">Fiyatın Nereden Geldiği</div>
-                                            <div>
-                                              {(etki ? plusAciklamasi(item, etki) : (indirimAciklamasi(item.campaign_price) || [])).map((a, i) => (
-                                                <div key={i} className={`flex items-start justify-between gap-2 py-1.5 ${a.vurgu ? 'border-t border-border font-semibold' : 'border-t border-dashed border-border/60'} ${a.sonuc ? 'text-green-700 dark:text-green-400' : 'text-foreground'}`}>
-                                                  <div>
-                                                    <div>{a.ad}</div>
-                                                    {a.not && <div className="text-[10px] font-normal text-muted-foreground mt-0.5">{a.not}</div>}
-                                                  </div>
-                                                  <div className="shrink-0">{a.deger}</div>
-                                                </div>
-                                              ))}
-                                            </div>
+                                          <PopoverContent align="end" className="w-72 text-xs p-2.5">
+                                            {(etki ? plusAciklamasi(item, etki) : (indirimAciklamasi(item.campaign_price) || [])).map((a, i) => (
+                                              <div key={i} className={`flex items-center justify-between gap-2 py-1.5 ${i > 0 ? 'border-t border-border/70' : ''} ${a.sonuc ? 'font-semibold text-sky-700 dark:text-sky-400' : a.vurgu ? 'font-semibold text-foreground' : 'text-muted-foreground'}`}>
+                                                <span className="inline-flex items-center gap-1">
+                                                  {a.ad}
+                                                  {a.ipucu && <Info className="h-3 w-3 text-muted-foreground/50 shrink-0" title={a.ipucu} />}
+                                                </span>
+                                                <span className={`shrink-0 ${a.vurgu || a.sonuc ? '' : 'text-foreground'}`}>{a.deger}</span>
+                                              </div>
+                                            ))}
                                           </PopoverContent>
                                         </Popover>
                                       </div>
