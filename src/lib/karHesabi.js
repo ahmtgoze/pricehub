@@ -75,13 +75,9 @@ export function fiyattaKar({ urun, platform, sablonlar = [], fiyat, komisyonOran
     karOrani: d.profitRate,
     karMarji: (d.netProfit / f) * 100,
     baremUsed,
-    // Not: printingCost/extraCost/packagingCost/posServiceFee motora GİRDİ olarak veriliyor ve netProfit
-    // hesabına dahil (bkz. calculatePriceBreakdown netProfitBeforeTax formülü); eskiden buraya kopyalanmıyordu,
-    // kalem listesi toplamı net kârı tutturamıyordu (26 Eyl 2026, eklenti "Kâr Detayı" kartında fark edildi).
     kalemler: {
-      satisKdvHaric: d.salePriceExclVat, maliyet: d.productCost, baskiMaliyeti: d.printingCost, ekMaliyet: d.extraCost,
-      paketlemeMaliyeti: d.packagingCost, komisyon: d.commissionAmount, kargo: d.shippingCost, hizmetBedeli: d.serviceFee,
-      posHizmetBedeli: d.posServiceFee, stopaj: d.withholdingAmount, netKdv: d.netVat, kurumlarVergisi: d.corporateTaxAmount,
+      satisKdvHaric: d.salePriceExclVat, maliyet: d.productCost, komisyon: d.commissionAmount, kargo: d.shippingCost,
+      hizmetBedeli: d.serviceFee, stopaj: d.withholdingAmount, netKdv: d.netVat, kurumlarVergisi: d.corporateTaxAmount,
     },
   };
 }

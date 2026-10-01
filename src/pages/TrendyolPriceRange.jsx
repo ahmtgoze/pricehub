@@ -626,10 +626,11 @@ export default function TrendyolPriceRange() {
     if (!zk) return { profit: calc.profit || 0, profitRate: calc.profitRate || 0, zk: null };
     return { profit: Math.min(calc.profit || 0, zk.profit), profitRate: Math.min(calc.profitRate || 0, zk.profitRate), zk };
   };
+  // Trendyol'un kendi "Nasıl hesaplanır?" gösterimi gibi: kaynak (hangi promosyon sayfasından geldiği) DOĞRUDAN
+  // satırda, hover'a gizlenmiyor (kullanıcı: "bizimki biraz karışık" — 1 Eki 2026). Hesaplama değişmedi.
   const ZincirSatiri = ({ zk }) => zk ? (
-    <div className={`text-[10px] leading-tight mt-0.5 ${zk.profit > 0 ? 'text-amber-700 dark:text-amber-400' : 'text-red-600'}`}
-      title={`Taban: ${zk.z.taban.kaynak} ₺${zk.z.taban.fiyat.toFixed(2)}${zk.z.genel ? ` · ${zk.z.genel.ad}` : ''}${zk.z.plus ? ` · Plus %${zk.z.plus.oran}` : ''}`}>
-      Diğer promosyonlarla: müşteri ₺{zk.z.musteriFiyat.toFixed(2)} · {zk.profit > 0 ? '+' : ''}₺{zk.profit.toFixed(2)} (%{zk.profitRate.toFixed(1)})
+    <div className={`text-[10px] leading-tight mt-0.5 ${zk.profit > 0 ? 'text-amber-700 dark:text-amber-400' : 'text-red-600'}`}>
+      {zk.z.taban.kaynak} ₺{zk.z.taban.fiyat.toFixed(2)} ile birlikte: müşteri ₺{zk.z.musteriFiyat.toFixed(2)} · {zk.profit > 0 ? '+' : ''}₺{zk.profit.toFixed(2)} (%{zk.profitRate.toFixed(1)})
     </div>
   ) : null;
 
