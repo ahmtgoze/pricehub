@@ -232,8 +232,17 @@ export function dosyaAdindanKampanya(dosyaAdi) {
   slug = slug.replace(/_\d{4}-\d{2}-\d{2}.*$/, '').replace(/_part_\d+$/, '');
   if (!slug) return null;
 
-  const tip = slug.includes('trendyol-plus') ? 'trendyol_plus'
-    : (slug.includes('mikro-ihracat') || slug.includes('yurt-disi')) ? 'mikro_ihracat'
+  // Mikro Ihracat dosya adlari "mikro-ihracat" kelimesini hic icermeyebilir
+  // (gercek ornekler, 1 Eki 2026: "azerbaycan-korfez-trendyol-plus-..." ve
+  // "tum-bolgelerde-gecerli-sepette-..." — ikisi de Trendyol panelinde
+  // "Mikro Ihracata Ozel" etiketli ama dosya adinda bu gecmiyor). Bolge/ulke
+  // kelimeleri bu yuzden trendyol-plus kontrolunden ONCE kontrol edilir;
+  // yoksa mikro bir Plus kampanyasi yanlislikla 'trendyol_plus' (Turkiye)
+  // sanilip Turkiye Plus hesabina karisabilir. Kesin degil — kullanici
+  // "Kampanya Turu" alanini yine de gozden gecirmeli.
+  const mikroIsareti = /korfez|azerbaycan|avrupa-ulkeleri|bolgelerde|yurt-disi|mikro-ihracat/;
+  const tip = mikroIsareti.test(slug) ? 'mikro_ihracat'
+    : slug.includes('trendyol-plus') ? 'trendyol_plus'
     : 'all_countries';
 
   const sonuc = {

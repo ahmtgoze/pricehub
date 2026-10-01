@@ -717,7 +717,13 @@ export default function Campaigns() {
           // Yazilacak fiyat sutunu kampanyaya gore farkli adlaniyor:
           //   Plus (Ek İndirim)      -> "Kampanyalı Satış Fiyatı"
           //   Genel (X TL'ye Y TL)   -> "İndirim Uygulanmadan Önceki Fiyat"
-          const existingL = sayiyaCevirVeya(getVal(row, 'Kampanyalı Satış Fiyatı', FIYAT_SUTUNU_ANAHTARLARI), 0);
+          //   Mikro Ihracat          -> boyle bir sutun hic yok (Trendyol'da fiyat
+          //                              girilmez, indirim mevcut fiyatin ustune
+          //                              otomatik uygulanir); kayit icin mevcut
+          //                              fiyati kullaniriz (1 Eki 2026).
+          const existingL = kampanya.campaign_type === 'mikro_ihracat'
+            ? 0
+            : sayiyaCevirVeya(getVal(row, 'Kampanyalı Satış Fiyatı', FIYAT_SUTUNU_ANAHTARLARI), 0);
 
           const mpRec = marketplaceProducts.find(mp => mp.platform_account === selectedPlatform && mp.barkod === barcode);
           let matched;
@@ -738,7 +744,7 @@ export default function Campaigns() {
             current_stock: parseFloat(getVal(row, 'Mevcut Stok', ['mevcut stok', 'stok'])) || 0,
             current_sale_price: curPrice,
             max_price: maxPrice,
-            campaign_price: existingL > 0 ? existingL : maxPrice,
+            campaign_price: existingL > 0 ? existingL : (kampanya.campaign_type === 'mikro_ihracat' ? curPrice : maxPrice),
             commission_tariff: getVal(row, 'Ürün Komisyon Tarifesi', ['komisyon tarifesi']) || '',
             listing_id: getVal(row, 'ListingId', ['listingid', 'listing']) || '',
             selected_type: 'none',

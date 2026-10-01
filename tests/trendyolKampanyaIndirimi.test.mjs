@@ -118,6 +118,16 @@ console.log('\n=== DOSYA ADINDAN KAMPANYA ===');
   esit('plus ad', c.campaign_name, 'Trendyol plus musterilerine ozel ek 5 indirim');
   const d = dosyaAdindanKampanya('C:\\\\indir\\\\mikro-ihracat-4-al-3-ode.xlsx');
   esit('yol ayiklanir, mikro ihracat', [d.campaign_type, d.discount_kind], ['mikro_ihracat', null]);
+  // Gercek Trendyol dosya adlari (1 Eki 2026, satici panelinden indirildi):
+  // "mikro-ihracat" kelimesini HIC icermiyorlar ama ikisi de panelde "Mikro
+  // Ihracata Ozel" etiketli — bolge/ulke kelimeleri (korfez, azerbaycan,
+  // bolgelerde) trendyol-plus kontrolunden once bakilmali, yoksa ilki
+  // yanlislikla Turkiye Plus'i (trendyol_plus), ikincisi Turkiye genelini
+  // (all_countries) sanir ve Turkiye fiyat zincirine sizabilir.
+  const e = dosyaAdindanKampanya('azerbaycan-korfez-trendyol-plus-musterilerine-ozel-ek-10-indirim_2026-10-01_14-49_tr-TR_part_1.xlsx');
+  esit('mikro plus (korfez/azerbaycan adinda) -> mikro_ihracat, trendyol_plus DEGIL', e.campaign_type, 'mikro_ihracat');
+  const f = dosyaAdindanKampanya("tum-bolgelerde-gecerli-sepette-15-indirim-(satici-indirimi-11)-25-trendyol-karsilamali_2026-10-01_14-50_tr-TR_part_1.xlsx");
+  esit('mikro genel (bolgelerde adinda) -> mikro_ihracat, all_countries DEGIL', f.campaign_type, 'mikro_ihracat');
   esit('tanimsiz ad -> tur genel, indirim yok', dosyaAdindanKampanya('promotion-downloaded.xlsx').discount_kind, null);
   esit('bos -> null', dosyaAdindanKampanya(''), null);
   esit('bos -> null 2', dosyaAdindanKampanya(null), null);
