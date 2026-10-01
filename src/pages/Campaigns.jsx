@@ -844,9 +844,14 @@ export default function Campaigns() {
     toast.success(`${secilen > 0 ? `${secilen} ürün seçildi${baremli > 0 ? ` (${baremli}'i barem önerisiyle)` : ''}` : 'Aralığa giren ürün yok'}`);
   };
 
-  const openDetailModal = (item) => {
+  // calc parametresi: satirin KENDI hesapladigi (zincir dahil, kupon/diger
+  // kampanyalar dahil) sonuc varsa onu kullan — yoksa (eski cagrilar icin)
+  // ayni basit hesabi burada tekrar yap. Eskiden hep burada YENIDEN, zincirsiz
+  // hesaplaniyordu: satirdaki fiyat ile bu pencere FARKLI sayi gosterebiliyordu
+  // (kullanici, 1 Eki 2026: "aynı urun kartından gelıyor" — tutarsizligi fark etti).
+  const openDetailModal = (item, calc) => {
     const price = item.campaign_price || item.max_price;
-    const calc = calculateProfit(price, item);
+    if (!calc?.breakdown) calc = calculateProfit(price, item);
     const matchedProduct = calc.matchedProduct || getMatchedProduct(item);
     setDetailModal({
       open: true,
@@ -1268,7 +1273,7 @@ export default function Campaigns() {
                                       <div className={`text-xs font-semibold ${karli ? 'text-green-600' : 'text-red-600'}`}>
                                         {calc.profit > 0 ? '+' : ''}₺{calc.profit.toFixed(2)} (%{calc.profitRate.toFixed(1)})
                                       </div>
-                                      <Button size="sm" variant="ghost" className="h-5 w-5 p-0" onClick={() => openDetailModal(item)}><Info className="h-3 w-3" /></Button>
+                                      <Button size="sm" variant="ghost" className="h-5 w-5 p-0" onClick={() => openDetailModal(item, calc)}><Info className="h-3 w-3" /></Button>
                                     </div>
                                     <Button size="sm" variant={isSelected ? 'default' : 'outline'} onClick={() => handleSelect(realIndex)} className="w-full mt-2 h-7 text-xs">
                                       {isSelected ? 'Seçili' : 'Seç'}
