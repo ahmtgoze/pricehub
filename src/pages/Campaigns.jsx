@@ -403,16 +403,12 @@ export default function Campaigns() {
    * nereden geldigini basitce anlat: avantajli, komisyon tarifesi,
    * kampanyalar…"). Sonra "i" dugmesi kar modalini acar.
    */
-  // Trendyol'un kendi "Hesaplama Adımları" egitiminde anlattigi gibi (kullanici,
-  // 1 Eki 2026, ekran goruntusu referans): Trendyol Satis Fiyati -> Gecerli
-  // Fiyat -> Gecerli Indirimler -> Musteri Fiyati. O ekranda ACIKCA yaziyor:
-  // "Kod, kupon gibi musterinin gordugu fiyati ETKILEMEYEN promosyon araclari
-  // gosterilmez" — bunlar sepette ayrica uygulanir, urun sayfasindaki fiyata
-  // girmez. Bu yuzden kod/kupon burada HIC gosterilmiyor; "Musteri Fiyati" da
-  // onlar uygulanmadan ONCEKI (urun sayfasi) fiyat — kod/kupon indirimleri
-  // musteriFiyat'tan geri eklenerek bulunur (ikisi de zincirde sadece
-  // CIKARILIYOR, ekleme ters alir). Ayrinti (karsilama, kim oder) satirin
-  // "title" ipucunda. "Sana kalan" eklenmez: karttaki efektif fiyat ayni rakam.
+  // Trendyol'un kendi "Nasıl hesaplanır?" ekranı gibi kisa satirlar (ad +
+  // tutar), cumle degil (kullanici, 1 Eki 2026: ekran goruntusu sadece GORSEL
+  // STIL ornegiydi — "fiyati her sey etkiliyor, biz hesaplarken bunlari
+  // kaile aliyoruz, sikinti yok"; yani kod/kupon YINE gosterilir, sadece
+  // kisa). Ayrinti (karsilama, kim oder) satirin "title" ipucunda. "Sana
+  // kalan" eklenmez: karttaki efektif fiyat ayni rakam.
   const plusAciklamasi = (item, etki) => {
     const tl = (n) => `₺${Number(n || 0).toFixed(2)}`;
     const adimlar = [{ ad: `Taban Fiyat (${etki.taban.kaynak})`, deger: tl(etki.taban.fiyat), vurgu: true }];
@@ -431,8 +427,14 @@ export default function Campaigns() {
       });
     }
     if (etki.plus) adimlar.push({ ad: `Plus %${Number(etki.plus.oran) || 0}`, deger: `-${tl(etki.zincir.plusIndirim)}`, ipucu: 'Tamamı senden' });
-    const urunSayfasiFiyati = etki.zincir.musteriFiyat + (etki.kod?.indirim || 0) + (etki.kupon?.indirim || 0);
-    adimlar.push({ ad: 'Müşterinin Gördüğü Fiyat', deger: tl(urunSayfasiFiyati), vurgu: true, sonuc: true });
+    if (etki.kod) adimlar.push({ ad: `İndirim Kodu (${etki.kod.ad})`, deger: `-${tl(etki.kod.indirim)}`, ipucu: 'Tamamı senden' });
+    if (etki.kupon) {
+      adimlar.push({
+        ad: `Kupon (${etki.kupon.ad})`, deger: `-${tl(etki.kupon.indirim)}`,
+        ipucu: `Trendyol %${etki.kupon.karsilama} karşılar, senin payın ${tl(etki.kupon.saticiPayi)}`,
+      });
+    }
+    adimlar.push({ ad: 'Müşterinin Gördüğü Fiyat', deger: tl(etki.zincir.musteriFiyat), vurgu: true, sonuc: true });
     return adimlar;
   };
 
