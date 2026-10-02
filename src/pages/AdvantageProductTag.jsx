@@ -858,7 +858,29 @@ export default function AdvantageProductTag() {
     return oneri;
   };
 
-  const renderBaremSuggestionCell = (item, index) => {
+  // Barem onerisini MANUEL fiyat olarak uygular. Satir, ekrandaki (filtreli/
+  // siralanmis) sira numarasiyla degil, uploadedData icindeki gercek yeriyle
+  // bulunur; aksi halde filtre/siralama varken oneri BASKA bir urune yaziliyordu.
+  // Manuel kâr/komisyon da hesaplanir ki "Manuel Fiyat" kutusu dolu gorunsun.
+  const baremOnerisiUygula = (item, price) => {
+    const idx = uploadedData.indexOf(item);
+    if (idx < 0 || !price) return;
+    const updated = [...uploadedData];
+    const satir = { ...updated[idx] };
+    const komisyon = getDynamicCommissionForPrice(satir, price);
+    const { profit, profitRate } = calculateProfit(price, komisyon, satir);
+    satir.manual_price = price;
+    satir.manual_profit = profit;
+    satir.manual_profit_rate = profitRate;
+    satir.manual_commission = komisyon;
+    satir.selected_range = 'manual';
+    satir.selected_price = price;
+    satir.selected_commission = komisyon;
+    updated[idx] = satir;
+    setUploadedData(updated);
+  };
+
+  const renderBaremSuggestionCell = (item) => {
     const oneri = baremOnerisiHesapla(item, Number(item.selected_price) || 0);
     if (!oneri) return <div className="text-center text-muted-foreground/70 text-xs">-</div>;
     const karArtisi = oneri.karArtisi;
@@ -877,7 +899,7 @@ export default function AdvantageProductTag() {
           size="sm"
           variant="outline"
           className="w-full mt-2 h-7 text-xs"
-          onClick={() => handlePriceSelect(index, 'manual', oneri.price)}
+          onClick={() => baremOnerisiUygula(item, oneri.price)}
         >
           Uygula
         </Button>
@@ -1223,7 +1245,7 @@ export default function AdvantageProductTag() {
                             <td className="p-3">{renderRangeCell(item, index, 'advantage', item.advantage_min, item.advantage_max, item.advantage_commission, 'Avantaj')}</td>
                             <td className="p-3">{renderRangeCell(item, index, 'super_advantage', item.super_advantage_min, item.super_advantage_max, item.super_advantage_commission, 'Çok Avantaj')}</td>
                             <td className="p-3">{renderRangeCell(item, index, 'mega_advantage', item.mega_advantage_min, item.mega_advantage_max, item.mega_advantage_commission, 'Süper Avantaj')}</td>
-                            <td className="p-3">{renderBaremSuggestionCell(item, index)}</td>
+                            <td className="p-3">{renderBaremSuggestionCell(item)}</td>
                             <td className="p-3">
                               <div className={`border rounded-lg p-2 ${item.selected_range === 'manual' ? 'border-primary bg-secondary' : 'border-border'}`}>
                                 <div className="text-xs font-semibold text-muted-foreground mb-2">Manuel Fiyat</div>
