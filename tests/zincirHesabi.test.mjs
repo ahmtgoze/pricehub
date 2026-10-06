@@ -196,4 +196,35 @@ console.log('\n=== MIKRO IHRACAT KAMPANYASI TURKIYE ZINCIRINE SIZMAZ ===');
 }
 
 esit('bugunMetni bicimi', /^\d{4}-\d{2}-\d{2}$/.test(bugunMetni()), true);
+console.log('\n=== PLUS SEPETTE TL + KARSILAMA (Plus Gunleri, 6 Eki 2026) ===');
+{
+  const u = { barcode: 'P1', stock_code: 'P1' };
+  const plusTl = { id: 'ptl', campaign_type: 'trendyol_plus', start_date: '2026-09-01', end_date: '2026-10-01', discount_kind: 'cart_tl', discount_amount: 100, threshold_amount: 500, trendyol_coverage_rate: 40 };
+  const kayit = (id) => ({ campaign_id: id, barcode: 'P1', selected_type: 'campaign', campaign_price: 600 });
+  const Kp = { campaigns: [plusTl], campaignProducts: [kayit('ptl')] };
+  const z600 = zincirKur({ urun: u, kaynaklar: Kp, bugun: BUGUN, platform: 'Trendyol', aday: { kaynak: 'Liste', fiyat: 600 } });
+  esit("600 TL: musteri 500, satici payi 60, kalan 540", [z600.musteriFiyat, z600.plusIndirim, z600.saticiNet], [500, 100, 540]);
+  esit('etiket', z600.plus.etiket, "Plus 500 TL'ye 100 TL İndirim");
+  const z400 = zincirKur({ urun: u, kaynaklar: Kp, bugun: BUGUN, platform: 'Trendyol', aday: { kaynak: 'Liste', fiyat: 400 } });
+  esit('400 TL: indirim 80 (pay 400/500), satici payi 48, kalan 352', [z400.plusIndirim, z400.saticiNet], [80, 352]);
+
+  // Trendyol'un kendi ornegi: 1000 -> sepet %10 (900) -> Plus %10 (810)
+  const sepet10 = { id: 's10', campaign_type: 'all_countries', start_date: '2026-09-01', end_date: '2026-10-01', discount_kind: 'cart_percent', discount_amount: 10, trendyol_coverage_rate: 0 };
+  const plus10 = { id: 'p10', campaign_type: 'trendyol_plus', start_date: '2026-09-01', end_date: '2026-10-01', discount_kind: 'net_percent', discount_amount: 10, trendyol_coverage_rate: 0 };
+  const plus5 = { ...plus10, id: 'p5', discount_amount: 5 };
+  const Ko = { campaigns: [sepet10, plus5, plus10], campaignProducts: ['s10', 'p5', 'p10'].map((id) => ({ ...kayit(id), campaign_price: 1000 })) };
+  const zo = zincirKur({ urun: u, kaynaklar: Ko, bugun: BUGUN, platform: 'Trendyol', aday: { kaynak: 'Liste', fiyat: 1000 } });
+  esit('1000 -> 900 -> 810; iki Plus kampanyasindan yuksek olan (%10)', [zo.genelIndirim, zo.plusIndirim, zo.musteriFiyat, zo.plus.oran, zo.plus.etiket], [100, 90, 810, 10, 'Plus %10']);
+
+  // Plus %10, %30 Trendyol karsilamali: satici payi 70
+  const Kk = { campaigns: [{ ...plus10, trendyol_coverage_rate: 30 }], campaignProducts: [{ ...kayit('p10'), campaign_price: 1000 }] };
+  const zk = zincirKur({ urun: u, kaynaklar: Kk, bugun: BUGUN, platform: 'Trendyol', aday: { kaynak: 'Liste', fiyat: 1000 } });
+  esit('karsilamali Plus %10: musteri 900, saticiya kalan 930', [zk.musteriFiyat, zk.saticiNet], [900, 930]);
+
+  // Yuzde ile TL yarisir: o fiyatta yuksek olan
+  const Ky = { campaigns: [plusTl, plus10], campaignProducts: [kayit('ptl'), kayit('p10')] };
+  esit('600 TL: 500e100 (100) > %10 (60)', zincirKur({ urun: u, kaynaklar: Ky, bugun: BUGUN, platform: 'Trendyol', aday: { kaynak: 'Liste', fiyat: 600 } }).plusIndirim, 100);
+  esit('2000 TL: %10 (200) > 500e100 (100)', zincirKur({ urun: u, kaynaklar: Ky, bugun: BUGUN, platform: 'Trendyol', aday: { kaynak: 'Liste', fiyat: 2000 } }).plusIndirim, 200);
+}
+
 console.log(`\nGECEN: ${gecen}   KALAN: ${kalan}`); if (kalan) process.exit(1);

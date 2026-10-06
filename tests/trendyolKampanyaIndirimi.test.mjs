@@ -116,6 +116,13 @@ console.log('\n=== DOSYA ADINDAN KAMPANYA ===');
   const c = dosyaAdindanKampanya('trendyol-plus-musterilerine-ozel-ek-5-indirim_2026-09-03_20-03_tr-TR_part_1.xlsx');
   esit('plus ek %5', [c.campaign_type, c.discount_kind, c.discount_amount, c.threshold_amount], ['trendyol_plus', 'net_percent', 5, null]);
   esit('plus ad', c.campaign_name, 'Trendyol plus musterilerine ozel ek 5 indirim');
+  // Plus Gunleri (6 Eki 2026): "500 TL ve uzeri 100 TL" / "500 TL'ye 100" + karsilama
+  const p1 = dosyaAdindanKampanya('kirtasiye-urunlerinde-trendyol-plus-musterilerine-ozel-500-tl-ve-uzeri-100-tl-indirim-40-trendyol-karsilamali_2026-10-06_10-00_tr-TR_part_1.xlsx');
+  esit('plus sepet tl', [p1.campaign_type, p1.discount_kind, p1.threshold_amount, p1.discount_amount, p1.trendyol_coverage_rate], ['trendyol_plus', 'cart_tl', 500, 100, 40]);
+  const p2 = dosyaAdindanKampanya('hobi-de-trendyol-plus-gunlerine-ozel-500-tl-ye-100-indirim-40-trendyol-karsilamali_2026-10-06_10-00_tr-TR_part_1.xlsx');
+  esit("plus 500 tl'ye 100 (%100 sanilmaz)", [p2.discount_kind, p2.threshold_amount, p2.discount_amount], ['cart_tl', 500, 100]);
+  const p3 = dosyaAdindanKampanya('kirtasiye-urunlerinde-trendyol-plus-a-ozel-10-indirim-30-trendyol-karsilamali_2026-10-06_10-00_tr-TR_part_1.xlsx');
+  esit('plus yuzde karsilamali', [p3.campaign_type, p3.discount_kind, p3.discount_amount, p3.trendyol_coverage_rate], ['trendyol_plus', 'net_percent', 10, 30]);
   const d = dosyaAdindanKampanya('C:\\\\indir\\\\mikro-ihracat-4-al-3-ode.xlsx');
   esit('yol ayiklanir, mikro ihracat', [d.campaign_type, d.discount_kind], ['mikro_ihracat', null]);
   // Gercek Trendyol dosya adlari (1 Eki 2026, satici panelinden indirildi):

@@ -254,7 +254,10 @@ export function dosyaAdindanKampanya(dosyaAdi) {
   const karsilama = slug.match(/(\d+)-trendyol-karsilamali/);
   if (karsilama) sonuc.trendyol_coverage_rate = Number(karsilama[1]);
 
-  const sepet = slug.match(/(\d+)-tl-uzeri-(\d+)-tl-indirim/);
+  // "1000-tl-uzeri-150-tl-indirim", "500-tl-ve-uzeri-100-tl-indirim",
+  // "500-tl-ye-100-indirim" (Plus Gunleri, 6 Eki 2026). Yuzde kalibindan ONCE
+  // bakilir; yoksa "…-100-indirim" %100 sanilir.
+  const sepet = slug.match(/(\d+)-tl-?(?:ve-)?(?:uzeri|ye|ya)-(\d+)(?:-tl)?-indirim/);
   const yuzde = slug.match(/(?:^|-)(?:ek-)?(\d+)-indirim(?:-|$)/);
   if (sepet) {
     sonuc.discount_kind = 'cart_tl';

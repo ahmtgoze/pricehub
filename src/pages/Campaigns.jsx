@@ -448,7 +448,10 @@ export default function Campaigns() {
         ipucu: kars > 0 ? `Trendyol %${Number(k.karsilama) || 0} karşılar (${tl(trendyol)}), senin payın ${tl(satici)}` : 'Tamamı senden',
       });
     }
-    if (etki.plus) adimlar.push({ ad: `Plus %${Number(etki.plus.oran) || 0}`, deger: `-${tl(etki.zincir.plusIndirim)}`, ipucu: 'Tamamı senden' });
+    if (etki.plus) {
+      const kars = Number(etki.plus.genel?.karsilama) || 0;
+      adimlar.push({ ad: etki.plus.etiket, deger: `-${tl(etki.zincir.plusIndirim)}`, ipucu: kars > 0 ? `Trendyol %${kars} karşılar` : 'Tamamı senden' });
+    }
     if (etki.kod) adimlar.push({ ad: `İndirim Kodu (${etki.kod.ad})`, deger: `-${tl(etki.kod.indirim)}`, ipucu: 'Tamamı senden' });
     if (etki.kupon) {
       adimlar.push({
@@ -588,7 +591,7 @@ export default function Campaigns() {
     if (f <= 0) return null;
     const ortak = { urun: item, kaynaklar: zincirKaynaklari, bugun: bugunMetni, platform: selectedPlatform };
     const z = plusKampanyasiMi
-      ? zincirKur({ ...ortak, aday: { kaynak: KAYNAK.PLUS_GIRILEN, fiyat: f }, plus: { oran: aktifKampanya.oran, karsilama: aktifKampanya.karsilama } })
+      ? zincirKur({ ...ortak, aday: { kaynak: KAYNAK.PLUS_GIRILEN, fiyat: f }, plus: { oran: aktifKampanya.oran, karsilama: aktifKampanya.karsilama, genel: aktifKampanya } })
       : zincirKur({ ...ortak, ekGenel: { kampanyaId: managingCampaign.id, genel: aktifKampanya, ad: kampanyaMetni(aktifKampanya), fiyat: f } });
     if (!z) return null;
     // calculateProfit'in bekledigi "zincir" nesnesi + aciklama icin ayrintilar

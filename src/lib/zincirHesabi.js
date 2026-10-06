@@ -106,17 +106,33 @@ export function genelKampanyalar(urun, kaynaklar, { bugun, haricKampanyaId = nul
   return sonuc;
 }
 
-/** Urun bugun suren Plus kampanyasinda secili mi? -> { oran, karsilama } | null */
+/**
+ * Urun bugun suren Plus kampanyasinda secili mi? -> { oran, karsilama, kampanya, genel, hepsi } | null
+ *
+ * Urun birden fazla Plus kampanyasinda olabilir (Plus %5 + Plus %10, ya da
+ * "Plus'a ozel 500 TL'ye 100 TL"). `hepsi` tumunu tasir; hangisinin
+ * uygulanacagina zincirKur fiyata bakarak karar verir (en yuksek indirim).
+ * Donen ana kayit en yuksek YUZDELI olandir (eski cagrilar `oran` okur).
+ */
 export function plusDurumu(urun, kaynaklar, { bugun } = {}) {
   const k = kaynaklar || {};
+  const hepsi = [];
   for (const c of k.campaigns || []) {
     if (!c || c.campaign_type !== 'trendyol_plus' || c.is_active === false || !surer(c, bugun)) continue;
     const kayit = (k.campaignProducts || []).find((cp) => cp.campaign_id === c.id && cp.selected_type === 'campaign' && ayniUrun(urun, cp));
     if (!kayit) continue;
     const p = kaydiKampanyayaCevir(c);
-    return { oran: sayi(p.oran), karsilama: sayi(p.karsilama), kampanya: c };
+    hepsi.push({ oran: sayi(p.oran), karsilama: sayi(p.karsilama), kampanya: c, genel: p });
   }
-  return null;
+  if (hepsi.length === 0) return null;
+  const ana = hepsi.reduce((a, b) => (b.oran > a.oran ? b : a));
+  return { ...ana, hepsi };
+}
+
+/** Plus indiriminin kisa adi: "Plus %5" ya da "Plus 500 TL'ye 100 TL İndirim". */
+export function plusEtiketi(genel) {
+  if (!genel) return 'Plus';
+  return genel.tur === 'net_percent' || genel.tur === 'cart_percent' ? `Plus %${sayi(genel.oran)}` : `Plus ${kampanyaMetni(genel)}`;
 }
 
 /* ------------------------------------------------------------------ *
@@ -274,19 +290,34 @@ export function zincirKur({ urun, kaynaklar, bugun = bugunMetni(), platform = nu
     if (indirim > 0 && (!enIyi || indirim > enIyi.indirim || dahaKotu)) enIyi = { ...g, indirim };
   }
 
-  // SIRA 2.5 — Plus %5 ile Plus'a ozel kendi indirimi (yuzde) yarisir
-  // Plus tarifesi taban olduysa Trendyol'un Plus %5'i uygulanmaz; kendi
-  // Plus'a ozel yuzde indirimi yine de sayilir (en kotu durum).
-  let plusOran = plusBilgi && !plusTarife ? sayi(plusBilgi.oran) : 0;
-  for (const d of kendiler.filter((x) => (x.hedef_kitle || 'all') === 'plus' && (x.indirim_tipi || 'percent') === 'percent')) {
-    plusOran = Math.max(plusOran, sayi(d.oran));
+  // SIRA 2.5 — Plus kampanyalari ile Plus'a ozel kendi indirimi (yuzde)
+  // yarisir; o fiyatta EN YUKSEK indirimi veren tek biri uygulanir (esitse
+  // karsilamasi dusuk olan: en kotu durum). Plus kampanyasi yuzde de olabilir
+  // "500 TL'ye 100 TL" de (Plus Gunleri, 6 Eki 2026); ikisi de karsilamali
+  // olabilir. Plus tarifesi taban olduysa Trendyol'un Plus kampanyasi
+  // uygulanmaz; kendi Plus'a ozel yuzde indirimi yine de sayilir.
+  const plusAdaylari = [];
+  if (plusBilgi && !plusTarife) {
+    for (const p of plusBilgi.hepsi || [plusBilgi]) {
+      plusAdaylari.push(p.genel || { tur: 'net_percent', oran: sayi(p.oran), karsilama: sayi(p.karsilama), tutar: 0, esik: 0 });
+    }
   }
-  const plusKampanya = plusMusterisi && plusOran > 0 ? { tur: 'net_percent', oran: plusOran, karsilama: sayi(plusBilgi.karsilama), tutar: 0 } : null;
+  if (plusMusterisi) {
+    for (const d of kendiler.filter(plusYuzdeMi)) plusAdaylari.push({ tur: 'net_percent', oran: sayi(d.oran), karsilama: 0, tutar: 0, esik: 0 });
+  }
+  const araFiyat = kurus(Math.max(0, sira1Fiyat - (enIyi ? enIyi.indirim : 0)));
+  let plusKampanya = null, plusEnIyi = 0;
+  for (const a of plusAdaylari) {
+    const ind = musteriIndirimi(araFiyat, a);
+    const dahaKotu = plusKampanya && ind === plusEnIyi && sayi(a.karsilama) < sayi(plusKampanya.karsilama);
+    if (ind > 0 && (!plusKampanya || ind > plusEnIyi || dahaKotu)) { plusKampanya = a; plusEnIyi = ind; }
+  }
+  const plusOran = plusKampanya && (plusKampanya.tur === 'net_percent' || plusKampanya.tur === 'cart_percent') ? sayi(plusKampanya.oran) : 0;
   const z = plusZincirliFiyat(sira1Fiyat, enIyi ? enIyi.genel : null, plusKampanya);
   if (!z) return null;
 
   const sonuc = {
-    taban, adaylar, net, genel: enIyi, plus: plusBilgi ? { ...plusBilgi, oran: plusOran } : null, plusTarife,
+    taban, adaylar, net, genel: enIyi, plus: plusBilgi ? { ...plusBilgi, oran: plusOran, genel: plusKampanya, etiket: plusEtiketi(plusKampanya) } : null, plusTarife,
     genelIndirim: z.genelIndirim, plusIndirim: z.plusIndirim, saticiPayi: kurus(z.saticiPayi + (net ? net.indirim : 0)),
     musteriFiyat: z.musteriFiyat, saticiNet: z.saticiNet, komisyon: plusTarife ? plusTarife.komisyon : null, kod: null, kupon: null,
   };
