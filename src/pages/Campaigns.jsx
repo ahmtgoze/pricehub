@@ -453,6 +453,7 @@ export default function Campaigns() {
       const kars = Number(etki.plus.genel?.karsilama) || 0;
       adimlar.push({ ad: etki.plus.etiket, deger: `-${tl(etki.zincir.plusIndirim)}`, ipucu: kars > 0 ? `Trendyol %${kars} karşılar` : 'Tamamı senden' });
     }
+    if (etki.birlikte) adimlar.push({ ad: etki.birlikte.ad, deger: `-${tl(etki.birlikte.indirim)}`, ipucu: 'Tamamı senden' });
     if (etki.kod) adimlar.push({ ad: `İndirim Kodu (${etki.kod.ad})`, deger: `-${tl(etki.kod.indirim)}`, ipucu: 'Tamamı senden' });
     if (etki.kupon) {
       adimlar.push({

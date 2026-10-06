@@ -894,6 +894,9 @@ mikro-ihracatta-indirimlerin-uygulanma-sirasi).
   **%30** (> 2000 TL). SSS sayfası %20/%15 ve 1.500 TL eşiği yazıyor —
   çelişki; uygulamadan önce Sözleşme & Belgeler'den doğrulanmalı.
 - Desi limiti **10**; uzunluk 50 cm (esnek 90 cm). Fiyat TL (TR satış fiyatı).
+  **Düzeltme (6 Eki 2026, kullanıcı – Trendyol temsilcisi):** 10 desi üstü
+  ürünler de Mikro İhracat'ta gönderilebiliyor. Desi, modelde ürün eleme
+  sebebi DEĞİLDİR; belgedeki sınır yalnız bilgi.
 - Vade: Körfez 7 gün (TR'den kısa), Azerbaycan TR gibi (ayrı kalem),
   Orta/Doğu Avrupa vade 0, sonraki ayın ilk haftası.
 - İndirim uygulanma sırası TR ile aynı (0 fiyat değişimi → 1 net → 2 koşullu
@@ -901,8 +904,9 @@ mikro-ihracatta-indirimlerin-uygulanma-sirasi).
   geçerli; TR kuponları geçerli değil. Aynı sıradakilerden en yükseği.
 
 Uygulama notu: Mikro İhracat kampanyası = genel kampanya hesabı + %6 hizmet
-bedeli − satış KDV'si 0 (ihracat) + opsiyonel iade riski satırı; desi > 10
-ürün uygun değil.
+bedeli − satış KDV'si 0 (ihracat); iade operasyon bedeli kâra KATILMAZ,
+yalnız bilgi satırı olarak gösterilir (kullanıcı kararı, 6 Eki 2026); desi
+sınırı uygulanmaz.
 
 ### Satıcı Bilgi Merkezi tam taraması (4 Eyl 2026) — kâr hesabını etkileyen kurallar
 294 sayfanın tamamı çekildi (`docs/trendyol-bilgi-merkezi/tam-metin.md`, dizin
@@ -1114,3 +1118,4 @@ zaten eşittir.
 | **Kampanyalar: barem önerisi zincirli** (6 Eki 2026, kullanıcı: "barem önerilerine katıldığımızda hata var"): öneri artık satırdaki kartla aynı zincir hesabını (`satirHesabi`) kullanır; fiyat, diğer promosyonlardan SONRA satıcıya kalan tutar barem tavanına oturacak şekilde bulunur. Eskiden zincirsiz hesaplanıyordu: öneri karttan yüksek kâr vaat ediyor, Uygula'dan sonra kart başka rakam veriyor, fiyat gereğinden fazla düşüyordu | `Campaigns.baremOnerisiHesapla` | düzeltme |
 | **Plus kampanyalarında TL eşikli indirim ve karşılama** (6 Eki 2026): Plus kampanyası artık yalnız "Net %X" değil; "Plus'a özel 500 TL'ye 100 TL – %40 Trendyol karşılamalı" ve "Plus'a özel %10 – %30 karşılamalı" da hesaplanır. Zincirde sıra 2,5: ürünün seçili olduğu Plus kampanyaları ile Plus'a özel kendi yüzde indirimi yarışır, o fiyatta **en yüksek indirimi veren tek biri** uygulanır (eşitse karşılaması düşük olan). Eskiden ürün iki Plus kampanyasındaysa ilk bulunan alınıyordu. Trendyol'un örneği: 1.000 → sepet %10 = 900 → Plus %10 = 810. Dosya adı ayrıştırma: "500-tl-ve-uzeri-100-tl-indirim", "500-tl-ye-100-indirim" | `zincirHesabi.plusDurumu/zincirKur`, `dosyaAdindanKampanya` | yeni |
 | **Plus kupon kampanyası** (6 Eki 2026, "750 TL Üzerine 100 TL Kupon – Trendyol Plus Müşterilerine Özel", süresiz): yeni indirim türü `coupon_tl`. Trendyol kampanya detayı: kupon maliyeti **tamamen satıcıda**; alt limit farklı satıcıların ürünleriyle de dolabilir, indirim bareme katkı oranında paylaştırılır (ürün başına pay = tutar × min(1, fiyat/eşik)); kupon tutarından komisyon kesilmez; aynı ürüne bir siparişte tek kupon (kendi kuponunla yarışır, yüksek olan); diğer sepet kampanyalarıyla birlikte kullanılır. **Fiyat girilmez**: Excel'de fiyat sütunu yok, "Eklenecek Ürünleri Seçiniz" sütununa "Seçildi" yazılır; çıktıda yalnız seçili satırlar. Zincirde en sonda (kupon sırası), yalnız Plus üyesinde. Trendyol'un örneği birebir: 1.000 → sepet %10 = 900 → Plus %10 = 810 → kupon = 710 | `kuponIndirimi`, `plusKuponlari`, `zincirKur(ekKupon)`, `Campaigns.handleExport` | yeni |
+| **Birlikte Al (Kasa Önü / Trendyol Ortak "Sepette Öne Çık")** (6 Eki 2026): Kendi İndirimlerim'de yeni tür `birlikte_al`. Alanlar: minimum sepet tutarı, ödül ürünler ve ödül fiyatları (`odul_urunler` jsonb: `[{barkod, fiyat}]`), sipariş limiti, tarih. Zincirde **sıra 3** (Plus'tan sonra, koddan ve kupondan önce): ürün ödül ürünüyse müşteri ödül fiyatını öder, fark tamamen satıcıdan; o ana kadarki fiyat zaten daha düşükse etkisi yok. En kötü durum sayılır (müşteri sepeti tamamlamıştır). **Varsayım:** ödül fiyatının önceki indirimlerin yerine mi üstüne mi geçtiği gerçek sepette teyit edilmedi; "en düşük olan" alındı. Trendyol destekli kupon (Ödül Mağazası / görev; ör. 30 TL, alt limit 450, 150 adet, %10 Trendyol) zaten "Kupon + karşılama" olarak kayıtlıydı; listeye bütçe özeti eklendi | `zincirHesabi.birlikteAlOdulu`, `OwnDiscounts` | yeni, kısmen varsayım |

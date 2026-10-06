@@ -252,4 +252,20 @@ console.log('\n=== PLUS KUPON KAMPANYASI (750 TL\'ye 100 TL, 6 Eki 2026) ===');
   esit('ekKupon: 1000 -> 900', [zd.musteriFiyat, zd.saticiNet], [900, 900]);
 }
 
+console.log('\n=== BIRLIKTE AL (Trendyol Ortak onerisi, 6 Eki 2026: TBE1 135 -> 88) ===');
+{
+  const u = { barcode: 'TBE1', stock_code: 'TBE-2040-1000-1' };
+  const tarih = { start_date: '2026-09-01', end_date: '2026-10-01' };
+  const ba = { id: 'ba', tur: 'birlikte_al', aktif: true, hedef_kitle: 'all', kapsam_turu: 'all', alt_limit: 117, platform_account: 'Trendyol', ...tarih,
+    odul_urunler: [{ barkod: 'TBE1', fiyat: 88 }, { barkod: 'KCL3545', fiyat: 332 }] };
+  const z = zincirKur({ urun: u, kaynaklar: { ownDiscounts: [ba] }, bugun: BUGUN, platform: 'Trendyol', aday: { kaynak: 'Liste', fiyat: 135.49 } });
+  esit('odul urun: musteri 88 oder, fark saticidan', [z.musteriFiyat, z.saticiNet, z.birlikte.indirim], [88, 88, 47.49]);
+  const zd = zincirKur({ urun: { barcode: 'BASKA' }, kaynaklar: { ownDiscounts: [ba] }, bugun: BUGUN, platform: 'Trendyol', aday: { kaynak: 'Liste', fiyat: 135.49 } });
+  esit('odul olmayan urun etkilenmez', [zd.musteriFiyat, zd.birlikte], [135.49, null]);
+  const zu = zincirKur({ urun: u, kaynaklar: { ownDiscounts: [ba] }, bugun: BUGUN, platform: 'Trendyol', aday: { kaynak: 'Liste', fiyat: 80 } });
+  esit('fiyat zaten odul fiyatinin altindaysa etkisi yok', [zu.musteriFiyat, zu.birlikte], [80, null]);
+  esit('stok koduyla da eslesir', zincirKur({ urun: { barcode: 'X', stock_code: 'KCL3545' }, kaynaklar: { ownDiscounts: [ba] }, bugun: BUGUN, platform: 'Trendyol', aday: { kaynak: 'Liste', fiyat: 373 } }).musteriFiyat, 332);
+  esit('pasif kayit sayilmaz', zincirKur({ urun: u, kaynaklar: { ownDiscounts: [{ ...ba, aktif: false }] }, bugun: BUGUN, platform: 'Trendyol', aday: { kaynak: 'Liste', fiyat: 135.49 } }).birlikte, null);
+}
+
 console.log(`\nGECEN: ${gecen}   KALAN: ${kalan}`); if (kalan) process.exit(1);

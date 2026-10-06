@@ -216,6 +216,28 @@ export function kendiIndirimTutari(d, fiyat) {
   return 0;
 }
 
+/**
+ * BIRLIKTE AL (Trendyol "Sepette Öne Çık" / Kasa Önü İndirimi; Trendyol Ortak
+ * onerileri bu turdendir): sepet minimum tutari bulunca secili ODUL urunler
+ * sabit indirimli fiyattan satilir. Tamami saticidan. Urun bir odul urunuyse
+ * { d, fiyat } doner. Kapsam (hangi urunlerle birlikte) odul urunun kendi
+ * karini degistirmez; bu yuzden kapsama bakilmaz, yalniz odul listesine.
+ */
+export function birlikteAlOdulu(urun, kaynaklar, { bugun, platform } = {}) {
+  let en = null;
+  for (const d of kaynaklar?.ownDiscounts || []) {
+    if (!d || d.tur !== 'birlikte_al' || d.aktif === false || !surer(d, bugun) || !platformUyar(d, platform)) continue;
+    if ((d.hedef_kitle || 'all') === 'mikro') continue;
+    for (const o of Array.isArray(d.odul_urunler) ? d.odul_urunler : []) {
+      const kod = String(o?.barkod ?? '');
+      if (!kod || !(sayi(o.fiyat) > 0)) continue;
+      if (kod !== String(urun?.barcode ?? '') && kod !== String(urun?.stock_code || urun?.seller_stock_code || '')) continue;
+      if (!en || sayi(o.fiyat) < en.fiyat) en = { d, fiyat: sayi(o.fiyat) };
+    }
+  }
+  return en;
+}
+
 /** Kosullu kendi indirimini sepet kampanyasi nesnesine cevirir (musteriIndirimi ile ayni kurallar). */
 function kosulluyuKampanyayaCevir(d) {
   const tip = d.indirim_tipi || 'percent';
@@ -342,8 +364,20 @@ export function zincirKur({ urun, kaynaklar, bugun = bugunMetni(), platform = nu
   const sonuc = {
     taban, adaylar, net, genel: enIyi, plus: plusBilgi ? { ...plusBilgi, oran: plusOran, genel: plusKampanya, etiket: plusEtiketi(plusKampanya) } : null, plusTarife,
     genelIndirim: z.genelIndirim, plusIndirim: z.plusIndirim, saticiPayi: kurus(z.saticiPayi + (net ? net.indirim : 0)),
-    musteriFiyat: z.musteriFiyat, saticiNet: z.saticiNet, komisyon: plusTarife ? plusTarife.komisyon : null, kod: null, kupon: null,
+    musteriFiyat: z.musteriFiyat, saticiNet: z.saticiNet, komisyon: plusTarife ? plusTarife.komisyon : null, birlikte: null, kod: null, kupon: null,
   };
+
+  // SIRA 3 — Birlikte Al: urun odul urunuyse musteri odul fiyatini oder (o ana
+  // kadarki fiyat zaten daha dusukse etkisi yok). Fark tamamen saticidan.
+  // En kotu durum sayilir: musteri sepeti minimum tutara tamamlamistir.
+  const odul = birlikteAlOdulu(urun, kaynaklar, { bugun, platform });
+  if (odul && odul.fiyat < sonuc.musteriFiyat - 0.005) {
+    const ind = kurus(sonuc.musteriFiyat - odul.fiyat);
+    sonuc.birlikte = { d: odul.d, ad: `Birlikte Al ödül fiyatı ${odul.fiyat} TL${odul.d.ad ? ` · ${odul.d.ad}` : ''}`, indirim: ind, fiyat: odul.fiyat };
+    sonuc.musteriFiyat = odul.fiyat;
+    sonuc.saticiNet = kurus(sonuc.saticiNet - ind);
+    sonuc.saticiPayi = kurus(sonuc.saticiPayi + ind);
+  }
 
   // SIRA 5 — indirim kodu (tamami satici), SIRA 6 — kupon (karsilama payi dusulur)
   let kalan = sonuc.musteriFiyat;

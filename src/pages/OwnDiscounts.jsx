@@ -30,6 +30,7 @@ const TURLER = [
   { value: 'kosullu_tutar', label: 'Koşullu — Tutar üzerinden' },
   { value: 'kosullu_adet', label: 'Koşullu — Ürün adedi üzerinden' },
   { value: 'kosullu_xurun', label: 'Koşullu — X. ürüne' },
+  { value: 'birlikte_al', label: 'Birlikte Al (Kasa Önü)' },
   { value: 'indirim_kodu', label: 'İndirim Kodu' },
   { value: 'kupon', label: 'Kupon' },
 ];
@@ -47,6 +48,7 @@ const KUPON_TURLERI = [
 const INDIRIM_TURLERI = [
   { value: 'net', label: 'Net İndirim', aciklama: 'Sepet tutarına direkt uygulanır; alt limit yok.' },
   { value: 'kosullu', label: 'Koşullu İndirim', aciklama: 'Belirlenen koşul üzeri alışverişlere uygulanır (tutar, adet, X. ürün).' },
+  { value: 'birlikte_al', label: 'Birlikte Al', aciklama: 'Sepet minimum tutarı bulunca seçili ödül ürünler indirimli fiyattan satılır (Trendyol Ortak "Sepette Öne Çık" önerileri).' },
   { value: 'indirim_kodu', label: 'İndirim Kodu', aciklama: 'Sepette kodu giren müşteriye uygulanır.' },
 ];
 const KOSUL_TIPLERI = [
@@ -60,7 +62,7 @@ const KAPSAMLAR = [
   { value: 'urunler', label: 'Belirli ürünler (barkod / stok kodu)' },
 ];
 const bos = () => ({
-  ad: '', kategori: 'kupon', tur: 'kupon', kupon_turu: 'urunden', kosul_tipi: 'tutar', hedef_kitle: 'all', kapsam_turu: 'all', kapsam_kategoriler: [], kapsam_urunler_metin: '',
+  ad: '', kategori: 'kupon', tur: 'kupon', kupon_turu: 'urunden', kosul_tipi: 'tutar', hedef_kitle: 'all', kapsam_turu: 'all', kapsam_kategoriler: [], kapsam_urunler_metin: '', odul_metin: '',
   indirim_tipi: 'tl', oran: '', tutar: '', alt_limit: '', adet: '', al_x: '3', ode_y: '2', maks_tutar: '', karsilama: '0',
   kupon_adedi: '', siparis_limiti: '', start_date: bugunMetni(), end_date: '', aktif: true, not_metni: '',
 });
@@ -100,6 +102,7 @@ export default function OwnDiscounts() {
       maks_tutar: r.maks_tutar ?? '', karsilama: r.karsilama ?? '0', kupon_adedi: r.kupon_adedi ?? '', siparis_limiti: r.siparis_limiti ?? '',
       kapsam_kategoriler: Array.isArray(r.kapsam_kategoriler) ? r.kapsam_kategoriler : [],
       kapsam_urunler_metin: (Array.isArray(r.kapsam_urunler) ? r.kapsam_urunler : []).join('\n'),
+      odul_metin: (Array.isArray(r.odul_urunler) ? r.odul_urunler : []).map((o) => `${o.barkod}; ${o.fiyat}`).join('\n'),
     });
     setEditingId(r.id); setAdim(3); setShowForm(true);
   };
@@ -107,12 +110,20 @@ export default function OwnDiscounts() {
   const kaydet = async () => {
     if (!selectedPlatform) { toast.error('Platform seçin'); return; }
     if (!form.end_date || !form.start_date) { toast.error('Başlangıç ve bitiş tarihi gerekli'); return; }
-    if (form.indirim_tipi === 'percent' && !(sayi(form.oran) > 0)) { toast.error('İndirim yüzdesi girin'); return; }
-    if (form.indirim_tipi === 'tl' && !(sayi(form.tutar) > 0)) { toast.error('İndirim tutarı girin'); return; }
+    const birlikte = form.tur === 'birlikte_al';
+    // Odul urunler: satir basina "barkod; odul fiyati"
+    const oduller = birlikte ? form.odul_metin.split('\n').map((satir) => {
+      const [barkod, fiyat] = satir.split(/[;\t]+/).map((x) => x.trim());
+      return { barkod, fiyat: sayi(fiyat) };
+    }).filter((o) => o.barkod && o.fiyat > 0) : [];
+    if (birlikte && oduller.length === 0) { toast.error('En az bir ödül ürün ve fiyatı girin (barkod; fiyat)'); return; }
+    if (!birlikte && form.indirim_tipi === 'percent' && !(sayi(form.oran) > 0)) { toast.error('İndirim yüzdesi girin'); return; }
+    if (!birlikte && form.indirim_tipi === 'tl' && !(sayi(form.tutar) > 0)) { toast.error('İndirim tutarı girin'); return; }
     const veri = {
       platform_account: selectedPlatform, ad: form.ad || null, tur: form.tur, kupon_turu: form.tur === 'kupon' ? form.kupon_turu : null, hedef_kitle: form.hedef_kitle, kapsam_turu: form.kapsam_turu,
       kapsam_kategoriler: form.kapsam_turu === 'kategori' ? form.kapsam_kategoriler : [],
       kapsam_urunler: form.kapsam_turu === 'urunler' ? form.kapsam_urunler_metin.split(/[\n,;]+/).map((x) => x.trim()).filter(Boolean) : [],
+      odul_urunler: oduller,
       indirim_tipi: form.indirim_tipi, oran: sayi(form.oran), tutar: sayi(form.tutar), alt_limit: sayi(form.alt_limit) || 0,
       adet: sayi(form.adet), al_x: sayi(form.al_x), ode_y: sayi(form.ode_y), maks_tutar: sayi(form.maks_tutar),
       karsilama: sayi(form.karsilama) || 0, kupon_adedi: sayi(form.kupon_adedi), siparis_limiti: sayi(form.siparis_limiti),
@@ -137,9 +148,17 @@ export default function OwnDiscounts() {
   };
 
   const indirimMetni = (r) => {
+    if (r.tur === 'birlikte_al') return `${(r.odul_urunler || []).length} ödül ürün${Number(r.alt_limit) > 0 ? ` · min sepet ${r.alt_limit} TL` : ''}`;
     const tip = r.indirim_tipi || 'percent';
     const m = tip === 'tl' ? `${r.tutar} TL` : tip === 'xalyode' ? `${r.al_x} Al ${r.ode_y} Öde` : `%${r.oran}${r.maks_tutar ? ` (maks ${r.maks_tutar} TL)` : ''}`;
     return `${m}${Number(r.alt_limit) > 0 ? ` · alt limit ${r.alt_limit} TL` : ''}${r.tur === 'kosullu_adet' && r.adet ? ` · ${r.adet} adet` : ''}${r.tur === 'kosullu_xurun' && r.adet ? ` · ${r.adet}. ürün` : ''}`;
+  };
+  // Trendyol destekli kuponun onay ekranindaki ozet: "4500 TL'lik butcenin 450 TL'si Trendyol'dan"
+  const kuponButcesi = (r) => {
+    if (r.tur !== 'kupon' || (r.indirim_tipi || 'percent') !== 'tl' || !(Number(r.kupon_adedi) > 0) || !(Number(r.tutar) > 0)) return null;
+    const butce = Number(r.kupon_adedi) * Number(r.tutar);
+    const trendyol = butce * Math.min(100, Math.max(0, Number(r.karsilama) || 0)) / 100;
+    return `Bütçe ${butce.toLocaleString('tr-TR')} TL${trendyol > 0 ? ` · Trendyol ${trendyol.toLocaleString('tr-TR')} TL, sen ${(butce - trendyol).toLocaleString('tr-TR')} TL` : ''}`;
   };
   const kapsamMetni = (r) => r.kapsam_turu === 'kategori' ? `Kategori: ${(r.kapsam_kategoriler || []).join(', ')}` : r.kapsam_turu === 'urunler' ? `${(r.kapsam_urunler || []).length} ürün` : 'Tüm ürünler';
 
@@ -199,7 +218,7 @@ export default function OwnDiscounts() {
               )}
               {adim === 2 && form.kategori === 'indirim' && (
                 <div className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                     {INDIRIM_TURLERI.map((t) => (
                       <button key={t.value} type="button" onClick={() => { set('tur', t.value === 'kosullu' ? `kosullu_${form.kosul_tipi}` : t.value); if (t.value !== 'kosullu') setAdim(3); }}
                         className={`text-left rounded-xl border p-4 hover:bg-secondary ${(t.value === 'kosullu' ? form.tur.startsWith('kosullu') : form.tur === t.value) ? 'border-primary bg-secondary' : 'border-border'}`}>
@@ -253,17 +272,24 @@ export default function OwnDiscounts() {
                     </div>
                   )}
 
-                  <div className="space-y-2"><Label>{form.kategori === 'kupon' ? 'Kupon indirim türü' : 'İndirim tipi'}</Label>
+                  {form.tur === 'birlikte_al' && (
+                    <div className="space-y-2"><Label>Ödül ürünler ve ödül fiyatları * (satır başına: barkod; fiyat)</Label>
+                      <textarea className="w-full min-h-[90px] rounded-xl border border-border bg-background p-2 text-sm font-mono" value={form.odul_metin} onChange={(e) => set('odul_metin', e.target.value)} placeholder={'TBE1; 88\nKCL3545; 332'} />
+                      <div className="text-xs text-muted-foreground">Yukarıdaki "uygulanacak ürünler" sepeti dolduran ürünlerdir; kâr hesabına giren ödül ürünlerin bu fiyatıdır.</div>
+                    </div>
+                  )}
+
+                  {form.tur !== 'birlikte_al' && <div className="space-y-2"><Label>{form.kategori === 'kupon' ? 'Kupon indirim türü' : 'İndirim tipi'}</Label>
                     <div className="flex flex-wrap gap-2">
                       <Button type="button" size="sm" variant={form.indirim_tipi === 'tl' ? 'default' : 'outline'} onClick={() => set('indirim_tipi', 'tl')}>{form.kategori === 'kupon' ? 'Tutar (₺) indirimi' : 'X TL indirim'}</Button>
                       <Button type="button" size="sm" variant={form.indirim_tipi === 'percent' ? 'default' : 'outline'} onClick={() => set('indirim_tipi', 'percent')}>{form.kategori === 'kupon' ? 'Yüzde indirimi' : '%X indirim'}</Button>
                       {form.tur === 'kosullu_adet' && <Button type="button" size="sm" variant={form.indirim_tipi === 'xalyode' ? 'default' : 'outline'} onClick={() => set('indirim_tipi', 'xalyode')}>X Al Y Öde</Button>}
                     </div>
-                  </div>
+                  </div>}
 
                   <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                    {form.indirim_tipi === 'percent' && <div className="space-y-2"><Label>{form.kategori === 'kupon' ? 'Kupon yüzde indirimi *' : 'İndirim yüzdesi *'}</Label><Input type="number" step="0.1" value={form.oran} onChange={(e) => set('oran', e.target.value)} placeholder="ör. 10" /></div>}
-                    {form.indirim_tipi === 'tl' && <div className="space-y-2"><Label>{form.kategori === 'kupon' ? 'Kupon tutarı (₺) *' : 'İndirim tutarı (₺) *'}</Label><Input type="number" step="0.01" value={form.tutar} onChange={(e) => set('tutar', e.target.value)} placeholder="ör. 50" /></div>}
+                    {form.tur !== 'birlikte_al' && form.indirim_tipi === 'percent' && <div className="space-y-2"><Label>{form.kategori === 'kupon' ? 'Kupon yüzde indirimi *' : 'İndirim yüzdesi *'}</Label><Input type="number" step="0.1" value={form.oran} onChange={(e) => set('oran', e.target.value)} placeholder="ör. 10" /></div>}
+                    {form.tur !== 'birlikte_al' && form.indirim_tipi === 'tl' && <div className="space-y-2"><Label>{form.kategori === 'kupon' ? 'Kupon tutarı (₺) *' : 'İndirim tutarı (₺) *'}</Label><Input type="number" step="0.01" value={form.tutar} onChange={(e) => set('tutar', e.target.value)} placeholder="ör. 50" /></div>}
                     {form.indirim_tipi === 'xalyode' && (<>
                       <div className="space-y-2"><Label>X al</Label><Input type="number" value={form.al_x} onChange={(e) => set('al_x', e.target.value)} /></div>
                       <div className="space-y-2"><Label>Y öde</Label><Input type="number" value={form.ode_y} onChange={(e) => set('ode_y', e.target.value)} /></div>
@@ -324,7 +350,8 @@ export default function OwnDiscounts() {
                       return (
                         <tr key={r.id} className="border-b hover:bg-secondary">
                           <td className="p-3"><div className="font-medium">{TURLER.find((t) => t.value === r.tur)?.label || r.tur}{r.tur === 'kupon' && r.kupon_turu ? ` · ${KUPON_TURLERI.find((k) => k.value === r.kupon_turu)?.label || r.kupon_turu}` : ''}</div>{r.ad && <div className="text-xs text-muted-foreground">{r.ad}</div>}</td>
-                          <td className="p-3">{indirimMetni(r)}{r.tur === 'kupon' && Number(r.karsilama) > 0 && <div className="text-xs text-emerald-600">%{r.karsilama} Trendyol karşılamalı</div>}</td>
+                          <td className="p-3">{indirimMetni(r)}{r.tur === 'kupon' && Number(r.karsilama) > 0 && <div className="text-xs text-emerald-600">%{r.karsilama} Trendyol karşılamalı</div>}
+                            {kuponButcesi(r) && <div className="text-xs text-muted-foreground">{kuponButcesi(r)}</div>}</td>
                           <td className="p-3">{HEDEFLER.find((h) => h.value === r.hedef_kitle)?.label || 'Tüm ülkeler'}</td>
                           <td className="p-3 text-xs">{kapsamMetni(r)}</td>
                           <td className="p-3 text-xs">{r.start_date} → {r.end_date}</td>
