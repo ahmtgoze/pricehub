@@ -24,7 +24,7 @@ import { gecerliMaliyet } from '@/lib/gecerliMaliyet';
 import { sayiyaCevirVeya } from '@/lib/turkceSayi';
 import { tarifeKomisyonu, aktifPencereOzeti } from '@/lib/tarifeKaydiSecimi';
 import { zincirKur, KAYNAK, bugunMetni as bugunMetniUret } from '@/lib/zincirHesabi';
-import { INDIRIM_TURLERI, KAMPANYA_GRUPLARI, kampanyaFiyati, kampanyaFiyatiTersi, musteriFiyati, musteriIndirimi, kampanyaMetni, kaydiKampanyayaCevir, dosyaAdindanKampanya } from '@/lib/trendyolKampanyaIndirimi';
+import { INDIRIM_TURLERI, KAMPANYA_GRUPLARI, kampanyaFiyati, kampanyaFiyatiTersi, musteriFiyati, musteriIndirimi, kampanyaMetni, kaydiKampanyayaCevir, dosyaAdindanKampanya, kuponMu } from '@/lib/trendyolKampanyaIndirimi';
 
 const Campaign = db.entities.Campaign;
 // DIKKAT: 5 Eyl 2026'ya kadar bu entity TABLE_MAP'te yoktu; try/catch icindeki
@@ -76,7 +76,7 @@ const emptyForm = {
 const formuKampanyayaCevir = (f) => ({
   tur: f.discount_kind,
   oran: YUZDELI(f.discount_kind) ? (Number(f.discount_amount) || 0) : 0,
-  tutar: f.discount_kind === 'cart_tl' ? (Number(f.discount_amount) || 0) : 0,
+  tutar: f.discount_kind === 'cart_tl' || f.discount_kind === 'coupon_tl' ? (Number(f.discount_amount) || 0) : 0,
   esik: Number(f.threshold_amount) || 0,
   alX: Number(f.buy_x) || 0,
   odeY: Number(f.pay_y) || 0,
@@ -381,6 +381,7 @@ export default function Campaigns() {
    */
   const baremOnerisiHesapla = (item, mevcutFiyat) => {
     if (!mevcutFiyat || mevcutFiyat <= 0) return null;
+    if (kuponMu(aktifKampanya)) return null;      // fiyat girilmeyen kampanya: oneri anlamsiz
     const mevcut = satirHesabi(mevcutFiyat, item);
     if (!mevcut.breakdown) return null;
     if (mevcut.baremUsed === 'barem1' || mevcut.baremUsed === 'barem2') return null;
@@ -590,7 +591,10 @@ export default function Campaigns() {
     const f = Number(fiyat) || 0;
     if (f <= 0) return null;
     const ortak = { urun: item, kaynaklar: zincirKaynaklari, bugun: bugunMetni, platform: selectedPlatform };
-    const z = plusKampanyasiMi
+    // Plus kupon: fiyat girilmez; kupon zincirin SONUNDA liste fiyatinin ustune iner
+    const z = kuponMu(aktifKampanya)
+      ? zincirKur({ ...ortak, aday: { kaynak: 'Liste', fiyat: f }, ekKupon: { kampanyaId: managingCampaign.id, genel: aktifKampanya } })
+      : plusKampanyasiMi
       ? zincirKur({ ...ortak, aday: { kaynak: KAYNAK.PLUS_GIRILEN, fiyat: f }, plus: { oran: aktifKampanya.oran, karsilama: aktifKampanya.karsilama, genel: aktifKampanya } })
       : zincirKur({ ...ortak, ekGenel: { kampanyaId: managingCampaign.id, genel: aktifKampanya, ad: kampanyaMetni(aktifKampanya), fiyat: f } });
     if (!z) return null;
@@ -723,7 +727,8 @@ export default function Campaigns() {
           //                              girilmez, indirim mevcut fiyatin ustune
           //                              otomatik uygulanir); kayit icin mevcut
           //                              fiyati kullaniriz (1 Eki 2026).
-          const existingL = kampanya.campaign_type === 'mikro_ihracat'
+          const fiyatsiz = kampanya.campaign_type === 'mikro_ihracat' || kampanya.discount_kind === 'coupon_tl';
+          const existingL = fiyatsiz
             ? 0
             : sayiyaCevirVeya(getVal(row, 'Kampanyalı Satış Fiyatı', FIYAT_SUTUNU_ANAHTARLARI), 0);
 
@@ -746,7 +751,7 @@ export default function Campaigns() {
             current_stock: parseFloat(getVal(row, 'Mevcut Stok', ['mevcut stok', 'stok'])) || 0,
             current_sale_price: curPrice,
             max_price: maxPrice,
-            campaign_price: existingL > 0 ? existingL : (kampanya.campaign_type === 'mikro_ihracat' ? curPrice : maxPrice),
+            campaign_price: existingL > 0 ? existingL : (fiyatsiz ? curPrice : maxPrice),
             commission_tariff: getVal(row, 'Ürün Komisyon Tarifesi', ['komisyon tarifesi']) || '',
             listing_id: getVal(row, 'ListingId', ['listingid', 'listing']) || '',
             selected_type: 'none',
@@ -988,15 +993,18 @@ export default function Campaigns() {
     const worksheet = workbook.Sheets[sheetName];
     const range = XLSX.utils.decode_range(worksheet['!ref']);
 
-    let colL = -1, colBarkod = -1, colListing = -1;
+    let colL = -1, colBarkod = -1, colListing = -1, colSecim = -1;
     for (let C = range.s.c; C <= range.e.c; C++) {
       const h = worksheet[XLSX.utils.encode_cell({ r: range.s.r, c: C })]?.v;
       const hl = (h || '').toString().toLowerCase().trim();
       if (FIYAT_SUTUNU_ANAHTARLARI.some(a => hl.includes(a))) colL = C;
       if (hl === 'barkod') colBarkod = C;
+      if (hl.includes('eklenecek ürünleri seç')) colSecim = C;
       if (hl.includes('listingid') || hl === 'listing id') colListing = C;
     }
-    if (colL === -1) { toast.error('Excelde fiyat sütunu bulunamadı ("Kampanyalı Satış Fiyatı" veya "İndirim Uygulanmadan Önceki Fiyat")'); return; }
+    // Fiyat girilmeyen kampanya (Plus kupon): fiyat sutunu yok, "Eklenecek
+    // Ürünleri Seçiniz" sutununa "Seçildi" yazilir (gercek dosya, 6 Eki 2026).
+    if (colL === -1 && colSecim === -1) { toast.error('Excelde fiyat sütunu bulunamadı ("Kampanyalı Satış Fiyatı" veya "İndirim Uygulanmadan Önceki Fiyat")'); return; }
 
     // Yalnizca SECILI satirlar dosyaya yazilir; secilmeyenler cikarilir.
     // Trendyol fiyati bos satiri "hatali" sayiyordu (kullanici, 5 Eyl 2026:
@@ -1027,6 +1035,7 @@ export default function Campaigns() {
       for (let C = range.s.c; C <= range.e.c; C++) {
         const h = C === colL
           ? { v: Number(item.campaign_price), t: 'n', z: '0.00' }
+          : C === colSecim ? { v: 'Seçildi', t: 's' }
           : kopyaHucre(R, C);
         if (h) yeniSayfa[XLSX.utils.encode_cell({ r: yeniSatir, c: C })] = h;
       }
@@ -1254,6 +1263,7 @@ export default function Campaigns() {
                               <td className="p-3 text-center font-semibold text-muted-foreground">₺{Number(item.max_price || 0).toFixed(2)}</td>
                               <td className="p-3">
                                 <Input type="number" step="0.01" value={item.campaign_price} onChange={(e) => handlePriceChange(realIndex, e.target.value)}
+                                  readOnly={kuponMu(aktifKampanya)} title={kuponMu(aktifKampanya) ? 'Bu kampanyada fiyat girilmez; kupon mevcut fiyatın üstüne uygulanır' : undefined}
                                   className={`h-8 text-xs text-center ${overMax ? 'border-red-400' : ''}`} />
                                 {overMax && <div className="text-[10px] text-red-500 mt-1 text-center">Maks. girilebilecek fiyatı aşıyor</div>}
                               </td>
@@ -1424,7 +1434,7 @@ export default function Campaigns() {
                   </div>
                 )}
 
-                {formData.campaign_type && formData.discount_kind === 'cart_tl' && (
+                {formData.campaign_type && (formData.discount_kind === 'cart_tl' || formData.discount_kind === 'coupon_tl') && (
                   <>
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">

@@ -20,7 +20,7 @@
  * KAYITLI secimleriyle birlestirir. Sayfalar ciktidaki saticiNet'i kendi
  * kar motoruna verir; hedef bu kara gore kontrol edilir.
  */
-import { musteriIndirimi, plusZincirliFiyat, kaydiKampanyayaCevir, kampanyaMetni } from './trendyolKampanyaIndirimi.js';
+import { musteriIndirimi, plusZincirliFiyat, kaydiKampanyayaCevir, kampanyaMetni, kuponMu, kuponIndirimi } from './trendyolKampanyaIndirimi.js';
 import { aktifPencere } from './tarifeKaydiSecimi.js';
 import { secimiOku } from './trendyolPencereSecimi.js';
 
@@ -122,11 +122,31 @@ export function plusDurumu(urun, kaynaklar, { bugun } = {}) {
     const kayit = (k.campaignProducts || []).find((cp) => cp.campaign_id === c.id && cp.selected_type === 'campaign' && ayniUrun(urun, cp));
     if (!kayit) continue;
     const p = kaydiKampanyayaCevir(c);
+    if (kuponMu(p)) continue;                 // kupon indirim degil; zincirin sonunda (bkz. plusKuponlari)
     hepsi.push({ oran: sayi(p.oran), karsilama: sayi(p.karsilama), kampanya: c, genel: p });
   }
   if (hepsi.length === 0) return null;
   const ana = hepsi.reduce((a, b) => (b.oran > a.oran ? b : a));
   return { ...ana, hepsi };
+}
+
+/**
+ * Urunun secili oldugu, bugun suren Plus KUPON kampanyalari ("750 TL'ye
+ * 100 TL Kupon"). Kupon yalniz Plus uyesine tanimlanir ve zincirin en
+ * sonunda, kendi kuponlarinla yarisarak uygulanir (ayni urune tek kupon).
+ */
+export function plusKuponlari(urun, kaynaklar, { bugun, haricKampanyaId = null } = {}) {
+  const k = kaynaklar || {};
+  const sonuc = [];
+  for (const c of k.campaigns || []) {
+    if (!c || c.campaign_type !== 'trendyol_plus' || c.is_active === false || !surer(c, bugun)) continue;
+    if (haricKampanyaId && c.id === haricKampanyaId) continue;
+    const p = kaydiKampanyayaCevir(c);
+    if (!kuponMu(p)) continue;
+    if (!(k.campaignProducts || []).some((cp) => cp.campaign_id === c.id && cp.selected_type === 'campaign' && ayniUrun(urun, cp))) continue;
+    sonuc.push(p);
+  }
+  return sonuc;
 }
 
 /** Plus indiriminin kisa adi: "Plus %5" ya da "Plus 500 TL'ye 100 TL İndirim". */
@@ -237,7 +257,7 @@ export function plusTarifeFiyati(urun, kaynaklar, { bugun, platform } = {}) {
  * @returns null (fiyat yok) | { taban, adaylar, genel, plus, plusTarife, genelIndirim, plusIndirim,
  *           saticiPayi, musteriFiyat, saticiNet, komisyon (Plus tarifesi kazandiysa) }
  */
-export function zincirKur({ urun, kaynaklar, bugun = bugunMetni(), platform = null, aday = null, ekGenel = null, plus = undefined } = {}) {
+export function zincirKur({ urun, kaynaklar, bugun = bugunMetni(), platform = null, aday = null, ekGenel = null, plus = undefined, ekKupon = null } = {}) {
   const haric = aday?.kaynak ? [aday.kaynak] : [];
   const adaylar = sira0Adaylari(urun, kaynaklar, { bugun, platform, haric });
   if (aday && sayi(aday.fiyat) > 0) adaylar.push({ kaynak: aday.kaynak, fiyat: sayi(aday.fiyat) });
@@ -246,7 +266,10 @@ export function zincirKur({ urun, kaynaklar, bugun = bugunMetni(), platform = nu
   let taban = adaylar.reduce((a, b) => (b.fiyat < a.fiyat ? b : a));
 
   const plusBilgi = plus === undefined ? plusDurumu(urun, kaynaklar, { bugun }) : plus;
-  const plusMusterisi = !!plusBilgi;
+  // Plus kupon kampanyalari: kayitli olanlar + bu ekranda denenen (ekKupon)
+  const plusKuponAdaylari = plusKuponlari(urun, kaynaklar, { bugun, haricKampanyaId: ekKupon?.kampanyaId || null });
+  if (ekKupon?.genel) plusKuponAdaylari.push(ekKupon.genel);
+  const plusMusterisi = !!plusBilgi || plusKuponAdaylari.length > 0;
   // Plus Komisyon Tarifesi'ndeki Plus'a ozel fiyat, Plus musterisi icin SATIS
   // FIYATI olur (sira 0): sepet kampanyalari ve kuponlar bunun ustune biner.
   // Gercek sepet (16 Eyl 2026, Plus uyeli hesap, KCZ4555 x 2): 346,49 ->
@@ -336,6 +359,13 @@ export function zincirKur({ urun, kaynaklar, bugun = bugunMetni(), platform = nu
     if (ind > 0 && (!kupon || ind > kupon.indirim)) {
       const kars = Math.min(1, Math.max(0, sayi(d.karsilama) / 100));
       kupon = { d, ad: kendiAdi(d), indirim: ind, karsilama: sayi(d.karsilama), saticiPayi: kurus(ind * (1 - kars)) };
+    }
+  }
+  for (const p of plusKuponAdaylari) {
+    const ind = kuponIndirimi(kalan, p);
+    if (ind > 0 && (!kupon || ind > kupon.indirim)) {
+      const kars = Math.min(1, Math.max(0, sayi(p.karsilama) / 100));
+      kupon = { d: null, plusKuponu: true, ad: `Plus ${kampanyaMetni(p)}`, indirim: ind, karsilama: sayi(p.karsilama), saticiPayi: kurus(ind * (1 - kars)) };
     }
   }
   if (kupon) { kalan = kurus(kalan - kupon.indirim); sonuc.saticiNet = kurus(sonuc.saticiNet - kupon.saticiPayi); sonuc.saticiPayi = kurus(sonuc.saticiPayi + kupon.saticiPayi); }

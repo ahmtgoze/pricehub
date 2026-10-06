@@ -1,6 +1,6 @@
 import { plusZincirliFiyat,
   musteriIndirimi, musteriFiyati, kampanyaFiyati, kampanyaFiyatiTersi, sepetPayi,
-  dosyaAdindanKampanya, kampanyaMetni, kaydiKampanyayaCevir,
+  dosyaAdindanKampanya, kampanyaMetni, kaydiKampanyayaCevir, kuponIndirimi,
   INDIRIM_TURLERI, KAMPANYA_GRUPLARI,
 } from '../src/lib/trendyolKampanyaIndirimi.js';
 
@@ -123,6 +123,13 @@ console.log('\n=== DOSYA ADINDAN KAMPANYA ===');
   esit("plus 500 tl'ye 100 (%100 sanilmaz)", [p2.discount_kind, p2.threshold_amount, p2.discount_amount], ['cart_tl', 500, 100]);
   const p3 = dosyaAdindanKampanya('kirtasiye-urunlerinde-trendyol-plus-a-ozel-10-indirim-30-trendyol-karsilamali_2026-10-06_10-00_tr-TR_part_1.xlsx');
   esit('plus yuzde karsilamali', [p3.campaign_type, p3.discount_kind, p3.discount_amount, p3.trendyol_coverage_rate], ['trendyol_plus', 'net_percent', 10, 30]);
+  // Plus kupon (gercek dosya adi, 6 Eki 2026): fiyat yok, yalniz secim
+  const kp = dosyaAdindanKampanya('750-tl-uzerine-100-tl-kupon-trendyol-plus-musterilerine-ozel-_2026-10-06_17-03_tr-TR_part_1.xlsx');
+  esit('plus kupon', [kp.campaign_type, kp.discount_kind, kp.threshold_amount, kp.discount_amount], ['trendyol_plus', 'coupon_tl', 750, 100]);
+  const kk = kaydiKampanyayaCevir({ discount_kind: 'coupon_tl', discount_amount: 100, threshold_amount: 750 });
+  esit('kupon metni', kampanyaMetni(kk), "750 TL'ye 100 TL Kupon");
+  esit('kupon fiyati degistirmez (fiyat indirimi 0)', [musteriIndirimi(1000, kk), kampanyaFiyati(1000, kk)], [0, 1000]);
+  esit('kupon payi: 1000 TL tamami, 375 TL yarisi', [kuponIndirimi(1000, kk), kuponIndirimi(375, kk)], [100, 50]);
   const d = dosyaAdindanKampanya('C:\\\\indir\\\\mikro-ihracat-4-al-3-ode.xlsx');
   esit('yol ayiklanir, mikro ihracat', [d.campaign_type, d.discount_kind], ['mikro_ihracat', null]);
   // Gercek Trendyol dosya adlari (1 Eki 2026, satici panelinden indirildi):
@@ -180,7 +187,7 @@ console.log('\n=== ESKI KAYIT UYUMU ===');
 
 console.log('\n=== SABIT LISTELER ===');
 {
-  esit('5 indirim turu', INDIRIM_TURLERI.map((t) => t.value), ['net_percent', 'cart_percent', 'cart_tl', 'buy_x_pay_y', 'qty_percent']);
+  esit('6 indirim turu (Plus kupon dahil)', INDIRIM_TURLERI.map((t) => t.value), ['net_percent', 'cart_percent', 'cart_tl', 'buy_x_pay_y', 'qty_percent', 'coupon_tl']);
   esit('uc grup: genel, plus, mikro ihracat', KAMPANYA_GRUPLARI.map((g) => g.value), ['all_countries', 'trendyol_plus', 'mikro_ihracat']);
   esit('okul donemi ayri grup degil', KAMPANYA_GRUPLARI.some((g) => g.value === 'ozel_donem'), false);
 }

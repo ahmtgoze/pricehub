@@ -227,4 +227,29 @@ console.log('\n=== PLUS SEPETTE TL + KARSILAMA (Plus Gunleri, 6 Eki 2026) ===');
   esit('2000 TL: %10 (200) > 500e100 (100)', zincirKur({ urun: u, kaynaklar: Ky, bugun: BUGUN, platform: 'Trendyol', aday: { kaynak: 'Liste', fiyat: 2000 } }).plusIndirim, 200);
 }
 
+console.log('\n=== PLUS KUPON KAMPANYASI (750 TL\'ye 100 TL, 6 Eki 2026) ===');
+{
+  const u = { barcode: 'P1', stock_code: 'P1' };
+  const tarih = { start_date: '2026-09-01', end_date: '2026-10-01' };
+  const kupon = { id: 'kup', campaign_type: 'trendyol_plus', ...tarih, discount_kind: 'coupon_tl', discount_amount: 100, threshold_amount: 750, trendyol_coverage_rate: 0 };
+  const sepet10 = { id: 's10', campaign_type: 'all_countries', ...tarih, discount_kind: 'cart_percent', discount_amount: 10, trendyol_coverage_rate: 0 };
+  const plus10 = { id: 'p10', campaign_type: 'trendyol_plus', ...tarih, discount_kind: 'net_percent', discount_amount: 10, trendyol_coverage_rate: 0 };
+  const kayit = (id) => ({ campaign_id: id, barcode: 'P1', selected_type: 'campaign', campaign_price: 1000 });
+  // Trendyol'un ornegi: 1000 -> 900 (sepet %10) -> 810 (Plus %10) -> 710 (Plus kuponu)
+  const Kt = { campaigns: [sepet10, plus10, kupon], campaignProducts: ['s10', 'p10', 'kup'].map(kayit) };
+  const z = zincirKur({ urun: u, kaynaklar: Kt, bugun: BUGUN, platform: 'Trendyol', aday: { kaynak: 'Liste', fiyat: 1000 } });
+  esit('1000 -> 900 -> 810 -> 710, saticiya kalan 710', [z.musteriFiyat, z.saticiNet, z.kupon?.ad], [710, 710, "Plus 750 TL'ye 100 TL Kupon"]);
+  esit('kupon Plus yuzdesi sayilmaz', z.plus.oran, 10);
+  // Yalniz kupon kampanyasinda: Plus uyesi sayilir, kupon uygulanir
+  const Ky = { campaigns: [kupon], campaignProducts: [{ ...kayit('kup'), campaign_price: 300 }] };
+  const zy = zincirKur({ urun: u, kaynaklar: Ky, bugun: BUGUN, platform: 'Trendyol', aday: { kaynak: 'Liste', fiyat: 300 } });
+  esit('300 TL urun: pay 100 x 300/750 = 40', [zy.plus, zy.kupon.indirim, zy.saticiNet], [null, 40, 260]);
+  // Kendi kuponunla yarisir: ayni urune tek kupon, yuksek olan
+  const Kk = { ...Ky, ownDiscounts: [{ tur: 'kupon', indirim_tipi: 'tl', tutar: 60, alt_limit: 0, karsilama: 0, hedef_kitle: 'all', kapsam_turu: 'all', aktif: true, ...tarih, platform_account: 'Trendyol' }] };
+  esit('kendi 60 TL kuponu > Plus kuponu payi 40', zincirKur({ urun: u, kaynaklar: Kk, bugun: BUGUN, platform: 'Trendyol', aday: { kaynak: 'Liste', fiyat: 300 } }).kupon.indirim, 60);
+  // Kayitli degilken ekranda deneme (ekKupon)
+  const zd = zincirKur({ urun: u, kaynaklar: { campaigns: [], campaignProducts: [] }, bugun: BUGUN, platform: 'Trendyol', aday: { kaynak: 'Liste', fiyat: 1000 }, ekKupon: { kampanyaId: 'kup', genel: { tur: 'coupon_tl', tutar: 100, esik: 750, karsilama: 0 } } });
+  esit('ekKupon: 1000 -> 900', [zd.musteriFiyat, zd.saticiNet], [900, 900]);
+}
+
 console.log(`\nGECEN: ${gecen}   KALAN: ${kalan}`); if (kalan) process.exit(1);

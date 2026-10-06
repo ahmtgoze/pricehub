@@ -50,6 +50,7 @@ export const INDIRIM_TURLERI = [
   { value: 'cart_tl', label: "X TL'ye Y TL İndirim", ornek: "500 TL'ye 100 TL İndirim" },
   { value: 'buy_x_pay_y', label: 'X Al Y Öde', ornek: '3 Al 2 Öde' },
   { value: 'qty_percent', label: 'N Adet ve Üzeri % İndirim', ornek: '2 Adet ve Üzeri %15 İndirim' },
+  { value: 'coupon_tl', label: "X TL'ye Y TL Kupon (Plus)", ornek: "750 TL'ye 100 TL Kupon" },
 ];
 
 /** Trendyol'un "Katılım Koşulu" secenekleri. */
@@ -70,6 +71,26 @@ export const KAMPANYA_GRUPLARI = [
   { value: 'trendyol_plus', label: 'Trendyol Plus (Ek İndirim)' },
   { value: 'mikro_ihracat', label: 'Mikro İhracat (Türkiye fiyatına girmez)' },
 ];
+
+/** Fiyat girilmeyen, yalniz urun secilen kampanya mi? (Plus kupon) */
+export const kuponMu = (kampanya) => kampanya?.tur === 'coupon_tl';
+
+/**
+ * Plus kupon kampanyasinda kuponun URUNE dusen kismi.
+ *
+ * Trendyol (kampanya detayi, 6 Eki 2026): "100 TL indirim saglayan, 750 TL
+ * ve uzeri alisverislerde gecerli kupon. Alt limit farkli saticilardan
+ * urunlerle de tamamlanabilir; indirim, urunlerin bareme katkisi oraninda
+ * saticilar arasinda paylastirilir." Yani sepet indirimiyle ayni model:
+ * urun basina ust sinir = tutar x min(1, fiyat / esik). Fiyat yazilmaz;
+ * kupon "Musterinin Gordugu Fiyat" uzerine, zincirin en sonunda uygulanir.
+ */
+export function kuponIndirimi(fiyat, kampanya) {
+  const f = sayi(fiyat);
+  const tutar = sayi(kampanya?.tutar) ?? 0;
+  if (f === null || f <= 0 || tutar <= 0 || !kuponMu(kampanya)) return 0;
+  return kurusa(Math.min(f, tutar * sepetPayi(f, kampanya.esik)));
+}
 
 const yuzdeliMi = (tur) => tur === 'net_percent' || tur === 'cart_percent' || tur === 'qty_percent';
 
@@ -257,6 +278,13 @@ export function dosyaAdindanKampanya(dosyaAdi) {
   // "1000-tl-uzeri-150-tl-indirim", "500-tl-ve-uzeri-100-tl-indirim",
   // "500-tl-ye-100-indirim" (Plus Gunleri, 6 Eki 2026). Yuzde kalibindan ONCE
   // bakilir; yoksa "…-100-indirim" %100 sanilir.
+  const kupon = slug.match(/(\d+)-tl-?(?:ve-)?uzerine?-(\d+)-tl-kupon/);
+  if (kupon) {
+    sonuc.discount_kind = 'coupon_tl';
+    sonuc.threshold_amount = Number(kupon[1]);
+    sonuc.discount_amount = Number(kupon[2]);
+    return sonuc;
+  }
   const sepet = slug.match(/(\d+)-tl-?(?:ve-)?(?:uzeri|ye|ya)-(\d+)(?:-tl)?-indirim/);
   const yuzde = slug.match(/(?:^|-)(?:ek-)?(\d+)-indirim(?:-|$)/);
   if (sepet) {
@@ -288,6 +316,7 @@ export function kampanyaMetni(kampanya) {
         ? `${duz(esik)} TL'ye ${duz(kampanya.tutar)} TL İndirim`
         : `${duz(kampanya.tutar)} TL İndirim`;
     }
+    case 'coupon_tl': return `${duz(kampanya.esik)} TL'ye ${duz(kampanya.tutar)} TL Kupon`;
     case 'buy_x_pay_y': return `${duz(kampanya.alX)} Al ${duz(kampanya.odeY)} Öde`;
     case 'qty_percent': return `${duz(kampanya.minAdet)} Adet ve Üzeri %${duz(kampanya.oran)} İndirim`;
     default: return '';
@@ -320,7 +349,7 @@ export function kaydiKampanyayaCevir(row) {
   return {
     tur,
     oran: yuzdeli ? miktar : 0,
-    tutar: tur === 'cart_tl' ? miktar : 0,
+    tutar: tur === 'cart_tl' || tur === 'coupon_tl' ? miktar : 0,
     esik: esik ?? 0,
     alX: sayi(row.buy_x) ?? 0,
     odeY: sayi(row.pay_y) ?? 0,
