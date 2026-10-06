@@ -35,7 +35,7 @@ export function platformBirlestir(platform, sablonlar = []) {
 
 const sayi = (d) => (d === null || d === undefined || d === '' ? NaN : Number(d));
 
-export function fiyattaKar({ urun, platform, sablonlar = [], fiyat, komisyonOrani, tarifeler = [], ayarlar = [], paketMaliyeti = 0 }) {
+export function fiyattaKar({ urun, platform, sablonlar = [], fiyat, komisyonOrani, tarifeler = [], ayarlar = [], paketMaliyeti = 0, mikroIhracat = null }) {
   const f = sayi(fiyat);
   const oran = sayi(komisyonOrani);
   if (!(f > 0) || !Number.isFinite(f) || !(oran >= 0 && oran <= 100)) return { durum: 'veri_gecersiz' };
@@ -66,6 +66,7 @@ export function fiyattaKar({ urun, platform, sablonlar = [], fiyat, komisyonOran
     printingCost: parseFloat(urun.printing_cost) || 0,
     extraCost: parseFloat(urun.extra_cost) || 0,
     isSameDayDelivery: urun.same_day_delivery || false,
+    mikroIhracat,
   });
 
   return {

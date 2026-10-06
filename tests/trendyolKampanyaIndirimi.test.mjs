@@ -130,6 +130,8 @@ console.log('\n=== DOSYA ADINDAN KAMPANYA ===');
   esit('kupon metni', kampanyaMetni(kk), "750 TL'ye 100 TL Kupon");
   esit('kupon fiyati degistirmez (fiyat indirimi 0)', [musteriIndirimi(1000, kk), kampanyaFiyati(1000, kk)], [0, 1000]);
   esit('kupon payi: 1000 TL tamami, 375 TL yarisi', [kuponIndirimi(1000, kk), kuponIndirimi(375, kk)], [100, 50]);
+  const mi = dosyaAdindanKampanya('tum-bolgelerde-gecerli-sepette-15-indirim-(satici-indirimi-11)-25-trendyol-karsilamali_2026-10-06_17-16_tr-TR_part_1.xlsx');
+  esit('mikro sepette % + karsilama (gercek dosya adi)', [mi.campaign_type, mi.discount_kind, mi.discount_amount, mi.trendyol_coverage_rate], ['mikro_ihracat', 'cart_percent', 15, 25]);
   const d = dosyaAdindanKampanya('C:\\\\indir\\\\mikro-ihracat-4-al-3-ode.xlsx');
   esit('yol ayiklanir, mikro ihracat', [d.campaign_type, d.discount_kind], ['mikro_ihracat', null]);
   // Gercek Trendyol dosya adlari (1 Eki 2026, satici panelinden indirildi):

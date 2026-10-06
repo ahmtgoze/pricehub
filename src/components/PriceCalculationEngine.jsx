@@ -139,10 +139,18 @@ export const calculatePriceBreakdown = ({
   packagingCost = 0,
   printingCost = 0,
   extraCost = 0,
-  isSameDayDelivery = false
+  isSameDayDelivery = false,
+  mikroIhracat = null
 }) => {
+  // MIKRO IHRACAT (yalniz { hizmetBedeliOrani } verilirse; verilmezse hesap
+  // eskisiyle BIREBIR aynidir). Trendyol "Mikro Ihracattaki Maliyetler":
+  //   - fatura %0 KDV: satis KDV'si dogmaz (girdi KDV'leri yine indirilir)
+  //   - komisyon orani ve kargo Turkiye ile ayni (matrah degismez)
+  //   - platform hizmet bedelinin YERINE urun basina KDV dahil %6
+  //     "Uluslararasi Hizmet Bedeli" (matrah: saticiya kalan satis fiyati)
+  const mikro = mikroIhracat && typeof mikroIhracat === 'object' ? mikroIhracat : null;
   const salePriceExclVat = removeVat(salePriceInclVat, productVatRate);
-  const saleVat = salePriceInclVat - salePriceExclVat;
+  const saleVat = mikro ? 0 : salePriceInclVat - salePriceExclVat;
   const productCostExclVat = removeVat(productCost, productVatRate);
   const productVat = productCost - productCostExclVat;
   const printingCostExclVat = removeVat(printingCost, productVatRate);
@@ -154,7 +162,10 @@ export const calculatePriceBreakdown = ({
   const packagingCostExclVat = removeVat(packagingCost, productVatRate);
   const packagingVat = packagingCost - packagingCostExclVat;
   const commission = calculateCommission(salePriceExclVat, commissionRate, commissionVatRate);
-  const serviceFee = calculateServiceFee(platform, salePriceInclVat, isSameDayDelivery);
+  const mikroBedel = mikro ? salePriceInclVat * (Number(mikro.hizmetBedeliOrani) || 0) / 100 : 0;
+  const serviceFee = mikro
+    ? { amount: mikroBedel, amountExclVat: removeVat(mikroBedel, 20), vat: mikroBedel - removeVat(mikroBedel, 20) }
+    : calculateServiceFee(platform, salePriceInclVat, isSameDayDelivery);
   const withholdingAmount = calculateWithholding(platform, salePriceExclVat);
   const transactionFeeInclVat = platform.has_transaction_fee ? (platform.transaction_fee_amount || 0) : 0;
   const transactionFeeVatRate = platform.transaction_fee_vat_rate || 20;
@@ -222,7 +233,8 @@ export const calculatePriceBreakdown = ({
     corporateTaxAmount,
     netProfit,
     profitRate,
-    baremUsed
+    baremUsed,
+    mikroIhracat: !!mikro
   };
 };
 

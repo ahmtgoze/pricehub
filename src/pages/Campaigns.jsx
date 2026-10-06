@@ -124,6 +124,12 @@ export default function Campaigns() {
     queryFn: () => Platform.filter({ created_by: userEmail }),
     enabled: !!userEmail,
   });
+  // Mikro Ihracat hizmet bedeli orani yonetici sablonunda durur (kullanici kaydinda 0)
+  const { data: sablonPlatformlar = [] } = useQuery({
+    queryKey: ['platformSablonlari'],
+    queryFn: () => Platform.filter({ is_system_admin: true }),
+    enabled: !!userEmail,
+  });
   const { data: products = [] } = useQuery({
     queryKey: ['products', userEmail],
     queryFn: () => Product.filter({ created_by: userEmail }),
@@ -606,6 +612,16 @@ export default function Campaigns() {
   const etkinFiyatIcinKampanyaFiyati = (hedefEtkin) =>
     (aktifKampanya ? kampanyaFiyatiTersi(hedefEtkin, aktifKampanya) : 0);
 
+  // MIKRO IHRACAT: satis KDV'si %0, platform hizmet bedeli yerine uluslararasi
+  // hizmet bedeli (oran yonetici sablonundan). Komisyon ve kargo Turkiye ile ayni.
+  const mikroKampanyaMi = managingCampaign?.campaign_type === 'mikro_ihracat';
+  const mikroHizmetOrani = (() => {
+    const kendi = uniquePlatforms.find(p => p.name === selectedPlatform);
+    const sablon = sablonPlatformlar.find(p => p.platform_type === (kendi?.platform_type || 'trendyol'));
+    const kaynak = sablon?.has_micro_export ? sablon : (kendi?.has_micro_export ? kendi : null);
+    return Number(kaynak?.micro_export_service_fee_rate) || 0;
+  })();
+
   const calculateProfit = (campaignPrice, item, kampanya = aktifKampanya, zincir = null) => {
     try {
       // zincir: Plus'ta Genel kampanya ustune hesap (bkz. genelKampanyaEtkisi)
@@ -659,6 +675,7 @@ export default function Campaigns() {
         printingCost: parseFloat(printingCost) || 0,
         extraCost: parseFloat(extraCost) || 0,
         isSameDayDelivery: matchedProduct.same_day_delivery || false,
+        mikroIhracat: mikroKampanyaMi ? { hizmetBedeliOrani: mikroHizmetOrani } : null,
       });
 
       return {
@@ -1113,6 +1130,14 @@ export default function Campaigns() {
               {[kampanyaMetni(aktifKampanya), aktifKampanya?.karsilama > 0 ? `%${aktifKampanya.karsilama} Trendyol karşılamalı` : '', `${safeDate(managingCampaign.start_date)} - ${safeDate(managingCampaign.end_date)}`].filter(Boolean).join(' · ')}
             </p>
             <AktifPencereSatiri ozet={aktifPencereOzeti(priceRanges, selectedPlatform)} boyut="text-sm" />
+            {mikroKampanyaMi && (
+              <div className={`mt-2 rounded-lg border p-3 text-sm ${mikroHizmetOrani > 0 ? 'border-border bg-secondary text-muted-foreground' : 'border-red-300 bg-red-50 text-red-700 dark:bg-red-950/30 dark:text-red-300'}`}>
+                {mikroHizmetOrani > 0
+                  ? <>Mikro İhracat hesabı: satış KDV'si <b>%0</b>, platform hizmet bedeli yerine <b>%{mikroHizmetOrani}</b> uluslararası hizmet bedeli; komisyon ve kargo Türkiye ile aynı. Bu kampanya Türkiye fiyatlarına karışmaz.</>
+                  : <>Mikro İhracat hizmet bedeli oranı tanımlı değil; kâr olduğundan yüksek görünür. Oran yönetici platform ayarında (Mikro İhracat) girilmelidir.</>}
+                <div className="mt-1 text-xs">Bilgi: ürün iadeye dönerse Trendyol ayrıca yurt dışı iade operasyon bedeli keser. Bu tutar kâra dahil edilmez; güncel oran Hesap Bilgileri › Sözleşme &amp; Belgeler'dedir.</div>
+              </div>
+            )}
           </div>
 
           <Card className="mb-6">

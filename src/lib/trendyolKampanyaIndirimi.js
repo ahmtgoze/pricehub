@@ -292,7 +292,8 @@ export function dosyaAdindanKampanya(dosyaAdi) {
     sonuc.threshold_amount = Number(sepet[1]);
     sonuc.discount_amount = Number(sepet[2]);
   } else if (yuzde) {
-    sonuc.discount_kind = 'net_percent';
+    // "sepette-15-indirim-(satici-indirimi-11)-25-trendyol-karsilamali" (Mikro Ihracat, 6 Eki 2026)
+    sonuc.discount_kind = new RegExp(`sepette-${yuzde[1]}-indirim`).test(slug) ? 'cart_percent' : 'net_percent';
     sonuc.discount_amount = Number(yuzde[1]);
   }
   return sonuc;

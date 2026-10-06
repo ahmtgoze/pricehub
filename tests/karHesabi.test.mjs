@@ -137,5 +137,21 @@ console.log('\n═══ MALİYET KURALI ═══');
   esit('18 referanssız ürün: baz maliyet yok sayılır', s.kalemler.maliyet, 50);
 }
 
+console.log('\n═══ MİKRO İHRACAT (6 Eki 2026) ═══');
+{
+  const ortak = { urun: urun({ desi: 12 }), platform: KULLANICI, sablonlar: [SABLON], fiyat: 600, komisyonOrani: 20, tarifeler: TARIFELER };
+  const tr = fiyattaKar(ortak);
+  const mi = fiyattaKar({ ...ortak, mikroIhracat: { hizmetBedeliOrani: 6 } });
+  const yakin = (a, b) => Math.abs(a - b) < 0.005;
+  dogru('komisyon, kargo, stopaj Türkiye ile aynı', yakin(tr.kalemler.komisyon, mi.kalemler.komisyon) && yakin(tr.kalemler.kargo, mi.kalemler.kargo) && yakin(tr.kalemler.stopaj, mi.kalemler.stopaj));
+  dogru('hizmet bedeli = fiyatın %6sı (KDV dahil)', yakin(mi.kalemler.hizmetBedeli, 36), `olan: ${mi.kalemler.hizmetBedeli}`);
+  // Fark yalnız iki kalemden gelir: satış KDV'si doğmaz (+100), hizmet bedeli değişir (KDV hariç fark)
+  const satisKdv = 600 - 600 / 1.2;
+  const beklenenFark = satisKdv + tr.kalemler.hizmetBedeli / 1.2 - 36 / 1.2;
+  dogru('vergi öncesi kâr farkı = satış KDV’si + hizmet bedeli farkı', yakin(mi.vergiOncesiKar - tr.vergiOncesiKar, beklenenFark), `fark: ${mi.vergiOncesiKar - tr.vergiOncesiKar} beklenen: ${beklenenFark}`);
+  dogru('desi 10 üstü ürün de hesaplanır (eleme yok)', mi.durum === 'tamam');
+  dogru('seçenek verilmezse sonuç değişmez', JSON.stringify(fiyattaKar({ ...ortak, mikroIhracat: null })) === JSON.stringify(tr));
+}
+
 console.log(`\nGECEN: ${gecen}   KALAN: ${kalan}`);
 if (kalan > 0) process.exit(1);
