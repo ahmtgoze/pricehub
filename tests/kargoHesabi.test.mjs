@@ -36,6 +36,22 @@ esit('tarife ustu yok', desiTarifesiBul(tarifeler, 31), null);
 esit('cift kargo sayfada da uygulanir', promosyonKargosu({ platform: web, urun: { double_shipping: true, desi: 3 }, fiyat: 500, tarifeler, kurallar }).shippingCost, 210);
 esit('coklu paket paket paket', promosyonKargosu({ platform: web, urun: { double_shipping: true, multi_package: true, packages: '[{"desi":3},{"desi":20}]' }, fiyat: 500, tarifeler, kurallar }).shippingCost, 210 + 450);
 
+console.log('\n═══ KARGO FIRMASI ═══');
+// 6 Eki 2026: promosyon sayfalari firmaya bakmadan ilk gelen tarifeyi aliyordu
+{
+  const coklu = [
+    { rate_type: 'desi', desi: 2, price: 115.91, shipping_company: 'Kolay Gelsin' },
+    { rate_type: 'desi', desi: 2, price: 98.34, shipping_company: 'Trendyol Express' },
+    { rate_type: 'barem1', price: 90, shipping_company: 'Kolay Gelsin' },
+    { rate_type: 'barem1', price: 46.49, shipping_company: 'Trendyol Express' },
+  ];
+  const ty = { platform_type: 'trendyol', use_barem: true, barem_max_desi: 10, barem1_min: 0, barem1_max: 199.99, barem2_min: 200, barem2_max: 349.99, shipping_company_name: 'Trendyol Express' };
+  esit('desi: secili firmanin tarifesi', promosyonKargosu({ platform: ty, urun: { desi: 1 }, fiyat: 500, tarifeler: coklu, kurallar: [] }).shippingCost, 98.34);
+  esit('barem: secili firmanin tarifesi', promosyonKargosu({ platform: ty, urun: { desi: 1 }, fiyat: 150, tarifeler: coklu, kurallar: [] }).shippingCost, 46.49);
+  esit('firma secili degilse eski davranis', promosyonKargosu({ platform: { ...ty, shipping_company_name: '' }, urun: { desi: 1 }, fiyat: 500, tarifeler: coklu, kurallar: [] }).shippingCost, 115.91);
+  esit('firmanin tarifesi yoksa kargo sifirlanmaz', promosyonKargosu({ platform: { ...ty, shipping_company_name: 'Olmayan' }, urun: { desi: 1 }, fiyat: 500, tarifeler: coklu, kurallar: [] }).shippingCost, 115.91);
+}
+
 console.log('\n═══ FIYAT DETAYI METNI ═══');
 // 23 Eyl 2026: aralik yokken (sabit=null) metin hazirlanirken cokup beyaz ekran veriyordu
 esit('kayit yok', ciftKargoMetni(undefined, 200).includes('2 × kargo'), true);

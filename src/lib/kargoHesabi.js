@@ -62,8 +62,26 @@ export function paketler(urun) {
   }
 }
 
+/**
+ * Platformun SECILI kargo firmasinin tarifeleri (fiyat motoruyla ayni kural).
+ *
+ * NICIN: sistemde bir platform icin yedi firmanin tarifesi birlikte durur.
+ * Promosyon sayfalari firmaya bakmadan ilk gelen desi tarifesini aliyordu;
+ * Trendyol Express (98,34) secili iken baska firmanin 115,91'i hesaba
+ * giriyor, kar oldugundan DUSUK cikiyor ve urun kampanyaya secilmiyordu
+ * (6 Ekim 2026). Firma secili degilse ya da o firmanin hic tarifesi yoksa
+ * liste oldugu gibi kalir (kargo 0 cikip kari sisirmesin).
+ */
+export function firmaTarifeleri(platform, tarifeler) {
+  const firma = String(platform?.shipping_company_name || '').trim();
+  if (!firma || !Array.isArray(tarifeler)) return tarifeler;
+  const secili = tarifeler.filter((r) => r.shipping_company === firma);
+  return secili.length ? secili : tarifeler;
+}
+
 /** Promosyon sayfalari: verilen satis fiyatinda barem, yoksa desi (paket paket). */
-export function promosyonKargosu({ platform, urun, fiyat, tarifeler, kurallar }) {
+export function promosyonKargosu({ platform, urun, fiyat, tarifeler: tumTarifeler, kurallar }) {
+  const tarifeler = firmaTarifeleri(platform, tumTarifeler);
   const barem = baremSec(platform, urun, fiyat, urun?.desi);
   const bt = barem && baremTarifesiSec(tarifeler, barem, urun?.same_day_delivery || false);
   if (bt?.price) {

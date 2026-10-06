@@ -359,30 +359,52 @@ export default function Campaigns() {
 
   const getPackageCost = (packageId) => (packages.find(p => p.id === packageId)?.total_cost) || 0;
 
-  /**
-   * Barem onerisi: kampanya fiyatinin etkin karsiligi desi tarifesine
-   * dusuyorsa, etkin fiyati barem esigine cekecek kampanya fiyatini onerir.
-   * Yalnizca ekranda gosterilir; Excel sablonuna dahil degildir.
-   */
+  // Satirin ekranda gosterdigi hesap: urun baska promosyon/kampanyada da
+  // seciliyse zincirli (en dip) sonuc, degilse sade kampanya hesabi.
+  const satirHesabi = (fiyat, item) => {
+    const sade = calculateProfit(fiyat, item);
+    const etki = genelKampanyaEtkisi(item, fiyat);
+    const zincirli = etki ? calculateProfit(fiyat, item, aktifKampanya, etki.zincir) : null;
+    return zincirli?.breakdown ? zincirli : sade;
+  };
+
   /**
    * Barem onerisi: girilen fiyat desi tarifesine dusuyorsa, fiyati barem
    * tavanina cekmek kar ORANINI artiriyor mu? Ekrandaki sutun ve Akilli
    * Otomatik Sec ayni hesabi kullanir. Yoksa null.
+   *
+   * Hesap satirla AYNI zinciri kullanir (kullanici, 6 Ekim 2026: "barem
+   * onerilerine katildigimizda hata var"). Eskiden zincirsiz hesaplaniyordu:
+   * oneri karttakinden yuksek kar gosteriyor, Uygula'dan sonra kart baska
+   * rakam veriyor ve fiyat gereginden fazla dusuyordu (diger indirimler
+   * saticiya kalani zaten tavanin altina cekiyor).
    */
   const baremOnerisiHesapla = (item, mevcutFiyat) => {
     if (!mevcutFiyat || mevcutFiyat <= 0) return null;
-    const mevcut = calculateProfit(mevcutFiyat, item);
+    const mevcut = satirHesabi(mevcutFiyat, item);
     if (!mevcut.breakdown) return null;
     if (mevcut.baremUsed === 'barem1' || mevcut.baremUsed === 'barem2') return null;
 
     const maks = parseFloat(item.max_price) || 0;
     let oneri = null;
     for (const [hedefEtkin, ad, tip] of [[BAREM2_UST, 'Barem 2', 'barem2'], [BAREM1_UST, 'Barem 1', 'barem1']]) {
-      const aday = etkinFiyatIcinKampanyaFiyati(hedefEtkin);
+      // Ilk tahmin zincirsiz ters hesap; sonra zincir SONUNDA saticiya kalan
+      // tavana oturana kadar fiyat oranlanir (birkac adimda yakinsar).
+      let aday = etkinFiyatIcinKampanyaFiyati(hedefEtkin);
       if (!aday || aday <= 0) continue;
+      let c = satirHesabi(aday, item);
+      for (let i = 0; i < 6 && c.effPrice > 0 && aday < mevcutFiyat; i++) {
+        const fark = hedefEtkin - c.effPrice;
+        if (fark >= 0 && fark < 0.01) break;
+        aday = Math.floor((aday * hedefEtkin / c.effPrice) * 100) / 100;
+        c = satirHesabi(aday, item);
+      }
+      for (let i = 0; i < 5 && c.effPrice > hedefEtkin; i++) {   // kurus yuvarlamasi tavani asmasin
+        aday = Math.round((aday - 0.01) * 100) / 100;
+        c = satirHesabi(aday, item);
+      }
       if (aday >= mevcutFiyat) continue;          // fiyati dusurerek bareme inilir
       if (maks > 0 && aday > maks) continue;      // max girilebilir asilmasin
-      const c = calculateProfit(aday, item);
       if (c.baremUsed !== tip) continue;
       if (c.profitRate <= mevcut.profitRate) continue;
       if (!oneri || c.profitRate > oneri.profitRate) {
@@ -1198,10 +1220,8 @@ export default function Campaigns() {
                           // zincirli (en dip fiyat) hesaptan gelir; "sadece Plus %5" hali
                           // kucuk bilgi satiri olur (kullanici, 15 Eylul 2026: "gercek
                           // karlilik bizim hesapladigimizdan hesaplanmali").
-                          const sadePlus = calculateProfit(item.campaign_price, item);
                           const etki = genelKampanyaEtkisi(item, item.campaign_price);
-                          const zincirli = etki ? calculateProfit(item.campaign_price, item, aktifKampanya, etki.zincir) : null;
-                          const calc = zincirli?.breakdown ? zincirli : sadePlus;
+                          const calc = satirHesabi(item.campaign_price, item);
                           const below = item.campaign_price > 0 ? isBelowFloor(item, item.campaign_price) : false;
                           const overMax = item.max_price > 0 && parseFloat(item.campaign_price) > item.max_price;
                           const isSelected = item.selected_type === 'campaign';
