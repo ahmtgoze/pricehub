@@ -29,6 +29,7 @@ import { promosyonKargosu, ciftKargoKurallari } from '@/lib/kargoHesabi';
 import { gecerliMaliyet } from '@/lib/gecerliMaliyet';
 import { useZincirKaynaklari } from '@/hooks/useZincirKaynaklari';
 import { zincirKur, KAYNAK, bugunMetni as zincirBugun } from '@/lib/zincirHesabi';
+import ZincirSatiri from '@/components/ZincirSatiri';
 
 export default function AdvantageProductTag() {
   const [userEmail, setUserEmail] = useState(null);
@@ -472,16 +473,6 @@ export default function AdvantageProductTag() {
     if (!zk) return { profit: calc.profit || 0, profitRate: calc.profitRate || 0, zk: null };
     return { profit: Math.min(calc.profit || 0, zk.profit), profitRate: Math.min(calc.profitRate || 0, zk.profitRate), zk };
   };
-  // Trendyol'un kendi "Nasıl hesaplanır?" gösterimi gibi: kaynak (hangi promosyon sayfasından geldiği) DOĞRUDAN
-  // satırda, hover'a gizlenmiyor (kullanıcı: "bizimki biraz karışık" — 1 Eki 2026). Hesaplama değişmedi.
-  // Taban üstüne binen genel kampanya/Plus/kod/kupon da gösterilir — eskiden (title'da bile) yalnız genel+Plus
-  // vardı, kod/kupon hiç görünmüyordu; doğrulamada bir kuponun payı gözden kaçıyordu (1 Eki 2026).
-  const zincirDahilOlan = (z) => [z.genel?.ad, z.plus ? z.plus.etiket : null, z.birlikte?.ad, z.kod?.ad, z.kupon?.ad].filter(Boolean).join(' + ');
-  const ZincirSatiri = ({ zk }) => zk ? (
-    <div className={`text-[10px] leading-tight mt-0.5 ${zk.profit > 0 ? 'text-amber-700 dark:text-amber-400' : 'text-red-600'}`}>
-      {zk.z.taban.kaynak} ₺{zk.z.taban.fiyat.toFixed(2)}{zincirDahilOlan(zk.z) ? ` + ${zincirDahilOlan(zk.z)}` : ''} ile birlikte: müşteri ₺{zk.z.musteriFiyat.toFixed(2)} · {zk.profit > 0 ? '+' : ''}₺{zk.profit.toFixed(2)} (%{zk.profitRate.toFixed(1)})
-    </div>
-  ) : null;
 
   const handleSmartAutoSelect = () => {
     const platformObj = uniquePlatforms.find(p => p.name === selectedPlatform);
